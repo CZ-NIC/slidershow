@@ -1,5 +1,5 @@
 const wh = new WebHotkeys()
-$body = $("body")
+const $body = $("body")
 let $articles = $("article")
 /**
  * @type {Playback}
@@ -7,7 +7,7 @@ let $articles = $("article")
 let playback
 
 
-const TRANS_DURATION = ($("body").data("transition-duration") || 0) * 1000 // XXX
+const TRANS_DURATION = ($("body").data("transition-duration") || 0) * 1000 // XX do an attribute instead
 
 
 /**
@@ -30,7 +30,12 @@ class Menu {
             playback.stop()
             $menu.show()
             $start.focus()
+
+            // scroll back
+            Playback.resetWindow()
+            $body.css({ top: '0px' })
         })
+
 
         // Drop new files
         const $drop = $("#drop").on("drop", (ev) => {
@@ -82,23 +87,24 @@ class Menu {
  * Append new frame programatically with the static methods.
  */
 class Frame {
-    static html(html, append=true) {
+    static html(html, append = true) {
         const $el = $("<article/>", { html: html })
-        if(append) {
+        if (append) {
             $el.appendTo($body).hide(0)
         }
         return $el
     }
 
-    static text(text, append=true) {
+    static text(text, append = true) {
         return Frame.html(text, append)
     }
 
-    static img(filename, append=true) {
-        return Frame.html(`<img src="${filename}" />`, append)
+    static img(filename, append = true) {
+        // data-src prevents the performance for serveral thousand frames
+        return Frame.html(`<img src="data:" data-src="${filename}" />`, append)
     }
-    static video(filename, append=true) {
-        return Frame.html(`<video controls autoplay><source src="${filename}"></video>`, append)
+    static video(filename, append = true) {
+        return Frame.html(`<video controls autoplay data-src="${filename}"></video>`, append)
     }
 
     /**
@@ -106,7 +112,7 @@ class Frame {
      * @param {*} filename
      * @returns {null|jQuery} Null if the file could not be included
      */
-    static file(filename, append=true) {
+    static file(filename, append = true) {
         const suffix = filename.split('.').pop().toLowerCase()
         switch (suffix) {
             case "mp4":
@@ -158,9 +164,11 @@ class Playback {
         this.promise = {} // transition promise
         this.moving = true
         this.moving_timeout = null
-        this.appendEndSlide()
+        this.appendEndSlide() // XX gets appended multiple times when playback starts multiple times
         $articles = $("article")
-        $articles.hide()
+        this.positionFrames()
+        // $articles.hide()
+        $articles.show()
 
         this.$current = $articles.first()
         this.goToFrame(0, true)
@@ -173,6 +181,31 @@ class Playback {
     stop() {
         clearTimeout(this.moving_timeout)
         $articles.hide()
+        console.log("188: Abor",)
+
+        this.promise.aborted = true
+    }
+
+    positionFrames() {
+        // let top = 0
+        // let left = 0
+        // $articles.each(function () {
+        //     $(this).css({
+        //         top: top + "vh",
+        //         left: left + "vw"
+        //     })
+        //     top += 100
+        //     left += 100
+        // })
+
+        $articles.css({
+            "top": function (index) {
+                return index * 100 + "vh";
+            }
+            // , "left": function (index) {
+            //     return index * 100 + "vw"
+            // }
+        })
     }
 
     /**
@@ -240,11 +273,29 @@ class Playback {
         const $current = this.$current = next ? $(next) : $last
         this.index = $articles.index($current)
 
+        // preload media
+        // for the case of several thousands file, the perfomarce is important
+        // XX we should probably implement an unload too
+        $current.find("img[data-src]").each(function () {
+            $(this).attr("src", $(this).data("src"))
+            $(this).removeAttr("data-src")
+        })
+        $current.find("video[data-src]").each(function () {
+            $(this).append("src", $("<source/>", { src: $(this).data("src") }))
+            $(this).removeAttr("data-src")
+        })
+
+
+        // start transition
         this.moving = moving
+        if (this.moving_timeout) {
+            clearTimeout(this.moving_timeout)
+        }
         this.promise.aborted = true
         const promise = this.promise = $last[0] === $current[0] ? Promise.resolve() : this.transition($last, $current).promise()
         promise.then(() => {
 
+            // frame is at the viewport now
             if (promise.aborted) { // another frame was raise meanwhile
                 console.log("235: ABORTED",)
                 return
@@ -283,9 +334,6 @@ class Playback {
                 const duration = $el.prop("tagName") === "VIDEO" ? this.prop("duration-video") : this.prop("duration")
 
                 if (duration) {
-                    if(this.moving_timeout) {
-                        clearTimeout(this.moving_timeout)
-                    }
                     this.moving_timeout = setTimeout(() => this.moving && this.nextFrame(), duration * 1000)
                 }
             }
@@ -302,7 +350,7 @@ class Playback {
         const last = new Frame($last)
         const current = new Frame($current)
         switch (this.prop("transition")) {
-            case "scroll-down":
+            case "scroll-down": // XX deprec?
                 if ($articles.index($last) < $articles.index($current)) {
                     last.effect("go-up")
                     return current.effect("arrive-from-bottom")
@@ -310,11 +358,23 @@ class Playback {
                     last.effect("go-down")
                     return current.effect("arrive-from-top")
                 }
-            case "fade":
-            default:
+            case "fade": // XX incompatible with body manipulation
                 $last.fadeOut(TRANS_DURATION)
                 return $current.fadeIn(TRANS_DURATION)
+            default:
+                Playback.resetWindow()
+                return $body.animate({
+                    top: `-${$current.position().top}px`
+                }, TRANS_DURATION)
         }
+    }
+
+    /**
+     * The browser tends to scroll the hidden scrollbar even if we move the body manually
+     */
+    static resetWindow() {
+        $body.stop()
+        window.scrollTo(0, 0)
     }
 }
 

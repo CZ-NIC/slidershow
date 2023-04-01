@@ -1,6 +1,8 @@
 body {
   background-color: black;
   color: white !important;
+  overflow-y: hidden;
+  position: relative;
 }
 menu {
   display: flex;
@@ -31,14 +33,14 @@ menu #defaults {
   font-size: 1vw;
 }
 article {
-  position: relative;
+  position: absolute;
   left: 5vw;
-  width: 90%;
-  height: 90%;
+  width: 90vw;
+  height: 90vh;
   padding: 3px;
   text-align: center;
   font-size: 10vw;
-  margin-bottom: 10vw;
+  margin-bottom: 100vh;
 }
 article img,
 article video {
