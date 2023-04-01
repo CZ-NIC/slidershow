@@ -1,6 +1,7 @@
 body {
     background-color: black;
     color: white !important;
+    // overflow-y: hidden; XX debug
 }
 
 menu {
@@ -22,7 +23,6 @@ menu {
         width: 100px;
         height: 100px;
         font-size: 50px;
-        // font-size: 10vw;
     }
 
     #drop {
@@ -39,13 +39,14 @@ menu {
 
 
 article {
-    position: fixed;
-    left: 5%;
+    position: relative;
+    left: 5vw;
     width: 90%;
     height: 90%;
     padding: 3px;
     text-align: center;
     font-size: 10vw;
+    margin-bottom: 10vw;
 
     img,
     video {
