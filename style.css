@@ -2,6 +2,7 @@ body {
   background-color: black;
   color: white !important;
   overflow-y: hidden;
+  overflow-x: hidden;
   position: relative;
 }
 menu {
@@ -34,9 +35,8 @@ menu #defaults {
 }
 article {
   position: absolute;
-  left: 5vw;
-  width: 90vw;
-  height: 90vh;
+  width: 100vw;
+  height: 100vh;
   padding: 3px;
   text-align: center;
   font-size: 10vw;

@@ -7,7 +7,7 @@ let $articles = $("article")
 let playback
 
 
-const TRANS_DURATION = ($("body").data("transition-duration") || 0) * 1000 // XX do an attribute instead
+const TRANS_DURATION = ($("body").data("transition-duration") || 0) * 1000 * 0// XX do an attribute instead
 
 
 /**
@@ -33,7 +33,7 @@ class Menu {
 
             // scroll back
             Playback.resetWindow()
-            $body.css({ top: '0px' })
+            $body.css({ top: '0px', left: '0px' })
         })
 
 
@@ -187,24 +187,16 @@ class Playback {
     }
 
     positionFrames() {
-        // let top = 0
-        // let left = 0
-        // $articles.each(function () {
-        //     $(this).css({
-        //         top: top + "vh",
-        //         left: left + "vw"
-        //     })
-        //     top += 100
-        //     left += 100
-        // })
+        // XX more options
+        $articles.each((index, el) => {
+            const $el = $(el)
+            // XXX data("x") might be ZERO. Do not ignore.
+            console.log("193: this.prop", this.prop("y", $el), this.prop("x", $el))
 
-        $articles.css({
-            "top": function (index) {
-                return index * 100 + "vh";
-            }
-            // , "left": function (index) {
-            //     return index * 100 + "vw"
-            // }
+            $el.css({
+                top: (this.prop("y", $el) || index) * 100 + "vh",
+                left: (this.prop("x", $el) || index) * 100 + "vw"
+            })
         })
     }
 
@@ -318,16 +310,16 @@ class Playback {
             }
 
             // Video autoplay (when muted in chromium)
-            // if ($el.prop("tagName") === "VIDEO") {
-            //     // user has to interact first, try 'try catch'
-            //     console.log("260: PLAY attempt")
-            //     try {
-            //         $el[0].play()
-            //     } catch (e) {
-            //         alert("Interact with the page before the autoplay works.")
-            //         // XX $("<div/>", { text: "Interact with the page before the autoplay works." })
-            //     }
-            // }
+            if ($el.prop("tagName") === "VIDEO") {
+                // user has to interact first, try 'try catch'
+                console.log("260: PLAY attempt")
+                try {
+                    $el[0].play()
+                } catch (e) {
+                    alert("Interact with the page before the autoplay works.")
+                    // XX $("<div/>", { text: "Interact with the page before the autoplay works." })
+                }
+            }
 
             // Duration
             if (moving) {
@@ -342,8 +334,8 @@ class Playback {
         })
     }
 
-    prop(prop) {
-        return this.$current.closest(`[data-${prop}]`).data(prop)
+    prop(prop, $el = null) {
+        return ($el || this.$current).closest(`[data-${prop}]`).data(prop)
     }
 
     transition($last, $current) {
@@ -364,7 +356,8 @@ class Playback {
             default:
                 Playback.resetWindow()
                 return $body.animate({
-                    top: `-${$current.position().top}px`
+                    top: `-${$current.position().top}px`,
+                    left: `-${$current.position().left}px`,
                 }, TRANS_DURATION)
         }
     }

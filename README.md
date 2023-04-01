@@ -30,6 +30,7 @@ Which contains arbitrary HTML code, such as images or videos.
 
 * `data-transition`: `fade` (default), `scroll-down` XXX
 * `data-transition-duration`: s (default 0.5) XXX
+* `data-x`, `data-y`: A viewport stands for a chessboard field. This is the position of the frame in the chessboard. XXX Attention, when nested in section. They may stay in the same position. Implement z-index of something.
 
 ## Frame group <section>
 These `<article>` tags might be encapsuled into (nested) `<section>` groups. A `<section>` has the same attributes as an `<article>`.
