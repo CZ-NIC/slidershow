@@ -2,6 +2,8 @@ Have you ever wanted to show your friends media from holidays? How cubersome it 
 
 # Structure
 
+Put the presentation content to the <main> tag which contain <article> tags.
+
 ## Frame <article>
 
 Every frame is represented by an `<article>` tag.
@@ -31,6 +33,19 @@ Which contains arbitrary HTML code, such as images or videos.
 * `data-transition`: `fade` (default), `scroll-down` XXX
 * `data-transition-duration`: s (default 0.5) XXX
 * `data-x`, `data-y`: A viewport stands for a chessboard field. This is the position of the frame in the chessboard. XXX Attention, when nested in section. They may stay in the same position. Implement z-index of something.
+* `data-video`: All <video> tags inherits its value as attributes. (controls autoplay muted loop)
+
+```html
+<article data-video="autoplay muted">
+    <video> <!-- becomes <video autoplay muted> -->
+        <source src="my_video.mp4#t=8,10" type="video/mp4">
+    </video>
+</article>
+```
+
+## <article-map>
+
+XXX
 
 ## Frame group <section>
 These `<article>` tags might be encapsuled into (nested) `<section>` groups. A `<section>` has the same attributes as an `<article>`.
@@ -43,12 +58,12 @@ These `<article>` tags might be encapsuled into (nested) `<section>` groups. A `
 </section>
 ```
 
-As the ultimate default the `<body>` tag may be used.
+As the ultimate default the `<main>` tag may be used.
 
 ```html
-<body data-duration='0.5'>
+<main data-duration='0.5'>
     <article>Short frame (inherits 0.5)</article>
-</body>
+</main>
 ```
 
 ## Frame content

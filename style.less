@@ -3,6 +3,10 @@ body {
     color: white !important;
     overflow-y: hidden; //XX debug
     overflow-x: hidden; //XX debug
+    // position: relative;
+}
+
+main {
     position: relative;
 }
 
@@ -21,6 +25,7 @@ menu {
     div {
         text-align: center;
     }
+
     #start {
         width: 100px;
         height: 100px;
@@ -39,8 +44,27 @@ menu {
     }
 }
 
+#hud {
+    // display:none; // XXXX
+    position: fixed; // Xdoes not work when moving body, we have to move it manually
+    // position:absolute;
+    // right: 10px;
+    width: 500px;
+    height: 500px;
 
-article {
+    // background-color: blue;
+    // z-index: 10;
+    #map {
+        position: absolute;
+
+        height:50vh;
+        width:50vw;
+    }
+}
+
+article,
+article-map {
+    display: none; // initially hidden
     position: absolute;
     // left: 5vw;
     width: 100vw;
@@ -50,10 +74,19 @@ article {
     font-size: 10vw;
     margin-bottom: 100vh;
 
+
     img,
     video {
-        /* display: block; */
         max-width: 100%;
         max-height: 100%;
+
+        &:only-child {
+            // Stretch the small image or video to the full frame size.
+            // If there are more elements, leave the burden to the user.
+            width: 100%;
+            height: 100%;
+
+            object-fit: contain;
+        }
     }
 }

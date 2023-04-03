@@ -3,6 +3,8 @@ body {
   color: white !important;
   overflow-y: hidden;
   overflow-x: hidden;
+}
+main {
   position: relative;
 }
 menu {
@@ -33,7 +35,19 @@ menu #defaults {
   text-align: left;
   font-size: 1vw;
 }
-article {
+#hud {
+  position: fixed;
+  width: 500px;
+  height: 500px;
+}
+#hud #map {
+  position: absolute;
+  height: 50vh;
+  width: 50vw;
+}
+article,
+article-map {
+  display: none;
   position: absolute;
   width: 100vw;
   height: 100vh;
@@ -43,8 +57,17 @@ article {
   margin-bottom: 100vh;
 }
 article img,
-article video {
-  /* display: block; */
+article-map img,
+article video,
+article-map video {
   max-width: 100%;
   max-height: 100%;
+}
+article img:only-child,
+article-map img:only-child,
+article video:only-child,
+article-map video:only-child {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
 }
