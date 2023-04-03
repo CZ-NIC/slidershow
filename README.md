@@ -45,7 +45,10 @@ Which contains arbitrary HTML code, such as images or videos.
 
 ## <article-map>
 
-XXX
+* attributes
+    * `data-places`: Delimited by comma. Ex: "Prague, Brno"
+    * `data-route`: Delimited by comma. Ex: "Prague, Brno"
+* Content does not work in the frame.
 
 ## Frame group <section>
 These `<article>` tags might be encapsuled into (nested) `<section>` groups. A `<section>` has the same attributes as an `<article>`.

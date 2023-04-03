@@ -46,7 +46,7 @@ menu {
 }
 
 #hud {
-    // display:none; // XXXX
+    // display:none; // XX
     position: fixed; // Xdoes not work when moving body, we have to move it manually
     // position:absolute;
     // right: 10px;
@@ -58,26 +58,26 @@ menu {
 
     // background-color: blue;
     // z-index: 10;
-    #map {
-        position: absolute;
+}
 
-        height: 100%;
-        width: 100%;
-    }
+#map {
+    position: absolute;
+    height: 100%;
+    width: 100%;
 }
 
 article,
 article-map {
     display: none; // initially hidden
     position: absolute;
-    // left: 5vw;
     width: 100vw;
     height: 100vh;
-    // padding: 3px;
     text-align: center;
     font-size: 10vw;
     margin-bottom: 100vh;
+}
 
+article {
 
     img,
     video {
@@ -93,4 +93,13 @@ article-map {
             object-fit: contain;
         }
     }
+}
+
+
+article-map {
+    // as the map widget is hard to be moved in the DOM and yet we need to interact it
+    // while keeping the article-map content above
+    // pointer-events: none;
+    // z-index: 1;
+    // color: black;
 }

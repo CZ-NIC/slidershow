@@ -1,5 +1,5 @@
 const wh = new WebHotkeys()
-const $body = $("main")
+const $main = $("main")
 
 
 const TRANS_DURATION = ($("main").data("transition-duration") || 0) * 1000 //* 0// XX do an attribute instead
@@ -25,7 +25,7 @@ class Menu {
 
             // scroll back
             Playback.resetWindow()
-            $body.css({ top: '0px', left: '0px' })
+            $main.css({ top: '0px', left: '0px' })
         })
 
         // Drop new files
@@ -64,7 +64,7 @@ class Menu {
         }
 
         $articles.remove() // delete old frames
-        const $section = $("<section/>").appendTo($body);//.data(defaults)
+        const $section = $("<section/>").appendTo($main);//.data(defaults)
         ([...(new FormData($("#defaults")[0]))]).map(([key, val]) => $section.attr("data-" + key, val))
 
         const elements = items.map(item => FrameFactory.file(folder + item, false)).filter(x => !!x)
@@ -81,7 +81,7 @@ class FrameFactory {
     static html(html, append = true) {
         const $el = $("<article/>", { html: html })
         if (append) {
-            $el.appendTo($body).hide(0)
+            $el.appendTo($main).hide(0)
         }
         return $el
     }
@@ -151,6 +151,37 @@ class Frame {
         return this.$frame.closest(`[data-${prop}]`).data(prop)
     }
 
+    /**
+     *
+     * @param {MapWidget} map
+     */
+    prepare(map) {
+        const $frame = this.$frame
+        // preload media
+        // for the case of several thousands file, the perfomarce is important
+        // XX we should probably implement an unload too
+        $frame.find("img[data-src]").each(function () {
+            $(this).attr("src", $(this).data("src"))
+            $(this).removeAttr("data-src")
+        })
+        $frame.find("video[data-src]").each(function () {
+            $(this).append("src", $("<source/>", { src: $(this).data("src") }))
+            $(this).removeAttr("data-src")
+        })
+        if ($frame.prop("tagName") === "ARTICLE-MAP") {
+            map.adapt($frame)
+            const route = $frame.data("route")
+            if (route) {
+                map.display_route(route.split(","))
+            }
+            const places = $frame.data("places")
+            if (places) {
+                map.display_markers(places.split(","))
+            }
+
+        }
+    }
+
     enter(video_finished_clb) {
         const $frame = this.$frame
 
@@ -197,6 +228,10 @@ class Frame {
         return true
     }
 
+    left() {
+
+    }
+
     /**
      *
      * @returns {jQuery[]}
@@ -224,8 +259,7 @@ class Playback {
         this.positionFrames()
         $articles.show()
 
-        this.hud = new Hud()
-        this.hud.map_start()
+        this.map = new MapWidget().map_start()
 
 
         this.$current = $articles.first()
@@ -333,33 +367,7 @@ class Playback {
 
         this.index = $articles.index($current)
 
-        // preload media
-        // for the case of several thousands file, the perfomarce is important
-        // XX we should probably implement an unload too
-        $current.find("img[data-src]").each(function () {
-            $(this).attr("src", $(this).data("src"))
-            $(this).removeAttr("data-src")
-        })
-        $current.find("video[data-src]").each(function () {
-            $(this).append("src", $("<source/>", { src: $(this).data("src") }))
-            $(this).removeAttr("data-src")
-        })
-
-        const $map = $("#map") //XXX
-        if ($current.prop("tagName") === "ARTICLE-MAP") { // XXXX asi předělat na frame
-            // $map.css({top: $current.position().top, left: $current.position().left})
-            console.log("294: zdeee")
-            $("#map").show(0)
-
-            // Viz papírek XXXXXXXXXXXX
-
-            // $map.animate({
-            //     top: `${$current.position().top}px`,
-            //     left: `${$current.position().left}px`,
-            // }, TRANS_DURATION)
-
-            this.hud.suggest("Pardubice")
-        }
+        frame.prepare(this.map)
 
         // start transition
         this.moving = moving
@@ -375,7 +383,8 @@ class Playback {
                 return
             }
             console.log("Frame ready")
-            const duration = this.frame.enter(() => this.moving && this.nextFrame())
+            const duration = frame.enter(() => this.moving && this.nextFrame())
+            $last.data("frame").left()
 
             // Duration
             if (moving && duration) {
@@ -407,7 +416,7 @@ class Playback {
                 return $current.fadeIn(TRANS_DURATION)
             default:
                 Playback.resetWindow()
-                return $body.animate({
+                return $main.animate({
                     top: `-${$current.position().top}px`,
                     left: `-${$current.position().left}px`,
                 }, TRANS_DURATION)
@@ -418,68 +427,191 @@ class Playback {
      * The browser tends to scroll the hidden scrollbar even if we move the body manually
      */
     static resetWindow() {
-        $body.stop()
+        $main.stop()
         window.scrollTo(0, 0)
     }
 }
 
-/**
- * @type {Object.<string, SMap.Coords>} {query: SMap.Coords}
- */
-MapCache = {}
 
-class Hud {
+
+class MapWidget {
     constructor() {
+        /**
+         * @type {SMap}
+         */
         this.map = null
+        this.$map = $("#map")
     }
     map_start() {
-        return
+
         const center = SMap.Coords.fromWGS84(14.41790, 50.12655)
         const map = this.map = new SMap(JAK.gel("map"), center)
         map.addDefaultLayer(SMap.DEF_BASE).enable()
         map.addDefaultControls()
 
         // marker layer
-        var marker_layer = new SMap.Layer.Marker()
-        map.addLayer(marker_layer)
-        marker_layer.enable()
+        this.marker_layer = new SMap.Layer.Marker()
+        map.addLayer(this.marker_layer)
+        this.marker_layer.enable()
 
-        $("#map").hide(0)
-
+        // geometry layer
+        this.geometry_layer = new SMap.Layer.Geometry()
+        map.addLayer(this.geometry_layer).enable()
+        this.$map.hide(0)
+        return this
     }
 
-    set_center(point) {
-        console.log("445: point", point)
+    /**
+     * The map is displayed either at the background at the fixed position
+     *  (and you cannot interact with by controls like mouse, the frame above takes the control)
+     * or in a place of a frame you give here.
+     * @param {jQuery|null} $frame Frame or null (fixed, non interactive position)
+     */
+    adapt($frame = null) {
+        this.$map.show(0)
+
+        if ($frame) {
+            this.$map.prependTo($frame)
+        } else {
+            this.$map.prependTo($("body")) // XX not used in the moment, fullscreen background
+        }
+    }
+
+    _names_to_places(names = null) {
+        return Promise.all(names.map(name => Place.get(name)))
+    }
+
+    set_center(longitude, latitude) {
+        const point = SMap.Coords.fromWGS84(longitude, latitude)
         this.map.setCenter(point, true)
-        //return SMap.Coords.fromWGS84(this.coordinates.longitude, this.coordinates.latitude)
     }
 
-    suggest(query) {
-        return
+    async display_route(names = null) {
+        this._names_to_places(names).then(places => {
+            SMap.Route.route(places.map(place => place.coord()), {
+                geometry: true
+            }).then((route) => {
+                if (route._results.error) {
+                    console.warn("***Cannot find route", route)
+                    return
+                }
+                console.log("Route", route)
+                const coords = route.getResults().geometry
+                this.geometry_layer.clear()
+                this.geometry_layer.addGeometry(new SMap.Geometry(SMap.GEOMETRY_POLYLINE, null, coords))
+                this.map.setCenterZoom(...this.map.computeCenterZoom(coords), true)
+            })
+        })
+    }
 
-        return (new SMap.SuggestProvider()).get(query).then((addresses) => {
-            if (addresses.length < 1) {
-                console.log("Coordinates error", query, addresses)
-                return
-            }
-            console.log("456: addresses[0]", addresses[0])
+    async display_markers(names = null) {
+        this._names_to_places(names).then(places => {
+            places.forEach(place => {
 
-            MapCache[query] = addresses[0]
-            const point = addresses[0]
-            const coords = SMap.Coords.fromWGS84(point.longitude, point.latitude)
-            this.set_center(coords)
+                var card = new SMap.Card();
+                card.getHeader().innerHTML = "<strong>Nadpis</strong>";
+                card.getBody().innerHTML = "Ahoj, já jsem <em>obsah vizitky</em>!";
+
+                // const znacka = JAK.mel("div");
+                // const popisek = JAK.mel("div", { }, {position:"absolute", left:"0px", top:"2px", textAlign:"center", width:"22px", color:"white", fontWeight:"bold"});
+                // popisek.innerHTML = this.name;
+                // znacka.appendChild(popisek);
+
+                const marker = new SMap.Marker(place.coord(), place.name, {
+                    title: place.name,
+                    // url: znacka
+                });
+                marker.decorate(SMap.Marker.Feature.Card, card);
+                this.marker_layer.addMarker(marker);
+            })
+
+            // centralize the map
+            console.log("527: (...this.map", this.map.computeCenterZoom(places.map(p => p.coord())))
+
+            this.map.setCenterZoom(...this.map.computeCenterZoom(places.map(p => p.coord())), true)
         })
     }
 }
 
-// Main
+class Place {
+    static async get(name) {
+        const p = new Place(name)
+        await p.assure_coord()
+        return p
+    }
+    constructor(name) {
+        this.name = name
+        let cache
+
+        // XX turn cache back on
+        // try {// if there is something wrong in cache
+        //     cache = JSON.parse(localStorage.getItem("PLACE: " + this.name)) || {}
+        // } catch (e) {
+        cache = {}
+        // }
+
+        this.coordinates = cache.coordinates || {}
+    }
+
+    /**
+     * return true if coordinates already exist
+     * */
+    assure_coord() {
+        if (this.coordinates && Object.keys(this.coordinates).length) {
+            return true
+        }
+
+        return (new SMap.SuggestProvider()).get(this.name).then((addresses) => {
+            if (addresses.length < 1) {
+                console.log("Coordinates error", this.name, addresses)
+                return
+            }
+            this.coordinates = addresses[0]
+            console.log("Coordinates", this.name, "possibilities:", addresses.length, this.coordinates)
+            this.cache_self()
+        })
+    }
+
+    coord() {
+        if (!this.coordinates || !Object.keys(this.coordinates).length) {
+            console.warn("Unknown coordinates of", this.name)
+        }
+        return SMap.Coords.fromWGS84(this.coordinates.longitude, this.coordinates.latitude)
+    }
+
+    // XX route to another place
+    // compute_distance(place) {
+    //     if (this.distances[place.name]) { // we already have this distance
+    //         return true;
+    //     }
+    //     return (new SMap.Route([this.coord(), place.coord()], (route) => {
+    //         const [time, len] = [route._results.time, route._results.length]
+    //         console.log(`${this.name} -> ${place.name}: ${len} m, ${time} s`)
+    //         if (time && len) {
+    //             Place._show_route_on_map(route) // XX looks amazing but slows down, might make it togglable in UI
+    //             this.distances[place.name] = { "time": time, "length": len }
+    //             this.cache_self()
+    //         }
+    //     })).getPromise()
+    // }
+
+    // static _show_route_on_map(route) {
+    //     var coords = route.getResults().geometry
+    //     // m.setCenterZoom(...m.computeCenterZoom(coords))
+    //     var g = new SMap.Geometry(SMap.GEOMETRY_POLYLINE, null, coords)
+    //     geometry_layer.clear()
+    //     geometry_layer.addGeometry(g)
+    // }
+
+    cache_self() {
+        localStorage.setItem("PLACE: " + this.name, JSON.stringify(this))
+    }
+}
+
+// Main launch and export to the dev console
 let $articles = Frame.load_all()
 /**
  * @type {Playback}
  */
 let playback
-
-
-// export to the dev console
 const menu = new Menu()
-playback
