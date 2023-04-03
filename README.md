@@ -48,7 +48,15 @@ Which contains arbitrary HTML code, such as images or videos.
 * attributes
     * `data-places`: Delimited by comma. Ex: "Prague, Brno"
     * `data-route`: Delimited by comma. Ex: "Prague, Brno"
-* Content does not work in the frame.
+* Content is not displayed in the moment.
+* You may nest `<article-map>` tags easily which causes the map to change.
+
+```html
+<article-map data-duration="0" data-places="Prague, Brno">
+    <article-map data-duration="0" data-places="Paris"></article-map>
+    <article-map data-duration="0.3" data-places="London"></article-map>
+</article-map>
+```
 
 ## Frame group <section>
 These `<article>` tags might be encapsuled into (nested) `<section>` groups. A `<section>` has the same attributes as an `<article>`.
@@ -67,6 +75,17 @@ As the ultimate default the `<main>` tag may be used.
 <main data-duration='0.5'>
     <article>Short frame (inherits 0.5)</article>
 </main>
+```
+
+### Nested <article> tags
+
+You may nest an `<article>` beneath another one. Which causes the children to be hidden and shown on top of the parent when they time comes.
+
+```html
+<article>
+    <img src="flower.jpg" />
+    <article>That is a flower!</article>
+</article>
 ```
 
 ## Frame content
