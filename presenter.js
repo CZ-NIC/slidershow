@@ -225,7 +225,7 @@ class Playback {
         $articles.show()
 
         this.hud = new Hud()
-        this.hud.map()
+        this.hud.map_start()
 
 
         this.$current = $articles.first()
@@ -357,6 +357,8 @@ class Playback {
             //     top: `${$current.position().top}px`,
             //     left: `${$current.position().left}px`,
             // }, TRANS_DURATION)
+
+            this.hud.suggest("Pardubice")
         }
 
         // start transition
@@ -373,15 +375,11 @@ class Playback {
                 return
             }
             console.log("Frame ready")
-
             const duration = this.frame.enter(() => this.moving && this.nextFrame())
 
-
             // Duration
-            if (moving) {
-                if (duration) {
-                    this.moving_timeout = setTimeout(() => this.moving && frame.leave() && this.nextFrame(), duration * 1000)
-                }
+            if (moving && duration) {
+                this.moving_timeout = setTimeout(() => this.moving && frame.leave() && this.nextFrame(), duration * 1000)
             }
         })
     }
@@ -425,14 +423,52 @@ class Playback {
     }
 }
 
+/**
+ * @type {Object.<string, SMap.Coords>} {query: SMap.Coords}
+ */
+MapCache = {}
+
 class Hud {
-    map() {
-        return; // XXXXXx
-        let center = SMap.Coords.fromWGS84(14.41790, 50.12655);
-        let m = new SMap(JAK.gel("m"), center);
-        m.addDefaultLayer(SMap.DEF_BASE).enable();
-        m.addDefaultControls();
+    constructor() {
+        this.map = null
+    }
+    map_start() {
+        return
+        const center = SMap.Coords.fromWGS84(14.41790, 50.12655)
+        const map = this.map = new SMap(JAK.gel("map"), center)
+        map.addDefaultLayer(SMap.DEF_BASE).enable()
+        map.addDefaultControls()
+
+        // marker layer
+        var marker_layer = new SMap.Layer.Marker()
+        map.addLayer(marker_layer)
+        marker_layer.enable()
+
         $("#map").hide(0)
+
+    }
+
+    set_center(point) {
+        console.log("445: point", point)
+        this.map.setCenter(point, true)
+        //return SMap.Coords.fromWGS84(this.coordinates.longitude, this.coordinates.latitude)
+    }
+
+    suggest(query) {
+        return
+
+        return (new SMap.SuggestProvider()).get(query).then((addresses) => {
+            if (addresses.length < 1) {
+                console.log("Coordinates error", query, addresses)
+                return
+            }
+            console.log("456: addresses[0]", addresses[0])
+
+            MapCache[query] = addresses[0]
+            const point = addresses[0]
+            const coords = SMap.Coords.fromWGS84(point.longitude, point.latitude)
+            this.set_center(coords)
+        })
     }
 }
 

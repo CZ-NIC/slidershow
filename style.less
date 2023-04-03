@@ -4,6 +4,7 @@ body {
     overflow-y: hidden; //XX debug
     overflow-x: hidden; //XX debug
     // position: relative;
+    margin: 0; // browser default
 }
 
 main {
@@ -52,13 +53,16 @@ menu {
     width: 500px;
     height: 500px;
 
+    height: 100%;
+    width: 100%;
+
     // background-color: blue;
     // z-index: 10;
     #map {
         position: absolute;
 
-        height:50vh;
-        width:50vw;
+        height: 100%;
+        width: 100%;
     }
 }
 
@@ -69,7 +73,7 @@ article-map {
     // left: 5vw;
     width: 100vw;
     height: 100vh;
-    padding: 3px;
+    // padding: 3px;
     text-align: center;
     font-size: 10vw;
     margin-bottom: 100vh;
