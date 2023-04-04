@@ -122,8 +122,14 @@ We try to fetch Exif data for images.
 
 However, this is a non-trivial task since the browser protects your photos privacy. This will work for images you drag and drop inside, image from the web (with the permitive CORS policy). Reading the Exif of your local images you just mention in the document will work only with the browser (CORS disabled)[https://stackoverflow.com/questions/4819060/allow-google-chrome-to-use-xmlhttprequest-to-load-a-url-from-a-local-file] – do that only if you know what are you doing.
 
+#### Zoomable
 
-* Zoomable on click/mouse wheel.
+Zoomable on click/mouse wheel.
+
+
+#### Panoramatic images
+
+When an image is much longer than the screen, we show it slowly first before resizing it to fit the screen.
 
 # Playback
 

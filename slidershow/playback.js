@@ -139,7 +139,7 @@ class Playback {
 
         this.index = $articles.index($current)
 
-        frame.prepare(this.map)
+        frame.prepare()
 
         // start transition
         this.moving = moving
@@ -156,7 +156,10 @@ class Playback {
             }
             console.log("Frame ready")
             const duration = frame.enter(() => this.moving && this.nextFrame())
-            $last.data("frame").left()
+
+            if ($last[0] !== $current[0]) {
+                $last.data("frame").left()
+            }
 
             // Duration
             if (moving && duration) {

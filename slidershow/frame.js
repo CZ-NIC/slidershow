@@ -93,6 +93,11 @@ class Frame {
         this.$frame = $el
         this.playback = playback
         this.$video_pause_listener = null
+        /**  @type {jQuery|null}         */
+        this.$actor = null
+
+        this.panorama_callback = null
+
         /**
          * If set, this frame is a subframe.
          * @type {Frame|null}
@@ -138,10 +143,6 @@ class Frame {
         return this.$frame.closest(`[data-${prop}]`).data(prop)
     }
 
-    /**
-     *
-     * @param {MapWidget} map
-     */
     prepare(map) {
         const $frame = this.$frame
 
@@ -171,11 +172,16 @@ class Frame {
             $(this).empty().append($("<source/>", { src: $(this).data("src-cached-data") }))
         })
 
+        // Get main media
+        const $actor = this.$actor = $frame.find("video, img").first()
+        if ($actor.prop("tagName") === "IMG") {
+            this.panorama()
+        }
 
 
         if ($frame.prop("tagName") === "ARTICLE-MAP") {
 
-
+            const map = this.playback.map
             map.adapt(this)
             map.geometry_layer.clear()
             map.marker_layer.clear()
@@ -198,13 +204,16 @@ class Frame {
         const $frame = this.$frame
 
         // Get main media
-        const $actor = $frame.find("video, img").first()
+        const $actor = this.$actor // $frame.find("video, img").first()
 
 
         // Image frame
         if ($actor.prop("tagName") === "IMG") {
             this.zoom($actor)
             Frame.exif($actor)
+            if (this.panorama_callback) {
+                this.panorama_callback()
+            }
         }
 
         // No HTML tag found, fit plain text to the screen size
@@ -243,7 +252,58 @@ class Frame {
     }
 
     left() {
+        this.$actor.stop(true)
+    }
 
+    panorama() {
+        const $actor = this.$actor
+        this.panorama_callback = null
+
+        // get image dimensions
+        $actor.css({
+            width: "unset",
+            height: "unset",
+            "max-width": "unset",
+            "max-height": "unset",
+        })
+        const [w, h, main_w, main_h] = [$actor.width(), $actor.height(), window.innerWidth, window.innerHeight]
+        const small_height = main_w / (w / h)
+        const medium_width = w / (h / main_h)
+        const trailing_width = medium_width - main_w
+
+        $actor.css({
+            width: "inherit",
+            height: "inherit",
+            "max-width": "inherit",
+            "max-height": "inherit",
+        })
+
+        if (w / h > 2) {
+            let speed = Math.min((trailing_width / 100), 5) * 1000 // 100 px / 1s, but max 5 sec
+            // speed = 1000
+            $actor.css({
+                width: "unset",
+                height: "unset",
+                "max-width": "unset",
+                "max-height": main_h,
+                "position": "absolute",
+                "left": 0
+            })
+            this.panorama_callback = () => {
+                $actor.animate({
+                    left: - trailing_width,
+                }, speed, () => {
+                    console.log("255: ANIM CENTRA", $actor)
+                    $actor.animate({
+                        left: 0,
+                        width: main_w,
+                        top: (main_h / 2) - (small_height / 2) + "px"
+                    }, 1000, () => {
+                        $actor.removeAttr("style")
+                    })
+                })
+            }
+        }
     }
 
     zoom($actor) {
