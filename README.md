@@ -14,9 +14,9 @@ Every frame is represented by an `<article>` tag.
 
 Which contains arbitrary HTML code, such as images or videos.
 
-## Attributes
+### Attributes
 
-* `data-duration`: How many seconds a frame will last. By default, indefinitely
+* `data-duration`: How many seconds a frame will last. By default, indefinitely (waiting for a user action)
 ```html
 <article data-duration="0.5">Short frame</article>
 <article>You have to click to get further.</article>
@@ -43,7 +43,7 @@ Which contains arbitrary HTML code, such as images or videos.
 </article>
 ```
 
-## <article-map>
+## Map frame <article-map>
 
 * attributes
     * `data-places`: Delimited by comma. Ex: "Prague, Brno"
@@ -109,6 +109,19 @@ Any HTML content is accepted.
 ### Text
 
 If there is no tag inside an `<article>`, it is considered as a plain text. Its size gets fit to the screen width.
+
+### <img>
+
+#### Exif info
+We try to fetch Exif data for images.
+* `data-device`: maker and model
+* `data-dateTime`
+* `data-gps`: point on the map
+
+However, this is a non-trivial task since the browser protects your photos privacy. This will work for images you drag and drop inside, image from the web (with the permitive CORS policy). Reading the Exif of your local images you just mention in the document will work only with the browser (CORS disabled)[https://stackoverflow.com/questions/4819060/allow-google-chrome-to-use-xmlhttprequest-to-load-a-url-from-a-local-file] – do that only if you know what are you doing.
+
+
+* Zoomable on click/mouse wheel.
 
 # Playback
 

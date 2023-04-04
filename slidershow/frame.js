@@ -17,30 +17,64 @@ class FrameFactory {
         return FrameFactory.html(text, append)
     }
 
-    static img(filename, append = true) {
+    static img(filename, append = true, data = null, ram_only = false) {
         // data-src prevents the performance for serveral thousand frames
-        return FrameFactory.html(`<img src="data:" data-src="${filename}" />`, append)
+        console.log("22: data", data)
+
+        const $el = $(`<img src="data:" data-src="${filename}" />`)
+        const $frame = FrameFactory.html($el, append)
+
+        if (data) {
+            // sets exif
+            Frame.exif($el, data)
+
+            if (ram_only) {
+                // src preloading (we do not need to know the exact directory)
+                FrameFactory._read(data, $el)
+            }
+        }
+
+
+        return $frame
     }
-    static video(filename, append = true) {
-        return FrameFactory.html(`<video controls autoplay data-src="${filename}"></video>`, append)
+
+    static video(filename, append = true, data = null, ram_only = false) {
+        const $el = $(`<video controls autoplay data-src="${filename}"></video>`)
+        const $frame = FrameFactory.html($el, append)
+        if (data && ram_only) {
+            FrameFactory._read(data, $el)
+        }
+        return $frame
+    }
+
+    static _read(data, $el) {
+        const reader = new FileReader()
+        reader.onload = (e) => $el
+            .attr("data-src-cached", 1)
+            .data("src-cached-data", e.target.result)
+        reader.readAsDataURL(data)
     }
 
     /**
      *
-     * @param {*} filename
+     * @param {string} filename
+     * @param {bool} append to $main
+     * @param {Object} data
+     * @param {bool} ram_only We will push the media contents to the RAM
      * @returns {null|jQuery} Null if the file could not be included
      */
-    static file(filename, append = true) {
+
+    static file(filename, append = true, data = null, ram_only = false) {
         const suffix = filename.split('.').pop().toLowerCase()
         switch (suffix) {
             case "mp4":
-                return FrameFactory.video(filename, append)
+                return FrameFactory.video(filename, append, data, ram_only)
             case "heif":
             case "heic":
             case "gif":
             case "png":
             case "jpg":
-                return FrameFactory.img(filename, append)
+                return FrameFactory.img(filename, append, data, ram_only)
             default:
                 console.warn("Cannot identify", filename)
                 FrameFactory.text("Cannot be identified: " + filename, append)
@@ -50,8 +84,14 @@ class FrameFactory {
 }
 
 class Frame {
-    constructor($el) {
+    /**
+     *
+     * @param {jQuery} $el
+     * @param {Playback|null} playback
+     */
+    constructor($el, playback = null) {
         this.$frame = $el
+        this.playback = playback
         this.$video_pause_listener = null
         /**
          * If set, this frame is a subframe.
@@ -113,14 +153,26 @@ class Frame {
         // preload media
         // for the case of several thousands file, the perfomarce is important
         // XX we should probably implement an unload too
+
+        // Attribute preload – file src is held in the attribute
         $frame.find("img[data-src]").each(function () {
             $(this).attr("src", $(this).data("src"))
             $(this).removeAttr("data-src")
         })
         $frame.find("video[data-src]").each(function () {
-            $(this).append("src", $("<source/>", { src: $(this).data("src") }))
-            $(this).removeAttr("data-src")
+            $(this).empty().append($("<source/>", { src: $(this).data("src") }))
         })
+
+        // Memory preload – we hold all data in the memory
+        $frame.find("img[data-src-cached]").each(function () {
+            $(this).attr("src", $(this).data("src-cached-data"))
+        })
+        $frame.find("video[data-src-cached]").each(function () {
+            $(this).empty().append($("<source/>", { src: $(this).data("src-cached-data") }))
+        })
+
+
+
         if ($frame.prop("tagName") === "ARTICLE-MAP") {
 
 
@@ -151,58 +203,13 @@ class Frame {
 
         // Image frame
         if ($actor.prop("tagName") === "IMG") {
-            // Zoomable image
-            // XX works bad with object fit
-            // const scale_init = 1
-            // $actor.wrap('<span style="display:inline-block"></span>')
-            //     .css('display', 'block')
-            //     .parent()
-            //     .zoom({ "magnify": scale_init, "on": "grab" })
-            //     .on("dblclick", function () { // exit zooming
-            //         $(this).data("current-zoom", 0)
-            //         $(this).trigger('zoom.destroy')
-            //     })
-            //     .on('wheel', function (e) {
-            //         e.preventDefault()
-            //         const scaleDelta = e.originalEvent.deltaY > 0 ? -.1 : .1;
-            //         let scale = ($(this).data("current-zoom") || scale_init) + scaleDelta
-            //         if (scale < 0.3) {
-            //             $(this).trigger('zoom.destroy')
-            //             return
-            //         }
-            //         $(this).data("current-zoom", scale)
-            //         $(this).trigger('zoom.destroy')
-            //         $(this).zoom({
-            //             magnify: scale
-            //         })
-            //     })
-
-            // Exif
-
-            var img1 = $actor.get()
-            console.log("153: 1", 1)
-
-            EXIF.getData(img1, function () {
-                console.log("157: ", 555)
-
-                var make = EXIF.getTag(this, "Make");
-                var model = EXIF.getTag(this, "Model");
-                var makeAndModel = document.getElementById("makeAndModel");
-                console.log(`${make} ${model}`);
-            });
-            console.log("153: 2", 1)
-
-            // var img2 = document.getElementById("img2");
-            // EXIF.getData(img2, function () {
-            //     var allMetaData = EXIF.getAllTags(this);
-            //     var allMetaDataSpan = document.getElementById("allMetaDataSpan");
-            //     allMetaDataSpan.innerHTML = JSON.stringify(allMetaData, null, "\t");
-            // });
+            this.zoom($actor)
+            Frame.exif($actor)
         }
 
         // No HTML tag found, fit plain text to the screen size
         if ($frame.children().length === 0) {
-            // textFit($frame) // XXXXXX pusť to zas
+            textFit($frame)
         }
 
         // Video frame
@@ -239,11 +246,94 @@ class Frame {
 
     }
 
+    zoom($actor) {
+        // Zoomable image
+        // XX works bad with object fit
+        // const scale_init = 1
+        // $actor.wrap('<span style="display:inline-block"></span>')
+        //     .css('display', 'block')
+        //     .parent()
+        //     .zoom({ "magnify": scale_init, "on": "grab" })
+        //     .on("dblclick", function () { // exit zooming
+        //         $(this).data("current-zoom", 0)
+        //         $(this).trigger('zoom.destroy')
+        //     })
+        //     .on('wheel', function (e) {
+        //         e.preventDefault()
+        //         const scaleDelta = e.originalEvent.deltaY > 0 ? -.1 : .1;
+        //         let scale = ($(this).data("current-zoom") || scale_init) + scaleDelta
+        //         if (scale < 0.3) {
+        //             $(this).trigger('zoom.destroy')
+        //             return
+        //         }
+        //         $(this).data("current-zoom", scale)
+        //         $(this).trigger('zoom.destroy')
+        //         $(this).zoom({
+        //             magnify: scale
+        //         })
+        //     })
+    }
+
+    static exif($el, data = null, callback = null) {
+        if (!READ_EXIF) {
+            return
+        }
+        const process = (exif) => {
+            const attrs = {}
+
+            const make = exif.Make
+            const model = exif.Model
+            if (make && model) {
+                attrs["data-device"] = `${make} ${model}`
+            }
+
+            // získání dat o datumu a času pořízení fotografie
+            const dateTime = exif.DateTimeOriginal?.replace(/:/g, "-").replace(/ /g, "T")
+            if (dateTime) { attrs["data-dateTime"] = dateTime }
+
+            // convert GPS
+            const { GPSLatitude: _lat, GPSLongitude: _lon, GPSLatitudeRef: _latRef, GPSLongitudeRef: _lonRef } = exif
+            try {
+                const latitude = Frame._convertDMSToDD(_lat[0], _lat[1], _lat[2], _latRef)
+                const longitude = Frame._convertDMSToDD(_lon[0], _lon[1], _lon[2], _lonRef)
+                if (longitude && latitude) {
+                    attrs["data-gps"] = `${longitude}, ${latitude}`
+                }
+            } catch (e) {
+                ; // no gps info
+            }
+
+
+
+            console.log("Exif info", attrs);
+            $el.attr(attrs)  // XX these attrs are not used in the moment
+            if (callback) {
+                callback()
+            }
+        }
+
+        // raises uncatcheable log when CORS encoutered
+        EXIF.getData(data || $el.get()[0], function () {
+            process(EXIF.getAllTags(this))
+        })
+    }
+
+    /**
+     * GPS DMS -> DD
+     */
+    static _convertDMSToDD(degrees, minutes, seconds, direction) {
+        var dd = degrees + (minutes / 60) + (seconds / 3600)
+        if (direction == "S" || direction == "W") {
+            dd = dd * -1
+        }
+        return dd
+    }
+
     /**
      *
      * @returns {jQuery[]}
      */
-    static load_all() {
-        return $("article,article-map").each((_, el) => $(el).data("frame", new Frame($(el))))
+    static load_all(playback = null) {
+        return $("article,article-map").each((_, el) => $(el).data("frame", new Frame($(el), playback)))
     }
 }

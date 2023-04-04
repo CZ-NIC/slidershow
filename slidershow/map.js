@@ -50,8 +50,12 @@ class MapWidget {
 
         if ($frame) {
             this.$map.prependTo($frame)
+
         } else {
-            this.$map.prependTo($("body")) // XX not used in the moment, fullscreen background
+
+            this.$map.prependTo($("#map-wrapper")) // XX not used in the moment, fullscreen background
+
+            // this.$map.prependTo($("body")) // XX not used in the moment, fullscreen background
         }
     }
 
@@ -61,7 +65,9 @@ class MapWidget {
 
     set_center(longitude, latitude) {
         const point = SMap.Coords.fromWGS84(longitude, latitude)
-        this.map.setCenter(point, true)
+
+        this.marker_layer.addMarker(new SMap.Marker(point))
+        this.map.setCenter(point, false)
     }
 
     async display_route(names = null) {
@@ -148,7 +154,7 @@ class MapWidget {
     //         let instruction = buffer.shift();
     //         m.setCenterZoom(SMap.Coords.fromWGS84(instruction[0], instruction[1]), instruction[2], true);
     //     }, 700);
-    // //                        }, 300); // XXXX vra
+    // //                        }, 300);
     //     suggest = new SMap.SuggestProvider();
     //     var queries = {};
 
@@ -208,7 +214,7 @@ class MapWidget {
     //         }
     //         console.log("zoom", x, y, zoom_final);
     //         buffer.push([x, y, zoom_final]);
-    // //return; // XXX
+    // //return; // XX
     // //                            console.log("celkove:", x, y, distance, zoom, max_zoom, zoom_final, buffer);
     //         changing.start();
     //         changing.panorama = panorama;

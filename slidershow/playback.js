@@ -13,7 +13,7 @@ class Playback {
          */
         this.frame
         this.appendEndSlide() // XX gets appended multiple times when playback starts multiple times
-        $articles = Frame.load_all()
+        $articles = Frame.load_all(this)
         this.positionFrames()
         $articles.show()
 
@@ -34,6 +34,8 @@ class Playback {
         console.log("188: Abor",)
 
         this.promise.aborted = true
+
+        // return this.index
     }
 
     positionFrames() {
