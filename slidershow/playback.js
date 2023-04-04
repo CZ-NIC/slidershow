@@ -8,6 +8,9 @@ class Playback {
         this.promise = {} // transition promise
         this.moving = true
         this.moving_timeout = null
+
+        this.map = new MapWidget().map_start()
+
         /**
          * @type {Frame}
          */
@@ -15,26 +18,27 @@ class Playback {
         this.appendEndSlide() // XX gets appended multiple times when playback starts multiple times
         $articles = Frame.load_all(this)
         this.positionFrames()
-        $articles.show()
 
-        this.map = new MapWidget().map_start()
+        this.$current
+        this.index = 0
 
-
-        this.$current = $articles.first()
-        this.goToFrame(0, true)
-        this.$current.show()
-
+        this.start()
+        // this.$current.show()
         this.videoInit()
         this.shortcuts()
+
+    }
+
+    start() {
+        $articles.show()
+        this.$current = $articles.first()
+        this.goToFrame(this.index, true)
     }
 
     stop() {
         clearTimeout(this.moving_timeout)
         $articles.hide()
-        console.log("188: Abor",)
-
         this.promise.aborted = true
-
         // return this.index
     }
 
@@ -169,6 +173,7 @@ class Playback {
         const last = $last.data("frame")
         /** @type {Frame} */
         const current = $current.data("frame")
+        const TRANS_DURATION = current.prop("transition-duration") * 1000
 
         switch (current.prop("transition")) {
             case "scroll-down": // XX deprec?
@@ -180,6 +185,7 @@ class Playback {
                     return current.effect("arrive-from-top")
                 }
             case "fade": // XX incompatible with body manipulation
+
                 $last.fadeOut(TRANS_DURATION)
                 return $current.fadeIn(TRANS_DURATION)
             default:

@@ -8,12 +8,14 @@ class Menu {
 
         const $start = $("#start").focus().click(() => this.start())
 
+        this.playback = null
+
         if ($menu.attr("data-skip") !== undefined) {
             this.start()
         }
 
         wh.press(KEY.ESCAPE, "Go to menu", () => {
-            playback.stop()
+            this.playback.stop()
             $menu.show()
             $start.focus()
 
@@ -48,7 +50,16 @@ class Menu {
 
     start() {
         this.$menu.hide()
-        playback = new Playback()
+        if (!this.playback) {
+            this.playback = playback = new Playback()
+        } else {
+            this.playback.start()
+        }
+    }
+
+    clean_playback() {
+        this.playback = playback = null
+        $articles.remove() // delete old frames
     }
 
     appendFiles(items) {
@@ -61,7 +72,7 @@ class Menu {
             folder = ""
         }
 
-        $articles.remove() // delete old frames
+        this.clean_playback()
         const $section = $("<section/>").appendTo($main);
         [...(new FormData($("#defaults")[0]))].map(([key, val]) => $section.attr("data-" + key, val))
 

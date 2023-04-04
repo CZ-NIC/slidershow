@@ -5,6 +5,9 @@ class MapWidget {
          */
         this.map = null
         this.$map = $("#map")
+        if (!this.$map.length) {
+            this.$map = $("<div/>", { id: "map" }).prependTo("body")
+        }
     }
     map_start() {
 

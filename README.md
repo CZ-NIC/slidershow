@@ -1,3 +1,5 @@
+Slidershow – more than a slideshow
+
 Have you ever wanted to show your friends media from holidays? How cubersome it was to mix photos and videos? Enough of frame transition? Dreaming about a fully customisable presentation experience? Presentation file size huge? This HTML based presented will let you show your contents just as you want. Either launch it and drag the files inside or fully define all the properties.
 
 # Structure
@@ -31,7 +33,7 @@ Which contains arbitrary HTML code, such as images or videos.
 ```
 
 * `data-transition`: `fade` (default), `scroll-down` XXX
-* `data-transition-duration`: s (default 0.5) XXX
+* `data-transition-duration`: s (default 0.5)
 * `data-x`, `data-y`: A viewport stands for a chessboard field. This is the position of the frame in the chessboard. XXX Attention, when nested in section. They may stay in the same position. Implement z-index of something.
 * `data-video`: All <video> tags inherits its value as attributes. (controls autoplay muted loop)
 

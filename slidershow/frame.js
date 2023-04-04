@@ -115,7 +115,7 @@ class Frame {
      */
     effect(effect) {
         return
-        const TRANS_DURATION = 1000
+        const TRANS_DURATION = this.prop("transition-duration") * 1000
         const $el = this.$frame
         const winHeight = $(window).height() + "px"
         switch (effect) {
