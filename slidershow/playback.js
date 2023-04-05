@@ -1,4 +1,3 @@
-
 /**
  * Frame playback controller.
  */
@@ -9,7 +8,12 @@ class Playback {
         this.moving = true
         this.moving_timeout = null
 
-        this.map = new MapWidget().map_start()
+
+
+        const fact = (id) => $("<div/>", { id: id }).prependTo("body")
+        this.map = new MapWidget(fact("map")).map_start()
+        this.hud = new Hud()
+        this.hud_map = new MapWidget(fact("map-hud")).map_start()
 
         /**
          * @type {Frame}
@@ -31,6 +35,7 @@ class Playback {
 
     start() {
         $articles.show()
+        $hud.show(0)
         this.$current = $articles.first()
         this.goToFrame(this.index, true)
     }
@@ -38,8 +43,23 @@ class Playback {
     stop() {
         clearTimeout(this.moving_timeout)
         $articles.hide()
+        $hud.hide(0)
         this.promise.aborted = true
+        this.hud_map.hide()
         // return this.index
+    }
+    destroy() {
+        console.log("47: this.map.map", this.map.map)
+
+        this.map.destroy()
+        this.hud_map.destroy()
+    }
+
+    play_pause(moving) {
+        if (this.moving !== moving) {
+            this.hud.playback_icon(moving ? "▶" : "&#9612;&#9612;")
+        }
+        this.moving = moving
     }
 
     positionFrames() {
@@ -57,8 +77,8 @@ class Playback {
             }
             // XXX data("x") might be ZERO. Do not ignore.
             $el.css({
-                top: (frame.prop("y") || index) * 100 + "vh",
-                left: (frame.prop("x") || index) * 100 + "vw",
+                top: frame.prop("y", index) * 100 + "vh",
+                left: frame.prop("x", index) * 100 + "vw",
             })
         })
     }
@@ -146,7 +166,7 @@ class Playback {
         frame.prepare()
 
         // start transition
-        this.moving = moving
+        this.play_pause(moving)
         if (this.moving_timeout) {
             clearTimeout(this.moving_timeout)
         }

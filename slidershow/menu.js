@@ -58,7 +58,10 @@ class Menu {
     }
 
     clean_playback() {
-        this.playback = playback = null
+        if (this.playback) {
+            this.playback.destroy()
+            this.playback = playback = null
+        }
         $articles.remove() // delete old frames
     }
 

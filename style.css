@@ -40,6 +40,31 @@ menu #defaults {
   position: fixed;
   z-index: 10;
 }
+#hud > * {
+  position: fixed;
+}
+#hud #playback-icon {
+  right: 3vw;
+  top: 3vh;
+}
+#hud #hud-fileinfo {
+  right: 3vw;
+  bottom: 10vw;
+  text-align: right;
+}
+#hud #hud-fileinfo #hud-gps {
+  display: none;
+}
+#map-hud {
+  position: fixed;
+  height: 10vh;
+  min-height: 300px;
+  min-width: 300px;
+  width: 10vw;
+  top: 3vh;
+  right: 5vw;
+  z-index: 1;
+}
 #map {
   position: absolute;
   height: 100%;

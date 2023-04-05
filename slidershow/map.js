@@ -1,18 +1,20 @@
 class MapWidget {
-    constructor() {
+    constructor($map) {
         /**
          * @type {SMap}
          */
         this.map = null
-        this.$map = $("#map")
-        if (!this.$map.length) {
-            this.$map = $("<div/>", { id: "map" }).prependTo("body")
-        }
+
+        this.$map = $map
+
+        console.log("11: CONSTRUCT",)
+
     }
     map_start() {
+        console.log("13: START",this.$map[0])
 
         const center = SMap.Coords.fromWGS84(14.41790, 50.12655)
-        const map = this.map = new SMap(JAK.gel("map"), center)
+        const map = this.map = new SMap(JAK.gel(this.$map[0]), center)
         map.addDefaultLayer(SMap.DEF_BASE).enable()
         map.addDefaultControls()
 
@@ -56,10 +58,20 @@ class MapWidget {
 
         } else {
 
-            this.$map.prependTo($("#map-wrapper")) // XX not used in the moment, fullscreen background
+            // this.$map.prependTo($("#map-wrapper")) // XX not used in the moment, fullscreen background -> map_hud used instead
 
-            // this.$map.prependTo($("body")) // XX not used in the moment, fullscreen background
+            this.$map.prependTo($("body")) // XX not used in the moment, fullscreen background
         }
+    }
+
+    hide(){
+        this.geometry_layer.removeAll()
+        this.marker_layer.removeAll()
+        this.$map.hide()
+    }
+    destroy() {
+        this.map.$destructor()
+        this.$map.remove()
     }
 
     _names_to_places(names = null) {
@@ -67,6 +79,8 @@ class MapWidget {
     }
 
     set_center(longitude, latitude) {
+        this.$map.show(0)
+
         const point = SMap.Coords.fromWGS84(longitude, latitude)
 
         this.marker_layer.addMarker(new SMap.Marker(point))

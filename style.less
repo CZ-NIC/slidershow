@@ -46,30 +46,39 @@ menu {
 }
 
 #hud {
-    // display:none; // XX
-    position: fixed; // Xdoes not work when moving body, we have to move it manually
-    // position:absolute;
-    // right: 10px;
-    // width: 500px;
-    // height: 500px;
-
-    // height: 100%;
-    // width: 100%;
+    position: fixed; // note that when position:fixed does not work when moving body
     z-index: 10;
-    // background-color: blue;
-    // z-index: 10;
+
+    > * {
+        position: fixed;
+    }
+
+    #playback-icon {
+        right:3vw;
+        top:3vh;
+    }
+
+    #hud-fileinfo {
+        right:3vw;
+        bottom: 10vw;
+        text-align:right;
+
+        #hud-gps {
+            display: none; // XX not used right now
+        }
+    }
 }
 
-// #map-wrapper {
-//     position: fixed;
-//     height: 10vh;
-//     min-height: 300px;
-//     min-width: 300px;
-//     width: 10vw;
-//     top: 3vh;
-//     right: 5vw;
-//     z-index: 1;
-// }
+#map-hud {
+    position: fixed;
+    height: 10vh;
+    min-height: 300px;
+    min-width: 300px;
+    width: 10vw;
+    top: 3vh;
+    right: 5vw;
+    z-index: 1;
+}
 
 #map {
     position: absolute;

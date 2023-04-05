@@ -139,11 +139,15 @@ class Frame {
         }
     }
 
-    prop(prop) {
-        return this.$frame.closest(`[data-${prop}]`).data(prop)
+    prop(prop, def = null) {
+        const v = this.$frame.closest(`[data-${prop}]`).data(prop)
+        if (v === undefined && def !== undefined) {
+            return def
+        }
+        return v
     }
 
-    prepare(map) {
+    prepare() {
         const $frame = this.$frame
 
         this.children.forEach(f => f.$frame.hide())
@@ -158,7 +162,7 @@ class Frame {
         // Attribute preload – file src is held in the attribute
         $frame.find("img[data-src]").each(function () {
             $(this).attr("src", $(this).data("src"))
-            $(this).removeAttr("data-src")
+            // $(this).removeAttr("data-src")
         })
         $frame.find("video[data-src]").each(function () {
             $(this).empty().append($("<source/>", { src: $(this).data("src") }))
@@ -178,6 +182,17 @@ class Frame {
             this.panorama()
         }
 
+        // File name
+        console.log("186: $actor", $actor, $frame)
+
+
+        this.playback.hud.fileinfo($actor)
+
+        // Map
+        const gps = $actor.data("gps")
+        if (gps) {
+                this.playback.hud_map.set_center(...gps.split(","))
+        }
 
         if ($frame.prop("tagName") === "ARTICLE-MAP") {
 
@@ -204,12 +219,11 @@ class Frame {
         const $frame = this.$frame
 
         // Get main media
-        const $actor = this.$actor // $frame.find("video, img").first()
-
+        const $actor = this.$actor
 
         // Image frame
         if ($actor.prop("tagName") === "IMG") {
-            this.zoom($actor)
+            this.zoom()
             Frame.exif($actor)
             if (this.panorama_callback) {
                 this.panorama_callback()
@@ -248,7 +262,9 @@ class Frame {
             this.$video_pause_listener.off("pause")
             this.$video_pause_listener = null
         }
-        this.$actor.data("wzoom-unload")?.()
+        this.$actor?.data("wzoom-unload")?.()
+
+        this.playback.hud_map.hide()
         return true
     }
 
@@ -302,7 +318,8 @@ class Frame {
         }
     }
 
-    zoom($actor) {
+    zoom() {
+        const $actor = this.$actor
         $actor.off("click wheel").on("click wheel", () => {
             if ($actor.data("wzoom-unload")) {
                 return
@@ -312,9 +329,8 @@ class Frame {
                 maxScale: maxScale_default,
                 minScale: 1,
                 speed: 1,
-                // we can wheel in for ever
-                // but as the click takes us to the current bed,
-                // keep maxScale on leash
+                // We can wheel in for ever but keeping maxScale on leash.
+                // Because the click takes us to the current bed (and second click zooms out).
                 rescale: (wzoom) =>
                     wzoom.content.maxScale = Math.max(maxScale_default, wzoom.content.currentScale + 3)
             })
@@ -325,6 +341,8 @@ class Frame {
                 wzoom.destroy()
                 $actor.data("wzoom-unload", null).off("dblclick")
             })).on("dblclick", () => $actor.data("wzoom-unload")())
+
+            this.playback.moving = false
         })
     }
 
