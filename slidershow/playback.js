@@ -139,6 +139,10 @@ class Playback {
 
         this.index = $articles.index($current)
 
+        const same_frame = $last[0] === $current[0]
+        if (!same_frame) {
+            $last.data("frame").leave()
+        }
         frame.prepare()
 
         // start transition
@@ -147,7 +151,7 @@ class Playback {
             clearTimeout(this.moving_timeout)
         }
         this.promise.aborted = true
-        const promise = this.promise = $last[0] === $current[0] ? Promise.resolve() : this.transition($last, $current).promise()
+        const promise = this.promise = same_frame ? Promise.resolve() : this.transition($last, $current).promise()
         promise.then(() => {
             // frame is at the viewport now
             if (promise.aborted) { // another frame was raise meanwhile
@@ -157,13 +161,14 @@ class Playback {
             console.log("Frame ready")
             const duration = frame.enter(() => this.moving && this.nextFrame())
 
-            if ($last[0] !== $current[0]) {
+            if (!same_frame) {
                 $last.data("frame").left()
             }
 
+
             // Duration
             if (moving && duration) {
-                this.moving_timeout = setTimeout(() => this.moving && frame.leave() && this.nextFrame(), duration * 1000)
+                this.moving_timeout = setTimeout(() => this.moving && this.nextFrame(), duration * 1000)
             }
         })
     }

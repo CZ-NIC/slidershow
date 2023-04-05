@@ -248,6 +248,7 @@ class Frame {
             this.$video_pause_listener.off("pause")
             this.$video_pause_listener = null
         }
+        this.$actor.data("wzoom-unload")?.()
         return true
     }
 
@@ -271,12 +272,7 @@ class Frame {
         const medium_width = w / (h / main_h)
         const trailing_width = medium_width - main_w
 
-        $actor.css({
-            width: "inherit",
-            height: "inherit",
-            "max-width": "inherit",
-            "max-height": "inherit",
-        })
+        $actor.removeAttr("style")
 
         if (w / h > 2) {
             let speed = Math.min((trailing_width / 100), 5) * 1000 // 100 px / 1s, but max 5 sec
@@ -307,31 +303,29 @@ class Frame {
     }
 
     zoom($actor) {
-        // Zoomable image
-        // XX works bad with object fit
-        // const scale_init = 1
-        // $actor.wrap('<span style="display:inline-block"></span>')
-        //     .css('display', 'block')
-        //     .parent()
-        //     .zoom({ "magnify": scale_init, "on": "grab" })
-        //     .on("dblclick", function () { // exit zooming
-        //         $(this).data("current-zoom", 0)
-        //         $(this).trigger('zoom.destroy')
-        //     })
-        //     .on('wheel', function (e) {
-        //         e.preventDefault()
-        //         const scaleDelta = e.originalEvent.deltaY > 0 ? -.1 : .1;
-        //         let scale = ($(this).data("current-zoom") || scale_init) + scaleDelta
-        //         if (scale < 0.3) {
-        //             $(this).trigger('zoom.destroy')
-        //             return
-        //         }
-        //         $(this).data("current-zoom", scale)
-        //         $(this).trigger('zoom.destroy')
-        //         $(this).zoom({
-        //             magnify: scale
-        //         })
-        //     })
+        $actor.off("click wheel").on("click wheel", () => {
+            if ($actor.data("wzoom-unload")) {
+                return
+            }
+            const maxScale_default = 5
+            const wzoom = WZoom.create($actor.get()[0], {
+                maxScale: maxScale_default,
+                minScale: 1,
+                speed: 1,
+                // we can wheel in for ever
+                // but as the click takes us to the current bed,
+                // keep maxScale on leash
+                rescale: (wzoom) =>
+                    wzoom.content.maxScale = Math.max(maxScale_default, wzoom.content.currentScale + 3)
+            })
+            wzoom.zoomUp() // compensate the click already been consumed
+
+
+            $actor.data("wzoom-unload", () => setTimeout(() => { // we have to timeout - wzoom bug, has to finish before it can be destroyed
+                wzoom.destroy()
+                $actor.data("wzoom-unload", null).off("dblclick")
+            })).on("dblclick", () => $actor.data("wzoom-unload")())
+        })
     }
 
     static exif($el, data = null, callback = null) {

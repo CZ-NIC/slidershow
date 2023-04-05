@@ -124,7 +124,7 @@ However, this is a non-trivial task since the browser protects your photos priva
 
 #### Zoomable
 
-Zoomable on click/mouse wheel.
+Zoomable on click/mouse wheel. Double click restores image original size.
 
 
 #### Panoramatic images
