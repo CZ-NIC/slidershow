@@ -13,6 +13,6 @@ function loadScript(src) {
     });
 }
 
-Promise.all(["frame.js", "place.js", "map.js", "hud.js", "menu.js", "playback.js"].map(f => loadScript(f))).then(() => {
+Promise.all(["static.js", "frame.js", "place.js", "map.js", "hud.js", "menu.js", "playback.js"].map(f => loadScript(f))).then(() => {
     loadScript("launch.js")
 })

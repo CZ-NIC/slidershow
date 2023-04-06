@@ -11,9 +11,9 @@ class Playback {
 
 
         const fact = (id) => $("<div/>", { id: id }).prependTo("body")
-        this.map = new MapWidget(fact("map")).map_start()
+        this.map = new MapWidget(fact("map"), this).map_start()
         this.hud = new Hud()
-        this.hud_map = new MapWidget(fact("map-hud")).map_start()
+        this.hud_map = new MapWidget(fact("map-hud"), this).map_start()
 
         /**
          * @type {Frame}
@@ -38,6 +38,10 @@ class Playback {
         $hud.show(0)
         this.$current = $articles.first()
         this.goToFrame(this.index, true)
+
+        // setTimeout(() => {
+        //     this.hud_map.test()
+        // }, 300)
     }
 
     stop() {

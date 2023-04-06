@@ -72,6 +72,8 @@ class Place {
     // }
 
     cache_self() {
-        localStorage.setItem("PLACE: " + this.name, JSON.stringify(this))
+        if (this.name) {
+            localStorage.setItem("PLACE: " + this.name, JSON.stringify(this))
+        }
     }
 }

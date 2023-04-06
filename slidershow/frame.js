@@ -1,6 +1,3 @@
-
-
-
 /**
  * Append new frame programatically with the static methods.
  */
@@ -91,6 +88,7 @@ class Frame {
      */
     constructor($el, playback = null) {
         this.$frame = $el
+        /** @type Playback */
         this.playback = playback
         this.$video_pause_listener = null
         /**  @type {jQuery|null}         */
@@ -191,7 +189,9 @@ class Frame {
         // Map
         const gps = $actor.data("gps")
         if (gps) {
-                this.playback.hud_map.set_center(...gps.split(","))
+            // this.playback.hud_map.set_center(...gps.split(","))
+            // XXXX zkousim tu
+            this.playback.hud_map.animate_to(...gps.split(","))
         }
 
         if ($frame.prop("tagName") === "ARTICLE-MAP") {

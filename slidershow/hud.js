@@ -29,4 +29,9 @@ class Hud {
         this.$hud_datetime.html($actor.data("datetime"))
         this.$hud_gps.html($actor.data("gps"))
     }
+
+    alert(text){
+        // $("#letadylko-submit").after("<span class='map-broken alert alert-warning'></span>");
+        alert(text)
+    }
 }

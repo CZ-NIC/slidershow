@@ -1,17 +1,38 @@
+/**
+ * @typedef {number[]} Coordinates
+ * @property {number} 0 - Zeměpisná délka (longitude).
+ * @property {number} 1 - Zeměpisná šířka (latitude).
+ */
+
 class MapWidget {
-    constructor($map) {
+    /**
+     *
+     * @param {jQuery} $map
+     * @param {Playback} playback
+     */
+    constructor($map, playback) {
         /**
          * @type {SMap}
          */
         this.map = null
 
         this.$map = $map
+        this.playback = playback
+        console.log("21: !!!!!playback", playback)
 
-        console.log("11: CONSTRUCT",)
 
+        this.query_last
+        this.changing
+        this.buffer
+        this.animate_map_init()
     }
+
+    /**
+     *
+     * @returns MapWidget
+     */
     map_start() {
-        console.log("13: START",this.$map[0])
+        console.log("13: START", this.$map[0])
 
         const center = SMap.Coords.fromWGS84(14.41790, 50.12655)
         const map = this.map = new SMap(JAK.gel(this.$map[0]), center)
@@ -57,14 +78,12 @@ class MapWidget {
             this.$map.prependTo($frame)
 
         } else {
-
             // this.$map.prependTo($("#map-wrapper")) // XX not used in the moment, fullscreen background -> map_hud used instead
-
             this.$map.prependTo($("body")) // XX not used in the moment, fullscreen background
         }
     }
 
-    hide(){
+    hide() {
         this.geometry_layer.removeAll()
         this.marker_layer.removeAll()
         this.$map.hide()
@@ -129,153 +148,137 @@ class MapWidget {
         })
     }
 
-    // Nicer map zooming XX (I did for my wedding page)
-    //     //pokyny pro pohyb v mape
-    //     var buffer = [];
-    //     buffer.target = null;
-    //     var changing = new Interval(() => {
-    //         if (buffer.length === 0) {
-    //             changing.stop();
-    //             if (changing.panorama) {
-    //                 $(".panorama").show();
-    //                 // prepneme panorama a mapu
-    //                 SMap.Pano.get(changing.panorama[0]).then(function (place) {
-    //                     let o = {"fov": 1, "pitch": 0};  // we have to reset fov and pitch in case user changed something on the last scene
-    //                     if (changing.panorama[1]) {
-    //                         o["yaw"] = changing.panorama[1];
-    //                     }
-    //                     panoramaScene.show(place, o);
-    //                 });
-    //                 if (!panorama_shown) {
-    //                     panorama_shown = true;
-    //                     try {
-    //                         m.removeControl(mini4);
-    //                         m.addControl(panoramaScene, {right: "3px", bottom: "3px"}); // this throws an error
-    //                     } catch (e) {
-    //                     }
-    //                 }
-    //             }
+    /**
+     * Nicer map zooming XX I did for my wedding page
+     */
+    animate_map_init() {
+        this.buffer = []
+        this.buffer.target = null
+        console.log("155: this.playback", this.playback)
+const thisRef = this
+        this.changing = new Interval(() => {
+            console.log("158: this", this, this.TEST, thisRef.TEST)
+            // console.trace()
 
-    //             //check, jestli je mapa zasekla
-    //             let r = (x) => {
-    //                 return Math.round(x * 10000);
-    //             };
-    //             if (buffer.target && r(buffer.target[0]) !== r(m.getCenter().x) || r(buffer.target[1]) !== r(m.getCenter().y)) {
-    //                 $("#letadylko-submit").after("<span class='map-broken alert alert-warning'>Mapa se možná rozbila – jestli nereaguje, renačtěte stránku, pardon.</span>");
-    //             } else {
-    //                 $(".map-broken").remove();
-    //             }
-    // //                                marker.setCoords(m.getCenter());
-    //             return;
-    //         }
-    //         let instruction = buffer.shift();
-    //         m.setCenterZoom(SMap.Coords.fromWGS84(instruction[0], instruction[1]), instruction[2], true);
-    //     }, 700);
-    // //                        }, 300);
-    //     suggest = new SMap.SuggestProvider();
-    //     var queries = {};
+            console.log("158: this.buffer", this.buffer, thisRef.buffer)
 
-    //     function change_location_callback(addresses, zoom_final, panorama) {
+            if (this.buffer.length === 0) {
+                this.changing.stop()
+                // check map broken
+                const r = (x) => {
+                    return Math.round(x * 10000);
+                }
+                console.log("164: this.buffer", this.buffer)
 
-    //         changing.stop();
-    //         buffer = [];
-    //         [a, b] = [m.getCenter().x, m.getCenter().y];
-    //         [x, y] = [addresses[0].longitude, addresses[0].latitude];
-    //         buffer.target = [x, y];
-    //         let distance = Math.sqrt(Math.pow(a - x, 2) + Math.pow(b - y, 2));
-    //         let max_zoom;
-    //         if (distance < 0.001) {
-    //             max_zoom = 17;
-    //         } else if (distance < 0.01) {
-    //             max_zoom = 15;
-    //         } else if (distance < 0.1) {
-    //             max_zoom = 13;
-    //         } else if (distance < 1) {
-    //             max_zoom = 11;
-    //         } else if (distance < 10) {
-    //             max_zoom = 9;
-    //         } else {
-    //             max_zoom = 3;
-    //         }
-    //         let current_zoom = m.getZoom();
-    //         let zoom = Math.min(max_zoom, current_zoom);
-
-    //         // XX změna v polovině instrukcí funguje ok?
-
-    //         // zoom out
-    //         let steps = Math.ceil((current_zoom - zoom) / 3);
-    //         for (let step = 1; step <= steps; step++) {
-    //             console.log("Odzoom", a, b, current_zoom - (current_zoom - zoom) / steps * step);
-    //             buffer.push([a, b, current_zoom - (current_zoom - zoom) / steps * step]);
-    //         }
-
-    //         // move
-    //         steps = 3;
-    //         for (let step = 1; step <= steps; step++) {
-    //             x_step = (x - a) / steps * step;
-    //             y_step = (y - b) / steps * step;
-    //             if (Math.abs(x_step) < 0.00001 && Math.abs(y_step) < 0.00001) {
-    //                 console.log("standing", x_step, y_step);
-    //                 break;
-    //             }
-    //             console.log("move", a + x_step, b + y_step, zoom);
-    //             buffer.push([a + x_step, b + y_step, zoom]);
-    //         }
+                console.log("165: this.playback", this.playback) // XXXXXX tady
+                if (this.buffer.target && r(this.buffer.target[0]) !== r(this.map.getCenter().x) || r(this.buffer.target[1]) !== r(this.map.getCenter().y)) {
+                    console.log("165: this.playback", this.playback)
+                    console.log("166: this", this)
 
 
-    //         // zoom in
-    //         steps = Math.ceil((zoom_final - zoom) / 3);
-    //         for (let step = 1; step < steps; step++) {
-    //             console.log("zoom", x, y, Math.round(zoom + (zoom_final - zoom) / steps * step));
-    //             buffer.push([x, y, Math.round(zoom + (zoom_final - zoom) / steps * step)]);
-    //         }
-    //         console.log("zoom", x, y, zoom_final);
-    //         buffer.push([x, y, zoom_final]);
-    // //return; // XX
-    // //                            console.log("celkove:", x, y, distance, zoom, max_zoom, zoom_final, buffer);
-    //         changing.start();
-    //         changing.panorama = panorama;
+                    this.playback.hud.alert("Map broken?")
+                }
+                return
+            }
+            const ins = this.buffer.shift()
 
 
-    //         if (panorama_shown) {
-    //             panorama_shown = false;
-    //             try {
-    //                 m.addControl(mini4, {right: "3px", bottom: "3px"});
-    //                 m.removeControl(panoramaScene);
+            this.map.setCenterZoom(SMap.Coords.fromWGS84(ins[0], ins[1]), ins[2], true)
+        }, 700).stop()
 
-    //             } catch (e) {
-    //             }
-    //         }
+    }
+
+    _animate_to(longitude, latitude, zoom_final) {
+        console.log("184: longitude, latitude", longitude, latitude)
+
+        this.changing.stop()
+        this.buffer = []
+        const [a, b] = [this.map.getCenter().x, this.map.getCenter().y]
+        const [x, y] = [longitude, latitude]
+
+        this.marker_layer.addMarker(new SMap.Marker(SMap.Coords.fromWGS84(longitude, latitude)))
+
+        this.buffer.target = [x, y]
+        console.log("192: this.buffer", this.buffer, a,b)
+
+        let distance = Math.sqrt(Math.pow(a - x, 2) + Math.pow(b - y, 2))
+        let max_zoom
+        if (distance < 0.001) {
+            max_zoom = 17
+        } else if (distance < 0.01) {
+            max_zoom = 15
+        } else if (distance < 0.1) {
+            max_zoom = 13
+        } else if (distance < 1) {
+            max_zoom = 11
+        } else if (distance < 10) {
+            max_zoom = 9
+        } else {
+            max_zoom = 3
+        }
+        let current_zoom = this.map.getZoom()
+        let zoom = Math.min(max_zoom, current_zoom)
+
+        // zoom out
+        let steps = Math.ceil((current_zoom - zoom) / 3)
+        for (let step = 1; step <= steps; step++) {
+            console.log("Odzoom", a, b, current_zoom - (current_zoom - zoom) / steps * step)
+            this.buffer.push([a, b, current_zoom - (current_zoom - zoom) / steps * step])
+        }
+
+        // move
+        steps = 3
+        for (let step = 1; step <= steps; step++) {
+            const x_step = (x - a) / steps * step
+            const y_step = (y - b) / steps * step
+            if (Math.abs(x_step) < 0.00001 && Math.abs(y_step) < 0.00001) {
+                console.log("standing", x_step, y_step)
+                break;
+            }
+            console.log("228: a,x_step, steps, step, x", a,x_step, steps, step, x)
+
+            console.log("move", a + x_step, b + y_step, zoom)
+            this.buffer.push([a + x_step, b + y_step, zoom])
+        }
 
 
+        // zoom in
+        steps = Math.ceil((zoom_final - zoom) / 3)
+        for (let step = 1; step < steps; step++) {
+            console.log("zoom", x, y, Math.round(zoom + (zoom_final - zoom) / steps * step))
+            this.buffer.push([x, y, Math.round(zoom + (zoom_final - zoom) / steps * step)])
+        }
+        console.log("zoom", x, y, zoom_final)
+        this.buffer.push([x, y, zoom_final])
+        console.log("247: this.buffer", this.buffer)
+        this.TEST = 5
+        this.changing.start()
+    }
 
-    //     }
+    // test() {
+    //     this.animate_to("Salcburk", 11)
+    // }
 
-    //     var query_last = null;
-    //     function change_location(query, zoom_final = 8, panorama = null) {
-    //         if (query_last && query_last[0] === query && query_last[1] === zoom_final) {
-    //             return;
-    //         }
-    //         query_last = [query, zoom_final];
-    //         console.log("query", query, panorama);
-    //         if (typeof query !== "string") { // query is GPS coordinates
-    //             addresses = [{longitude: query[0], latitude: query[1]}]
-    //             change_location_callback(addresses, zoom_final, panorama);
-    //         } else { // query is a query string
-    //             if (query in queries) {
-    //                 change_location_callback(queries[query], zoom_final, panorama);
-    //             } else {
-    //                 suggest.get(query).then((addresses) => {
-    //                     if(addresses.length < 1) {
-    //                         console.log("Chyba addresses", addresses);
-    //                         $("#letadylko-submit").after("<span class='map-broken alert alert-warning'>Jestli mapa blbě reaguje, renačtěte stránku, pardon.</span>");
-    //                         return;
-    //                     }
-    //                     queries[query] = addresses;
-    //                     change_location_callback(queries[query], zoom_final, panorama);
-    //                 });
-    //             }
-    //     }
-    //     }
+
+    animate_to(longitude, latitude, zoom_final = 8) {
+        this.$map.show(0)
+        // if (this.query_last && this.query_last[0] === longitude && this.query_last[1] === latitude && this.query_last[2] === zoom_final) {
+        //     return
+        // }
+        if (this.query_last?.join() === [longitude, latitude, zoom_final].join()) {
+            return
+        }
+        this.query_last = [longitude, latitude,  zoom_final]
+        this._animate_to(longitude, latitude, zoom_final)
+
+        // if (typeof query !== "string") { // query is GPS coordinates
+        //     addresses = [{ longitude: query[0], latitude: query[1] }]
+        //     this._animate_to(addresses, zoom_final)
+        // } else { // query is a query string
+        //     this._names_to_places([query]).then(places =>
+        //         this._animate_to(places[0], zoom_final)
+        //     )
+        // }
+    }
+
 }
-
