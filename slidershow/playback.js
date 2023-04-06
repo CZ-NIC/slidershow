@@ -70,7 +70,7 @@ class Playback {
             /** @type {Frame} */
             const frame = $el.data("frame")
 
-            if ($el.parent().is("article,article-map")) {
+            if ($el.parent().is(FRAME_SELECTOR)) {
                 frame.register_parent($el.parent().data("frame"))
             } else {
                 index += 1

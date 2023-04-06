@@ -8,7 +8,7 @@ class AnimationStep {
     constructor(longitude, latitude, zoom, description, marker = false) {
         this.longitude = longitude
         this.latitude = latitude
-        this.zoom = zoom
+        this.zoom = Math.round(zoom)
         this.description = description
         this.marker = marker
     }
@@ -41,7 +41,7 @@ class MapWidget {
          * Animation steps
          * @type {AnimationStep[]}
          */
-        this.buffer
+        this.animation
 
         /**
          * Final animation destination
@@ -49,7 +49,7 @@ class MapWidget {
          * @property {number} 0 - longitude
          * @property {number} 1 - latitude
          */
-        this.animation_target
+        this.target_point
         this.animate_map_init()
     }
 
@@ -184,21 +184,23 @@ class MapWidget {
      * Nicer map zooming I did for my wedding page
      */
     animate_map_init() {
-        this.buffer = []
-        this.animation_target = null
+        this.animation = []
+        this.target_point = null
         this.changing = new Interval(() => {
-            if (this.buffer.length === 0) {
+            if (this.animation.length === 0) {
                 this.changing.stop()
                 // check map broken
                 const r = (x) => {
                     return Math.round(x * 10000);
                 }
-                if (r(this.animation_target.x) !== r(this.map.getCenter().x) || r(this.animation_target.y) !== r(this.map.getCenter().y)) {
+                if (r(this.target_point.x) !== r(this.map.getCenter().x) || r(this.target_point.y) !== r(this.map.getCenter().y)) {
                     this.playback.hud.alert("Map broken?")
                 }
                 return
             }
-            const as = this.buffer.shift()
+            const as = this.animation.shift()
+            console.log("202: as", as)
+
 
             if (as.marker) {
                 this.clear()
@@ -229,7 +231,7 @@ class MapWidget {
         zoom_final = Math.max(zoom_final, computed_zoom)
 
         this.changing.stop()
-        this.buffer = []
+        this.animation = []
         const [a, b] = [this.map.getCenter().x, this.map.getCenter().y]
         const [x, y] = [longitude, latitude]
 
@@ -243,11 +245,11 @@ class MapWidget {
         let steps = Math.ceil((current_zoom - zoom) / 3)
         let as = null
         for (let step = 1; step <= steps; step++) {
-            this.buffer.push(new AnimationStep(a, b, current_zoom - (current_zoom - zoom) / steps * step, "zoom out"))
+            this.animation.push(new AnimationStep(a, b, current_zoom - (current_zoom - zoom) / steps * step, "zoom out"))
         }
 
-        this.buffer.push(new AnimationStep(x, y, null, "marker", true))
-        this.animation_target = point
+        this.animation.push(new AnimationStep(x, y, null, "marker", true))
+        this.target_point = point
 
 
         // move
@@ -262,16 +264,16 @@ class MapWidget {
                 break;
             }
 
-            this.buffer.push(new AnimationStep(a + x_step, b + y_step, zoom, "move"))
+            this.animation.push(new AnimationStep(a + x_step, b + y_step, zoom, "move"))
         }
 
         // zoom in
         steps = Math.ceil((zoom_final - zoom) / 3)
         for (let step = 1; step < steps; step++) {
-            this.buffer.push(new AnimationStep(x, y, Math.round(zoom + (zoom_final - zoom) / steps * step), "zoom in"))
+            this.animation.push(new AnimationStep(x, y, zoom + (zoom_final - zoom) / steps * step, "zoom in"))
         }
 
-        this.buffer.push(new AnimationStep(x, y, zoom_final, "zoom final"))
+        this.animation.push(new AnimationStep(x, y, zoom_final, "zoom final"))
         this.changing.start()
     }
 

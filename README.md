@@ -2,9 +2,26 @@ Slidershow – more than a slideshow
 
 Have you ever wanted to show your friends media from holidays? How cubersome it was to mix photos and videos? Enough of frame transition? Dreaming about a fully customisable presentation experience? Presentation file size huge? This HTML based presented will let you show your contents just as you want. Either launch it and drag the files inside or fully define all the properties.
 
+# Usage
+
+## Online
+The application runs in the browser – check it.
+
+(Remember: Nothing is uploaded to the server. Check the code – there is no server.)
+
+## Manually
+
+Add somewhere and that is all!
+
+```html
+<script src="slidershow/slidershow.js"></script>
+```
+
 # Structure
 
 Put the presentation content to the <main> tag which contain <article> tags.
+
+
 
 ## Frame <article>
 

@@ -2,6 +2,7 @@
 const wh = new WebHotkeys()
 const $main = $("main")
 const $hud = $("#hud")
+const FRAME_SELECTOR = "article,article-map"
 
 const READ_EXIF = true // power consuming
 

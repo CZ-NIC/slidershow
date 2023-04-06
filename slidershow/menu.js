@@ -22,7 +22,11 @@ class Menu {
             // scroll back
             Playback.resetWindow()
             $main.css({ top: '0px', left: '0px' })
+
+            this.export() // XXXX
         })
+
+        wh.pressCtrl(KEY.S, "Export presentation", () => this.export())
 
         // Drop new files
         const $drop = $("#drop").on("drop", (ev) => {
@@ -82,5 +86,31 @@ class Menu {
         const elements = items.map(item => FrameFactory.file(folder + item.name, false, item, ram_only)).filter(x => !!x)
         $section.hide(0).append(elements).children().hide(0).parent().show(0)
         return true
+    }
+
+    export() {
+        const $contents = $($main.html())
+
+        $contents.find("*").removeAttr("style")
+        $contents.find(FRAME_SELECTOR).each(function () { Frame.preload($(this), true) })
+        // $contents.find("*").each(function () {
+        //     $(this).removeAttr("style")
+        // })
+        // reduce parameters
+        console.log("96: $contents.html()", $contents.html())
+
+        // return
+        var data = `<html>\n<head>
+<script src="./slidershow.js"></script>
+</head>\n<body>\n<main>` + $contents.html() + "\n</main>\n</body>\n</html>"
+        var blob = new Blob([data], { type: "text/plain" })
+        var url = URL.createObjectURL(blob)
+        var link = document.createElement("a")
+        link.href = url
+        link.download = "slidershow.html"
+        document.body.appendChild(link)
+        link.click()
+        URL.revokeObjectURL(url)
+        document.body.removeChild(link)
     }
 }

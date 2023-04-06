@@ -160,26 +160,8 @@ class Frame {
             $frame.show(0) // it was hidden before
         }
 
-        // preload media
-        // for the case of several thousands file, the perfomarce is important
-        // XX we should probably implement an unload too
+        Frame.preload($frame)
 
-        // Attribute preload – file src is held in the attribute
-        $frame.find("img[data-src]").each(function () {
-            $(this).attr("src", $(this).data("src"))
-            // $(this).removeAttr("data-src")
-        })
-        $frame.find("video[data-src]").each(function () {
-            $(this).empty().append($("<source/>", { src: $(this).data("src") }))
-        })
-
-        // Memory preload – we hold all data in the memory
-        $frame.find("img[data-src-cached]").each(function () {
-            $(this).attr("src", $(this).data("src-cached-data"))
-        })
-        $frame.find("video[data-src-cached]").each(function () {
-            $(this).empty().append($("<source/>", { src: $(this).data("src-cached-data") }))
-        })
 
         // Get main media
         const $actor = this.$actor = $frame.find("video, img").first()
@@ -218,6 +200,35 @@ class Frame {
             }
         }
 
+    }
+
+    /**
+     *   preload media
+     *   for the case of several thousands file, the perfomarce is important
+     *   XX we should probably implement an unload too
+     * @param {jQuery} $frame
+     * @param {bool} one_way Remove helper attributes but prevents further preload call
+     */
+    static preload($frame, one_way = false) {
+        // Attribute preload – file src is held in the attribute
+        $frame.find("img[data-src]").each(function () {
+            $(this).attr("src", $(this).data("src"))
+
+            if (one_way) {
+                $(this).removeAttr("data-src")
+            }
+        })
+        $frame.find("video[data-src]").each(function () {
+            $(this).empty().append($("<source/>", { src: $(this).data("src") }))
+        })
+
+        // Memory preload – we hold all data in the memory
+        $frame.find("img[data-src-cached]").each(function () {
+            $(this).attr("src", $(this).data("src-cached-data"))
+        })
+        $frame.find("video[data-src-cached]").each(function () {
+            $(this).empty().append($("<source/>", { src: $(this).data("src-cached-data") }))
+        })
     }
 
     enter(video_finished_clb) {
@@ -411,6 +422,6 @@ class Frame {
      * @returns {jQuery[]}
      */
     static load_all(playback = null) {
-        return $("article,article-map").each((_, el) => $(el).data("frame", new Frame($(el), playback)))
+        return $(FRAME_SELECTOR).each((_, el) => $(el).data("frame", new Frame($(el), playback)))
     }
 }
