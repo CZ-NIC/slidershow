@@ -37,6 +37,7 @@ loadjQuery(() => {
     Promise.all(vendor.concat(local)).then(() => {
         Loader.async = true
         Loader.load(null, null, () => { // Maps API need to have special callback
+            head().appendTo("body")
             loadScript({ src: DIR + "launch.js" }) // run the main script
         })
     })
@@ -57,4 +58,44 @@ function loadScript(attrs) {
         script.onerror = reject
         document.head.appendChild(script)
     });
+}
+
+function head() {
+    return $(`<div id="map-wrapper"></div>
+
+    <div id="hud">
+        <div id="hud-fileinfo">
+            <div id="hud-filename"></div>
+            <div id="hud-device"></div>
+            <div id="hud-datetime"></div>
+            <div id="hud-gps"></div>
+        </div>
+    </div>
+
+    <menu>
+        <h1>SlideRshow</h1>
+        <div>
+            Start presenting<br />
+            <button id="start">&#9654;</button>
+        </div>
+
+        <div>
+            Or choose another frames<br />
+            <input type="file" id="file" multiple>
+
+            <div id="drop" data-placeholder="Drag files here">
+                Drag files here
+            </div>
+
+            <form id="defaults">
+                Defaults
+                <br />Duration <input name="duration" value="3" size="4" placeholder="0"> s
+                <br />Video frame duration <input name="duration-video" value="0" size="4" placeholder="0"> s
+                <br />Transition <input name="transition-duration" value="0.5" size="4" placeholder="0"> s
+            </form>
+
+            <br/>
+            <button id="export" title="Export Ctrl+S">💾</button>
+        </div>
+    </menu>`)
 }

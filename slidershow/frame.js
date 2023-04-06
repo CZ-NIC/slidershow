@@ -363,7 +363,9 @@ class Frame {
     }
 
     static exif($el, data = null, callback = null) {
-        if (!READ_EXIF) {
+        if (!READ_EXIF || $el.data("exif-done")) {
+            console.log("367: skip exif", )
+
             return
         }
         const process = (exif) => {
@@ -394,7 +396,7 @@ class Frame {
 
 
             console.log("Exif info", attrs);
-            $el.attr(attrs)  // XX these attrs are not used in the moment
+            $el.attr(attrs).data("exif-done", 1)
             if (callback) {
                 callback()
             }

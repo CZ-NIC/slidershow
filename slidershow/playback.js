@@ -26,10 +26,10 @@ class Playback {
         this.$current
         this.index = 0
 
-        this.start()
         // this.$current.show()
+        this.shortcuts = this.shortcutsInit()
+        this.start()
         this.videoInit()
-        this.shortcuts()
 
     }
 
@@ -38,6 +38,7 @@ class Playback {
         $hud.show(0)
         this.$current = $articles.first()
         this.goToFrame(this.index, true)
+        this.shortcuts.forEach(s => s.enable())
     }
 
     stop() {
@@ -46,7 +47,7 @@ class Playback {
         $hud.hide(0)
         this.promise.aborted = true
         this.hud_map.hide()
-        // return this.index
+        this.shortcuts.forEach(s => s.disable())
     }
     destroy() {
         console.log("47: this.map.map", this.map.map)
@@ -101,29 +102,25 @@ class Playback {
         FrameFactory.text("... end.")
     }
 
-    shortcuts() {
-        // Shortcuts
-        wh.press(KEY.SPACE, "Next", () => this.notVideoFocus() && this.nextFrame())
+    shortcutsInit() {
+        return [wh.press(KEY.SPACE, "Next", () => this.notVideoFocus() && this.nextFrame()),
 
-        wh.press(KEY.RIGHT, "Next", () => this.notVideoFocus() && this.nextFrame())
-        wh.press(KEY.LEFT, "Prev", () => this.notVideoFocus() && this.previousFrame())
+        wh.press(KEY.RIGHT, "Next", () => this.notVideoFocus() && this.nextFrame()),
+        wh.press(KEY.LEFT, "Prev", () => this.notVideoFocus() && this.previousFrame()),
 
-        wh.press(KEY.N, "Next", () => this.nextFrame())
-        wh.press(KEY.P, "Prev", () => this.previousFrame())
+        wh.press(KEY.N, "Next", () => this.nextFrame()),
+        wh.press(KEY.P, "Prev", () => this.previousFrame()),
 
-        wh.press(KEY.PageDown, "Next", () => this.nextFrame())
-        wh.press(KEY.PageUp, "Prev", () => this.previousFrame())
+        wh.press(KEY.PageDown, "Next", () => this.nextFrame()),
+        wh.press(KEY.PageUp, "Prev", () => this.previousFrame()),
 
-        wh.press(KEY.Home, "Go to the first", () => this.goToFrame(0))
-        wh.press(KEY.End, "Go to end", () => this.goToFrame($articles.length - 2)) // -2 and not -1 due to our artificial end slide
+        wh.press(KEY.Home, "Go to the first", () => this.goToFrame(0)),
+        wh.press(KEY.End, "Go to end", () => this.goToFrame($articles.length - 2)), // -2 and not -1 due to our artificial end slide
 
-        wh.press(KEY.H, "Show help", () => {
-            alert(wh.getText())
-        })
+        wh.press(KEY.M, "Toggle hud map", () => this.notVideoFocus() && this.hud_map.toggle()),
 
-        wh.press(KEY.M, "Toggle hud map", () => this.notVideoFocus() && this.hud_map.toggle())
+        wh.press(KEY.F, "Toggle file info", () => $("#hud-fileinfo").toggle())]
 
-        wh.press(KEY.F, "Toggle file info", () => $("#hud-fileinfo").toggle())
 
     }
 

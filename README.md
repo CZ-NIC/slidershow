@@ -131,6 +131,13 @@ If there is no tag inside an `<article>`, it is considered as a plain text. Its 
 
 ### <img>
 
+#### Preload
+When having thousands of image, your browser may choke. Use `data-src` instead of `src` as a preload.
+
+```html
+<img data-src="flower.jpg" /> <!-- becomes <img src="flower.jpg"> when needed -->
+```
+
 #### Exif info
 We try to fetch Exif data for images.
 * `data-device`: maker and model
@@ -161,4 +168,4 @@ Full controls: <kbd>h</kbd>
 
 ## Start
 
-The <menu> is displayed before the presentation starts, unless it has `data-skip` attribute.
+The <menu> is displayed before the presentation starts, unless the <main> has `data-start` attribute.

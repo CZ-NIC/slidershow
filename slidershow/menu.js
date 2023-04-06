@@ -3,30 +3,26 @@
 */
 class Menu {
     constructor() {
-        // $articles.hide(0) XX pryč
-        const $menu = this.$menu = $("menu").show(0)
+        this.$menu = $("menu").show(0)
 
-        const $start = $("#start").focus().click(() => this.start())
+        this.$start = $("#start").focus().click(() => this.start_playback())
 
         this.playback = null
 
-        if ($menu.attr("data-skip") !== undefined) {
-            this.start()
-        }
 
-        wh.press(KEY.ESCAPE, "Go to menu", () => {
-            this.playback.stop()
-            $menu.show()
-            $start.focus()
-
-            // scroll back
-            Playback.resetWindow()
-            $main.css({ top: '0px', left: '0px' })
-
-            this.export() // XXXX
+        // Global shortcuts
+        wh.press(KEY.ESCAPE, "Go to menu", () => this.stop_playback())
+        wh.press(KEY.H, "Show help", () => {
+            alert(wh.getText())
         })
-
         wh.pressCtrl(KEY.S, "Export presentation", () => this.export())
+
+        // Shortcuts available only in menu, not in playback
+        this.shortcuts = []
+
+        if ($main.attr("data-start") !== undefined) {
+            this.start_playback()
+        }
 
         // Drop new files
         const $drop = $("#drop").on("drop", (ev) => {
@@ -50,15 +46,29 @@ class Menu {
         const $file = $("#file").change(() => {
             this.appendFiles([...$file[0].files])
         })
+
+        $("#export").on("click", () => this.export())
     }
 
-    start() {
+    start_playback() {
         this.$menu.hide()
         if (!this.playback) {
             this.playback = playback = new Playback()
         } else {
             this.playback.start()
         }
+        this.shortcuts.forEach(s => s.disable())
+    }
+    stop_playback() {
+        this.playback.stop()
+        this.$menu.show()
+        this.$start.focus()
+
+        // scroll back
+        Playback.resetWindow()
+        $main.css({ top: '0px', left: '0px' })
+
+        this.shortcuts.forEach(s => s.enable())
     }
 
     clean_playback() {
@@ -89,23 +99,19 @@ class Menu {
     }
 
     export() {
-        const $contents = $($main.html())
+        const $contents = $($main.prop('outerHTML'))
 
+        // reduce parameters
+        $contents.removeAttr("style")
         $contents.find("*").removeAttr("style")
         $contents.find(FRAME_SELECTOR).each(function () { Frame.preload($(this), true) })
-        // $contents.find("*").each(function () {
-        //     $(this).removeAttr("style")
-        // })
-        // reduce parameters
-        console.log("96: $contents.html()", $contents.html())
 
-        // return
-        var data = `<html>\n<head>
-<script src="./slidershow.js"></script>
-</head>\n<body>\n<main>` + $contents.html() + "\n</main>\n</body>\n</html>"
-        var blob = new Blob([data], { type: "text/plain" })
-        var url = URL.createObjectURL(blob)
-        var link = document.createElement("a")
+        const data = `<html>\n<head>
+<script src="./slidershow/slidershow.js"></script>
+</head>\n<body>` + $contents.prop("outerHTML") + "\n</body>\n</html>"
+        const blob = new Blob([data], { type: "text/plain" })
+        const url = URL.createObjectURL(blob)
+        const link = document.createElement("a")
         link.href = url
         link.download = "slidershow.html"
         document.body.appendChild(link)
