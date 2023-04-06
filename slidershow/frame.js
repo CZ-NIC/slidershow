@@ -137,6 +137,13 @@ class Frame {
         }
     }
 
+    /**
+     * Return closest prop, defined in the DOM.
+     * (Zero aware, you can safely set `data-prop=0`.)
+     * @param {string} prop
+     * @param {any} def Default value if undefined
+     * @returns
+     */
     prop(prop, def = null) {
         const v = this.$frame.closest(`[data-${prop}]`).data(prop)
         if (v === undefined && def !== undefined) {
@@ -189,8 +196,6 @@ class Frame {
         // Map
         const gps = $actor.data("gps")
         if (gps) {
-            // this.playback.hud_map.set_center(...gps.split(","))
-            // XXXX zkousim tu
             this.playback.hud_map.animate_to(...gps.split(","))
         }
 

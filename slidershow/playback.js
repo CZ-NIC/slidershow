@@ -13,7 +13,7 @@ class Playback {
         const fact = (id) => $("<div/>", { id: id }).prependTo("body")
         this.map = new MapWidget(fact("map"), this).map_start()
         this.hud = new Hud()
-        this.hud_map = new MapWidget(fact("map-hud"), this).map_start()
+        this.hud_map = new MapWidget(fact("map-hud"), this).map_start(false)
 
         /**
          * @type {Frame}
@@ -38,10 +38,6 @@ class Playback {
         $hud.show(0)
         this.$current = $articles.first()
         this.goToFrame(this.index, true)
-
-        // setTimeout(() => {
-        //     this.hud_map.test()
-        // }, 300)
     }
 
     stop() {
@@ -79,7 +75,6 @@ class Playback {
             } else {
                 index += 1
             }
-            // XXX data("x") might be ZERO. Do not ignore.
             $el.css({
                 top: frame.prop("y", index) * 100 + "vh",
                 left: frame.prop("x", index) * 100 + "vw",
@@ -125,6 +120,10 @@ class Playback {
         wh.press(KEY.H, "Show help", () => {
             alert(wh.getText())
         })
+
+        wh.press(KEY.M, "Toggle hud map", () => this.notVideoFocus() && this.hud_map.toggle())
+
+        wh.press(KEY.F, "Toggle file info", () => $("#hud-fileinfo").toggle())
 
     }
 

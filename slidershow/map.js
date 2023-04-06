@@ -1,8 +1,22 @@
-/**
- * @typedef {number[]} Coordinates
- * @property {number} 0 - Zeměpisná délka (longitude).
- * @property {number} 1 - Zeměpisná šířka (latitude).
- */
+class AnimationStep {
+    /**
+     * @param {number} longitude
+     * @param {number} latitude
+     * @param {number} zoom
+     * @param {string} description
+     */
+    constructor(longitude, latitude, zoom, description, marker = false) {
+        this.longitude = longitude
+        this.latitude = latitude
+        this.zoom = zoom
+        this.description = description
+        this.marker = marker
+    }
+
+    point() {
+        return SMap.Coords.fromWGS84(this.longitude, this.latitude)
+    }
+}
 
 class MapWidget {
     /**
@@ -18,7 +32,6 @@ class MapWidget {
 
         this.$map = $map
         this.playback = playback
-        console.log("21: !!!!!playback", playback)
 
 
         this.query_last
@@ -26,10 +39,7 @@ class MapWidget {
 
         /**
          * Animation steps
-         * @type {number[]}
-         * @property {number} 0 - longitude
-         * @property {number} 1 - latitude
-         * @property {number} 2 - zoom
+         * @type {AnimationStep[]}
          */
         this.buffer
 
@@ -47,14 +57,13 @@ class MapWidget {
      *
      * @returns MapWidget
      */
-    map_start() {
-        console.log("13: START", this.$map[0])
-
+    map_start(controls = true) {
         const center = SMap.Coords.fromWGS84(14.41790, 50.12655)
         const map = this.map = new SMap(JAK.gel(this.$map[0]), center)
         map.addDefaultLayer(SMap.DEF_BASE).enable()
-        map.addDefaultControls()
-
+        if (controls) {
+            map.addDefaultControls()
+        }
         // marker layer
         this.marker_layer = new SMap.Layer.Marker()
         map.addLayer(this.marker_layer)
@@ -99,14 +108,21 @@ class MapWidget {
         }
     }
 
+    toggle() {
+        this.$map.toggle()
+    }
     hide() {
-        this.geometry_layer.removeAll()
-        this.marker_layer.removeAll()
+        //this.geometry_layer.removeAll()
+        //this.marker_layer.removeAll()
         this.$map.hide()
     }
     destroy() {
         this.map.$destructor()
         this.$map.remove()
+    }
+    clear() {
+        this.geometry_layer.removeAll()
+        this.marker_layer.removeAll()
     }
 
     _names_to_places(names = null) {
@@ -133,7 +149,7 @@ class MapWidget {
                 }
                 console.log("Route", route)
                 const coords = route.getResults().geometry
-                this.geometry_layer.clear()
+                this.geometry_layer.removeAll()
                 this.geometry_layer.addGeometry(new SMap.Geometry(SMap.GEOMETRY_POLYLINE, null, coords))
                 this.map.setCenterZoom(...this.map.computeCenterZoom(coords), true)
             })
@@ -165,13 +181,11 @@ class MapWidget {
     }
 
     /**
-     * Nicer map zooming XX I did for my wedding page
+     * Nicer map zooming I did for my wedding page
      */
     animate_map_init() {
         this.buffer = []
         this.animation_target = null
-        console.log("155: this.playback", this.playback)
-        const thisRef = this
         this.changing = new Interval(() => {
             if (this.buffer.length === 0) {
                 this.changing.stop()
@@ -179,13 +193,22 @@ class MapWidget {
                 const r = (x) => {
                     return Math.round(x * 10000);
                 }
-                if (this.animation_target && r(this.animation_target[0]) !== r(this.map.getCenter().x) || r(this.animation_target[1]) !== r(this.map.getCenter().y)) {
+                if (r(this.animation_target.x) !== r(this.map.getCenter().x) || r(this.animation_target.y) !== r(this.map.getCenter().y)) {
                     this.playback.hud.alert("Map broken?")
                 }
                 return
             }
-            const ins = this.buffer.shift()
-            this.map.setCenterZoom(SMap.Coords.fromWGS84(ins[0], ins[1]), ins[2], true)
+            const as = this.buffer.shift()
+
+            if (as.marker) {
+                this.clear()
+                this.marker_layer.addMarker(new SMap.Marker(as.point()))
+                // we just add the final point marker, no moving, skip interval iteration
+                return this.changing.call_now()
+            }
+
+            this.map.setCenterZoom(as.point(), as.zoom, true)
+
         }, 700).stop()
 
     }
@@ -200,63 +223,55 @@ class MapWidget {
 
         // final point
         const point = SMap.Coords.fromWGS84(longitude, latitude)
-        this.marker_layer.addMarker(new SMap.Marker(point))
+
+        const [computed_pt, computed_zoom] = this.map.computeCenterZoom([point, this.map.getCenter()])
+        // if map moves only a little, do not zoom out, stay as close as possible
+        zoom_final = Math.max(zoom_final, computed_zoom)
 
         this.changing.stop()
         this.buffer = []
         const [a, b] = [this.map.getCenter().x, this.map.getCenter().y]
         const [x, y] = [longitude, latitude]
 
-        this.animation_target = [x, y]
 
-        let distance = Math.sqrt(Math.pow(a - x, 2) + Math.pow(b - y, 2))
-        let max_zoom
-        if (distance < 0.001) {
-            max_zoom = 17
-        } else if (distance < 0.01) {
-            max_zoom = 15
-        } else if (distance < 0.1) {
-            max_zoom = 13
-        } else if (distance < 1) {
-            max_zoom = 11
-        } else if (distance < 10) {
-            max_zoom = 9
-        } else {
-            max_zoom = 3
-        }
-        let current_zoom = this.map.getZoom()
-        let zoom = Math.min(max_zoom, current_zoom)
+        console.log("233: point.distance", point.distance(this.map.getCenter()))
+
+        const current_zoom = this.map.getZoom()
+        let zoom = Math.min(computed_zoom, current_zoom)
 
         // zoom out
         let steps = Math.ceil((current_zoom - zoom) / 3)
+        let as = null
         for (let step = 1; step <= steps; step++) {
-            console.log("Zoom out", a, b, current_zoom - (current_zoom - zoom) / steps * step)
-            this.buffer.push([a, b, current_zoom - (current_zoom - zoom) / steps * step])
+            this.buffer.push(new AnimationStep(a, b, current_zoom - (current_zoom - zoom) / steps * step, "zoom out"))
         }
+
+        this.buffer.push(new AnimationStep(x, y, null, "marker", true))
+        this.animation_target = point
+
 
         // move
         steps = 3
         for (let step = 1; step <= steps; step++) {
             const x_step = (x - a) / steps * step
             const y_step = (y - b) / steps * step
-            if (Math.abs(x_step) < 0.00001 && Math.abs(y_step) < 0.00001) {
+            console.log("260: x_step, y_step", x_step, y_step)
+
+            if (Math.abs(x_step) < 0.0001 && Math.abs(y_step) < 0.0001) {
                 console.log("standing", x_step, y_step)
                 break;
             }
 
-            console.log("move", a + x_step, b + y_step, zoom)
-            this.buffer.push([a + x_step, b + y_step, zoom])
+            this.buffer.push(new AnimationStep(a + x_step, b + y_step, zoom, "move"))
         }
-
 
         // zoom in
         steps = Math.ceil((zoom_final - zoom) / 3)
         for (let step = 1; step < steps; step++) {
-            console.log("zoom", x, y, Math.round(zoom + (zoom_final - zoom) / steps * step))
-            this.buffer.push([x, y, Math.round(zoom + (zoom_final - zoom) / steps * step)])
+            this.buffer.push(new AnimationStep(x, y, Math.round(zoom + (zoom_final - zoom) / steps * step), "zoom in"))
         }
-        console.log("zoom", x, y, zoom_final)
-        this.buffer.push([x, y, zoom_final])
+
+        this.buffer.push(new AnimationStep(x, y, zoom_final, "zoom final"))
         this.changing.start()
     }
 
