@@ -23,7 +23,23 @@ class MapWidget {
 
         this.query_last
         this.changing
+
+        /**
+         * Animation steps
+         * @type {number[]}
+         * @property {number} 0 - longitude
+         * @property {number} 1 - latitude
+         * @property {number} 2 - zoom
+         */
         this.buffer
+
+        /**
+         * Final animation destination
+         * @type {number}
+         * @property {number} 0 - longitude
+         * @property {number} 1 - latitude
+         */
+        this.animation_target
         this.animate_map_init()
     }
 
@@ -153,53 +169,45 @@ class MapWidget {
      */
     animate_map_init() {
         this.buffer = []
-        this.buffer.target = null
+        this.animation_target = null
         console.log("155: this.playback", this.playback)
-const thisRef = this
+        const thisRef = this
         this.changing = new Interval(() => {
-            console.log("158: this", this, this.TEST, thisRef.TEST)
-            // console.trace()
-
-            console.log("158: this.buffer", this.buffer, thisRef.buffer)
-
             if (this.buffer.length === 0) {
                 this.changing.stop()
                 // check map broken
                 const r = (x) => {
                     return Math.round(x * 10000);
                 }
-                console.log("164: this.buffer", this.buffer)
-
-                console.log("165: this.playback", this.playback) // XXXXXX tady
-                if (this.buffer.target && r(this.buffer.target[0]) !== r(this.map.getCenter().x) || r(this.buffer.target[1]) !== r(this.map.getCenter().y)) {
-                    console.log("165: this.playback", this.playback)
-                    console.log("166: this", this)
-
-
+                if (this.animation_target && r(this.animation_target[0]) !== r(this.map.getCenter().x) || r(this.animation_target[1]) !== r(this.map.getCenter().y)) {
                     this.playback.hud.alert("Map broken?")
                 }
                 return
             }
             const ins = this.buffer.shift()
-
-
             this.map.setCenterZoom(SMap.Coords.fromWGS84(ins[0], ins[1]), ins[2], true)
         }, 700).stop()
 
     }
 
-    _animate_to(longitude, latitude, zoom_final) {
-        console.log("184: longitude, latitude", longitude, latitude)
+
+    animate_to(longitude, latitude, zoom_final = 8) {
+        this.$map.show(0)
+        if (this.query_last?.join() === [longitude, latitude, zoom_final].join()) {
+            return
+        }
+        this.query_last = [longitude, latitude, zoom_final]
+
+        // final point
+        const point = SMap.Coords.fromWGS84(longitude, latitude)
+        this.marker_layer.addMarker(new SMap.Marker(point))
 
         this.changing.stop()
         this.buffer = []
         const [a, b] = [this.map.getCenter().x, this.map.getCenter().y]
         const [x, y] = [longitude, latitude]
 
-        this.marker_layer.addMarker(new SMap.Marker(SMap.Coords.fromWGS84(longitude, latitude)))
-
-        this.buffer.target = [x, y]
-        console.log("192: this.buffer", this.buffer, a,b)
+        this.animation_target = [x, y]
 
         let distance = Math.sqrt(Math.pow(a - x, 2) + Math.pow(b - y, 2))
         let max_zoom
@@ -222,7 +230,7 @@ const thisRef = this
         // zoom out
         let steps = Math.ceil((current_zoom - zoom) / 3)
         for (let step = 1; step <= steps; step++) {
-            console.log("Odzoom", a, b, current_zoom - (current_zoom - zoom) / steps * step)
+            console.log("Zoom out", a, b, current_zoom - (current_zoom - zoom) / steps * step)
             this.buffer.push([a, b, current_zoom - (current_zoom - zoom) / steps * step])
         }
 
@@ -235,7 +243,6 @@ const thisRef = this
                 console.log("standing", x_step, y_step)
                 break;
             }
-            console.log("228: a,x_step, steps, step, x", a,x_step, steps, step, x)
 
             console.log("move", a + x_step, b + y_step, zoom)
             this.buffer.push([a + x_step, b + y_step, zoom])
@@ -250,35 +257,7 @@ const thisRef = this
         }
         console.log("zoom", x, y, zoom_final)
         this.buffer.push([x, y, zoom_final])
-        console.log("247: this.buffer", this.buffer)
-        this.TEST = 5
         this.changing.start()
-    }
-
-    // test() {
-    //     this.animate_to("Salcburk", 11)
-    // }
-
-
-    animate_to(longitude, latitude, zoom_final = 8) {
-        this.$map.show(0)
-        // if (this.query_last && this.query_last[0] === longitude && this.query_last[1] === latitude && this.query_last[2] === zoom_final) {
-        //     return
-        // }
-        if (this.query_last?.join() === [longitude, latitude, zoom_final].join()) {
-            return
-        }
-        this.query_last = [longitude, latitude,  zoom_final]
-        this._animate_to(longitude, latitude, zoom_final)
-
-        // if (typeof query !== "string") { // query is GPS coordinates
-        //     addresses = [{ longitude: query[0], latitude: query[1] }]
-        //     this._animate_to(addresses, zoom_final)
-        // } else { // query is a query string
-        //     this._names_to_places([query]).then(places =>
-        //         this._animate_to(places[0], zoom_final)
-        //     )
-        // }
     }
 
 }
