@@ -1,3 +1,5 @@
+const PRELOAD_XXX = false // XXX Nejde mi to stáhnout, když používám preload. Ale jenom když je to na RAMce, bez cesty.
+
 /**
  * Append new frame programatically with the static methods.
  */
@@ -14,24 +16,22 @@ class FrameFactory {
         return FrameFactory.html(text, append)
     }
 
-    static img(filename, append = true, data = null, ram_only = false) {
+    static img(filename, append = true, data = null, ram_only = false, callback = null) {
         // data-src prevents the performance for serveral thousand frames
-        console.log("22: data", data)
-
         const $el = $(`<img src="data:" data-src="${filename}" />`)
         const $frame = FrameFactory.html($el, append)
 
         if (data) {
             // sets exif
-            Frame.exif($el, data)
+            Frame.exif($el, data, callback)
 
             if (ram_only) {
                 // src preloading (we do not need to know the exact directory)
                 FrameFactory._read(data, $el)
             }
+        } else {
+            callback()
         }
-
-
         return $frame
     }
 
@@ -45,11 +45,22 @@ class FrameFactory {
     }
 
     static _read(data, $el) {
-        const reader = new FileReader()
-        reader.onload = (e) => $el
-            .attr("data-src-cached", 1)
-            .data("src-cached-data", e.target.result)
-        reader.readAsDataURL(data)
+        if (PRELOAD_XXX) {
+            $el
+                .attr("data-src-cached", 1)
+                .data("src-cached-data", (dom) => {
+                    const reader = new FileReader()
+                    reader.onload = (e) => dom.src = e.target.result
+                    reader.readAsDataURL(data)
+                })
+        } else {
+
+            const reader = new FileReader()
+            reader.onload = (e) => $el
+                .attr("data-src-cached", 1)
+                .data("src-cached-data", e.target.result)
+            reader.readAsDataURL(data)
+        }
     }
 
     /**
@@ -61,17 +72,18 @@ class FrameFactory {
      * @returns {null|jQuery} Null if the file could not be included
      */
 
-    static file(filename, append = true, data = null, ram_only = false) {
+    static file(filename, append = true, data = null, ram_only = false, callback = null) {
         const suffix = filename.split('.').pop().toLowerCase()
         switch (suffix) {
             case "mp4":
+                callback()
                 return FrameFactory.video(filename, append, data, ram_only)
             case "heif":
             case "heic":
             case "gif":
             case "png":
             case "jpg":
-                return FrameFactory.img(filename, append, data, ram_only)
+                return FrameFactory.img(filename, append, data, ram_only, callback)
             default:
                 console.warn("Cannot identify", filename)
                 FrameFactory.text("Cannot be identified: " + filename, append)
@@ -172,8 +184,8 @@ class Frame {
         // File name
         console.log("186: $actor", $actor, $frame)
 
-
         this.playback.hud.fileinfo($actor)
+        this.check_tag()
 
         // Map
         const gps = $actor.data("gps")
@@ -224,7 +236,12 @@ class Frame {
 
         // Memory preload – we hold all data in the memory
         $frame.find("img[data-src-cached]").each(function () {
-            $(this).attr("src", $(this).data("src-cached-data"))
+            if (PRELOAD_XXX) {
+                // .removeAttr("data-src-cached")
+                $(this).data("src-cached-data")(this)
+            } else {
+                $(this).attr("src", $(this).data("src-cached-data"))
+            }
         })
         $frame.find("video[data-src-cached]").each(function () {
             $(this).empty().append($("<source/>", { src: $(this).data("src-cached-data") }))
@@ -362,9 +379,41 @@ class Frame {
         })
     }
 
+    check_tag() {
+        const $actor = this.$actor
+        const name = ($actor.data("src") || $actor.attr("src"))?.split("/").pop()
+        const tag = localStorage.getItem("TAG: " + name)
+        console.log("387: tag", tag)
+
+        if (tag) {
+            console.log("390: TAG ZDE", tag)
+
+            $actor.attr("data-tag", tag)
+        }
+        this.playback.hud.tag(tag)
+    }
+
+    tag(tag) {
+        console.log("392: anooo")
+
+        const $actor = this.$actor
+        const name = ($actor.data("src") || $actor.attr("src"))?.split("/").pop()
+
+        const key = "TAG: " + name
+        if (tag) {
+            localStorage.setItem(key, tag)
+            $actor.attr("data-tag", tag)
+        } else {
+            localStorage.removeItem(key)
+            $actor.removeAttr("data-tag")
+        }
+
+        this.check_tag()
+    }
+
     static exif($el, data = null, callback = null) {
         if (!READ_EXIF || $el.data("exif-done")) {
-            console.log("367: skip exif", )
+            console.log("367: skip exif",)
 
             return
         }
@@ -393,9 +442,7 @@ class Frame {
                 ; // no gps info
             }
 
-
-
-            console.log("Exif info", attrs);
+            // console.log("Exif info", attrs);
             $el.attr(attrs).data("exif-done", 1)
             if (callback) {
                 callback()

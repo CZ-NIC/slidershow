@@ -36,6 +36,22 @@ menu #defaults {
   text-align: left;
   font-size: 1vw;
 }
+menu #progress {
+  margin-top: 10px;
+}
+menu #progress .circle-progress-value {
+  stroke-width: 6px;
+  stroke: hsl(320, 80%, 60%);
+  stroke-dasharray: 4 1;
+}
+menu #progress .circle-progress-circle {
+  stroke-width: 6px;
+  stroke: #eee;
+}
+menu #progress .circle-progress-text {
+  font-weight: bold;
+  fill: hsl(180, 80%, 47%);
+}
 #hud {
   position: fixed;
   z-index: 10;
@@ -54,6 +70,10 @@ menu #defaults {
 }
 #hud #hud-fileinfo #hud-gps {
   display: none;
+}
+#hud #hud-fileinfo #hud-tag {
+  background-color: blue;
+  font-size: 300%;
 }
 #map-hud {
   position: fixed;

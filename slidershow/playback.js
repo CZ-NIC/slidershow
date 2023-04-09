@@ -81,6 +81,34 @@ class Playback {
                 left: frame.prop("x", index) * 100 + "vw",
             })
         })
+
+
+        /* XXX
+        function generateSpiralPosition(index, nextCircle=false) {
+  const angleStep = clockwise ? -0.1 : 0.1; // krok úhlu, závisí na směru
+  const radiusStep = 0.1; // krok poloměru
+
+  if (index === 0) { // pokud je index 0, nastav aktuální kruh na 0
+    currentCircle = 0;
+  } else if (index % 4 === 0) { // každý 4. div, zvyš aktuální kruh o 1
+  // XX if (nextCircle)
+    currentCircle++;
+  }
+
+  const angle = angleStep * (index + currentCircle * 4); // uprav úhel o aktuální kruh
+  const radius = radiusStep * Math.sqrt(index + currentCircle); // uprav poloměr o aktuální kruh
+  const x = radius * Math.cos(angle);
+  const y = radius * Math.sin(angle);
+  const top = (50 + y * 45) + 'vh';
+  const left = (50 + x * 45) + 'vw';
+  return { top, left };
+}
+
+// Funkce pro změnu směru spirály
+function changeSpiralDirection() {
+  clockwise = !clockwise; // změna směru
+  currentCircle++; // zvýšení aktuálního kruhu o 1
+}*/
     }
 
     /**
@@ -119,8 +147,40 @@ class Playback {
 
         wh.press(KEY.M, "Toggle hud map", () => this.notVideoFocus() && this.hud_map.toggle()),
 
-        wh.press(KEY.F, "Toggle file info", () => $("#hud-fileinfo").toggle())]
+        wh.press(KEY.F, "Toggle file info", () => $("#hud-fileinfo").toggle()),
 
+        wh.press(KEY.N0, "Tag 0", () => this.frame.tag(null)),
+        wh.press(KEY.N1, "Tag 1", () => this.frame.tag(1)),
+        wh.press(KEY.N2, "Tag 2", () => this.frame.tag(2)),
+        wh.press(KEY.N3, "Tag 3", () => this.frame.tag(3)),
+        wh.press(KEY.N4, "Tag 4", () => this.frame.tag(4)),
+        wh.press(KEY.N5, "Tag 5", () => this.frame.tag(5)),
+        wh.press(KEY.N6, "Tag 6", () => this.frame.tag(6)),
+        wh.press(KEY.N7, "Tag 7", () => this.frame.tag(7)),
+        wh.press(KEY.N8, "Tag 8", () => this.frame.tag(8)),
+        wh.press(KEY.N9, "Tag 9", () => this.frame.tag(9)),
+
+        wh.press(KEY.Numpad0, "Tag 0", () => this.frame.tag(null)),
+        wh.press(KEY.Numpad1, "Tag 1", () => this.frame.tag(1)),
+        wh.press(KEY.Numpad2, "Tag 2", () => this.frame.tag(2)),
+        wh.press(KEY.Numpad3, "Tag 3", () => this.frame.tag(3)),
+        wh.press(KEY.Numpad4, "Tag 4", () => this.frame.tag(4)),
+        wh.press(KEY.Numpad5, "Tag 5", () => this.frame.tag(5)),
+        wh.press(KEY.Numpad6, "Tag 6", () => this.frame.tag(6)),
+        wh.press(KEY.Numpad7, "Tag 7", () => this.frame.tag(7)),
+        wh.press(KEY.Numpad8, "Tag 8", () => this.frame.tag(8)),
+        wh.press(KEY.Numpad9, "Tag 9", () => this.frame.tag(9)),
+
+        wh.pressAlt(KEY.Numpad1, "Tag 10", () => this.frame.tag(10)),
+        wh.pressAlt(KEY.Numpad2, "Tag 11", () => this.frame.tag(11)),
+        wh.pressAlt(KEY.Numpad3, "Tag 12", () => this.frame.tag(12)),
+        wh.pressAlt(KEY.Numpad4, "Tag 13", () => this.frame.tag(13)),
+        wh.pressAlt(KEY.Numpad5, "Tag 14", () => this.frame.tag(14)),
+        wh.pressAlt(KEY.Numpad6, "Tag 15", () => this.frame.tag(15)),
+        wh.pressAlt(KEY.Numpad7, "Tag 16", () => this.frame.tag(16)),
+        wh.pressAlt(KEY.Numpad8, "Tag 17", () => this.frame.tag(17)),
+        wh.pressAlt(KEY.Numpad9, "Tag 18", () => this.frame.tag(18)),
+        ]
 
     }
 

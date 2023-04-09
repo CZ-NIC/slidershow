@@ -43,28 +43,51 @@ menu {
         text-align: left;
         font-size: 1vw;
     }
+
+    #progress {
+        margin-top: 10px;
+        .circle-progress-value {
+            stroke-width: 6px;
+            stroke: hsl(320, 80%, 60%);
+            stroke-dasharray: 4 1;
+        }
+
+        .circle-progress-circle {
+            stroke-width: 6px;
+            stroke: #eee;
+        }
+
+        .circle-progress-text {
+            font-weight: bold;
+            fill: hsl(180, 80%, 47%);
+        }
+    }
 }
 
 #hud {
     position: fixed; // note that when position:fixed does not work when moving body
     z-index: 10;
 
-    > * {
+    >* {
         position: fixed;
     }
 
     #playback-icon {
-        right:3vw;
-        top:3vh;
+        right: 3vw;
+        top: 3vh;
     }
 
     #hud-fileinfo {
-        right:3vw;
+        right: 3vw;
         bottom: 10vw;
-        text-align:right;
+        text-align: right;
 
         #hud-gps {
             display: none; // XX not used right now
+        }
+        #hud-tag{
+            background-color: blue;
+            font-size: 300%;
         }
     }
 }

@@ -28,6 +28,10 @@ loadjQuery(() => {
             integrity: "sha256-iew84VMdav48KUPfYXOXyChG413xDhB4NlDngkmVfTg=",
             crossOrigin: "anonymous"
         },
+        {
+            src: "https://cdn.jsdelivr.net/npm/js-circle-progress@0.2.4/dist/jquery.circle-progress.min.js"
+        },
+
         { src: "https://cdn.jsdelivr.net/npm/exif-js" },
         { src: "https://api.mapy.cz/loader.js" }
     ].map(f => loadScript(f))
@@ -46,7 +50,7 @@ loadjQuery(() => {
 function loadjQuery(callback) {
     var el = document.createElement("script")
     el.src = "https://code.jquery.com/jquery-3.6.4.min.js"
-    el.addEventListener("load", () => callback() )
+    el.addEventListener("load", () => callback())
     document.head.appendChild(el)
 }
 
@@ -69,6 +73,7 @@ function head() {
             <div id="hud-device"></div>
             <div id="hud-datetime"></div>
             <div id="hud-gps"></div>
+            <div id="hud-tag"></div>
         </div>
     </div>
 

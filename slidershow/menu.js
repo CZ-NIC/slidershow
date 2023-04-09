@@ -25,7 +25,7 @@ class Menu {
         }
 
         // Drop new files
-        const $drop = $("#drop").on("drop", (ev) => {
+        const $drop = this.$drop = $("#drop").on("drop", (ev) => {
             ev.preventDefault()
             const items = [...ev.originalEvent.dataTransfer.items].filter(i => i.kind === "file").map(i => i.getAsFile())
             if (this.appendFiles(items)) {
@@ -93,7 +93,18 @@ class Menu {
         const $section = $("<section/>").appendTo($main);
         [...(new FormData($("#defaults")[0]))].map(([key, val]) => $section.attr("data-" + key, val))
 
-        const elements = items.map(item => FrameFactory.file(folder + item.name, false, item, ram_only)).filter(x => !!x)
+
+        let progress = 0
+        $("#progress").remove()
+        const $progress = $("<div/>", { id: "progress" }).insertAfter(this.$drop).circleProgress({
+            value: 0,
+            max: items.length
+        })
+
+        const elements = items.map(item =>
+            FrameFactory.file(folder + item.name, false, item, ram_only, () =>
+                $progress.circleProgress("value", ++progress)))
+            .filter(x => !!x)
         $section.hide(0).append(elements).children().hide(0).parent().show(0)
         return true
     }

@@ -1,10 +1,11 @@
 class Hud {
 
     constructor() {
-        this.$hud_filename = $("#hude-filename")
+        this.$hud_filename = $("#hud-filename")
         this.$hud_device = $("#hud-device")
         this.$hud_datetime = $("#hud-datetime")
         this.$hud_gps = $("#hud-gps")
+        this.$hud_tag = $("#hud-tag")
     }
 
     playback_icon(html) {
@@ -22,7 +23,8 @@ class Hud {
         if (!$actor) {
             $actor = { data: () => null }
         }
-        const name = ($actor.data("src") || $actor.attr("src"))?.split("/").pop()
+
+        const name = ($actor.data("src") || $actor.attr("src"))?.split("/").pop() // XX -> used twice, make single method
         this.$hud_filename.html(name)
 
         this.$hud_device.html($actor.data("device"))
@@ -30,7 +32,11 @@ class Hud {
         this.$hud_gps.html($actor.data("gps"))
     }
 
-    alert(text){
+    tag(tag="") {
+        this.$hud_tag.html(tag? "TAG: " + tag : "")
+    }
+
+    alert(text) {
         // $("#letadylko-submit").after("<span class='map-broken alert alert-warning'></span>");
         alert(text)
     }
