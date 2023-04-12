@@ -192,7 +192,7 @@ class MapWidget {
                     return Math.round(x * 10000);
                 }
                 if (r(this.target_point.x) !== r(this.map.getCenter().x) || r(this.target_point.y) !== r(this.map.getCenter().y)) {
-                    this.playback.hud.alert("Map broken?")
+                    this.playback.hud.alert("Map broken?", true)
                 }
                 return
             }

@@ -57,6 +57,10 @@ class Playback {
         this.hud_map.destroy()
     }
 
+    /**
+     *
+     * @param {bool} moving
+     */
     play_pause(moving) {
         if (this.moving !== moving) {
             this.hud.playback_icon(moving ? "▶" : "&#9612;&#9612;")
@@ -145,7 +149,14 @@ function changeSpiralDirection() {
     }
 
     shortcutsInit() {
-        return [wh.press(KEY.SPACE, "Next", () => this.notVideoFocus() && this.nextFrame()),
+        return [wh.press(KEY.SPACE, "Next", (e) => {
+            if (this.notVideoFocus()) {
+                return this.nextFrame()
+            } else {
+                this.play_pause(false)
+                return false
+            }
+        }),
 
         wh.press(KEY.RIGHT, "Next", () => this.notVideoFocus() && this.nextFrame()),
         wh.press(KEY.LEFT, "Prev", () => this.notVideoFocus() && this.previousFrame()),
@@ -200,7 +211,7 @@ function changeSpiralDirection() {
         wh.pressAlt(KEY.PageDown, "Next section", () => this.nextSection()),
         wh.pressAlt(KEY.PageUp, "Prev section", () => this.previousSection()),
 
-        // wh.pressAlt(KEY.T, "Thumbnails", () => this.thumbnails()),
+            // wh.pressAlt(KEY.T, "Thumbnails", () => this.thumbnails()),
         ]
 
     }
@@ -305,7 +316,6 @@ function changeSpiralDirection() {
             if (!same_frame) {
                 $last.data("frame").left()
             }
-
 
             // Duration
             if (moving && duration) {

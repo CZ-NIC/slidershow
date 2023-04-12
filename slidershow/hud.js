@@ -41,7 +41,7 @@ class Hud {
 
         const index = $frame.data("frame").index
         for (let i = index - 3; i < index + 3; i++) {
-            console.log("216: $(this.$articles[i]).html()", $(this.playback.$articles[i]).html(),  i, this.playback.$articles)
+            console.log("216: $(this.$articles[i]).html()", $(this.playback.$articles[i]).html(), i, this.playback.$articles)
 
             const $frame = $(this.playback.$articles[i])
             Frame.preload($frame) // XX this get preloaded multiple times
@@ -87,8 +87,12 @@ class Hud {
         this.$hud_tag.html(tag ? "TAG: " + tag : "")
     }
 
-    alert(text) {
+    alert(text, soft = false) {
         // $("#letadylko-submit").after("<span class='map-broken alert alert-warning'></span>");
-        alert(text)
+        if (soft) {
+            console.warn(text) // XX GUI message overlay windowd
+        } else {
+            alert(text)
+        }
     }
 }

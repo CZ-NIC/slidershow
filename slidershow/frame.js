@@ -281,17 +281,35 @@ class Frame {
             if ($actor.attr("autoplay")) {
                 // Video autoplay (when muted in chromium)
                 $actor[0].play().catch(() => {
-                    alert("Interact with the page before the autoplay works.") // XX -> HUD
+                    this.playback.hud.alert("Interact with the page before the autoplay works.")
                 })
             }
 
+            // Pausing vs playback moving
             this.$video_pause_listener = $actor.on("pause", () => {
-                $actor.off("pause")
-                video_finished_clb()
+                // Normally, when a video ends, we want to move further.
+                // However, when we click to the video progress gauge,
+                // just before rewinding, a pause event is generated.
+                // We cannot distinguish whether a pause is a user-action
+                // or an automatic action. So that we wait
+                // an if it was a user-action, a play event will follow shortly,
+                // with the mouse button up.
+                this.next_interval = new Interval(() => {
+                    this.next_interval.stop()
+                    video_finished_clb()
+                }, 300)
+            }).on("play", () => {
+                // the video continues, it has not ended, do not move further
+                this.next_interval?.stop()
             })
-            // .on("click", ()=>{
-            //     alert("update")
-            // })
+                .on("click", () => {
+                    // the video was manually clicked upod, it has not ended, do not move further
+                    this.next_interval?.stop()
+                    this.playback.play_pause(false)
+                }).on("slidershow-leave", () => {
+                    $actor.off("pause").off("play").off("click")
+                })
+
         }
 
         return $actor.prop("tagName") === "VIDEO" ? this.prop("duration-video") : this.prop("duration")
@@ -299,7 +317,7 @@ class Frame {
 
     leave() {
         if (this.$video_pause_listener) {
-            this.$video_pause_listener.off("pause")
+            this.$video_pause_listener.trigger("slidershow-leave")
             this.$video_pause_listener = null
         }
         this.$actor?.data("wzoom-unload")?.()
