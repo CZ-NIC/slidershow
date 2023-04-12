@@ -169,3 +169,7 @@ Full controls: <kbd>h</kbd>
 ## Start
 
 The <menu> is displayed before the presentation starts, unless the <main> has `data-start` attribute.
+
+# Organizing
+
+Use Numpad to tag the images. Then in the menu, hit <kbd>Alt+G</kbd> to group the images to the `<section>` according to tags.

@@ -46,6 +46,7 @@ menu {
 
     #progress {
         margin-top: 10px;
+
         .circle-progress-value {
             stroke-width: 6px;
             stroke: hsl(320, 80%, 60%);
@@ -85,9 +86,35 @@ menu {
         #hud-gps {
             display: none; // XX not used right now
         }
-        #hud-tag{
+
+        #hud-tag {
             background-color: blue;
             font-size: 300%;
+        }
+    }
+
+    #hud-thumbnails { // XX not used
+        display: none;
+        display: flex;
+        width: 100vw;
+        max-height: 40vh;
+        bottom: 0;
+        background-color: blue;
+        gap: 10px;
+
+        >div {
+            position: relative;
+            max-width: 100px;
+            max-height: 100px;
+
+            &.current {
+                background-color: red;
+                border: 1px solid red;
+            }
+
+            >img {
+                max-width: 100%;
+            }
         }
     }
 }

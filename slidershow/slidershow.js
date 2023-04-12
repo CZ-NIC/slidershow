@@ -74,7 +74,9 @@ function head() {
             <div id="hud-datetime"></div>
             <div id="hud-gps"></div>
             <div id="hud-tag"></div>
+            <div id="hud-counter"></div>
         </div>
+        <div id="hud-thumbnails"></div>
     </div>
 
     <menu>

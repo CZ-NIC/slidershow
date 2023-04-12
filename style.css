@@ -75,6 +75,27 @@ menu #progress .circle-progress-text {
   background-color: blue;
   font-size: 300%;
 }
+#hud #hud-thumbnails {
+  display: none;
+  display: flex;
+  width: 100vw;
+  max-height: 40vh;
+  bottom: 0;
+  background-color: blue;
+  gap: 10px;
+}
+#hud #hud-thumbnails > div {
+  position: relative;
+  max-width: 100px;
+  max-height: 100px;
+}
+#hud #hud-thumbnails > div.current {
+  background-color: red;
+  border: 1px solid red;
+}
+#hud #hud-thumbnails > div > img {
+  max-width: 100%;
+}
 #map-hud {
   position: fixed;
   height: 10vh;

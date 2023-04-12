@@ -12,7 +12,7 @@ class Playback {
 
         const fact = (id) => $("<div/>", { id: id }).prependTo("body")
         this.map = new MapWidget(fact("map"), this).map_start()
-        this.hud = new Hud()
+        this.hud = new Hud(this)
         this.hud_map = new MapWidget(fact("map-hud"), this).map_start(false)
 
         /**
@@ -20,7 +20,8 @@ class Playback {
          */
         this.frame
         this.appendEndSlide() // XX gets appended multiple times when playback starts multiple times
-        $articles = Frame.load_all(this)
+        this.frame_count
+        this.$articles
         this.positionFrames()
 
         this.$current
@@ -64,22 +65,32 @@ class Playback {
     }
 
     positionFrames() {
-        // XX more options
+        $articles = this.$articles = Frame.load_all(this)
+        console.log("68: $articles", $articles)
+
         let index = -1
         $articles.each((_, el) => {
             const $el = $(el)
             /** @type {Frame} */
             const frame = $el.data("frame")
 
+            // set position to frames
+            // XX more options
             if ($el.parent().is(FRAME_SELECTOR)) {
                 frame.register_parent($el.parent().data("frame"))
             } else {
                 index += 1
             }
+
+            frame.index = index + 1
+            console.log("82: frame,index", frame.$actor, frame.index, index)
             $el.css({
                 top: frame.prop("y", index) * 100 + "vh",
                 left: frame.prop("x", index) * 100 + "vw",
             })
+
+            // load tags from localStorage
+            frame.check_tag()
         })
 
 
@@ -109,6 +120,9 @@ function changeSpiralDirection() {
   clockwise = !clockwise; // změna směru
   currentCircle++; // zvýšení aktuálního kruhu o 1
 }*/
+
+        this.frame_count = index
+        return $articles
     }
 
     /**
@@ -149,39 +163,73 @@ function changeSpiralDirection() {
 
         wh.press(KEY.F, "Toggle file info", () => $("#hud-fileinfo").toggle()),
 
-        wh.press(KEY.N0, "Tag 0", () => this.frame.tag(null)),
-        wh.press(KEY.N1, "Tag 1", () => this.frame.tag(1)),
-        wh.press(KEY.N2, "Tag 2", () => this.frame.tag(2)),
-        wh.press(KEY.N3, "Tag 3", () => this.frame.tag(3)),
-        wh.press(KEY.N4, "Tag 4", () => this.frame.tag(4)),
-        wh.press(KEY.N5, "Tag 5", () => this.frame.tag(5)),
-        wh.press(KEY.N6, "Tag 6", () => this.frame.tag(6)),
-        wh.press(KEY.N7, "Tag 7", () => this.frame.tag(7)),
-        wh.press(KEY.N8, "Tag 8", () => this.frame.tag(8)),
-        wh.press(KEY.N9, "Tag 9", () => this.frame.tag(9)),
+        // XX Tagging is an undocumented feature
+        wh.pressAlt(KEY.G, "Group frames according to their tag", () => this.group()),
+        wh.press(KEY.N0, "Tag 0", () => this.frame.set_tag(null)),
+        wh.press(KEY.N1, "Tag 1", () => this.frame.set_tag(1)),
+        wh.press(KEY.N2, "Tag 2", () => this.frame.set_tag(2)),
+        wh.press(KEY.N3, "Tag 3", () => this.frame.set_tag(3)),
+        wh.press(KEY.N4, "Tag 4", () => this.frame.set_tag(4)),
+        wh.press(KEY.N5, "Tag 5", () => this.frame.set_tag(5)),
+        wh.press(KEY.N6, "Tag 6", () => this.frame.set_tag(6)),
+        wh.press(KEY.N7, "Tag 7", () => this.frame.set_tag(7)),
+        wh.press(KEY.N8, "Tag 8", () => this.frame.set_tag(8)),
+        wh.press(KEY.N9, "Tag 9", () => this.frame.set_tag(9)),
 
-        wh.press(KEY.Numpad0, "Tag 0", () => this.frame.tag(null)),
-        wh.press(KEY.Numpad1, "Tag 1", () => this.frame.tag(1)),
-        wh.press(KEY.Numpad2, "Tag 2", () => this.frame.tag(2)),
-        wh.press(KEY.Numpad3, "Tag 3", () => this.frame.tag(3)),
-        wh.press(KEY.Numpad4, "Tag 4", () => this.frame.tag(4)),
-        wh.press(KEY.Numpad5, "Tag 5", () => this.frame.tag(5)),
-        wh.press(KEY.Numpad6, "Tag 6", () => this.frame.tag(6)),
-        wh.press(KEY.Numpad7, "Tag 7", () => this.frame.tag(7)),
-        wh.press(KEY.Numpad8, "Tag 8", () => this.frame.tag(8)),
-        wh.press(KEY.Numpad9, "Tag 9", () => this.frame.tag(9)),
+        wh.press(KEY.Numpad0, "Tag 0", () => this.frame.set_tag(null)),
+        wh.press(KEY.Numpad1, "Tag 1", () => this.frame.set_tag(1)),
+        wh.press(KEY.Numpad2, "Tag 2", () => this.frame.set_tag(2)),
+        wh.press(KEY.Numpad3, "Tag 3", () => this.frame.set_tag(3)),
+        wh.press(KEY.Numpad4, "Tag 4", () => this.frame.set_tag(4)),
+        wh.press(KEY.Numpad5, "Tag 5", () => this.frame.set_tag(5)),
+        wh.press(KEY.Numpad6, "Tag 6", () => this.frame.set_tag(6)),
+        wh.press(KEY.Numpad7, "Tag 7", () => this.frame.set_tag(7)),
+        wh.press(KEY.Numpad8, "Tag 8", () => this.frame.set_tag(8)),
+        wh.press(KEY.Numpad9, "Tag 9", () => this.frame.set_tag(9)),
 
-        wh.pressAlt(KEY.Numpad1, "Tag 10", () => this.frame.tag(10)),
-        wh.pressAlt(KEY.Numpad2, "Tag 11", () => this.frame.tag(11)),
-        wh.pressAlt(KEY.Numpad3, "Tag 12", () => this.frame.tag(12)),
-        wh.pressAlt(KEY.Numpad4, "Tag 13", () => this.frame.tag(13)),
-        wh.pressAlt(KEY.Numpad5, "Tag 14", () => this.frame.tag(14)),
-        wh.pressAlt(KEY.Numpad6, "Tag 15", () => this.frame.tag(15)),
-        wh.pressAlt(KEY.Numpad7, "Tag 16", () => this.frame.tag(16)),
-        wh.pressAlt(KEY.Numpad8, "Tag 17", () => this.frame.tag(17)),
-        wh.pressAlt(KEY.Numpad9, "Tag 18", () => this.frame.tag(18)),
+        wh.pressAlt(KEY.Numpad1, "Tag 10", () => this.frame.set_tag(10)),
+        wh.pressAlt(KEY.Numpad2, "Tag 11", () => this.frame.set_tag(11)),
+        wh.pressAlt(KEY.Numpad3, "Tag 12", () => this.frame.set_tag(12)),
+        wh.pressAlt(KEY.Numpad4, "Tag 13", () => this.frame.set_tag(13)),
+        wh.pressAlt(KEY.Numpad5, "Tag 14", () => this.frame.set_tag(14)),
+        wh.pressAlt(KEY.Numpad6, "Tag 15", () => this.frame.set_tag(15)),
+        wh.pressAlt(KEY.Numpad7, "Tag 16", () => this.frame.set_tag(16)),
+        wh.pressAlt(KEY.Numpad8, "Tag 17", () => this.frame.set_tag(17)),
+        wh.pressAlt(KEY.Numpad9, "Tag 18", () => this.frame.set_tag(18)),
+
+        wh.pressAlt(KEY.PageDown, "Next section", () => this.nextSection()),
+        wh.pressAlt(KEY.PageUp, "Prev section", () => this.previousSection()),
+
+        // wh.pressAlt(KEY.T, "Thumbnails", () => this.thumbnails()),
         ]
 
+    }
+
+    /**
+     * Group frames according to the user tags across multiple <section> tags
+     */
+    group() {
+        $articles.each((_, el) => {
+            const $frame = $(el)
+            /** @type {Frame} */
+            const frame = $frame.data("frame")
+
+            const tag = frame.$actor.attr("data-tag") || 0
+            // if(!tag) { // XX delete element without tag (not working)
+            //     console.log("214: delete", )
+            //     $frame.remove()
+            //     return
+            // }
+
+            let $section = $(`section[data-tag=${tag}]`)
+            console.log("202: tag, $section.length", tag, $section.length)
+            if (!$section.length) {
+                $section = $("<section/>", { "data-tag": tag }).prependTo($main)
+            }
+            $frame.appendTo($section)
+        })
+        this.positionFrames()
+        this.goToFrame(this.$current.data("frame").index - 1) // keeps you on the same frame (woorks badly)
     }
 
     nextFrame() {
@@ -189,6 +237,19 @@ function changeSpiralDirection() {
     }
     previousFrame() {
         this.goToFrame(this.index - 1)
+    }
+
+    nextSection() {
+        const $next = this.frame.$frame.closest("section, main").next().find(FRAME_SELECTOR).first()
+        console.log("242: $next", $next, $next.data("frame").index)
+
+        this.goToFrame($next.data("frame").index - 1, true)
+    }
+    previousSection() {
+        const $previous = this.frame.$frame.closest("section, main").prev().find(FRAME_SELECTOR).first()
+        console.log("242: $previous", $previous, $previous.data("frame").index)
+
+        this.goToFrame($previous.data("frame").index - 1)
     }
 
     notVideoFocus() {

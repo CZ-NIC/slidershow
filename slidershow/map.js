@@ -112,8 +112,6 @@ class MapWidget {
         this.$map.toggle()
     }
     hide() {
-        //this.geometry_layer.removeAll()
-        //this.marker_layer.removeAll()
         this.$map.hide()
     }
     destroy() {
@@ -199,8 +197,6 @@ class MapWidget {
                 return
             }
             const as = this.animation.shift()
-            console.log("202: as", as)
-
 
             if (as.marker) {
                 this.clear()

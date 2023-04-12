@@ -104,7 +104,7 @@ class Frame {
         this.playback = playback
         this.$video_pause_listener = null
         /**  @type {jQuery|null}         */
-        this.$actor = null
+        this.$actor = this.$frame.find("video, img").first()
 
         this.panorama_callback = null
 
@@ -118,6 +118,11 @@ class Frame {
          * @type {Frame[]}
          */
         this.children = []
+
+        /**
+         * @type {Number} Frame counter. Set by the playback.
+         */
+        this.index
     }
 
     register_parent(frame) {
@@ -176,7 +181,7 @@ class Frame {
 
 
         // Get main media
-        const $actor = this.$actor = $frame.find("video, img").first()
+        const $actor = this.$actor
         if ($actor.prop("tagName") === "IMG") {
             this.panorama()
         }
@@ -184,8 +189,7 @@ class Frame {
         // File name
         console.log("186: $actor", $actor, $frame)
 
-        this.playback.hud.fileinfo($actor)
-        this.check_tag()
+        this.playback.hud.fileinfo(this)
 
         // Map
         const gps = $actor.data("gps")
@@ -285,6 +289,9 @@ class Frame {
                 $actor.off("pause")
                 video_finished_clb()
             })
+            // .on("click", ()=>{
+            //     alert("update")
+            // })
         }
 
         return $actor.prop("tagName") === "VIDEO" ? this.prop("duration-video") : this.prop("duration")
@@ -379,25 +386,24 @@ class Frame {
         })
     }
 
+    get_filename($actor) {
+        return ($actor.data("src") || $actor.attr("src"))?.split("/").pop()
+    }
+
     check_tag() {
         const $actor = this.$actor
-        const name = ($actor.data("src") || $actor.attr("src"))?.split("/").pop()
+        const name = this.get_filename($actor)
         const tag = localStorage.getItem("TAG: " + name)
-        console.log("387: tag", tag)
-
         if (tag) {
             console.log("390: TAG ZDE", tag)
 
             $actor.attr("data-tag", tag)
         }
-        this.playback.hud.tag(tag)
     }
 
-    tag(tag) {
-        console.log("392: anooo")
-
+    set_tag(tag) {
         const $actor = this.$actor
-        const name = ($actor.data("src") || $actor.attr("src"))?.split("/").pop()
+        const name = this.get_filename($actor)
 
         const key = "TAG: " + name
         if (tag) {
@@ -407,8 +413,7 @@ class Frame {
             localStorage.removeItem(key)
             $actor.removeAttr("data-tag")
         }
-
-        this.check_tag()
+        this.playback.hud.tag(tag)
     }
 
     static exif($el, data = null, callback = null) {
