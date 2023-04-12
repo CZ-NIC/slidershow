@@ -103,6 +103,7 @@ class Frame {
         /** @type Playback */
         this.playback = playback
         this.$video_pause_listener = null
+        this.next_interval
         /**  @type {jQuery|null}         */
         this.$actor = this.$frame.find("video, img").first()
 
@@ -123,6 +124,8 @@ class Frame {
          * @type {Number} Frame counter. Set by the playback.
          */
         this.index
+
+        this.shortcuts = []
     }
 
     register_parent(frame) {
@@ -159,10 +162,11 @@ class Frame {
      * (Zero aware, you can safely set `data-prop=0`.)
      * @param {string} prop
      * @param {any} def Default value if undefined
+     * @param {jQuery|null} $actor What element to check the prop of. If null, frame is checked.
      * @returns
      */
-    prop(prop, def = null) {
-        const v = this.$frame.closest(`[data-${prop}]`).data(prop)
+    prop(prop, def = null, $actor = null) {
+        const v = ($actor || this.$frame).closest(`[data-${prop}]`).data(prop)
         if (v === undefined && def !== undefined) {
             return def
         }
@@ -283,7 +287,9 @@ class Frame {
                 $actor[0].play().catch(() => {
                     this.playback.hud.alert("Interact with the page before the autoplay works.")
                 })
+
             }
+            $actor[0].playbackRate = this.prop("playback-rate", 1, $actor)
 
             // Pausing vs playback moving
             this.$video_pause_listener = $actor.on("pause", () => {
@@ -310,12 +316,24 @@ class Frame {
                     $actor.off("pause").off("play").off("click")
                 })
 
+            // Video shortcuts
+            const playback_change = (step) => {
+                const r = $actor[0].playbackRate = Math.round(($actor[0].playbackRate + step) * 10) / 10
+                this.playback.hud.playback_icon(r + " ×")
+            }
+            this.shortcuts.push(
+                wh.press(KEY.KP_Add, "Faster video", () => playback_change(0.1)),
+                wh.press(KEY.KP_Subtract, "Faster video", () => playback_change(-0.1)))
+
         }
 
         return $actor.prop("tagName") === "VIDEO" ? this.prop("duration-video") : this.prop("duration")
     }
 
     leave() {
+        this.shortcuts.forEach(s => s.disable())
+        this.shortcuts.length = 0
+
         if (this.$video_pause_listener) {
             this.$video_pause_listener.trigger("slidershow-leave")
             this.$video_pause_listener = null

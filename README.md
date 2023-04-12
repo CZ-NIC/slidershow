@@ -125,6 +125,16 @@ Any HTML content is accepted.
 * The `<video>` tag benefits from standard attributes like `loop`, `muted`, `autoplay` and `controls` (so that controls are visible). In Chromium based browsers, only `muted` video respects `autoplay` so we recommend using `controls` too so that you may start the video with the <kbd>Space</kbd>.
 * When a new frame appears, first video gets focus. Whether `autoplay` is present, it starts playing. Keys like <kbd>Space</kbd>, <kbd>Left</kbd>, <kbd>Right</kbd> stop working for frame switching to avoid interfering with the video controls.
 
+* `data-playback-rate`: The speed of the video. (May be set on the parents too.)
+```html
+<article> <!-- fast video -->
+    <video src="my_video.mp4#t=8,10" date-playback-rate="4"></video>
+</article>
+<article date-playback-rate="0.7">  <!-- slower video -->
+    <video src="my_video.mp4#t=8,10"></video>
+</article>
+```
+
 ### Text
 
 If there is no tag inside an `<article>`, it is considered as a plain text. Its size gets fit to the screen width.
@@ -165,6 +175,8 @@ Next frame: <kbd>Right</kbd>, <kbd>PageDown</kbd>, <kbd>n</kbd>, <kbd>Space</kbd
 Previous frame: <kbd>Left</kbd>, <kbd>PageUp</kbd>, <kbd>p</kbd>
 
 Full controls: <kbd>h</kbd>
+
+Video: Adjust speed by <kbd>Numpad +/-</kbd>
 
 ## Start
 
