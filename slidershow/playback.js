@@ -1,3 +1,6 @@
+const POSITIONING_EXPERIMENTAL = true
+const MAP_ENABLE = true
+
 /**
  * Frame playback controller.
  */
@@ -11,9 +14,12 @@ class Playback {
 
 
         const fact = (id) => $("<div/>", { id: id }).prependTo("body")
-        this.map = new MapWidget(fact("map"), this).map_start()
         this.hud = new Hud(this)
-        this.hud_map = new MapWidget(fact("map-hud"), this).map_start(false)
+
+        if (MAP_ENABLE) {
+            this.map = new MapWidget(fact("map"), this).map_start()
+            this.hud_map = new MapWidget(fact("map-hud"), this).map_start(false)
+        }
 
         /**
          * @type {Frame}
@@ -68,11 +74,14 @@ class Playback {
         this.moving = moving
     }
 
-    positionFrames() {
+    positionFrames(x1 = null, x2 = null, x3 = null, x4 = null) {
         $articles = this.$articles = Frame.load_all(this)
         console.log("68: $articles", $articles)
 
         let index = -1
+        let clockwise = true
+        let sectionCount = 0
+
         $articles.each((_, el) => {
             const $el = $(el)
             /** @type {Frame} */
@@ -87,43 +96,50 @@ class Playback {
             }
 
             frame.index = index + 1
-            console.log("82: frame,index", frame.$actor, frame.index, index)
-            $el.css({
-                top: frame.prop("y", index) * 100 + "vh",
-                left: frame.prop("x", index) * 100 + "vw",
-            })
+            // console.log("82: frame,index", frame.$actor, frame.index, index)
+
+
+            if (!POSITIONING_EXPERIMENTAL) {
+                $el.css({
+                    top: frame.prop("y", index) * 100 + "vh",
+                    left: frame.prop("x", index) * 100 + "vw",
+                })
+            } else {
+
+                function generateSpiralPosition(index, nextCircle = false) {
+                    if (nextCircle) {
+                        sectionCount++
+                    }
+                    const angleStep = clockwise ? -(x2 || 0.1) : (x2 || 0.1); // krok úhlu, závisí na směru
+                    const radiusStep = x1 || 0.5; // krok poloměru
+
+                    const bonus = (index < 10) ? index : 10 // the distance is too narrow in the beginning
+
+                    let index_r = index + bonus + sectionCount * 3
+                    console.log("124: bonus", index_r, sectionCount, bonus)
+                    const angle = angleStep * (index_r * (x3 || 4)); // uprav úhel o aktuální kruh
+                    const radius = radiusStep * Math.sqrt((index_r) * (x4 || 0.25));  // uprav poloměr o aktuální kruh
+                    const x = radius * Math.cos(angle);
+                    const y = radius * Math.sin(angle);
+                    const top = (15000 + y * 450) + 'vh';
+                    const left = (15000 + x * 450) + 'vw';
+                    return { top, left };
+                }
+
+                let is_new_section = $el.is(":first") && $el.parent().is("section") && $el.parent().parent().is("main")
+                // if (index % 6 === 0) {
+                //     is_new_section = true
+                // }
+                const pos = generateSpiralPosition(index, is_new_section)
+                console.log("131: pos", pos)
+
+                $el.css(pos)
+            }
 
             // load tags from localStorage
             frame.check_tag()
         })
 
-
-        /* XXX
-        function generateSpiralPosition(index, nextCircle=false) {
-  const angleStep = clockwise ? -0.1 : 0.1; // krok úhlu, závisí na směru
-  const radiusStep = 0.1; // krok poloměru
-
-  if (index === 0) { // pokud je index 0, nastav aktuální kruh na 0
-    currentCircle = 0;
-  } else if (index % 4 === 0) { // každý 4. div, zvyš aktuální kruh o 1
-  // XX if (nextCircle)
-    currentCircle++;
-  }
-
-  const angle = angleStep * (index + currentCircle * 4); // uprav úhel o aktuální kruh
-  const radius = radiusStep * Math.sqrt(index + currentCircle); // uprav poloměr o aktuální kruh
-  const x = radius * Math.cos(angle);
-  const y = radius * Math.sin(angle);
-  const top = (50 + y * 45) + 'vh';
-  const left = (50 + x * 45) + 'vw';
-  return { top, left };
-}
-
-// Funkce pro změnu směru spirály
-function changeSpiralDirection() {
-  clockwise = !clockwise; // změna směru
-  currentCircle++; // zvýšení aktuálního kruhu o 1
-}*/
 
         this.frame_count = index
         return $articles
@@ -268,7 +284,7 @@ function changeSpiralDirection() {
     }
 
     /**
-     *
+     * // XX expose to a shortcut
      * @param {Number} index
      */
     goToFrame(index, moving = false) {
@@ -303,7 +319,9 @@ function changeSpiralDirection() {
             clearTimeout(this.moving_timeout)
         }
         this.promise.aborted = true
-        const promise = this.promise = same_frame ? Promise.resolve() : this.transition($last, $current).promise()
+
+        const trans = same_frame ? $main.css(frame.get_position()) : this.transition($last, $current)
+        const promise = this.promise = trans.promise()
         promise.then(() => {
             // frame is at the viewport now
             if (promise.aborted) { // another frame was raise meanwhile
@@ -356,10 +374,7 @@ function changeSpiralDirection() {
                     return { promise: () => Promise.resolve() } // this is just a dummy object
                 } else {
                     Playback.resetWindow()
-                    return $main.animate({
-                        top: `-${$current.position().top}px`,
-                        left: `-${$current.position().left}px`,
-                    }, TRANS_DURATION)
+                    return $main.animate(current.get_position(), TRANS_DURATION)
                 }
         }
     }

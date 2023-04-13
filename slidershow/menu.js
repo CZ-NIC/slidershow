@@ -118,7 +118,7 @@ class Menu {
         $contents.find(FRAME_SELECTOR).each(function () { Frame.preload($(this), true) })
 
         const data = `<html>\n<head>
-<script src="./slidershow/slidershow.js"></script>
+<script src="${DIR}slidershow.js"></script>
 </head>\n<body>` + $contents.prop("outerHTML") + "\n</body>\n</html>"
         const blob = new Blob([data], { type: "text/plain" })
         const url = URL.createObjectURL(blob)

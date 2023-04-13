@@ -1,14 +1,19 @@
 // Load all needed JS + CSS resources. User has nothing to specify in the HEAD.
 // We cannot use module as this would launch CORS blocking when using locally without server.
-loadjQuery(() => {
-    // What is current directory
-    const DIR = $("script[src$='slidershow.js']").attr("src").replace(/\/slidershow.js$/, "") + "/"
 
-    // style
-    const linkElement = document.createElement("link")
-    linkElement.href = DIR + "../style.css"
-    linkElement.rel = "stylesheet"
-    document.head.appendChild(linkElement)
+// What is current directory
+const DIR = document.querySelector("script[src$='slidershow.js']").getAttribute("src").replace(/\/slidershow.js$/, "") + "/";
+const USE_MAPY = true
+
+// style
+document.querySelector("html").style.display = "none" // so that body images are not shown before the style loads (short white blink appears instead)
+const link = document.createElement("link")
+link.href = DIR + "../style.css"
+link.rel = "stylesheet"
+link.onload = () => document.querySelector("html").removeAttribute("style")
+document.head.appendChild(link)
+
+loadjQuery(() => {
 
     // external and local scripts
     const vendor = [
@@ -37,13 +42,18 @@ loadjQuery(() => {
     ].map(f => loadScript(f))
     const local = ["../WebHotkeys.js", "static.js", "frame.js", "place.js", "map.js", "hud.js", "menu.js", "playback.js"].map(f => loadScript({ src: DIR + f }))
 
+    const load_launch = () => {
+        get_menu().appendTo("body")
+        loadScript({ src: DIR + "launch.js" })
+    }
     // wait for all scripts to load
     Promise.all(vendor.concat(local)).then(() => {
-        Loader.async = true
-        Loader.load(null, null, () => { // Maps API need to have special callback
-            head().appendTo("body")
-            loadScript({ src: DIR + "launch.js" }) // run the main script
-        })
+        if (USE_MAPY) {
+            Loader.async = true
+            Loader.load(null, null, load_launch)
+        } else {
+            load_launch()
+        }
     })
 })
 
@@ -64,7 +74,7 @@ function loadScript(attrs) {
     });
 }
 
-function head() {
+function get_menu() {
     return $(`<div id="map-wrapper"></div>
 
     <div id="hud">

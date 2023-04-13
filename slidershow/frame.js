@@ -426,6 +426,13 @@ class Frame {
         return ($actor.data("src") || $actor.attr("src"))?.split("/").pop()
     }
 
+    get_position() {
+        return {
+            top: `-${this.$frame.position().top}px`,
+            left: `-${this.$frame.position().left}px`,
+        }
+    }
+
     check_tag() {
         const $actor = this.$actor
         const name = this.get_filename($actor)
