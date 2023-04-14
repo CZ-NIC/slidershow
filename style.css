@@ -106,6 +106,9 @@ menu #progress .circle-progress-text {
   right: 5vw;
   z-index: 1;
 }
+#map-hud .hud {
+  display: none;
+}
 #map {
   position: absolute;
   height: 100%;

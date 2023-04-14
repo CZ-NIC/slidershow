@@ -22,7 +22,6 @@ class Interval {
         this.fn = fn;
         this.delay = this._delay = delay;
         this._delayed = function () {
-            console.log("48: DELAYED")
             this.time1 = +new Date();
             this.fn.call(this);
             if (ajax_wait !== true && this.running) {

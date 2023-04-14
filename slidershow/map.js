@@ -51,6 +51,10 @@ class MapWidget {
          */
         this.target_point
         this.animate_map_init()
+
+
+        this.default_layer = null //XX
+        this.geography_layer = null//XX
     }
 
     /**
@@ -60,10 +64,16 @@ class MapWidget {
     map_start(controls = true) {
         const center = SMap.Coords.fromWGS84(14.41790, 50.12655)
         const map = this.map = new SMap(JAK.gel(this.$map[0]), center)
-        map.addDefaultLayer(SMap.DEF_BASE).enable()
-        if (controls) {
+
+        this.default_layer = map.addDefaultLayer(SMap.DEF_BASE)
+        this.default_layer.enable()
+        // this.geography_layer = map.addDefaultLayer(SMap.DEF_GEOGRAPHY)
+        // console.log("69: this.default_layer", this.default_layer, this.geography_layer)
+
+        // if (controls) { ///XXX
             map.addDefaultControls()
-        }
+        // }
+
         // marker layer
         this.marker_layer = new SMap.Layer.Marker()
         map.addLayer(this.marker_layer)
@@ -128,12 +138,26 @@ class MapWidget {
     }
 
     set_center(longitude, latitude) {
+        this.clear()
         this.$map.show(0)
 
+
         const point = SMap.Coords.fromWGS84(longitude, latitude)
+        console.log("136: point", point)
+
 
         this.marker_layer.addMarker(new SMap.Marker(point))
-        this.map.setCenter(point, false)
+        this.map.setCenter(point, true)
+    }
+
+
+    geography() {
+        // this.geography_layer.enable()
+        // this.geography_layer = this.map.addDefaultLayer(SMap.DEF_GEOGRAPHY).enable()
+        // this.map.removeLayer(SMap.DEF_GEOGRAPHY)
+        // // this.map.changeBaseLayer("DEF_GEOGRAPHY");
+        // console.log("151:         this.geography_layer",         this.geography_layer)
+
     }
 
     async display_route(names = null) {
@@ -154,7 +178,7 @@ class MapWidget {
         })
     }
 
-    async display_markers(names = null) {
+    async display_markers(names = null, zoom=null) {
         this._names_to_places(names).then(places => {
             places.forEach(place => {
                 // var card = new SMap.Card();
@@ -171,10 +195,12 @@ class MapWidget {
                 this.marker_layer.addMarker(new SMap.Marker(place.coord(), place.name))
             })
 
-            // centralize the map
-            console.log("527: (...this.map", this.map.computeCenterZoom(places.map(p => p.coord())))
+            const [coord, zoom_recommended] = this.map.computeCenterZoom(places.map(p => p.coord()))
+            console.log("199: ", zoom || zoom_recommended)
 
-            this.map.setCenterZoom(...this.map.computeCenterZoom(places.map(p => p.coord())), false) // instead of false do nicer map zooming XX
+            this.animate_to(coord.x,coord.y, zoom || zoom_recommended)
+
+            //this.map.setCenterZoom(...this.map.computeCenterZoom(places.map(p => p.coord())), false) // instead of false do nicer map zooming XX
         })
     }
 

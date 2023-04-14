@@ -61,8 +61,7 @@ class Hud {
             $actor = { data: () => null }
         }
 
-        const name = frame.get_filename($actor)
-        console.log("65: name", name)
+        const name = frame.get_filename($actor) || "?"
 
         this.$hud_filename.html(name)
 
@@ -95,6 +94,15 @@ class Hud {
             console.warn(text) // XX GUI message overlay windowd
         } else {
             alert(text)
+        }
+    }
+
+    /**
+     * Information for the presenter, not for the public.
+     */
+    discreet_info(text) {
+        if (text) {
+            console.log("INFO:", text)
         }
     }
 }

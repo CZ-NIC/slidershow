@@ -119,12 +119,12 @@ class Playback {
                     const y = radius * Math.sin(angle);
                     const top = (15000 + y * 450) + 'vh';
                     const left = (15000 + x * 450) + 'vw';
-                    console.log("124: bonus", index_r, sectionCount, bonus, top, left)
+                    // console.log("124: bonus", index_r, sectionCount, bonus, top, left)
                     return { top, left };
                 }
 
                 let is_new_section = $el.is(":first-child") && $el.parent().is("section") && $el.parent().parent().is("main")
-                console.log("126: $l", $el, $el.is(":first-child"), $el.parent().is("section"), $el.parent().parent().is("main"), $el.is(":first") && $el.parent().is("section") && $el.parent().parent().is("main"))
+                // console.log("126: $l", $el, $el.is(":first-child"), $el.parent().is("section"), $el.parent().parent().is("main"), $el.is(":first") && $el.parent().is("section") && $el.parent().parent().is("main"))
 
                 // if (index % 6 === 0) {
                 //     is_new_section = true
@@ -169,6 +169,10 @@ class Playback {
                 this.play_pause(false)
                 return false
             }
+        }),
+
+        wh.press(KEY.A, "Play/Pause", () => { // XX undocumented, replace by the space
+            this.play_pause(!this.moving)
         }),
 
         wh.press(KEY.RIGHT, "Next", () => this.notVideoFocus() && this.nextFrame()),
@@ -228,7 +232,7 @@ class Playback {
 
         wh.pressAlt(KEY.D, "Debug", () => {
             const zoom = $main.css("zoom")
-            $main.css({ "zoom": zoom == "1"? "0.05":"1" })
+            $main.css({ "zoom": zoom == "1" ? "0.05" : "1" })
             this.debug = !this.debug
         }),
         ]
@@ -304,8 +308,10 @@ class Playback {
         this.index = $articles.index($current)
 
         const same_frame = $last[0] === $current[0]
+        /** @type {Frame} */
+        const last_frame = $last.data("frame")
         if (!same_frame) {
-            $last.data("frame").leave()
+            last_frame.leave()
         }
         frame.prepare()
 
@@ -336,6 +342,11 @@ class Playback {
             }
 
             // Duration
+            // XX If stopped because of the duration, give info.
+            // if(moving && !duration && last_frame.get_duration()) {
+            //     console.log("343: CHANGE", last_frame.get_duration(), duration)
+            //     this.hud.playback_icon("(&#9612;&#9612;)")
+            // }
             if (moving && duration) {
                 this.moving_timeout.start(duration * 1000)
             }

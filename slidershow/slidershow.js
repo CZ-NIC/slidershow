@@ -56,7 +56,7 @@ loadjQuery(() => {
     Promise.all(vendor.concat(local)).then(() => {
         if (USE_MAPY) {
             Loader.async = true
-            Loader.load(null, null, load_launch)
+            Loader.load(null, {suggest: true}, load_launch)
         } else {
             load_launch()
         }

@@ -112,6 +112,8 @@ class Frame {
         this.$actor = this.$frame.find("video, img").first()
 
         this.panorama_callback = null
+        this.panorama_freeze = null
+        this.loop_interval = null
 
         /**
          * If set, this frame is a subframe.
@@ -203,7 +205,8 @@ class Frame {
             this.playback.hud_map.animate_to(...gps.split(","))
         }
 
-        if ($frame.prop("tagName") === "ARTICLE-MAP") {
+const zoom = this.prop("map-zoom")
+        if ($frame.prop("tagName") === "ARTICLE-MAP") { // XXXX
 
             const map = this.playback.map
             map.adapt(this)
@@ -215,10 +218,29 @@ class Frame {
             }
             const places = $frame.data("places")
             if (places) {
-                map.display_markers(places.split(","))
+                console.log("220: places", places)
+
+                // map.set_center(places) // XXX
+                map.display_markers(places.split(","), zoom)
                 // setTimeout(()=>{
                 //     map.display_markers(["Sušice"])
                 // }, 1500)
+            }
+
+            const point = $frame.data("point")
+            if (point) {
+                // map.geography()
+                map.set_center(...point.split(","))
+                // map.map.setZoom(6)
+            }
+
+            if (zoom) {
+                map.map.setZoom(zoom)
+            }
+        } else { // show hudmap for data-places
+            const places = $frame.data("places")
+            if (places) {
+                this.playback.hud_map.display_markers(places.split(","), zoom)
             }
         }
 
@@ -271,62 +293,94 @@ class Frame {
             if (this.panorama_callback) {
                 this.panorama_callback()
             }
+            const loop = this.prop("loop")
+            if (loop) {
+                this.loop(loop)
+            }
         }
 
         // No HTML tag found, fit plain text to the screen size
-        if ($frame.children().length === 0) {
+        if ($frame.children().length === 0 || this.prop("fit")) {
             textFit($frame)
         }
 
         // Video frame
         if ($actor.prop("tagName") === "VIDEO") {
-            $actor.focus() // Focus video controls
-
-            if ($actor.attr("autoplay")) {
-                // Video autoplay (when muted in chromium)
-                $actor[0].play().catch(() => {
-                    this.playback.hud.alert("Interact with the page before the autoplay works.")
-                })
-
-            }
-            $actor[0].playbackRate = this.prop("playback-rate", 1, $actor)
-
-            // Pausing vs playback moving
-            this.$video_pause_listener = $actor.on("pause", () => {
-                // Normally, when a video ends, we want to move further.
-                // However, when we click to the video progress gauge,
-                // just before rewinding, a pause event is generated.
-                // We cannot distinguish whether a pause is a user-action
-                // or an automatic action. So that we wait
-                // an if it was a user-action, a play event will follow shortly,
-                // with the mouse button up.
-                this.next_interval = new Interval(() => {
-                    this.next_interval.stop()
-                    video_finished_clb()
-                }, 300)
-            }).on("play", () => {
-                // the video continues, it has not ended, do not move further
-                this.next_interval?.stop()
-            })
-                .on("click", () => {
-                    // the video was manually clicked upod, it has not ended, do not move further
-                    this.next_interval?.stop()
-                    this.playback.play_pause(false)
-                }).on("slidershow-leave", () => {
-                    $actor.off("pause").off("play").off("click")
-                })
-
-            // Video shortcuts
-            const playback_change = (step) => {
-                const r = $actor[0].playbackRate = Math.round(($actor[0].playbackRate + step) * 10) / 10
-                this.playback.hud.playback_icon(r + " ×")
-            }
-            this.shortcuts.push(
-                wh.press(KEY.KP_Add, "Faster video", () => playback_change(0.1)),
-                wh.press(KEY.KP_Subtract, "Faster video", () => playback_change(-0.1)))
-
+            this.video_enter(video_finished_clb)
         }
         return this.get_duration()
+    }
+
+    video_enter(video_finished_clb) {
+        const $actor = this.$actor
+        $actor.focus() // Focus video controls
+
+        this.playback.hud.discreet_info(this.get_filename().split("#")[1])
+
+        if ($actor.attr("autoplay")) {
+            // Video autoplay (when muted in chromium)
+            $actor[0].play().catch(() => {
+                this.playback.hud.alert("Interact with the page before the autoplay works.")
+            })
+
+        }
+        $actor[0].playbackRate = this.prop("playback-rate", 1, $actor)
+
+        // Pausing vs playback moving
+        this.$video_pause_listener = $actor.on("pause", () => {
+            // Normally, when a video ends, we want to move further.
+            // However, when we click to the video progress gauge,
+            // just before rewinding, a pause event is generated.
+            // We cannot distinguish whether a pause is a user-action
+            // or an automatic action. So that we wait
+            // an if it was a user-action, a play event will follow shortly,
+            // with the mouse button up.
+            this.next_interval = new Interval(() => {
+                this.next_interval.stop()
+                video_finished_clb()
+            }, 300)
+        }).on("play", () => {
+            // the video continues, it has not ended, do not move further
+            this.next_interval?.stop()
+        })
+            .on("click", () => {
+                // the video was manually clicked upod, it has not ended, do not move further
+                this.next_interval?.stop()
+                this.playback.play_pause(false)
+            }).on("slidershow-leave", () => {
+                $actor.off("pause").off("play").off("click")
+            })
+
+        // Video shortcuts
+        const playback_change = (step) => {
+            const r = $actor[0].playbackRate = Math.round(($actor[0].playbackRate + step) * 10) / 10
+            this.playback.hud.playback_icon(r + " ×")
+        }
+        this.shortcuts.push(
+            wh.press(KEY.KP_Add, "Faster video", () => playback_change(0.1)),
+            wh.press(KEY.KP_Subtract, "Faster video", () => playback_change(-0.1)),
+            wh.pressAlt(KEY.M, "Toggle muted", () => $actor[0].muted = !$actor[0].muted)
+        )
+
+    }
+
+    loop(loop) {
+        const $frame = this.$frame
+        const $children = $frame.children().css({ "left": "unset", "top": "unset" }).show()
+
+        function* stepGen(steps) {
+            let index = 0;
+            while (true) {
+                yield steps[index];
+                index = (index + 1) % steps.length;
+            }
+        }
+        const gen = stepGen([...$children])
+
+        this.loop_interval = new Interval(() => {
+            $children.hide()
+            $(gen.next().value).show()
+        }, 200)
     }
 
     get_duration() {
@@ -348,6 +402,8 @@ class Frame {
     }
 
     left() {
+        this.panorama_freeze?.()
+        this.loop_interval?.stop()
         this.$actor.stop(true)
     }
 
@@ -371,6 +427,7 @@ class Frame {
 
         if (w / h > PANORAMA_THRESHOLD) {
             this.playback.moving_timeout.freeze()
+            this.panorama_freeze = () => { this.playback.moving_timeout.unfreeze(); this.panorama_freeze = null; }
             let speed = Math.min((trailing_width / 100), 5) * 1000 // 100 px / 1s, but max 5 sec
             // speed = 1000
             $actor.css({
@@ -391,7 +448,7 @@ class Frame {
                         top: (main_h / 2) - (small_height / 2) + "px"
                     }, 1000, () => {
                         $actor.removeAttr("style")
-                        this.playback.moving_timeout.unfreeze()
+                        this.panorama_freeze?.()
                     })
                 })
             }
@@ -426,16 +483,18 @@ class Frame {
         })
     }
 
-    get_filename($actor) {
-        return ($actor.data("src") || $actor.attr("src"))?.split("/").pop()
+    get_filename($actor = null) {
+        // there might be base64 data in the real src, hence we prefer the data-src
+        $actor = $actor || this.$actor
+        return ($actor.data("src") || $actor.attr("src") || $("source", $actor).attr("src"))?.split("/").pop()
     }
 
     get_position() {
-        if(this.playback.debug) {
+        if (this.playback.debug) {
             const zoom = $main.css("zoom")
             return {
-                top: `-${this.$frame.position().top - 300/zoom }px`,
-                left: `-${this.$frame.position().left  - 300/zoom}px`,
+                top: `-${this.$frame.position().top - 300 / zoom}px`,
+                left: `-${this.$frame.position().left - 300 / zoom}px`,
             }
         }
         return {
@@ -446,7 +505,7 @@ class Frame {
 
     check_tag() {
         const $actor = this.$actor
-        const name = this.get_filename($actor)
+        const name = this.get_filename()
         const tag = localStorage.getItem("TAG: " + name)
         if (tag) {
             $actor.attr("data-tag", tag)
@@ -455,7 +514,7 @@ class Frame {
 
     set_tag(tag) {
         const $actor = this.$actor
-        const name = this.get_filename($actor)
+        const name = this.get_filename()
 
         const key = "TAG: " + name
         if (tag) {

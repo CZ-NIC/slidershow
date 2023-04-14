@@ -62,11 +62,21 @@ Which contains arbitrary HTML code, such as images or videos.
 </article>
 ```
 
+* `data-loop`: If present, images in the body will rapidly loop, creating a funny animation. (Currenly use only -1 attribute for an infitite loop.)
+```html
+<article data-loop="-1">
+    <img src="pic1.jpg" />
+    <img src="pic2.jpg" />
+</article>
+```
+
 ## Map frame <article-map>
 
 * attributes
     * `data-places`: Delimited by comma. Ex: "Prague, Brno"
+        * May be used in an <article> too to display the HUD map.
     * `data-route`: Delimited by comma. Ex: "Prague, Brno"
+    * `data-map-zoom`: Zoom as given by the [Mapy.cz API](https://api.mapy.cz/doc/SMap.html) (world 1, country 5, street 13)
 * Content is not displayed in the moment.
 * You may nest `<article-map>` tags easily which causes the map to change.
 
@@ -137,7 +147,7 @@ Any HTML content is accepted.
 
 ### Text
 
-If there is no tag inside an `<article>`, it is considered as a plain text. Its size gets fit to the screen width.
+If there is no tag inside an `<article>` or if use use the `data-fit` attribute, it is considered as a plain text. Its size gets fit to the screen width.
 
 ### <img>
 
