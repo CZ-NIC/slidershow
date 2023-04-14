@@ -57,8 +57,6 @@ class Playback {
         this.shortcuts.forEach(s => s.disable())
     }
     destroy() {
-        console.log("47: this.map.map", this.map.map)
-
         this.map.destroy()
         this.hud_map.destroy()
     }
@@ -96,8 +94,6 @@ class Playback {
             }
 
             frame.index = index + 1
-            // console.log("82: frame,index", frame.$actor, frame.index, index)
-
 
             if (!POSITIONING_EXPERIMENTAL) {
                 $el.css({
@@ -115,14 +111,14 @@ class Playback {
 
                     const bonus = (index < 10) ? index : 10 // the distance is too narrow in the beginning
 
-                    let index_r = index + bonus + sectionCount * 3
-                    console.log("124: bonus", index_r, sectionCount, bonus)
+                    let index_r = index + bonus + sectionCount * 6
                     const angle = angleStep * (index_r * (x3 || 4)); // uprav úhel o aktuální kruh
                     const radius = radiusStep * Math.sqrt((index_r) * (x4 || 0.25));  // uprav poloměr o aktuální kruh
                     const x = radius * Math.cos(angle);
                     const y = radius * Math.sin(angle);
                     const top = (15000 + y * 450) + 'vh';
                     const left = (15000 + x * 450) + 'vw';
+                    console.log("124: bonus", index_r, sectionCount, bonus, top, left)
                     return { top, left };
                 }
 
@@ -131,8 +127,6 @@ class Playback {
                 //     is_new_section = true
                 // }
                 const pos = generateSpiralPosition(index, is_new_section)
-                console.log("131: pos", pos)
-
                 $el.css(pos)
             }
 
@@ -249,7 +243,6 @@ class Playback {
             // }
 
             let $section = $(`section[data-tag=${tag}]`)
-            console.log("202: tag, $section.length", tag, $section.length)
             if (!$section.length) {
                 $section = $("<section/>", { "data-tag": tag }).prependTo($main)
             }
@@ -268,14 +261,10 @@ class Playback {
 
     nextSection() {
         const $next = this.frame.$frame.closest("section, main").next().find(FRAME_SELECTOR).first()
-        console.log("242: $next", $next, $next.data("frame").index)
-
         this.goToFrame($next.data("frame").index - 1, true)
     }
     previousSection() {
         const $previous = this.frame.$frame.closest("section, main").prev().find(FRAME_SELECTOR).first()
-        console.log("242: $previous", $previous, $previous.data("frame").index)
-
         this.goToFrame($previous.data("frame").index - 1)
     }
 
@@ -303,8 +292,6 @@ class Playback {
          * @type {Frame}
          */
         const frame = this.frame = $current.data("frame")
-        console.log("Transition starts", index)
-
         this.index = $articles.index($current)
 
         const same_frame = $last[0] === $current[0]
@@ -325,7 +312,6 @@ class Playback {
         promise.then(() => {
             // frame is at the viewport now
             if (promise.aborted) { // another frame was raise meanwhile
-                console.log("235: ABORTED",)
                 return
             }
             console.log("Frame ready")

@@ -231,9 +231,6 @@ class MapWidget {
         const [a, b] = [this.map.getCenter().x, this.map.getCenter().y]
         const [x, y] = [longitude, latitude]
 
-
-        console.log("233: point.distance", point.distance(this.map.getCenter()))
-
         const current_zoom = this.map.getZoom()
         let zoom = Math.min(computed_zoom, current_zoom)
 
@@ -253,10 +250,10 @@ class MapWidget {
         for (let step = 1; step <= steps; step++) {
             const x_step = (x - a) / steps * step
             const y_step = (y - b) / steps * step
-            console.log("260: x_step, y_step", x_step, y_step)
+            // console.log("260: x_step, y_step", x_step, y_step)
 
             if (Math.abs(x_step) < 0.0001 && Math.abs(y_step) < 0.0001) {
-                console.log("standing", x_step, y_step)
+                // console.log("standing", x_step, y_step)
                 break;
             }
 

@@ -191,8 +191,6 @@ class Frame {
         }
 
         // File name
-        console.log("186: $actor", $actor, $frame)
-
         this.playback.hud.fileinfo(this)
 
         // Map
@@ -278,8 +276,6 @@ class Frame {
 
         // Video frame
         if ($actor.prop("tagName") === "VIDEO") {
-            console.log("172: Focusing actionr", $actor)
-
             $actor.focus() // Focus video controls
 
             if ($actor.attr("autoplay")) {
@@ -381,7 +377,6 @@ class Frame {
                 $actor.animate({
                     left: - trailing_width,
                 }, speed, () => {
-                    console.log("255: ANIM CENTRA", $actor)
                     $actor.animate({
                         left: 0,
                         width: main_w,
@@ -438,8 +433,6 @@ class Frame {
         const name = this.get_filename($actor)
         const tag = localStorage.getItem("TAG: " + name)
         if (tag) {
-            console.log("390: TAG ZDE", tag)
-
             $actor.attr("data-tag", tag)
         }
     }
@@ -461,8 +454,6 @@ class Frame {
 
     static exif($el, data = null, callback = null) {
         if (!READ_EXIF || $el.data("exif-done")) {
-            console.log("367: skip exif",)
-
             return
         }
         const process = (exif) => {
@@ -490,7 +481,6 @@ class Frame {
                 ; // no gps info
             }
 
-            // console.log("Exif info", attrs);
             $el.attr(attrs).data("exif-done", 1)
             if (callback) {
                 callback()

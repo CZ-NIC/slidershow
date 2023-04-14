@@ -46,6 +46,12 @@ loadjQuery(() => {
         get_menu().appendTo("body")
         loadScript({ src: DIR + "launch.js" })
     }
+
+    // meta tag check
+    if(!$("meta[charset]", "head").length) {
+        $("head").append("<meta charset='UTF-8'>")
+    }
+
     // wait for all scripts to load
     Promise.all(vendor.concat(local)).then(() => {
         if (USE_MAPY) {
