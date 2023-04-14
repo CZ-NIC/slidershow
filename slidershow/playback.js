@@ -9,7 +9,7 @@ class Playback {
     constructor() {
         this.promise = {} // transition promise
         this.moving = true
-        this.moving_timeout = null
+        this.moving_timeout = new Interval(() => this.moving && this.nextFrame())
 
 
 
@@ -38,6 +38,7 @@ class Playback {
         this.start()
         this.videoInit()
 
+        this.debug = false
     }
 
     start() {
@@ -49,7 +50,7 @@ class Playback {
     }
 
     stop() {
-        clearTimeout(this.moving_timeout)
+        this.moving_timeout.stop()
         $articles.hide()
         $hud.hide(0)
         this.promise.aborted = true
@@ -111,7 +112,7 @@ class Playback {
 
                     const bonus = (index < 10) ? index : 10 // the distance is too narrow in the beginning
 
-                    let index_r = index + bonus + sectionCount * 6
+                    let index_r = index + bonus + sectionCount * 3
                     const angle = angleStep * (index_r * (x3 || 4)); // uprav úhel o aktuální kruh
                     const radius = radiusStep * Math.sqrt((index_r) * (x4 || 0.25));  // uprav poloměr o aktuální kruh
                     const x = radius * Math.cos(angle);
@@ -122,7 +123,9 @@ class Playback {
                     return { top, left };
                 }
 
-                let is_new_section = $el.is(":first") && $el.parent().is("section") && $el.parent().parent().is("main")
+                let is_new_section = $el.is(":first-child") && $el.parent().is("section") && $el.parent().parent().is("main")
+                console.log("126: $l", $el, $el.is(":first-child"), $el.parent().is("section"), $el.parent().parent().is("main"), $el.is(":first") && $el.parent().is("section") && $el.parent().parent().is("main"))
+
                 // if (index % 6 === 0) {
                 //     is_new_section = true
                 // }
@@ -221,7 +224,13 @@ class Playback {
         wh.pressAlt(KEY.PageDown, "Next section", () => this.nextSection()),
         wh.pressAlt(KEY.PageUp, "Prev section", () => this.previousSection()),
 
-            // wh.pressAlt(KEY.T, "Thumbnails", () => this.thumbnails()),
+        // wh.pressAlt(KEY.T, "Thumbnails", () => this.thumbnails()),
+
+        wh.pressAlt(KEY.D, "Debug", () => {
+            const zoom = $main.css("zoom")
+            $main.css({ "zoom": zoom == "1"? "0.05":"1" })
+            this.debug = !this.debug
+        }),
         ]
 
     }
@@ -302,10 +311,15 @@ class Playback {
 
         // start transition
         this.play_pause(moving)
-        if (this.moving_timeout) {
-            clearTimeout(this.moving_timeout)
-        }
+        this.moving_timeout.stop()
         this.promise.aborted = true
+
+        if (this.debug) {
+            $last.css({ "background": "unset" })
+            $current.css({ "background": "blue" })
+        } else {
+            $last.css({ "background": "unset" })
+        }
 
         const trans = same_frame ? $main.css(frame.get_position()) : this.transition($last, $current)
         const promise = this.promise = trans.promise()
@@ -323,7 +337,7 @@ class Playback {
 
             // Duration
             if (moving && duration) {
-                this.moving_timeout = setTimeout(() => this.moving && this.nextFrame(), duration * 1000)
+                this.moving_timeout.start(duration * 1000)
             }
         })
     }

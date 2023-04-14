@@ -17,9 +17,12 @@ class Interval {
      * @returns {Interval}
      */
     constructor(fn, delay, ajax_wait) {
+        this.was_running = false
+        this.freezed = false
         this.fn = fn;
         this.delay = this._delay = delay;
         this._delayed = function () {
+            console.log("48: DELAYED")
             this.time1 = +new Date();
             this.fn.call(this);
             if (ajax_wait !== true && this.running) {
@@ -29,17 +32,44 @@ class Interval {
         this.start();
     }
 
-    start() {
-        this.stop();
-        this.running = true;
-        this.instance = setTimeout(this._delayed, this._delay);
-        return this;
+    /**
+     *
+     * @param {Number} delay If set, replaces current delay.
+     * @returns
+     */
+    start(delay = null) {
+        if (delay) {
+            this._delay = delay
+        }
+        if (this.freezed) {
+            return
+        }
+        this.stop()
+        this.running = true
+        this.instance = setTimeout(this._delayed, this._delay)
+        return this
     }
 
     stop() {
-        clearTimeout(this.instance);
-        this.running = false;
-        return this;
+        clearTimeout(this.instance)
+        this.running = false
+        return this
+    }
+
+    freeze() {
+        this.freezed = true
+        this.was_running = this.running
+        this.stop()
+    }
+
+    unfreeze() {
+        if(!this.freezed) {
+            return
+        }
+        this.freezed = false
+        if (this.was_running) {
+            this.start()
+        }
     }
 
     /**

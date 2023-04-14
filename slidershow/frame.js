@@ -1,4 +1,8 @@
 const PRELOAD_XXX = false // XXX Nejde mi to stáhnout, když používám preload. Ale jenom když je to na RAMce, bez cesty.
+/**
+ * Width / height > this → launch panorama
+ */
+const PANORAMA_THRESHOLD = 2
 
 /**
  * Append new frame programatically with the static methods.
@@ -322,8 +326,11 @@ class Frame {
                 wh.press(KEY.KP_Subtract, "Faster video", () => playback_change(-0.1)))
 
         }
+        return this.get_duration()
+    }
 
-        return $actor.prop("tagName") === "VIDEO" ? this.prop("duration-video") : this.prop("duration")
+    get_duration() {
+        return this.$actor.prop("tagName") === "VIDEO" ? this.prop("duration-video") : this.prop("duration")
     }
 
     leave() {
@@ -362,7 +369,8 @@ class Frame {
 
         $actor.removeAttr("style")
 
-        if (w / h > 2) {
+        if (w / h > PANORAMA_THRESHOLD) {
+            this.playback.moving_timeout.freeze()
             let speed = Math.min((trailing_width / 100), 5) * 1000 // 100 px / 1s, but max 5 sec
             // speed = 1000
             $actor.css({
@@ -383,6 +391,7 @@ class Frame {
                         top: (main_h / 2) - (small_height / 2) + "px"
                     }, 1000, () => {
                         $actor.removeAttr("style")
+                        this.playback.moving_timeout.unfreeze()
                     })
                 })
             }
@@ -422,6 +431,13 @@ class Frame {
     }
 
     get_position() {
+        if(this.playback.debug) {
+            const zoom = $main.css("zoom")
+            return {
+                top: `-${this.$frame.position().top - 300/zoom }px`,
+                left: `-${this.$frame.position().left  - 300/zoom}px`,
+            }
+        }
         return {
             top: `-${this.$frame.position().top}px`,
             left: `-${this.$frame.position().left}px`,

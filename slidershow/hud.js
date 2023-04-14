@@ -62,6 +62,8 @@ class Hud {
         }
 
         const name = frame.get_filename($actor)
+        console.log("65: name", name)
+
         this.$hud_filename.html(name)
 
         this.$hud_device.text($actor.data("device"))
