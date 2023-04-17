@@ -40,7 +40,7 @@ loadjQuery(() => {
         { src: "https://cdn.jsdelivr.net/npm/exif-js" },
         { src: "https://api.mapy.cz/loader.js" }
     ].map(f => loadScript(f))
-    const local = ["../WebHotkeys.js", "static.js", "frame.js", "place.js", "map.js", "hud.js", "menu.js", "playback.js"].map(f => loadScript({ src: DIR + f }))
+    const local = ["../WebHotkeys.js", "static.js", "frame_factory.js", "frame.js", "place.js", "map.js", "hud.js", "menu.js", "playback.js"].map(f => loadScript({ src: DIR + f }))
 
     const load_launch = () => {
         get_menu().appendTo("body")
@@ -48,7 +48,7 @@ loadjQuery(() => {
     }
 
     // meta tag check
-    if(!$("meta[charset]", "head").length) {
+    if (!$("meta[charset]", "head").length) {
         $("head").append("<meta charset='UTF-8'>")
     }
 
@@ -56,7 +56,7 @@ loadjQuery(() => {
     Promise.all(vendor.concat(local)).then(() => {
         if (USE_MAPY) {
             Loader.async = true
-            Loader.load(null, {suggest: true}, load_launch)
+            Loader.load(null, { suggest: true }, load_launch)
         } else {
             load_launch()
         }
