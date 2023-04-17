@@ -18,7 +18,7 @@ class Playback {
 
         if (MAP_ENABLE) {
             this.map = new MapWidget(fact("map"), this).map_start()
-            this.hud_map = new MapWidget(fact("map-hud"), this).map_start(false)
+            this.hud_map = new MapWidget(fact("map-hud"), this).map_start()
         }
 
         /**
@@ -351,7 +351,7 @@ class Playback {
                 Promise.all(frame.effects).then(() =>
                     this.moving_timeout.fn(() => {
                         this.moving_timeout.stop()
-                        Promise.resolve(frame.video_finished).then(() => this.moving && this.nextFrame())
+                        Promise.all([frame.video_finished, this.map.finished, this.hud_map.finished]).then(() => this.moving && this.nextFrame())
                     }).start(duration * 1000)
                 )
             }

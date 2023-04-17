@@ -1,27 +1,42 @@
-Slidershow – more than a slideshow
+# Slidershow – more than a slideshow
 
 Have you ever wanted to show your friends media from holidays? How cubersome it was to mix photos and videos? Enough of frame transition? Dreaming about a fully customisable presentation experience? Presentation file size huge? This HTML based presented will let you show your contents just as you want. Either launch it and drag the files inside or fully define all the properties.
 
 # Usage
 
-## Online
-The application runs in the browser – check it.
-
-(Remember: Nothing is uploaded to the server. Check the code – there is no server.)
-
-## Manually
-
-Add somewhere and that is all!
+The application runs in the browser – see the SlideRshow right now. Or download the repository and open the local file. Or add somewhere a tag and that is all!
 
 ```html
-<script src="slidershow/slidershow.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/CZ-NIC/slidershow@0.7.0/slidershow/slidershow.js"></script>
 ```
+
+When in the application, drag and drop media files into the page and just start the playthrough. (Remember: Nothing is uploaded to the server. Check the code – there is no server.) Should a more detailed presentation be needed, just export the presentation HTML file with <kbd>Ctrl+E</kbd> and edit it at will.
+
+# Playback
+
+## Controls
+
+When played, keyboard shortcuts works.
+
+Next frame: <kbd>Right</kbd>, <kbd>PageDown</kbd>, <kbd>n</kbd>, <kbd>Space</kbd>
+Previous frame: <kbd>Left</kbd>, <kbd>PageUp</kbd>, <kbd>p</kbd>
+
+Full controls: <kbd>h</kbd>
+Video: Adjust speed by <kbd>Numpad +/-</kbd>
+Menu: Hit <kbd>Esc</kbd>
+
+## Start
+
+The <menu> is displayed before the presentation starts, unless the <main> has `data-start` attribute.
+
+## Organizing
+
+Use Numpad to tag the images. Then in the menu, hit <kbd>Alt+G</kbd> to group the images to the `<section>` according to tags.
+
 
 # Structure
 
 Put the presentation content to the <main> tag which contain <article> tags.
-
-
 
 ## Frame <article>
 
@@ -36,12 +51,12 @@ Which contains arbitrary HTML code, such as images or videos.
 ### Attributes
 
 * `data-duration=0`: How many seconds a frame will last. By default, indefinitely (waiting for a user action). Note a video frame will hold till the video finishes.
+
 ```html
 <article data-duration="0.5">Short frame</article>
 <article>You have to click to get further.</article>
 <article data-duration="0.5">Short frame</article>
 ```
-
 
 * `data-transition`: `fade` (default), `scroll-down` XXX
 * `data-transition-duration`: s (default 0.5)
@@ -164,28 +179,6 @@ However, this is a non-trivial task since the browser protects your photos priva
 
 Zoomable on click/mouse wheel. Double click restores image original size.
 
-
 #### Panoramatic images
 
 When an image is much longer than the screen, we show it slowly first before resizing it to fit the screen.
-
-# Playback
-
-## Controls
-
-When played, keyboard shortcuts works.
-
-Next frame: <kbd>Right</kbd>, <kbd>PageDown</kbd>, <kbd>n</kbd>, <kbd>Space</kbd>
-Previous frame: <kbd>Left</kbd>, <kbd>PageUp</kbd>, <kbd>p</kbd>
-
-Full controls: <kbd>h</kbd>
-
-Video: Adjust speed by <kbd>Numpad +/-</kbd>
-
-## Start
-
-The <menu> is displayed before the presentation starts, unless the <main> has `data-start` attribute.
-
-# Organizing
-
-Use Numpad to tag the images. Then in the menu, hit <kbd>Alt+G</kbd> to group the images to the `<section>` according to tags.

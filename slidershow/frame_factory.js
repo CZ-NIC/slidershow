@@ -43,7 +43,7 @@ class FrameFactory {
     }
 
     static _read(data, $el) {
-        if (PRELOAD_XXX) {
+        if (PRELOAD_EXPERIMENTAL) {
             $el
                 .attr("data-src-cached", 1)
                 .data("src-cached-data", (dom) => {

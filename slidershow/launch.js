@@ -1,12 +1,12 @@
 
 const wh = new WebHotkeys()
-const $main = $("main")
+const $main = $("main").length ? $("main") : $("<main/>").appendTo("body")
 const $hud = $("#hud")
 const FRAME_SELECTOR = "article,article-map"
 
 const READ_EXIF = true // power consuming
 
-const PRELOAD_XXX = false // XXX Nejde mi to stáhnout, když používám preload. Ale jenom když je to na RAMce, bez cesty.
+const PRELOAD_EXPERIMENTAL = false // XX cannot be downloaded when preload used. But only when on RAM without path.
 
 /**
  * Width / height > this → launch panorama

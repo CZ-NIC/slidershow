@@ -33,23 +33,21 @@ loadjQuery(() => {
             integrity: "sha256-iew84VMdav48KUPfYXOXyChG413xDhB4NlDngkmVfTg=",
             crossOrigin: "anonymous"
         },
-        {
-            src: "https://cdn.jsdelivr.net/npm/js-circle-progress@0.2.4/dist/jquery.circle-progress.min.js"
-        },
-
+        { src: "https://cdn.jsdelivr.net/npm/js-circle-progress@0.2.4/dist/jquery.circle-progress.min.js" },
+        { src: "https://cdn.jsdelivr.net/gh/e3rd/WebHotkeys@0.7/WebHotkeys.js" },
         { src: "https://cdn.jsdelivr.net/npm/exif-js" },
         { src: "https://api.mapy.cz/loader.js" }
     ].map(f => loadScript(f))
-    const local = ["../WebHotkeys.js", "static.js", "frame_factory.js", "frame.js", "place.js", "map.js", "hud.js", "menu.js", "playback.js"].map(f => loadScript({ src: DIR + f }))
+    const local = ["static.js", "frame_factory.js", "frame.js", "place.js", "map.js", "hud.js", "menu.js", "playback.js"].map(f => loadScript({ src: DIR + f }))
 
     const load_launch = () => {
         get_menu().appendTo("body")
         loadScript({ src: DIR + "launch.js" })
     }
 
-    // meta tag check
+    // meta tag check (however, if not already present, export button displays as garbage)
     if (!$("meta[charset]", "head").length) {
-        $("head").append("<meta charset='UTF-8'>")
+        $("head").append("<meta charset='utf-8'>")
     }
 
     // wait for all scripts to load

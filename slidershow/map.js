@@ -40,7 +40,7 @@ class MapWidget {
         /**
          * Animation steps
          * @type {AnimationStep[]}
-         */
+        */
         this.animation
 
         /**
@@ -48,20 +48,26 @@ class MapWidget {
          * @type {number}
          * @property {number} 0 - longitude
          * @property {number} 1 - latitude
-         */
+        */
         this.target_point
         this.animate_map_init()
 
 
         this.default_layer = null //XX
         this.geography_layer = null//XX
+
+        /** @type {?Promise} Whether the animation is completed. */
+        this.finished = null
+        /** @type {?Function} Resolve method so that this.finished fulfills */
+        this._finished = null
+
     }
 
     /**
      *
      * @returns MapWidget
      */
-    map_start(controls = true) {
+    map_start() {
         const center = SMap.Coords.fromWGS84(14.41790, 50.12655)
         const map = this.map = new SMap(JAK.gel(this.$map[0]), center)
 
@@ -70,9 +76,7 @@ class MapWidget {
         // this.geography_layer = map.addDefaultLayer(SMap.DEF_GEOGRAPHY)
         // console.log("69: this.default_layer", this.default_layer, this.geography_layer)
 
-        // if (controls) { ///XXX
-            map.addDefaultControls()
-        // }
+        map.addDefaultControls()
 
         // marker layer
         this.marker_layer = new SMap.Layer.Marker()
@@ -83,6 +87,16 @@ class MapWidget {
         this.geometry_layer = new SMap.Layer.Geometry()
         map.addLayer(this.geometry_layer).enable()
         this.$map.hide(0)
+
+        // signals
+        map.getSignals().addListener(this, "*", (e) => {
+            console.log("93: map",e.type, this.animation.length)
+
+            if(e.type == "map-unlock" || e.type== "zoom-stop") {
+                return !this.animation.length && this._finished()
+            }
+        })
+
         return this
     }
 
@@ -137,7 +151,7 @@ class MapWidget {
         return Promise.all(names.map(name => Place.get(name)))
     }
 
-    set_center(longitude, latitude) {
+    set_center(longitude, latitude, zoom) {
         this.clear()
         this.$map.show(0)
 
@@ -148,15 +162,35 @@ class MapWidget {
 
         this.marker_layer.addMarker(new SMap.Marker(point))
         this.map.setCenter(point, true)
+        if(zoom) {
+            this.map.setZoom(zoom)
+        }
+        // this.animate_to(longitude, latitude, 8)
+        this._redrawing()
+    }
+
+    /**
+     * The internal map is redrawing and we want to be waited for.
+     * Should be called once by a public method.
+     */
+    _redrawing() {
+        console.log("166: Redrawing")
+
+        this.finished = new Promise(resolve => {
+            this._finished = resolve
+        })
     }
 
 
-    geography() {
-        // this.geography_layer.enable()
+    // geography() {
+        // this.geography_layer.enable() XX
         // this.geography_layer = this.map.addDefaultLayer(SMap.DEF_GEOGRAPHY).enable()
         // this.map.removeLayer(SMap.DEF_GEOGRAPHY)
         // // this.map.changeBaseLayer("DEF_GEOGRAPHY");
         // console.log("151:         this.geography_layer",         this.geography_layer)
+    // }
+
+    async display(options) {
 
     }
 
@@ -176,9 +210,10 @@ class MapWidget {
                 this.map.setCenterZoom(...this.map.computeCenterZoom(coords), true)
             })
         })
+        this._redrawing()
     }
 
-    async display_markers(names = null, zoom=null) {
+    async display_markers(names = null, zoom = null) {
         this._names_to_places(names).then(places => {
             places.forEach(place => {
                 // var card = new SMap.Card();
@@ -196,12 +231,13 @@ class MapWidget {
             })
 
             const [coord, zoom_recommended] = this.map.computeCenterZoom(places.map(p => p.coord()))
-            console.log("199: ", zoom || zoom_recommended)
+            // console.log("199: ", zoom || zoom_recommended)
 
-            this.animate_to(coord.x,coord.y, zoom || zoom_recommended)
+            this.animate_to(coord.x, coord.y, zoom || zoom_recommended)
 
             //this.map.setCenterZoom(...this.map.computeCenterZoom(places.map(p => p.coord())), false) // instead of false do nicer map zooming XX
         })
+        this._redrawing()
     }
 
     /**
@@ -211,7 +247,7 @@ class MapWidget {
         this.animation = []
         this.target_point = null
         this.changing = new Interval(() => {
-            if (this.animation.length === 0) {
+            if (this.animation.length === 0) { // animation ends
                 this.changing.stop()
                 // check map broken
                 const r = (x) => {
@@ -294,6 +330,7 @@ class MapWidget {
 
         this.animation.push(new AnimationStep(x, y, zoom_final, "zoom final"))
         this.changing.start()
+        this._redrawing()
     }
 
 }

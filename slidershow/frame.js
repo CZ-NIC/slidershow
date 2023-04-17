@@ -110,43 +110,32 @@ class Frame {
             this.playback.hud_map.animate_to(...gps.split(","))
         }
 
-        const zoom = this.prop("map-zoom")
-        if ($frame.prop("tagName") === "ARTICLE-MAP") { // XXXX
-
-            const map = this.playback.map
+        let map
+        // which map to use?
+        if ($frame.prop("tagName") === "ARTICLE-MAP") {
+            map = this.playback.map
             map.adapt(this)
             map.geometry_layer.clear()
             map.marker_layer.clear()
-            const route = $frame.data("route")
-            if (route) {
-                map.display_route(route.split(","))
-            }
-            const places = $frame.data("places")
-            if (places) {
-                console.log("220: places", places)
+        } else {
+            map = this.playback.hud_map
+        }
 
-                // map.set_center(places) // XXX
-                map.display_markers(places.split(","), zoom)
-                // setTimeout(()=>{
-                //     map.display_markers(["Sušice"])
-                // }, 1500)
-            }
+        const zoom = this.prop("map-zoom")
+        const route = $frame.data("route")
+        if (route) {
+            map.display_route(route.split(",")) // XX integrate zoom
+        }
+        const places = $frame.data("places")
+        if (places) {
+            console.log("220: places", places)
+            map.display_markers(places.split(","), zoom)
+        }
 
-            const point = $frame.data("point")
-            if (point) {
-                // map.geography()
-                map.set_center(...point.split(","))
-                // map.map.setZoom(6)
-            }
-
-            if (zoom) {
-                map.map.setZoom(zoom)
-            }
-        } else { // show hudmap for data-places
-            const places = $frame.data("places")
-            if (places) {
-                this.playback.hud_map.display_markers(places.split(","), zoom)
-            }
+        const point = $frame.data("point")
+        if (point) {
+            // map.geography()
+            map.set_center(...point.split(","), zoom)
         }
 
     }
@@ -173,7 +162,7 @@ class Frame {
 
         // Memory preload – we hold all data in the memory
         $frame.find("img[data-src-cached]").each(function () {
-            if (PRELOAD_XXX) {
+            if (PRELOAD_EXPERIMENTAL) {
                 // .removeAttr("data-src-cached")
                 $(this).data("src-cached-data")(this)
             } else {

@@ -26,12 +26,12 @@ class Hud {
 
 
     /**
-     *
+     * Thumbnail ribbon
      * @param {Frame} frame
      */
     refresh_thumbnails(frame) {
         return;
-        // if (!this.thumbnails) {//XXX
+        // if (!this.thumbnails) {
         //     return
         // }
         // this.hud.$hud_thumbnails.toggle()
