@@ -2,22 +2,21 @@ class Frame {
     /**
      *
      * @param {jQuery} $el
-     * @param {Playback|null} playback
+     * @param {?Playback} playback
      */
     constructor($el, playback = null) {
         this.$frame = $el
         /** @type Playback */
         this.playback = playback
         this.$video_pause_listener = null
-        this.next_interval
-        /**  @type {jQuery|null}         */
+        /**  @type {?jQuery}         */
         this.$actor = this.$frame.find("video, img").first()
         this.panorama_starter = null
         this.loop_interval = null
 
         /**
          * If set, this frame is a subframe.
-         * @type {Frame|null}
+         * @type {?Frame}
          */
         this.parent = null
         /**
@@ -33,8 +32,11 @@ class Frame {
 
         this.shortcuts = []
 
-        /** @type Promise[] All the effects that should hold playback. */
+        /** @type {Promise[]} All the effects that should hold playback. */
         this.effects = []
+
+        /** @type {?Promise} */
+        this.video_finished = null
     }
 
     register_parent(frame) {
@@ -183,7 +185,7 @@ class Frame {
         })
     }
 
-    enter(video_finished_clb) {
+    enter() {
         const $frame = this.$frame
 
         // Get main media
@@ -209,12 +211,12 @@ class Frame {
 
         // Video frame
         if ($actor.prop("tagName") === "VIDEO") {
-            this.video_enter(video_finished_clb)
+            this.video_finished = new Promise((resolve) => this.video_enter(resolve))
         }
         return this.get_duration()
     }
 
-    video_enter(video_finished_clb) {
+    video_enter(resolve) {
         const $actor = this.$actor
         $actor.focus() // Focus video controls
 
@@ -228,6 +230,7 @@ class Frame {
 
         }
         $actor[0].playbackRate = this.prop("playback-rate", 1, $actor)
+        let next_interval = null
 
         // Pausing vs playback moving
         this.$video_pause_listener = $actor.on("pause", () => {
@@ -238,17 +241,18 @@ class Frame {
             // or an automatic action. So that we wait
             // an if it was a user-action, a play event will follow shortly,
             // with the mouse button up.
-            this.next_interval = new Interval(() => {
-                this.next_interval.stop()
-                video_finished_clb()
+            next_interval = new Interval(() => {
+                next_interval.stop()
+                console.log("246: resolving", resolve)
+                resolve()
             }, 300)
         }).on("play", () => {
             // the video continues, it has not ended, do not move further
-            this.next_interval?.stop()
+            next_interval?.stop()
         })
             .on("click", () => {
                 // the video was manually clicked upod, it has not ended, do not move further
-                this.next_interval?.stop()
+                next_interval?.stop()
                 this.playback.play_pause(false)
             }).on("slidershow-leave", () => {
                 $actor.off("pause").off("play").off("click")
@@ -287,7 +291,8 @@ class Frame {
     }
 
     get_duration() {
-        return this.$actor.prop("tagName") === "VIDEO" ? this.prop("duration-video") : this.prop("duration")
+        return this.prop("duration", 0)
+        // return this.$actor.prop("tagName") === "VIDEO" ? this.prop("duration-video", 0) : this.prop("duration", 0)
     }
 
     leave() {

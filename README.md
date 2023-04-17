@@ -35,19 +35,13 @@ Which contains arbitrary HTML code, such as images or videos.
 
 ### Attributes
 
-* `data-duration`: How many seconds a frame will last. By default, indefinitely (waiting for a user action)
+* `data-duration=0`: How many seconds a frame will last. By default, indefinitely (waiting for a user action). Note a video frame will hold till the video finishes.
 ```html
 <article data-duration="0.5">Short frame</article>
 <article>You have to click to get further.</article>
 <article data-duration="0.5">Short frame</article>
 ```
-* `data-duration-video`: Supersedes `data-duration` for a video frame.
-```html
-<section data-duration="1" data-duration-video="0">
-    <article><img /></article> <!-- Go further after 1 s -->
-    <article><video .../> </article> <!-- Not skipped after 1 s, waiting for a user action -->
-</section>
-```
+
 
 * `data-transition`: `fade` (default), `scroll-down` XXX
 * `data-transition-duration`: s (default 0.5)

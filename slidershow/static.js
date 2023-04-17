@@ -19,11 +19,11 @@ class Interval {
     constructor(fn, delay, ajax_wait) {
         this.was_running = false
         this.freezed = false
-        this.fn = fn
+        this._fn = fn
         this.delay = this._delay = delay
         this._delayed = () => {
             this.time1 = +new Date()
-            this.fn.call(this)
+            this._fn.call(this)
             if (ajax_wait !== true && this.running) {
                 this.start()
             }
@@ -52,6 +52,14 @@ class Interval {
     stop() {
         clearTimeout(this.instance)
         this.running = false
+        return this
+    }
+
+    /**
+     * @param {function} fn
+     */
+    fn(fn) {
+        this._fn = fn
         return this
     }
 
