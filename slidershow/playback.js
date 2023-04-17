@@ -9,7 +9,12 @@ class Playback {
     constructor() {
         this.promise = {} // transition promise
         this.moving = true
-        this.moving_timeout = new Interval(() => this.moving && this.nextFrame())
+        this.moving_timeout = new Interval(() => {
+            this.moving_timeout.stop()
+            if (this.moving) {
+                this.nextFrame()
+            }
+        }).stop()
 
 
 
@@ -348,7 +353,7 @@ class Playback {
             //     this.hud.playback_icon("(&#9612;&#9612;)")
             // }
             if (moving && duration) {
-                this.moving_timeout.start(duration * 1000)
+                Promise.all(frame.effects).then(() => this.moving_timeout.start(duration * 1000))
             }
         })
     }

@@ -12,9 +12,7 @@ class Frame {
         this.next_interval
         /**  @type {jQuery|null}         */
         this.$actor = this.$frame.find("video, img").first()
-
-        this.panorama_callback = null
-        this.panorama_freeze = null
+        this.panorama_starter = null
         this.loop_interval = null
 
         /**
@@ -34,6 +32,9 @@ class Frame {
         this.index
 
         this.shortcuts = []
+
+        /** @type Promise[] All the effects that should hold playback. */
+        this.effects = []
     }
 
     register_parent(frame) {
@@ -107,7 +108,7 @@ class Frame {
             this.playback.hud_map.animate_to(...gps.split(","))
         }
 
-const zoom = this.prop("map-zoom")
+        const zoom = this.prop("map-zoom")
         if ($frame.prop("tagName") === "ARTICLE-MAP") { // XXXX
 
             const map = this.playback.map
@@ -188,13 +189,13 @@ const zoom = this.prop("map-zoom")
         // Get main media
         const $actor = this.$actor
 
+        this.effects.length = 0 // flush out any unsettled promises
+
         // Image frame
         if ($actor.prop("tagName") === "IMG") {
             this.zoom()
             Frame.exif($actor)
-            if (this.panorama_callback) {
-                this.panorama_callback()
-            }
+            this.panorama_starter?.()
             const loop = this.prop("loop")
             if (loop) {
                 this.loop(loop)
@@ -304,14 +305,13 @@ const zoom = this.prop("map-zoom")
     }
 
     left() {
-        this.panorama_freeze?.()
         this.loop_interval?.stop()
         this.$actor.stop(true)
     }
 
     panorama() {
         const $actor = this.$actor
-        this.panorama_callback = null
+        this.panorama_starter = null
 
         // get image dimensions
         $actor.css({
@@ -328,8 +328,6 @@ const zoom = this.prop("map-zoom")
         $actor.removeAttr("style")
 
         if (w / h > PANORAMA_THRESHOLD) {
-            this.playback.moving_timeout.freeze()
-            this.panorama_freeze = () => { this.playback.moving_timeout.unfreeze(); this.panorama_freeze = null; }
             let speed = Math.min((trailing_width / 100), 5) * 1000 // 100 px / 1s, but max 5 sec
             // speed = 1000
             $actor.css({
@@ -340,7 +338,7 @@ const zoom = this.prop("map-zoom")
                 "position": "absolute",
                 "left": 0
             })
-            this.panorama_callback = () => {
+            this.panorama_starter = () => this.add_effect(resolve => {
                 $actor.animate({
                     left: - trailing_width,
                 }, speed, () => {
@@ -350,11 +348,17 @@ const zoom = this.prop("map-zoom")
                         top: (main_h / 2) - (small_height / 2) + "px"
                     }, 1000, () => {
                         $actor.removeAttr("style")
-                        this.panorama_freeze?.()
+                        resolve()
                     })
                 })
-            }
+            })
         }
+    }
+
+    add_effect(promise) {
+        console.log("362: pushing", promise)
+
+        this.effects.push(new Promise(promise))
     }
 
     zoom() {
