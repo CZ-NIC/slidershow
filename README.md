@@ -38,6 +38,13 @@ Use Numpad to tag the images. Then in the menu, hit <kbd>Alt+G</kbd> to group th
 
 Put the presentation content to the <main> tag which contain <article> tags.
 
+To control the presentation flow, we use many attributes. These are resolved in the following way:
+* `<div data-attribute>` → true
+* `<div data-attribute=''>` → false
+* `<div data-attribute='false'>` → false
+* `<div data-attribute='true'>` → true
+* `<div data-attribute='value'>` → value
+
 ## Frame <article>
 
 Every frame is represented by an `<article>` tag.
@@ -79,13 +86,28 @@ Which contains arbitrary HTML code, such as images or videos.
 </article>
 ```
 
-## Map frame <article-map>
+## HUD Map vs <article-map>
 
-* attributes
-    * `data-places`: Delimited by comma. Ex: "Prague, Brno"
-        * May be used in an <article> too to display the HUD map.
-    * `data-route`: Delimited by comma. Ex: "Prague, Brno"
-    * `data-map-zoom`: Zoom as given by the [Mapy.cz API](https://api.mapy.cz/doc/SMap.html) (world 1, country 5, street 13)
+These are map-related attributes.
+
+* `data-places`: Delimited by comma. Ex: "Prague, Brno"
+    * May be used in an <article> too to display the HUD map.
+* `data-route`: Delimited by comma. Ex: "Prague, Brno" XX deprecated
+* `data-map-zoom`: Zoom as given by the [Mapy.cz API](https://api.mapy.cz/doc/SMap.html) (world 1, country 5, street 13)
+
+* `data-gps`: Single point, longitude and latitude, comma delimited.
+```html
+<!-- these are equivalent -->
+<img data-gps='50.0884647, 14.4707590' />
+<img data-places='Prague' />
+```
+
+* `data-map-animate` (default *true*): Change the center point directly or in a few steps.
+* `data-map-geometry-show` (default *false*): XXroute|polyline
+* `data-map-markers-show` (default *true*): Show red marker of a point.
+* `data-map-geometry-clear` (default *true*): Clear all route and drawings before displaying.
+* `data-map-markers-clear` (default *true*): Clear all point markers. (Or keep them visible all.)
+
 * Content is not displayed in the moment.
 * You may nest `<article-map>` tags easily which causes the map to change.
 
@@ -95,6 +117,8 @@ Which contains arbitrary HTML code, such as images or videos.
     <article-map data-duration="0.3" data-places="London"></article-map>
 </article-map>
 ```
+
+If the <article-map> tag is used, fullscreen map is displayed. Otherwise small HUD map in the corner.
 
 ## Frame group <section>
 These `<article>` tags might be encapsuled into (nested) `<section>` groups. A `<section>` has the same attributes as an `<article>`.

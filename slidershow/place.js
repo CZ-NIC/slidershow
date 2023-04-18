@@ -1,16 +1,21 @@
 let MAP_USE_CACHE = true
 
 class Place {
-    static async get(name) {
-        const p = new Place(name)
-        await p.assure_coord()
+    static from_coordinates(longitude=null, latitude=null) {
+        const p = new Place(null)
+        p.coordinates = {longitude: longitude, latitude: latitude}
         return p
     }
-    constructor(name) {
+
+    /**
+     *
+     * @param {?String} name Place name. If null, consider using Place.from_coordinates factory instead.
+     */
+    constructor(name=null) {
         this.name = name
         let cache = {}
 
-        if (MAP_USE_CACHE) {
+        if (MAP_USE_CACHE && this.name) {
             try {
                 cache = JSON.parse(localStorage.getItem("PLACE: " + this.name)) || {}
             } catch (e) {

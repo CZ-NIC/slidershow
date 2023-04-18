@@ -50,17 +50,19 @@ class MapWidget {
          * @property {number} 1 - latitude
         */
         this.target_point
-        this.animate_map_init()
+        this._animate_map_init()
 
 
-        this.default_layer = null //XX
-        this.geography_layer = null//XX
+        this.default_layer = null // XX
+        // this.geography_layer = null //XX
 
         /** @type {?Promise} Whether the animation is completed. */
         this.finished = null
         /** @type {?Function} Resolve method so that this.finished fulfills */
         this._finished = null
 
+        this.geometry_clear = null
+        this.markers_clear = null
     }
 
     /**
@@ -90,10 +92,11 @@ class MapWidget {
 
         // signals
         map.getSignals().addListener(this, "*", (e) => {
-            console.log("93: map",e.type, this.animation.length)
-
-            if(e.type == "map-unlock" || e.type== "zoom-stop") {
-                return !this.animation.length && this._finished()
+            // zoom-stop for data-map-animate: true
+            // map-unlock for data-map-animate: true without zooming
+            // center-stop for data-map-animate: false
+            if (["map-unlock", "zoom-stop", "center-stop"].includes(e.type) && !this.animation.length) {
+                return this._finished()
             }
         })
 
@@ -142,79 +145,28 @@ class MapWidget {
         this.map.$destructor()
         this.$map.remove()
     }
-    clear() {
-        this.geometry_layer.removeAll()
-        this.marker_layer.removeAll()
-    }
-
-    _names_to_places(names = null) {
-        return Promise.all(names.map(name => Place.get(name)))
-    }
-
-    set_center(longitude, latitude, zoom) {
-        this.clear()
-        this.$map.show(0)
-
-
-        const point = SMap.Coords.fromWGS84(longitude, latitude)
-        console.log("136: point", point)
-
-
-        this.marker_layer.addMarker(new SMap.Marker(point))
-        this.map.setCenter(point, true)
-        if(zoom) {
-            this.map.setZoom(zoom)
-        }
-        // this.animate_to(longitude, latitude, 8)
-        this._redrawing()
-    }
-
     /**
-     * The internal map is redrawing and we want to be waited for.
-     * Should be called once by a public method.
+     *
+     * @param {Place[]} places
+     * @param {*} animate
+     * @param {*} geometry_show
+     * @param {*} markers_show
      */
-    _redrawing() {
-        console.log("166: Redrawing")
+    async engage(places, animate, geometry_show, markers_show, geometry_clear, markers_clear, zoom) {
+        await Promise.all(places.map(p => p.assure_coord()))
+        this.geometry_clear = geometry_clear
+        this.markers_clear = markers_clear
 
-        this.finished = new Promise(resolve => {
-            this._finished = resolve
-        })
-    }
-
-
-    // geography() {
-        // this.geography_layer.enable() XX
-        // this.geography_layer = this.map.addDefaultLayer(SMap.DEF_GEOGRAPHY).enable()
-        // this.map.removeLayer(SMap.DEF_GEOGRAPHY)
-        // // this.map.changeBaseLayer("DEF_GEOGRAPHY");
-        // console.log("151:         this.geography_layer",         this.geography_layer)
-    // }
-
-    async display(options) {
-
-    }
-
-    async display_route(names = null) {
-        this._names_to_places(names).then(places => {
-            SMap.Route.route(places.map(place => place.coord()), {
-                geometry: true
-            }).then((route) => {
-                if (route._results.error) {
-                    console.warn("***Cannot find route", route)
-                    return
-                }
-                console.log("Route", route)
-                const coords = route.getResults().geometry
+        if (!animate) { // animation will clear them just before its ending
+            if (this.geometry_clear) {
                 this.geometry_layer.removeAll()
-                this.geometry_layer.addGeometry(new SMap.Geometry(SMap.GEOMETRY_POLYLINE, null, coords))
-                this.map.setCenterZoom(...this.map.computeCenterZoom(coords), true)
-            })
-        })
-        this._redrawing()
-    }
+            }
+            if (this.markers_clear) {
+                this.marker_layer.removeAll()
+            }
+        }
 
-    async display_markers(names = null, zoom = null) {
-        this._names_to_places(names).then(places => {
+        if (markers_show) {
             places.forEach(place => {
                 // var card = new SMap.Card();
                 // card.getHeader().innerHTML = "<strong>Header</strong>";
@@ -229,30 +181,68 @@ class MapWidget {
                 // this.marker_layer.addMarker(marker)
                 this.marker_layer.addMarker(new SMap.Marker(place.coord(), place.name))
             })
+        }
+        let center_coords = null
+        if (geometry_show) {
+            if (places.length < 2) {
+                console.warn("Map geometry: must have at least two points")
+            } else {
 
-            const [coord, zoom_recommended] = this.map.computeCenterZoom(places.map(p => p.coord()))
-            // console.log("199: ", zoom || zoom_recommended)
+                await SMap.Route.route(places.map(place => place.coord()), {
+                    geometry: true
+                }).then((route) => {
+                    if (route._results.error) {
+                        console.warn("***Cannot find route", route)
+                        return
+                    }
+                    console.log("Route", route)
+                    center_coords = route.getResults().geometry
+                    this.geometry_layer.addGeometry(new SMap.Geometry(SMap.GEOMETRY_POLYLINE, null, center_coords))
+                    // this.map.setCenterZoom(...this.map.computeCenterZoom(coords), true)
+                })
+            }
+        }
 
-            this.animate_to(coord.x, coord.y, zoom || zoom_recommended)
+        const [center, zoom_recommended] = this.map.computeCenterZoom(center_coords || places.map(p => p.coord()))
 
-            //this.map.setCenterZoom(...this.map.computeCenterZoom(places.map(p => p.coord())), false) // instead of false do nicer map zooming XX
+
+        // The internal map is redrawing and we want to be waited for.
+        this.finished = new Promise(resolve => {
+            this._finished = resolve
         })
-        this._redrawing()
+
+        if (animate) {
+            this._animate_to(center.x, center.y, zoom || zoom_recommended)
+        } else {
+            this.animation.length = 0 // is we switch slides too fast and there is still an ongoing animation, ends it prematurely
+
+            this.map.setCenter(center, true)
+            if (zoom || zoom_recommended) {
+                this.map.setZoom(zoom || zoom_recommended)
+            }
+        }
     }
+
+    // geography() {
+    // this.geography_layer.enable() XX
+    // this.geography_layer = this.map.addDefaultLayer(SMap.DEF_GEOGRAPHY).enable()
+    // this.map.removeLayer(SMap.DEF_GEOGRAPHY)
+    // // this.map.changeBaseLayer("DEF_GEOGRAPHY");
+    // console.log("151:         this.geography_layer",         this.geography_layer)
+    // }
+
 
     /**
      * Nicer map zooming I did for my wedding page
      */
-    animate_map_init() {
+    _animate_map_init() {
         this.animation = []
         this.target_point = null
         this.changing = new Interval(() => {
             if (this.animation.length === 0) { // animation ends
                 this.changing.stop()
                 // check map broken
-                const r = (x) => {
-                    return Math.round(x * 10000);
-                }
+                const r = x => Math.round(x * 10000)
                 if (r(this.target_point.x) !== r(this.map.getCenter().x) || r(this.target_point.y) !== r(this.map.getCenter().y)) {
                     this.playback.hud.alert("Map broken?", true)
                 }
@@ -261,7 +251,14 @@ class MapWidget {
             const as = this.animation.shift()
 
             if (as.marker) {
-                this.clear()
+                // it looks better when the old marker vanishes in the last step of an animation
+                if (this.geometry_clear) {
+                    this.geometry_layer.removeAll()
+                }
+                if (this.markers_clear) {
+                    this.marker_layer.removeAll()
+                }
+
                 this.marker_layer.addMarker(new SMap.Marker(as.point()))
                 // we just add the final point marker, no moving, skip interval iteration
                 return this.changing.call_now()
@@ -274,8 +271,8 @@ class MapWidget {
     }
 
 
-    animate_to(longitude, latitude, zoom_final = 8) {
-        this.$map.show(0)
+    _animate_to(longitude, latitude, zoom_final = 8) {
+        // this.$map.show(0)
         if (this.query_last?.join() === [longitude, latitude, zoom_final].join()) {
             return
         }
@@ -330,7 +327,6 @@ class MapWidget {
 
         this.animation.push(new AnimationStep(x, y, zoom_final, "zoom final"))
         this.changing.start()
-        this._redrawing()
     }
 
 }

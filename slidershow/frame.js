@@ -77,11 +77,27 @@ class Frame {
      * @returns
      */
     prop(prop, def = null, $actor = null) {
-        const v = ($actor || this.$frame).closest(`[data-${prop}]`).data(prop)
-        if (v === undefined && def !== undefined) {
-            return def
+        const $el = $actor?.length ? $actor : this.$frame
+        const v = $el.closest(`[data-${prop}]`).data(prop)
+        switch (v) {
+            case "false": // <main data-start='false'> -> false
+                return false
+            case "": // mere presence of an attribute resolves to true: <main data-start>
+                if ($el[0].getAttribute(`data-${prop}`) === "") {
+                    // <main data-start=''> -> false
+                    return false;
+                }
+            // <main data-start> -> true
+            case "true": // <main data-start='true'> -> true
+                return true;
+            case undefined:
+                if (def !== undefined) {
+                    return def
+                }
+            default:
+                return v;
         }
-        return v
+
     }
 
     prepare() {
@@ -105,39 +121,42 @@ class Frame {
         this.playback.hud.fileinfo(this)
 
         // Map
-        const gps = $actor.data("gps")
-        if (gps) {
-            this.playback.hud_map.animate_to(...gps.split(","))
-        }
+        this.map_prepare()
+    }
 
+    map_prepare() {
+        /** @type {MapWidget} */
         let map
         // which map to use?
-        if ($frame.prop("tagName") === "ARTICLE-MAP") {
+        if (this.$frame.prop("tagName") === "ARTICLE-MAP") {
             map = this.playback.map
             map.adapt(this)
-            map.geometry_layer.clear()
-            map.marker_layer.clear()
         } else {
             map = this.playback.hud_map
         }
 
-        const zoom = this.prop("map-zoom")
-        const route = $frame.data("route")
-        if (route) {
-            map.display_route(route.split(",")) // XX integrate zoom
-        }
-        const places = $frame.data("places")
-        if (places) {
-            console.log("220: places", places)
-            map.display_markers(places.split(","), zoom)
+        /** @type {Place[]} */
+        const places = []
+
+        const gps = this.prop("gps", null, this.$actor)
+        if (gps) {
+            places.push(Place.from_coordinates(...gps.split(",")))
         }
 
-        const point = $frame.data("point")
-        if (point) {
-            // map.geography()
-            map.set_center(...point.split(","), zoom)
+        const names = this.prop("places")
+        if (names) {
+            places.push(...names.split(",").map(name => new Place(name)))
         }
 
+        if (places.length) {
+            map.engage(places,
+                this.prop("map-animate", true),
+                this.prop("map-geometry-show", false) /* XXroute|polyline*/,
+                this.prop("map-markers-show", true),
+                this.prop("map-geometry-clear", true),
+                this.prop("map-markers-clear", true),
+                this.prop("map-zoom"))
+        }
     }
 
     /**
