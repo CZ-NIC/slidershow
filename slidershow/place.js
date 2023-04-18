@@ -36,11 +36,10 @@ class Place {
 
         return (new SMap.SuggestProvider()).get(this.name).then((addresses) => {
             if (addresses.length < 1) {
-                console.log("Coordinates error", this.name, addresses)
+                console.warn("Coordinates error", this.name, addresses)
                 return
             }
             this.coordinates = addresses[0]
-            console.log("Coordinates", this.name, "possibilities:", addresses.length, this.coordinates)
             this.cache_self()
         })
     }

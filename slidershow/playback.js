@@ -75,7 +75,6 @@ class Playback {
 
     positionFrames(x1 = null, x2 = null, x3 = null, x4 = null) {
         $articles = this.$articles = Frame.load_all(this)
-        console.log("68: $articles", $articles)
 
         let index = -1
         let clockwise = true

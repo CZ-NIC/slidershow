@@ -63,6 +63,8 @@ class MapWidget {
 
         this.geometry_clear = null
         this.markers_clear = null
+        /** @type {Place[]} */
+        this.last_places = []
     }
 
     /**
@@ -182,29 +184,13 @@ class MapWidget {
                 this.marker_layer.addMarker(new SMap.Marker(place.coord(), place.name))
             })
         }
-        let center_coords = null
         if (geometry_show) {
-            if (places.length < 2) {
-                console.warn("Map geometry: must have at least two points")
-            } else {
-
-                await SMap.Route.route(places.map(place => place.coord()), {
-                    geometry: true
-                }).then((route) => {
-                    if (route._results.error) {
-                        console.warn("***Cannot find route", route)
-                        return
-                    }
-                    console.log("Route", route)
-                    center_coords = route.getResults().geometry
-                    this.geometry_layer.addGeometry(new SMap.Geometry(SMap.GEOMETRY_POLYLINE, null, center_coords))
-                    // this.map.setCenterZoom(...this.map.computeCenterZoom(coords), true)
-                })
-            }
+            // if we await, it takes longer but the geometry is more stable
+            // however, we do not want the user to lag
+            await Promise.race([this._route(geometry_show, places), new Promise(resolve => setTimeout(() => resolve(), ROUTE_TIMEOUT))])
         }
 
-        const [center, zoom_recommended] = this.map.computeCenterZoom(center_coords || places.map(p => p.coord()))
-
+        const [center, zoom_recommended] = this.map.computeCenterZoom(places.map(p => p.coord()))
 
         // The internal map is redrawing and we want to be waited for.
         this.finished = new Promise(resolve => {
@@ -219,6 +205,34 @@ class MapWidget {
             this.map.setCenter(center, true)
             if (zoom || zoom_recommended) {
                 this.map.setZoom(zoom || zoom_recommended)
+            }
+        }
+        this.last_places = places
+    }
+
+    async _route(geometry_show, places) {
+        const line = geometry_show === "line"
+        let routing = [...places]
+        if (routing.length < 2 && this.last_places.length) {
+            // use last point
+            routing.unshift(this.last_places.slice(-1)[0])
+        }
+
+        if (routing.length > 1) {
+            if (line) {
+                this.geometry_layer.addGeometry(new SMap.Geometry(SMap.GEOMETRY_POLYLINE, null, routing.map(place => place.coord())))
+            }
+            else {
+                return SMap.Route.route(routing.map(place => place.coord()), {
+                    geometry: true
+                }).then((route) => {
+                    if (route._results.error) {
+                        console.warn("Cannot find route", route)
+                        return
+                    }
+                    const route_coords = route.getResults().geometry
+                    this.geometry_layer.addGeometry(new SMap.Geometry(SMap.GEOMETRY_POLYLINE, null, route_coords))
+                })
             }
         }
     }

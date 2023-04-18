@@ -80,7 +80,7 @@ class Menu {
     }
 
     appendFiles(items) {
-        console.log("49: items", items)
+        console.log("File items", items)
 
         let ram_only = false
         let folder = prompt("Do you want to specify folder?\nCancel – no, just display (RAM consuming)\nEmpty – the page folder", "")

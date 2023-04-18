@@ -103,7 +103,17 @@ These are map-related attributes.
 ```
 
 * `data-map-animate` (default *true*): Change the center point directly or in a few steps.
-* `data-map-geometry-show` (default *false*): XXroute|polyline
+* `data-map-geometry-show` (default *false*): Route amongst the places. If a single place is given, we take the place from the last time.
+    * `false` No route shown.
+    * `route|true` Route is calculated amongst the places.
+    * `line` Only line is marked amongst the places.
+    ```html
+    <!-- Full route is calculated and shown between Prague and Brno, then between Brno and Pardubice. -->
+    <article-map data-duration="0" data-places="Prague" data-map-geometry-show="true">
+        <article-map data-places="Brno"></article-map>
+        <article-map data-places="Pardubice"></article-map>
+    </article-map>
+    ```
 * `data-map-markers-show` (default *true*): Show red marker of a point.
 * `data-map-geometry-clear` (default *true*): Clear all route and drawings before displaying.
 * `data-map-markers-clear` (default *true*): Clear all point markers. (Or keep them visible all.)

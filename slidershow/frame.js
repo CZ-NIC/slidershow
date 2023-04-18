@@ -251,7 +251,6 @@ class Frame {
             // with the mouse button up.
             next_interval = new Interval(() => {
                 next_interval.stop()
-                console.log("246: resolving", resolve)
                 resolve()
             }, 300)
         }).on("play", () => {
@@ -369,8 +368,6 @@ class Frame {
     }
 
     add_effect(promise) {
-        console.log("362: pushing", promise)
-
         this.effects.push(new Promise(promise))
     }
 
