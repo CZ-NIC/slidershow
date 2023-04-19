@@ -1,4 +1,3 @@
-const POSITIONING_EXPERIMENTAL = true
 const MAP_ENABLE = true
 
 /**
@@ -95,41 +94,47 @@ class Playback {
 
             frame.index = index + 1
 
-            if (!POSITIONING_EXPERIMENTAL) {
-                $el.css({
-                    top: frame.prop("y", index) * 100 + "vh",
-                    left: frame.prop("x", index) * 100 + "vw",
-                })
-            } else {
+            const positioning = prop("spread-frames", true, $main)
+            switch (positioning) {
+                case "spiral":
+                case true:
+                    function generateSpiralPosition(index, nextCircle = false) {
+                        if (nextCircle) {
+                            sectionCount++
+                        }
+                        const angleStep = clockwise ? -(x2 || 0.1) : (x2 || 0.1); // krok úhlu, závisí na směru
+                        const radiusStep = x1 || 0.5; // krok poloměru
 
-                function generateSpiralPosition(index, nextCircle = false) {
-                    if (nextCircle) {
-                        sectionCount++
+                        const bonus = (index < 10) ? index : 10 // the distance is too narrow in the beginning
+
+                        let index_r = index + bonus + sectionCount * 3
+                        const angle = angleStep * (index_r * (x3 || 4)); // uprav úhel o aktuální kruh
+                        const radius = radiusStep * Math.sqrt((index_r) * (x4 || 0.25));  // uprav poloměr o aktuální kruh
+                        const x = radius * Math.cos(angle);
+                        const y = radius * Math.sin(angle);
+                        const top = (15000 + y * 450) + 'vh';
+                        const left = (15000 + x * 450) + 'vw';
+                        // console.log("124: bonus", index_r, sectionCount, bonus, top, left)
+                        return { top, left };
                     }
-                    const angleStep = clockwise ? -(x2 || 0.1) : (x2 || 0.1); // krok úhlu, závisí na směru
-                    const radiusStep = x1 || 0.5; // krok poloměru
 
-                    const bonus = (index < 10) ? index : 10 // the distance is too narrow in the beginning
+                    let is_new_section = $el.is(":first-child") && $el.parent().is("section") && $el.parent().parent().is("main")
+                    // console.log("126: $l", $el, $el.is(":first-child"), $el.parent().is("section"), $el.parent().parent().is("main"), $el.is(":first") && $el.parent().is("section") && $el.parent().parent().is("main"))
 
-                    let index_r = index + bonus + sectionCount * 3
-                    const angle = angleStep * (index_r * (x3 || 4)); // uprav úhel o aktuální kruh
-                    const radius = radiusStep * Math.sqrt((index_r) * (x4 || 0.25));  // uprav poloměr o aktuální kruh
-                    const x = radius * Math.cos(angle);
-                    const y = radius * Math.sin(angle);
-                    const top = (15000 + y * 450) + 'vh';
-                    const left = (15000 + x * 450) + 'vw';
-                    // console.log("124: bonus", index_r, sectionCount, bonus, top, left)
-                    return { top, left };
-                }
-
-                let is_new_section = $el.is(":first-child") && $el.parent().is("section") && $el.parent().parent().is("main")
-                // console.log("126: $l", $el, $el.is(":first-child"), $el.parent().is("section"), $el.parent().parent().is("main"), $el.is(":first") && $el.parent().is("section") && $el.parent().parent().is("main"))
-
-                // if (index % 6 === 0) {
-                //     is_new_section = true
-                // }
-                const pos = generateSpiralPosition(index, is_new_section)
-                $el.css(pos)
+                    // if (index % 6 === 0) {
+                    //     is_new_section = true
+                    // }
+                    const pos = generateSpiralPosition(index, is_new_section)
+                    $el.css(pos)
+                    break;
+                case "diagonal":
+                    $el.css({
+                        top: frame.prop("y", index) * 100 + "vh",
+                        left: frame.prop("x", index) * 100 + "vw",
+                    })
+                    break;
+                default:
+                    this.hud.alert(`Unknown spread-frames: ${positioning}`)
             }
 
             // load tags from localStorage
@@ -365,9 +370,10 @@ class Playback {
         const last = $last.data("frame")
         /** @type {Frame} */
         const current = $current.data("frame")
-        const TRANS_DURATION = current.prop("transition-duration") * 1000
+        const TRANS_DURATION = current.prop("transition-duration", 0) * 1000
 
         switch (current.prop("transition")) {
+            // XX document * `data-transition`: `fade` (default), `scroll-down`
             case "scroll-down": // XX deprec?
                 if ($articles.index($last) < $articles.index($current)) {
                     last.effect("go-up")

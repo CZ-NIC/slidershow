@@ -68,36 +68,18 @@ class Frame {
         }
     }
 
+
     /**
      * Return closest prop, defined in the DOM.
      * (Zero aware, you can safely set `data-prop=0`.)
-     * @param {string} prop
+     * @param {string} property
      * @param {any} def Default value if undefined
      * @param {jQuery|null} $actor What element to check the prop of. If null, frame is checked.
      * @returns
      */
-    prop(prop, def = null, $actor = null) {
+    prop(property, def = null, $actor = null) {
         const $el = $actor?.length ? $actor : this.$frame
-        const v = $el.closest(`[data-${prop}]`).data(prop)
-        switch (v) {
-            case "false": // <main data-start='false'> -> false
-                return false
-            case "": // mere presence of an attribute resolves to true: <main data-start>
-                if ($el[0].getAttribute(`data-${prop}`) === "") {
-                    // <main data-start=''> -> false
-                    return false;
-                }
-            // <main data-start> -> true
-            case "true": // <main data-start='true'> -> true
-                return true;
-            case undefined:
-                if (def !== undefined) {
-                    return def
-                }
-            default:
-                return v;
-        }
-
+        return prop(property, def, $el)
     }
 
     prepare() {
@@ -335,13 +317,17 @@ class Frame {
         const [w, h, main_w, main_h] = [$actor.width(), $actor.height(), window.innerWidth, window.innerHeight]
         const small_height = main_w / (w / h)
         const medium_width = w / (h / main_h)
-        const trailing_width = medium_width - main_w
+        const trailing_width = Math.round(medium_width - main_w)
 
         $actor.removeAttr("style")
 
-        if (w / h > PANORAMA_THRESHOLD) {
+        if (w > main_w && w / h > this.prop("panorama-threshold", 2, $actor)) {
+            // the image is wider than the sceen (would been shrinked) and its proportion looks like a panoramatic
             let speed = Math.min((trailing_width / 100), 5) * 1000 // 100 px / 1s, but max 5 sec
-            // speed = 1000
+            console.log("327: w, h, main_w, main_h", w, h, main_w, main_h)
+            console.log("328: small_height, medium_width", small_height, medium_width)
+            console.log("329: trailing_width", trailing_width)
+
             $actor.css({
                 width: "unset",
                 height: "unset",

@@ -1,16 +1,57 @@
-# Slidershow – more than a slideshow
+# SlideRshow – more than a slideshow
 
-Have you ever wanted to show your friends media from holidays? How cubersome it was to mix photos and videos? Enough of frame transition? Dreaming about a fully customisable presentation experience? Presentation file size huge? This HTML based presented will let you show your contents just as you want. Either launch it and drag the files inside or fully define all the properties.
+[![Run now!](https://img.shields.io/badge/Run_now!-green.svg)](https://cz-nic.github.io/slidershow/examples/slidershow.html)
+
+Have you ever wanted to show your friends media from holidays? How cubersome it was to mix photos and videos? Enough of frame transition? Dreaming about a fully customisable presentation experience? Presentation file size huge? This HTML based presenter will let you show your contents just the way you desire. Either launch it and drag the files in or fully define all the properties.
+
+
+
+What is SlideRshow and what advantages it has?
+* **media player**
+    * [Nomacs](https://nomacs.org/) – perfect but does not handle videos
+    * [VLC](https://www.videolan.org/vlc/) – perfect but not stable with 100+ files in the playlist
+* **organizer**
+    * simply tag photos as you browse them to be regrouped for a screening
+* **presentation software**
+    * Ridiculously small file size – given you do not have to keep the media copies as in other presentation software. Have you ever tried to put 1 GB of images onto slides?
+    * Super easy video trimming
 
 # Usage
 
-The application runs in the browser – see the SlideRshow right now. Or download the repository and open the local file. Or add somewhere a tag and that is all!
+The application **runs in the browser** – see the SlideRshow **[right now](https://cz-nic.github.io/slidershow/examples/slidershow.html)**. Or download the repository and open the local file. Or add somewhere a tag and that is all!
 
 ```html
-<script src="https://cdn.jsdelivr.net/gh/CZ-NIC/slidershow@0.7.0/slidershow/slidershow.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/CZ-NIC/slidershow@latest/slidershow/slidershow.js"></script>
 ```
 
 When in the application, drag and drop media files into the page and just start the playthrough. (Remember: Nothing is uploaded to the server. Check the code – there is no server.) Should a more detailed presentation be needed, just export the presentation HTML file with <kbd>Ctrl+E</kbd> and edit it at will.
+
+What can you acheive? See a variety of features in another example at [examples/tutorial.html](https://cz-nic.github.io/slidershow/examples/tutorial.html).
+
+# Contents
+- [Prologue](#slidershow-more-than-a-slideshow)
+- [Usage](#usage)
+- [Contents](#contents)
+- [Playback](#playback)
+  * [Controls](#controls)
+  * [Start](#start)
+  * [Organizing](#organizing)
+- [Structure](#structure)
+  * [Frame `<article>`](#frame-article--)
+  * [Frame content](#frame-content)
+    + [`<img>`](#img)
+      - [Exif info](#exif-info)
+      - [Zoomable](#zoomable)
+      - [Panoramatic images](#panoramatic-images)
+      - [Preload](#preload)
+    + [`<video>`](#--video--)
+    + [Text](#text)
+  * [Map](#map)
+    + [`<article-map>` frame](#--article-map-frame)
+  * [Frame group `<section>`](#frame-group-section)
+    + [Nested `<article>` tags](#nested-article-tags)
+  * [Further styling](#further-styling)
+- [License](#license)
 
 # Playback
 
@@ -18,34 +59,41 @@ When in the application, drag and drop media files into the page and just start 
 
 When played, keyboard shortcuts works.
 
-Next frame: <kbd>Right</kbd>, <kbd>PageDown</kbd>, <kbd>n</kbd>, <kbd>Space</kbd>
-Previous frame: <kbd>Left</kbd>, <kbd>PageUp</kbd>, <kbd>p</kbd>
-
-Full controls: <kbd>h</kbd>
-Video: Adjust speed by <kbd>Numpad +/-</kbd>
-Menu: Hit <kbd>Esc</kbd>
+* Next frame: <kbd>Right</kbd>, <kbd>PageDown</kbd>, <kbd>n</kbd>, <kbd>Space</kbd>
+* Previous frame: <kbd>Left</kbd>, <kbd>PageUp</kbd>, <kbd>p</kbd>
+* Full controls: <kbd>h</kbd>
+* Video: Adjust speed by <kbd>Numpad +/-</kbd>
+* Menu: Hit <kbd>Esc</kbd>
 
 ## Start
 
-The <menu> is displayed before the presentation starts, unless the <main> has `data-start` attribute.
+The `<menu>` is displayed before the presentation starts, unless the `<main>` has the `data-start` attribute.
 
 ## Organizing
 
-Use Numpad to tag the images. Then in the menu, hit <kbd>Alt+G</kbd> to group the images to the `<section>` according to tags.
-
+Use Numpad to tag the images. Then in the menu, hit <kbd>Alt+G</kbd> to group the images to the `<section>` according to tags. Export with <kbd>Ctrl+E</kbd>. Sorted & ready!
 
 # Structure
 
-Put the presentation content to the <main> tag which contain <article> tags.
+Put the presentation content to the `<main>` tag which contain `<article>` tags (~ frames).
 
 To control the presentation flow, we use many attributes. These are resolved in the following way:
 * `<div data-attribute>` → true
-* `<div data-attribute=''>` → false
-* `<div data-attribute='false'>` → false
+* `<div data-attribute=''>` → true
 * `<div data-attribute='true'>` → true
+* `<div data-attribute='false'>` → false
 * `<div data-attribute='value'>` → value
 
-## Frame <article>
+An element affected by an attribute searches for it amongst its own or ancestors' attributes.
+
+```html
+<main data-attribute="1" >
+    <img /> <!-- → value=1 -->
+    <img data-attribute="2" />  <!-- → value=2 -->
+</main>
+```
+
+## Frame `<article>`
 
 Every frame is represented by an `<article>` tag.
 
@@ -53,118 +101,59 @@ Every frame is represented by an `<article>` tag.
 <article><img src="flower.jpg" /></article>
 ```
 
-Which contains arbitrary HTML code, such as images or videos.
-
-### Attributes
+Which contains arbitrary HTML code, such as images or videos (by default, one per slide). Use control attributes:
 
 * `data-duration=0`: How many seconds a frame will last. By default, indefinitely (waiting for a user action). Note a video frame will hold till the video finishes.
 
-```html
-<article data-duration="0.5">Short frame</article>
-<article>You have to click to get further.</article>
-<article data-duration="0.5">Short frame</article>
-```
-
-* `data-transition`: `fade` (default), `scroll-down` XXX
-* `data-transition-duration`: s (default 0.5)
-* `data-x`, `data-y`: A viewport stands for a chessboard field. This is the position of the frame in the chessboard. XXX Attention, when nested in section. They may stay in the same position. Implement z-index of something.
-* `data-video`: All <video> tags inherits its value as attributes. (controls autoplay muted loop)
-
-```html
-<article data-video="autoplay muted">
-    <video> <!-- becomes <video autoplay muted> -->
-        <source src="my_video.mp4#t=8,10" type="video/mp4">
-    </video>
-</article>
-```
-
-* `data-loop`: If present, images in the body will rapidly loop, creating a funny animation. (Currenly use only -1 attribute for an infitite loop.)
-```html
-<article data-loop="-1">
-    <img src="pic1.jpg" />
-    <img src="pic2.jpg" />
-</article>
-```
-
-## HUD Map vs <article-map>
-
-These are map-related attributes.
-
-* `data-places`: Delimited by comma. Ex: "Prague, Brno"
-    * May be used in an <article> too to display the HUD map.
-* `data-route`: Delimited by comma. Ex: "Prague, Brno" XX deprecated
-* `data-map-zoom`: Zoom as given by the [Mapy.cz API](https://api.mapy.cz/doc/SMap.html) (world 1, country 5, street 13)
-
-* `data-gps`: Single point, longitude and latitude, comma delimited.
-```html
-<!-- these are equivalent -->
-<img data-gps='50.0884647, 14.4707590' />
-<img data-places='Prague' />
-```
-
-* `data-map-animate` (default *true*): Change the center point directly or in a few steps.
-* `data-map-geometry-show` (default *false*): Route amongst the places. If a single place is given, we take the place from the last time.
-    * `false` No route shown.
-    * `route|true` Route is calculated amongst the places.
-    * `line` Only line is marked amongst the places.
     ```html
-    <!-- Full route is calculated and shown between Prague and Brno, then between Brno and Pardubice. -->
-    <article-map data-duration="0" data-places="Prague" data-map-geometry-show="true">
-        <article-map data-places="Brno"></article-map>
-        <article-map data-places="Pardubice"></article-map>
-    </article-map>
+    <article data-duration="0.5">Short frame</article>
+    <article>You have to click to get further.</article>
+    <article data-duration="0.5">Short frame</article>
     ```
-* `data-map-markers-show` (default *true*): Show red marker of a point.
-* `data-map-geometry-clear` (default *true*): Clear all route and drawings before displaying.
-* `data-map-markers-clear` (default *true*): Clear all point markers. (Or keep them visible all.)
 
-* Content is not displayed in the moment.
-* You may nest `<article-map>` tags easily which causes the map to change.
-
-```html
-<article-map data-duration="0" data-places="Prague, Brno">
-    <article-map data-duration="0" data-places="Paris"></article-map>
-    <article-map data-duration="0.3" data-places="London"></article-map>
-</article-map>
-```
-
-If the <article-map> tag is used, fullscreen map is displayed. Otherwise small HUD map in the corner.
-
-## Frame group <section>
-These `<article>` tags might be encapsuled into (nested) `<section>` groups. A `<section>` has the same attributes as an `<article>`.
-
-```html
-<section data-duration='0.5'>
-    <article>Short frame (inherits 0.5)</article>
-    <article data-duration='0'>You have to click to get further.</article>
-    <article>Short frame (inherits 0.5)</article>
-</section>
-```
-
-As the ultimate default the `<main>` tag may be used.
-
-```html
-<main data-duration='0.5'>
-    <article>Short frame (inherits 0.5)</article>
-</main>
-```
-
-### Nested <article> tags
-
-You may nest an `<article>` beneath another one. Which causes the children to be hidden and shown on top of the parent when they time comes.
-
-```html
-<article>
-    <img src="flower.jpg" />
-    <article>That is a flower!</article>
-</article>
-```
+* `data-transition-duration=0`: How many seconds will it take to change a frame.
+* `data-spread-frames=spiral`: A viewport stands for a chessboard field. This is how the frame are positioned in the chessboard.
+    * `true=spiral`
+    * `diagonal`
+        * `data-x`, `data-y`: Override the default position. Attention, do not let the frames share the same position.X
+* `data-loop`: If present, images in the body will rapidly loop, creating a funny animation. (Currenly allowed only `-1` value for an infitite loop.)
+    ```html
+    <article data-loop="-1">
+        <img src="pic1.jpg" />
+        <img src="pic2.jpg" />
+    </article>
+    ```
 
 ## Frame content
 
 Any HTML content is accepted.
 
-### <video>
+### `<img>`
+
+#### Exif info
+We try to fetch Exif data for images.
+* `data-device`: maker and model
+* `data-datetime`: picture time stamp
+* `data-gps`: point on the map (HUD map will be automatically displayed in the corner)
+
+However, this is a non-trivial task since the browser protects your photos privacy. This will work for images you drag and drop inside, images from the web (with the permitive CORS policy). Reading the Exif of your local images you just mention in the document will work only with the browser (CORS disabled)[https://stackoverflow.com/questions/4819060/allow-google-chrome-to-use-xmlhttprequest-to-load-a-url-from-a-local-file] – do that only if you know what are you doing.
+
+#### Zoomable
+
+Zoomable on click/mouse wheel. Double click restores image original size.
+
+#### Panoramatic images
+
+When an image is much longer than the screen, we show it slowly first before resizing it to fit the screen. This will delay the `<article>`'s `data-duration`. It starts when the image proportion width / height > `data-panorama-threshold=2`.
+
+#### Preload
+When having thousands of images, your browser may choke. Use `data-src` instead of `src` as a preload.
+
+```html
+<img data-src="flower.jpg" /> <!-- becomes <img src="flower.jpg"> when needed -->
+```
+
+### `<video>`
 
 ```html
 <article>
@@ -188,31 +177,103 @@ Any HTML content is accepted.
 </article>
 ```
 
+* `data-video`: All `<video>` tags inherits its value as attributes. (controls autoplay muted loop)
+    ```html
+    <article data-video="autoplay muted">
+        <video> <!-- becomes <video autoplay muted> -->
+            <source src="my_video.mp4#t=8,10" type="video/mp4">
+        </video>
+    </article>
+    ```
+
 ### Text
 
 If there is no tag inside an `<article>` or if use use the `data-fit` attribute, it is considered as a plain text. Its size gets fit to the screen width.
 
-### <img>
+## Map
 
-#### Preload
-When having thousands of image, your browser may choke. Use `data-src` instead of `src` as a preload.
+These are map-related attributes which helps you to display the HUD/fullscreen map.
+
+* `data-places`: Delimited by comma. Ex: "Prague, Brno"
+* `data-map-zoom`: Zoom as given by the [Mapy.cz API](https://api.mapy.cz/doc/SMap.html) (world 1, country 5, street 13)
+* `data-gps`: Single point, longitude and latitude, comma delimited.
+    ```html
+    <!-- these are equivalent -->
+    <img data-gps='50.0884647, 14.4707590' />
+    <img data-places='Prague' />
+    ```
+* `data-map-animate=true`: Change the center point directly (`false`) or in a few steps (`true`).
+* `data-map-geometry-show=false`: Route amongst the places. If a single place is given, we take the place from the last time.
+    * `false` No route shown.
+    * `route|true` Route is calculated amongst the places.
+    * `line` Only line is marked amongst the places.
+    ```html
+    <!-- Full route is calculated and shown between Prague and Brno, then between Brno and Pardubice. -->
+    <article-map data-duration="0" data-places="Prague" data-map-geometry-show="true">
+        <article-map data-places="Brno"></article-map>
+        <article-map data-places="Pardubice"></article-map>
+    </article-map>
+    ```
+* `data-map-markers-show=true`: Show red marker of a point.
+* `data-map-geometry-clear=true`: Clear all route and drawings before displaying.
+* `data-map-markers-clear=true`: Clear all point markers. (Or keep them visible all.)
+
+
+### `<article-map>` frame
+
+Normally any map command will incur a small HUD map in the corder to appear. Should you with to display the fullscreen map, use the `<article-map>` tag.
+
+
+You may nest `<article-map>` tags easily which causes the map to change.
 
 ```html
-<img data-src="flower.jpg" /> <!-- becomes <img src="flower.jpg"> when needed -->
+<article-map data-duration="0" data-places="Prague, Brno">
+    <article-map data-duration="0" data-places="Paris"></article-map>
+    <article-map data-duration="0.3" data-places="London"></article-map>
+</article-map>
 ```
 
-#### Exif info
-We try to fetch Exif data for images.
-* `data-device`: maker and model
-* `data-dateTime`
-* `data-gps`: point on the map
+Note that no content is displayed within the `<article-map>` in the moment.
 
-However, this is a non-trivial task since the browser protects your photos privacy. This will work for images you drag and drop inside, image from the web (with the permitive CORS policy). Reading the Exif of your local images you just mention in the document will work only with the browser (CORS disabled)[https://stackoverflow.com/questions/4819060/allow-google-chrome-to-use-xmlhttprequest-to-load-a-url-from-a-local-file] – do that only if you know what are you doing.
+## Frame group `<section>`
+These `<article>` tags might be encapsuled into (nested) `<section>` groups. A `<section>` has the same attributes as an `<article>`.
 
-#### Zoomable
+```html
+<section data-duration='0.5'>
+    <article>Short frame (inherits 0.5)</article>
+    <article data-duration='0'>You have to click to get further.</article>
+    <article>Short frame (inherits 0.5)</article>
+</section>
+```
 
-Zoomable on click/mouse wheel. Double click restores image original size.
+As the ultimate default the `<main>` tag may be used.
 
-#### Panoramatic images
+```html
+<main data-duration='0.5'>
+    <article>Short frame (inherits 0.5)</article>
+</main>
+```
 
-When an image is much longer than the screen, we show it slowly first before resizing it to fit the screen.
+### Nested `<article>` tags
+
+You may nest an `<article>` beneath another one. Which causes the children to be hidden and shown on top of the parent when their time comes.
+
+```html
+<article>
+    <img src="flower.jpg" />
+    <article>That is a flower!</article>
+</article>
+```
+
+## Further styling
+
+The presentation being run in a simple HTML page, style customisation are really simple. Take a look at any running instance to the DevTools. For instance, to hide the frame counter, add a style tag to the `<head>`.
+
+```html
+<style>
+    #hud-counter {display:none}
+</style>
+```
+
+# License
+GNU GPLv3.

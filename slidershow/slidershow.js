@@ -111,7 +111,7 @@ function get_menu() {
             <form id="defaults">
                 Defaults
                 <br />Duration <input name="duration" value="3" size="4" placeholder="0"> s
-                <br />Transition <input name="transition-duration" value="0.5" size="4" placeholder="0"> s
+                <br />Transition <input name="transition-duration" value="0" size="4" placeholder="0"> s
             </form>
 
             <br/>
