@@ -25,7 +25,7 @@ class Playback {
          */
         this.frame
         this.appendEndSlide() // XX gets appended multiple times when playback starts multiple times
-        this.frame_count
+        this.slide_count
         this.$articles
         this.positionFrames()
 
@@ -75,7 +75,9 @@ class Playback {
     positionFrames(x1 = null, x2 = null, x3 = null, x4 = null) {
         $articles = this.$articles = Frame.load_all(this)
 
-        let index = -1
+        let slide_index = -1
+        let frame_index = -1
+
         let clockwise = true
         let sectionCount = 0
 
@@ -84,15 +86,15 @@ class Playback {
             /** @type {Frame} */
             const frame = $el.data("frame")
 
-            // set position to frames
-            // XX more options
+            // check nested frames
             if ($el.parent().is(FRAME_SELECTOR)) {
                 frame.register_parent($el.parent().data("frame"))
             } else {
-                index += 1
+                slide_index += 1
             }
 
-            frame.index = index + 1
+            frame.index = ++frame_index
+            frame.slide_index = slide_index
 
             const positioning = prop("spread-frames", true, $main)
             switch (positioning) {
@@ -124,13 +126,13 @@ class Playback {
                     // if (index % 6 === 0) {
                     //     is_new_section = true
                     // }
-                    const pos = generateSpiralPosition(index, is_new_section)
+                    const pos = generateSpiralPosition(slide_index, is_new_section)
                     $el.css(pos)
                     break;
                 case "diagonal":
                     $el.css({
-                        top: frame.prop("y", index) * 100 + "vh",
-                        left: frame.prop("x", index) * 100 + "vw",
+                        top: frame.prop("y", slide_index) * 100 + "vh",
+                        left: frame.prop("x", slide_index) * 100 + "vw",
                     })
                     break;
                 default:
@@ -142,7 +144,7 @@ class Playback {
         })
 
 
-        this.frame_count = index
+        this.slide_count = slide_index + 1
         return $articles
     }
 
@@ -277,16 +279,39 @@ class Playback {
     }
 
     nextSection() {
-        const $next = this.frame.$frame.closest("section, main").next().find(FRAME_SELECTOR).first()
-        this.goToFrame($next.data("frame").index - 1, true)
+        const $next = this.getSection().next().find(FRAME_SELECTOR).first()
+        this.goToArticle($next, true)
     }
     previousSection() {
-        const $previous = this.frame.$frame.closest("section, main").prev().find(FRAME_SELECTOR).first()
-        this.goToFrame($previous.data("frame").index - 1)
+        const $section = this.getSection()
+        const $first = $(FRAME_SELECTOR, $section).first()
+        console.log("289: $first", $first)
+
+        if ($first.data("frame").index === this.frame.index) {
+            const $previous = $section.prev().find(FRAME_SELECTOR).first()
+            this.goToArticle($previous)
+        } else {
+            console.log("295: zde",)
+
+            this.goToArticle($first)
+        }
     }
 
     notVideoFocus() {
         return $(":focus").prop("tagName") !== "VIDEO"
+    }
+
+    getSection() {
+        return this.frame.$frame.closest("section, main")
+    }
+
+    goToArticle($frame, moving = false) {
+        const frame = $frame.data("frame")
+        if (!frame) {
+            this.shake()
+        } else {
+            this.goToFrame(frame.index, moving)
+        }
     }
 
     /**
@@ -309,7 +334,7 @@ class Playback {
          * @type {Frame}
         */
         const frame = this.frame = $current.data("frame")
-        this.index = $articles.index($current)
+        this.index = frame.index
 
         const same_frame = $last[0] === $current[0]
         /** @type {Frame} */
@@ -331,19 +356,22 @@ class Playback {
             $last.css({ "background": "unset" })
         }
 
+
         const trans = same_frame ? $main.css(frame.get_position()) : this.transition($last, $current)
         const promise = this.promise = trans.promise()
+        const all_done = () => !promise.aborted && this.moving && this.nextFrame()
         promise.then(() => {
             // frame is at the viewport now
             if (promise.aborted) { // another frame was raise meanwhile
                 return
             }
             console.log("Frame ready")
-            const duration = frame.enter(() => this.moving && this.nextFrame())
+            const duration = frame.enter()
 
             if (!same_frame) {
                 $last.data("frame").left()
             }
+
 
             // Duration
             // XX If stopped because of the duration, give info.
@@ -351,15 +379,15 @@ class Playback {
             //     console.log("343: CHANGE", last_frame.get_duration(), duration)
             //     this.hud.playback_icon("(&#9612;&#9612;)")
             // }
-            if (moving && duration) {
+            if (this.moving && duration) {
                 Promise.all(frame.effects).then(() =>
                     this.moving_timeout.fn(() => {
                         this.moving_timeout.stop()
-                        Promise.all([frame.video_finished, this.map.finished, this.hud_map.finished]).then(() => this.moving && this.nextFrame())
+                        Promise.all([frame.video_finished, this.map.finished, this.hud_map.finished]).then(all_done)
                     }).start(duration * 1000)
                 )
-            } else if (moving && frame.video_finished) { // always go to the next frame when video ends, ignoring data-duration
-                frame.video_finished.then(() => this.moving && this.nextFrame())
+            } else if (this.moving && frame.video_finished) { // always go to the next frame when video ends, ignoring data-duration
+                frame.video_finished.then(all_done)
             }
         })
     }
@@ -400,6 +428,12 @@ class Playback {
                     return $main.animate(current.get_position(), TRANS_DURATION)
                 }
         }
+    }
+
+    shake() {
+        const left_init = $main.position().left
+        const f = left => $main.animate({ left: left_init + left }, 100).promise()
+        f(-100).then(() => f(100).then(() => f(0)))
     }
 
     /**

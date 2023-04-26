@@ -26,9 +26,14 @@ class Frame {
         this.children = []
 
         /**
-         * @type {Number} Frame counter. Set by the playback.
+         * @type {Number} Frame counter, starting with 0. Set by the playback.
          */
         this.index
+
+        /**
+        * @type {Number} Frame grouped by slides, starting with 0. (Frames nested under a parent frame has the same slide index). Set by the playback.
+         */
+        this.slide_index
 
         this.shortcuts = []
 

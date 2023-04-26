@@ -74,10 +74,10 @@ class Hud {
         const collection_index = frame.$frame.index() + 1
         const collection_max = frame.$frame.siblings().length + 1
 
-        if (collection_max > 1 && collection_max !== frame.playback.frame_count) {
-            this.$hud_counter.text(`${collection_index} / ${collection_max} (${frame.index} / ${frame.playback.frame_count})`)
+        if (collection_max > 1 && collection_max !== frame.playback.slide_count) {
+            this.$hud_counter.text(`${collection_index} / ${collection_max} (${frame.slide_index + 1} / ${frame.playback.slide_count})`)
         } else {
-            this.$hud_counter.text(`${frame.index} / ${frame.playback.frame_count}`)
+            this.$hud_counter.text(`${frame.slide_index + 1} / ${frame.playback.slide_count}`)
         }
 
         // Thumbnails

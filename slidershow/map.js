@@ -258,8 +258,6 @@ class MapWidget {
                     this.geometry_layer.addGeometry(new SMap.Geometry(SMap.GEOMETRY_POLYLINE, null, points)))
             }
             else { // geometry_show === "route"
-                console.log("270: START", JSON.stringify(points))
-
                 return SMap.Route.route(points, {
                     geometry: true,
                     criterion: geometry_criterion
@@ -268,8 +266,6 @@ class MapWidget {
                         console.warn("Cannot find route", route)
                         return
                     }
-                    console.log("271: STOP", JSON.stringify(points), route)
-
                     const route_coords = route.getResults().geometry
                     this.graphics_stack(() =>
                         this.geometry_layer.addGeometry(new SMap.Geometry(SMap.GEOMETRY_POLYLINE, null, route_coords)))

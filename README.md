@@ -85,6 +85,7 @@ To control the presentation flow, we use many attributes. These are resolved in 
 * `<div data-attribute='1'>` → 1 (also true)
 * `<div data-attribute='0'>` → 0 (also false)
 * `<div data-attribute='value'>` → value
+* `<div>` → null
 
 An element affected by an attribute searches for it amongst its own or ancestors' attributes.
 
