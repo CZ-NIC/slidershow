@@ -9,45 +9,114 @@
 <body>
     <main data-start data-transition-duration="0.5">
 
-        <article>
-            Let's take a look on some features. <br> Hit <kbd>PageDown</kbd> to proceed.<br>
-        </article>
-        <article>Every &lt;article&gt; tag corresponsds to a frame.</article>
-        <article>
-            Hit <kbd>Esc</kbd> any time to go to the menu.
-        </article>
+        <section>
+            <!-- Initial thoughts -->
+            <article>
+                Let's take a look on some features. <br> Hit <kbd>PageDown</kbd> to proceed.<br>
+            </article>
+            <article>Every &lt;article&gt; tag corresponsds to a frame.</article>
+            <article>
+                Hit <kbd>Esc</kbd> any time to go to the menu.
+            </article>
+        </section>
 
-        <article>
-            Put there a photo.
+        <section>
+            <!-- Photo wonders -->
+            <article>
+                Put there a photo.
+            </article>
+
+            <!-- Photo -->
+            <div data-duration="0.5">
+                <article>
+                    <img src="https://image.pmgstatic.com/files/images/film/photos/166/286/166286390_2c9ebe.jpg" />
+                </article>
+                <article>
+                    <img
+                        src="https://upload.wikimedia.org/wikipedia/commons/thumb/1/16/Charles_IV-John_Ocko_votive_picture-fragment.jpg/403px-Charles_IV-John_Ocko_votive_picture-fragment.jpg" />
+                </article>
+                <article>
+                    <img src="https://upload.wikimedia.org/wikipedia/commons/e/e8/Johnny5_03.jpg" />
+                </article>
+                <article>
+                    <img
+                        src="https://upload.wikimedia.org/wikipedia/commons/f/f0/Graphite-and-diamond-with-scale.jpg" />
+                </article>
+                <article>
+                    <img
+                        src="https://upload.wikimedia.org/wikipedia/commons/thumb/8/82/SevenWondersOfTheWorld.jpg/330px-SevenWondersOfTheWorld.jpg" />
+                </article>
+            </div>
+
+            <!-- Panoramatic example (very wide image) -->
+            <article>
+                If the photo is too wide, a panorama plays automatically.
+            </article>
+            <article>
+                <img src="https://upload.wikimedia.org/wikipedia/commons/a/ac/In-camera_panorama_stitch.jpg" />
+            </article>
+
+            <section>
+                <!-- Geolocation -->
+                <article>
+                    The photo geo information starts the HUD map in the corner.
+                </article>
+                <article>
+                    <img data-places="London Tower bridge"
+                        src="https://upload.wikimedia.org/wikipedia/commons/thumb/a/a5/Cmglee_Tower_Bridge_tall_ship.jpg/1200px-Cmglee_Tower_Bridge_tall_ship.jpg" />
+                </article>
+                <article>
+                    <img data-places="Paris Eiffel tower"
+                        src="https://upload.wikimedia.org/wikipedia/commons/thumb/4/4b/La_Tour_Eiffel_vue_de_la_Tour_Saint-Jacques%2C_Paris_ao%C3%BBt_2014_%282%29.jpg/1200px-La_Tour_Eiffel_vue_de_la_Tour_Saint-Jacques%2C_Paris_ao%C3%BBt_2014_%282%29.jpg" />
+                </article>
+            </section>
+        </section>
+
+        <section>
+            <article>
+                Map can be on fullscreen, too.
+            </article>
+            <article-map data-duration="2" data-places="Prague" data-map-zoom="8">
+                <article-map data-places="Plzeň"></article-map>
+                <article-map data-places="Brno"></article-map>
+            </article-map>
+
+            <article>Convert a GPX route to the frames.</article>
+            <article-map data-map-animate="false" data-map-geometry-show data-map-geometry-criterion="turist1"
+                data-map-geometry-clear="false" data-duration="0.5" data-map-zoom="14" data-gps="14.429827,50.079700">
+                <!-- Some cool places in Prague -->
+                <article-map data-gps="14.421194,50.081234"></article-map>
+                <article-map data-gps="14.417969,50.077591"></article-map>
+                <article-map data-gps="14.419263,50.075694"></article-map>
+                <article-map data-gps="14.416451,50.072460"></article-map>
+                <article-map data-gps="14.415032,50.066745"></article-map>
+                <article-map data-gps="14.418455,50.061556"></article-map>
+                <article-map data-gps="14.416981,50.052962"></article-map>
+                <article-map data-gps="14.410405,50.040836"></article-map>
+            </article-map>
+        </section>
+
+        <section>
+            <!-- Video -->
+            <article>Video playing made easy.</article>
+            <article><video
+                    src="https://upload.wikimedia.org/wikipedia/commons/a/aa/IberianIbexFight.webm#t=2,10"></video>
+            </article>
+            <article>Have you realized we trimmed? <br /> Cut is as easy as adding a number into the video URL hash.
+            </article>
+            <article><video
+                    src="https://upload.wikimedia.org/wikipedia/commons/a/aa/IberianIbexFight.webm#t=7,10"></video>
+            </article>
+            <article>Or change the speed.</article>
+            <article data-playback-rate="3"><video
+                    src="https://upload.wikimedia.org/wikipedia/commons/a/aa/IberianIbexFight.webm"></video>
+            </article>
+        </section>
+
+        <article>You have seen some cool features.
+            <br />Check the presentation source code with <kbd>Ctrl+U</kbd>.
+            <br />Cool and clean, isn't it?
         </article>
-
-        <!-- Photo XXX -->
-
-        <!-- Panoramatic example (very wide image) -->
-        <article>
-            If the photo is too wide, a panorama plays automatically.
-        </article>
-        <article>
-            <img src="https://upload.wikimedia.org/wikipedia/commons/a/ac/In-camera_panorama_stitch.jpg" />
-        </article>
-
-
-        <article>
-            <img src="https://upload.wikimedia.org/wikipedia/commons/d/d5/Panorama_of_the_courtyard_of_the_Great_Mosque_of_Kairouan.jpg" />
-        </article>
-        <article>
-        <img src="/home/edvard/Downloads/__zeland_fotky/external/3024_the chronicles of narnia_ prince caspian_cathedral cove_te whanganui-a-hei_4.png" />
-    </article>
-
-<!-- XXX
-    * Photos with GPS
-    * Some GPX route article maps
-    * Text slide
-    * Multiple section used -->
-        <article-map data-duration="2" data-places="Prague" data-map-zoom="8">
-            <article-map data-places="Plzeň"></article-map>
-            <article-map data-map-geometry-show data-places="Brno"></article-map>
-        </article-map>
     </main>
 </body>
 

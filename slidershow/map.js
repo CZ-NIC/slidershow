@@ -65,6 +65,14 @@ class MapWidget {
         this.markers_clear = null
         /** @type {Place[]} */
         this.last_places = []
+
+
+        /** @type {?Function} @see this.display_graphics_stack */
+        this._graphics_stack = []
+        this._hold_graphics = false
+
+        /** @type {Boolean} Whether the map is on its initial position. */
+        this.used = false
     }
 
     /**
@@ -93,15 +101,10 @@ class MapWidget {
         this.$map.hide(0)
 
         // signals
-        map.getSignals().addListener(this, "*", (e) => {
-            // zoom-stop for data-map-animate: true
-            // map-unlock for data-map-animate: true without zooming
-            // center-stop for data-map-animate: false
-            if (["map-unlock", "zoom-stop", "center-stop"].includes(e.type) && !this.animation.length) {
-                return this._finished()
-            }
-        })
-
+        // zoom-stop for data-map-animate: true
+        // map-unlock for data-map-animate: true without zooming
+        // center-stop for data-map-animate: false
+        map.getSignals().addListener(this, "map-unlock zoom-stop center-stop", e => !this.animation.length && this._finished())
         return this
     }
 
@@ -126,7 +129,6 @@ class MapWidget {
             }
         }
 
-        this.$map.show(0)
 
         if ($frame) {
             this.$map.prependTo($frame)
@@ -154,10 +156,22 @@ class MapWidget {
      * @param {*} geometry_show
      * @param {*} markers_show
      */
-    async engage(places, animate, geometry_show, markers_show, geometry_clear, markers_clear, zoom) {
-        await Promise.all(places.map(p => p.assure_coord()))
+    async engage(places, animate, geometry_show, geometry_criterion, markers_show, geometry_clear, markers_clear, zoom, last_places) {
+        this.$map.show(0)
+        this.last_places = last_places || []
         this.geometry_clear = geometry_clear
         this.markers_clear = markers_clear
+
+        // The internal map is redrawing and we want to be waited for.
+        this.finished = new Promise(resolve => {
+            this._finished = resolve
+        }).then(() => {
+            this._hold_graphics = false
+            this.graphics_stack()
+        })
+
+        // resolve the places
+        await Promise.all(places.map(p => p.assure_coord()))
 
         if (!animate) { // animation will clear them just before its ending
             if (this.geometry_clear) {
@@ -187,51 +201,78 @@ class MapWidget {
         if (geometry_show) {
             // if we await, it takes longer but the geometry is more stable
             // however, we do not want the user to lag
-            await Promise.race([this._route(geometry_show, places), new Promise(resolve => setTimeout(() => resolve(), ROUTE_TIMEOUT))])
+            await Promise.race([this._route(geometry_show, places, geometry_criterion), new Promise(resolve => setTimeout(() => resolve(), ROUTE_TIMEOUT))])
         }
 
-        const [center, zoom_recommended] = this.map.computeCenterZoom(places.map(p => p.coord()))
+        const coords = places.map(p => p.coord())
+        let [center, computed_zoom] = this.map.computeCenterZoom(coords)
+        if (coords.length === 1) {
+            computed_zoom = this.map.computeCenterZoom([...coords, this.map.getCenter()])[1]
+        }
 
-        // The internal map is redrawing and we want to be waited for.
-        this.finished = new Promise(resolve => {
-            this._finished = resolve
-        })
-
-        if (animate) {
-            this._animate_to(center.x, center.y, zoom || zoom_recommended)
+        // Start panning the map
+        if (animate && this.used) { // we can animate only if the map has been used -> has a center to animate from
+            this._animate_to(center.x, center.y, computed_zoom, zoom)
         } else {
             this.animation.length = 0 // is we switch slides too fast and there is still an ongoing animation, ends it prematurely
 
+            this._hold_graphics = true // when using this.map.setCenter, no graphics should be drawn unless finished
             this.map.setCenter(center, true)
-            if (zoom || zoom_recommended) {
-                this.map.setZoom(zoom || zoom_recommended)
+            if (zoom || computed_zoom) {
+                this.map.setZoom(zoom || computed_zoom)
             }
         }
-        this.last_places = places
+        this.used = true // first use done
     }
 
-    async _route(geometry_show, places) {
+    /**
+     * When putting graphics while this.map.setCenter(center, true) has not yet finished has this effect:
+     * the graphics is drawn to the previous center for a moment, no to the corresponding center.
+     * Changing the center multiple times somewhat quickly causes the graphics drawn wrong for a moment.
+     * The solution is to draw the graphics either before the animation starts or when finished.
+     * @param {?Function} fn Added to the graphics stack.
+     */
+    graphics_stack(fn) {
+        if (fn) {
+            this._graphics_stack.push(fn)
+        }
+
+        if (!this._hold_graphics) {
+            this._graphics_stack.forEach(f => f())
+            this._graphics_stack.length = 0
+        }
+    }
+
+    async _route(geometry_show, places, geometry_criterion) {
         const line = geometry_show === "line"
         let routing = [...places]
         if (routing.length < 2 && this.last_places.length) {
             // use last point
             routing.unshift(this.last_places.slice(-1)[0])
         }
+        const points = routing.map(place => place.coord())
 
-        if (routing.length > 1) {
+        if (routing.length > 1) { // geometry_show === "line"
             if (line) {
-                this.geometry_layer.addGeometry(new SMap.Geometry(SMap.GEOMETRY_POLYLINE, null, routing.map(place => place.coord())))
+                this.graphics_stack(() =>
+                    this.geometry_layer.addGeometry(new SMap.Geometry(SMap.GEOMETRY_POLYLINE, null, points)))
             }
-            else {
-                return SMap.Route.route(routing.map(place => place.coord()), {
-                    geometry: true
+            else { // geometry_show === "route"
+                console.log("270: START", JSON.stringify(points))
+
+                return SMap.Route.route(points, {
+                    geometry: true,
+                    criterion: geometry_criterion
                 }).then((route) => {
                     if (route._results.error) {
                         console.warn("Cannot find route", route)
                         return
                     }
+                    console.log("271: STOP", JSON.stringify(points), route)
+
                     const route_coords = route.getResults().geometry
-                    this.geometry_layer.addGeometry(new SMap.Geometry(SMap.GEOMETRY_POLYLINE, null, route_coords))
+                    this.graphics_stack(() =>
+                        this.geometry_layer.addGeometry(new SMap.Geometry(SMap.GEOMETRY_POLYLINE, null, route_coords)))
                 })
             }
         }
@@ -285,7 +326,15 @@ class MapWidget {
     }
 
 
-    _animate_to(longitude, latitude, zoom_final = 8) {
+    /**
+     *
+     * @param {Number} longitude
+     * @param {Number} latitude
+     * @param {?Number} computed_zoom Recommended final zoom.
+     * @param {?Number} zoom_final If not set, it is based on a previous location.
+     * @returns
+     */
+    _animate_to(longitude, latitude, computed_zoom, zoom_final) {
         // this.$map.show(0)
         if (this.query_last?.join() === [longitude, latitude, zoom_final].join()) {
             return
@@ -294,10 +343,9 @@ class MapWidget {
 
         // final point
         const point = SMap.Coords.fromWGS84(longitude, latitude)
-
-        const [computed_pt, computed_zoom] = this.map.computeCenterZoom([point, this.map.getCenter()])
-        // if map moves only a little, do not zoom out, stay as close as possible
-        zoom_final = Math.max(zoom_final, computed_zoom)
+        if (!zoom_final) {
+            zoom_final = computed_zoom
+        }
 
         this.changing.stop()
         this.animation = []
@@ -307,9 +355,8 @@ class MapWidget {
         const current_zoom = this.map.getZoom()
         let zoom = Math.min(computed_zoom, current_zoom)
 
-        // zoom out
+        // zoom out – if map moves only a little, do not zoom out, stay as close as possible
         let steps = Math.ceil((current_zoom - zoom) / 3)
-        let as = null
         for (let step = 1; step <= steps; step++) {
             this.animation.push(new AnimationStep(a, b, current_zoom - (current_zoom - zoom) / steps * step, "zoom out"))
         }

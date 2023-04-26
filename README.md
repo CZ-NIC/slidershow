@@ -82,6 +82,8 @@ To control the presentation flow, we use many attributes. These are resolved in 
 * `<div data-attribute=''>` → true
 * `<div data-attribute='true'>` → true
 * `<div data-attribute='false'>` → false
+* `<div data-attribute='1'>` → 1 (also true)
+* `<div data-attribute='0'>` → 0 (also false)
 * `<div data-attribute='value'>` → value
 
 An element affected by an attribute searches for it amongst its own or ancestors' attributes.
@@ -103,7 +105,7 @@ Every frame is represented by an `<article>` tag.
 
 Which contains arbitrary HTML code, such as images or videos (by default, one per slide). Use control attributes:
 
-* `data-duration=0`: How many seconds a frame will last. By default, indefinitely (waiting for a user action). Note a video frame will hold till the video finishes.
+* `data-duration=0`: How many seconds a frame will last. By default, indefinitely (waiting for a user action). Note a video frame is an exception: will hold till the video finishes and then change frame.
 
     ```html
     <article data-duration="0.5">Short frame</article>
@@ -115,7 +117,7 @@ Which contains arbitrary HTML code, such as images or videos (by default, one pe
 * `data-spread-frames=spiral`: A viewport stands for a chessboard field. This is how the frame are positioned in the chessboard.
     * `true=spiral`
     * `diagonal`
-        * `data-x`, `data-y`: Override the default position. Attention, do not let the frames share the same position.X
+        * `data-x`, `data-y`: Override the default position. Attention, do not let the frames share the same position.
 * `data-loop`: If present, images in the body will rapidly loop, creating a funny animation. (Currenly allowed only `-1` value for an infitite loop.)
     ```html
     <article data-loop="-1">
@@ -167,7 +169,8 @@ When having thousands of images, your browser may choke. Use `data-src` instead 
 * The `<video>` tag benefits from standard attributes like `loop`, `muted`, `autoplay` and `controls` (so that controls are visible). In Chromium based browsers, only `muted` video respects `autoplay` so we recommend using `controls` too so that you may start the video with the <kbd>Space</kbd>.
 * When a new frame appears, first video gets focus. Whether `autoplay` is present, it starts playing. Keys like <kbd>Space</kbd>, <kbd>Left</kbd>, <kbd>Right</kbd> stop working for frame switching to avoid interfering with the video controls.
 
-* `data-playback-rate`: The speed of the video. (May be set on the parents too.)
+* `data-playback-rate`: The speed of the video.
+Tip: Can be adjusted by <kbd>Numpad +/-</kbd> while presenting.
 ```html
 <article> <!-- fast video -->
     <video src="my_video.mp4#t=8,10" date-playback-rate="4"></video>
@@ -177,18 +180,31 @@ When having thousands of images, your browser may choke. Use `data-src` instead 
 </article>
 ```
 
-* `data-video`: All `<video>` tags inherits its value as attributes. (controls autoplay muted loop)
+* `data-video='autoplay controls'`: All `<video>` tags inherits its value as attributes (`autoplay controls muted loop`). Tip: toggle muted by <kbd>Alt+M</kbd> while presenting.
     ```html
     <article data-video="autoplay muted">
         <video> <!-- becomes <video autoplay muted> -->
             <source src="my_video.mp4#t=8,10" type="video/mp4">
         </video>
     </article>
+    <article>
+        <video src="my_video.mp4"> <!-- becomes <video autoplay controls> because that is the default --></video>
+    </article>
+    <article>
+        <video data-video='muted' src="my_video.mp4"> <!-- becomes <video muted> --></video>
+    </article>
+    <article>
+        <video muted src="my_video.mp4"> <!-- becomes <video autoplay controls muted> --></video>
+    </article>
     ```
 
 ### Text
 
-If there is no tag inside an `<article>` or if use use the `data-fit` attribute, it is considered as a plain text. Its size gets fit to the screen width.
+You can place an arbitrary content inside an `<article>`.
+
+* `data-fit=auto`
+    * `true|false`: Fit the text size to the screen width.
+    * `auto`: Fit if there is no tag inside an `<article>`
 
 ## Map
 
@@ -214,6 +230,7 @@ These are map-related attributes which helps you to display the HUD/fullscreen m
         <article-map data-places="Pardubice"></article-map>
     </article-map>
     ```
+* `data-map-geometry-criterion=''`: empty or `fast`, `short`, `turist1`, `turist2`, `bike1`, `bike2`, `bike3`
 * `data-map-markers-show=true`: Show red marker of a point.
 * `data-map-geometry-clear=true`: Clear all route and drawings before displaying.
 * `data-map-markers-clear=true`: Clear all point markers. (Or keep them visible all.)
@@ -234,6 +251,28 @@ You may nest `<article-map>` tags easily which causes the map to change.
 ```
 
 Note that no content is displayed within the `<article-map>` in the moment.
+
+#### Animate GPX file
+
+You can easily convert a GPX file (exported from a map software) into an interactive route. Just launch this Python script onto a GPX file and copy the `<article-map>` tags to the presentation HTML.
+
+```python
+from pathlib import Path
+import re
+FILENAME = "export.gpx"
+FRAME_COUNT = 10
+
+tag_end = "</article-map>"
+if matches:=re.findall('<trkpt lat="([^"]+)" lon="([^"]+)">', Path(FILENAME).read_text()):
+    # limit to frame count but always include the first and the last
+    step = round(len(matches)/(FRAME_COUNT-2))
+    limited = [matches[0]] + matches[::step][1:-1] + [matches[-1]]
+    # convert coordinates to frames
+    html = "\n".join([f'<article-map data-gps="{",".join((x[1], x[0]))}">{tag_end}' for x in limited])
+    # nest all under the first tag
+    html = re.sub(tag_end, "", html, 1) + tag_end
+    print(html)
+```
 
 ## Frame group `<section>`
 These `<article>` tags might be encapsuled into (nested) `<section>` groups. A `<section>` has the same attributes as an `<article>`.

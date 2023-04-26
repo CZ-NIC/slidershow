@@ -1,4 +1,3 @@
-
 const wh = new WebHotkeys()
 const $main = $("main").length ? $("main") : $("<main/>").appendTo("body")
 const $hud = $("#hud")
@@ -33,8 +32,8 @@ function prop(property, def = null, $el) {
         case "false": // <main data-start='false'> -> false
             return false
         case "":
-            // mere presence of an attribute resolves to true: <main data-start>
-            // (unfortunately undistinguishable from `<main data-start=''>` both in Chrome and FF)
+        // mere presence of an attribute resolves to true: <main data-start>
+        // (unfortunately undistinguishable from `<main data-start=''>` both in Chrome and FF)
         case "true": // <main data-start='true'> -> true
             return true;
         case undefined:
@@ -42,6 +41,11 @@ function prop(property, def = null, $el) {
                 return def
             }
         default:
-            return v;
+            const numeric_only = /^[-+]?\d*\.?\d+$/
+            if (numeric_only.test(v)) { // <main data-start='0'> -> Boolean(Number(0)) === false
+                return parseFloat(v)
+            } else {
+                return v;
+            }
     }
 }

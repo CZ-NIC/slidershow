@@ -118,26 +118,43 @@ class Frame {
         }
 
         /** @type {Place[]} */
-        const places = []
-
-        const gps = this.prop("gps", null, this.$actor)
-        if (gps) {
-            places.push(Place.from_coordinates(...gps.split(",")))
-        }
-
-        const names = this.prop("places")
-        if (names) {
-            places.push(...names.split(",").map(name => new Place(name)))
-        }
+        const places = get_places(this)
 
         if (places.length) {
+            const last_places = get_places(this.$frame.prev().data("frame")) || get_places(this.$frame.parent().data("frame"))
+
             map.engage(places,
                 this.prop("map-animate", true),
-                this.prop("map-geometry-show", false) /* XXroute|polyline*/,
+                this.prop("map-geometry-show", false),
+                this.prop("map-geometry-criterion", ""),
                 this.prop("map-markers-show", true),
                 this.prop("map-geometry-clear", true),
                 this.prop("map-markers-clear", true),
-                this.prop("map-zoom"))
+                this.prop("map-zoom"),
+                last_places)
+        }
+
+
+        /**
+         *
+         * @param {?Frame} frame
+         * @returns {?Place[]}
+         */
+        function get_places(frame) {
+            if (!frame) {
+                return null
+            }
+            const places = []
+            const gps = frame.prop("gps", null, frame.$actor)
+            if (gps) {
+                places.push(Place.from_coordinates(...gps.split(",")))
+            }
+
+            const names = frame.prop("places", null, frame.$actor)
+            if (names) {
+                places.push(...names.split(",").map(name => new Place(name)))
+            }
+            return places
         }
     }
 
@@ -195,7 +212,8 @@ class Frame {
         }
 
         // No HTML tag found, fit plain text to the screen size
-        if ($frame.children().length === 0 || this.prop("fit")) {
+        const fit = this.prop("fit", "auto")
+        if (fit === true || fit === 1 || (fit === 'auto' && $frame.children().length === 0)) {
             textFit($frame)
         }
 
@@ -442,7 +460,6 @@ class Frame {
                 attrs["data-device"] = `${make} ${model}`
             }
 
-            // získání dat o datumu a času pořízení fotografie
             const dateTime = exif.DateTimeOriginal?.replace(/:/g, "-").replace(/ /g, "T")
             if (dateTime) { attrs["data-dateTime"] = dateTime }
 

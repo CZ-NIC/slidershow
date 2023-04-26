@@ -151,7 +151,7 @@ class Playback {
      */
     videoInit() {
         $articles.find("video").each(function () {
-            const attributes = $(this).closest("[data-video]").data("video")?.split(" ") || [] // ex: ["muted", "autoplay"]
+            const attributes = prop("video", "autoplay controls", $(this)).split(" ") || [] // ex: ["muted", "autoplay"]
             attributes.forEach((k, v) => this[k] = true) // ex: video.muted = true
             // Following line has so more effect since it was already set by JS. However, for the readability
             // we display the attributes in the DOM too. We could skip the JS for the attribute 'controls'
@@ -307,7 +307,7 @@ class Playback {
         const $current = this.$current = next ? $(next) : $last
         /**
          * @type {Frame}
-         */
+        */
         const frame = this.frame = $current.data("frame")
         this.index = $articles.index($current)
 
@@ -358,6 +358,8 @@ class Playback {
                         Promise.all([frame.video_finished, this.map.finished, this.hud_map.finished]).then(() => this.moving && this.nextFrame())
                     }).start(duration * 1000)
                 )
+            } else if (moving && frame.video_finished) { // always go to the next frame when video ends, ignoring data-duration
+                frame.video_finished.then(() => this.moving && this.nextFrame())
             }
         })
     }
