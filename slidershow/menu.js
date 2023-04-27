@@ -53,7 +53,7 @@ class Menu {
             this.appendFiles([...$file[0].files])
         })
 
-        $("#export").on("click", () => this.export())
+        this.$export.on("click", () => this.export_dialog())
 
         // Load defaults from the main tag
         $("input", "#defaults").each(function () {
@@ -101,23 +101,32 @@ class Menu {
         [...formData].map(([key, val]) => $section.attr("data-" + key, val))
 
         const ram_only = !Boolean(path)
-
-        let progress = 0
-        $("#progress").remove()
-        const $progress = $("<div/>", { id: "progress" }).insertAfter(this.$drop).circleProgress({
-            value: 0,
-            max: items.length
-        })
+        const spin = this.display_progress(items.length, this.$drop)
 
         const elements = items.map(item =>
-            FrameFactory.file(path + item.name, false, item, ram_only, () =>
-                $progress.circleProgress("value", ++progress)))
+            FrameFactory.file(path + item.name, false, item, ram_only, spin))
             .filter(x => !!x)
         $section.hide(0).append(elements).children().hide(0).parent().show(0)
         this.$start_wrapper.show()
+        this.$start.focus()
         this.$export.show()
         this.playback.reset()
         return true
+    }
+
+    display_progress(max, $placement = null) {
+        $("#progress").remove()
+        const $progress = $("<div/>", { id: "progress" }).insertAfter($placement || "h1").circleProgress({
+            value: 0,
+            max: max
+        })
+        let progress = 0
+        return () => {
+            $progress.circleProgress("value", ++progress)
+            if (progress === max) {
+                $("#progress").fadeOut(2000)
+            }
+        }
     }
 
     export_dialog() {
@@ -137,6 +146,8 @@ class Menu {
                         }]
                     })
             }, {
+                // XX estimate the size and how many photos could not be packed (not being dropped previously)
+                // XX fix: if imported with a path, those file will not be exported with src=data
                 caption: "Pack into one file (huge RAM + disk demand)", callback: () => this.export(true)
             }]
         })
@@ -145,6 +156,8 @@ class Menu {
     async export(single_file = false, path = "") {
         if (single_file) {
             // RAM consuming operation
+            // if not preloaded yet, we have to be sure all bytes are put into the src
+            // XX instead of putting into src, we might use data-src-base64, much more efficient
             await Promise.all(this.playback.$articles.map((_, frame) => Frame.preload($(frame))).get().flat())
         }
 
@@ -153,13 +166,13 @@ class Menu {
         // reduce parameters
         $contents.removeAttr("style")
         $contents.find("*").removeAttr("style")
-        $contents.find(FRAME_SELECTOR).each((_, frame) => Frame.finalize_tag($(frame), single_file, path))
-        Frame.finalize_frames($contents)
+        Frame.finalize_frames($contents, single_file, path)
+
 
         const data = `<html>\n<head>
 <script src="${DIR}slidershow.js"></script>
 </head>\n<body>` + $contents.prop("outerHTML") + "\n</body>\n</html>"
-        const blob = new Blob([data], { type: "text/plain" })
+        const blob = new Blob([data.replaceAll(EXPORT_SRC, "src")], { type: "text/plain" })
         const url = URL.createObjectURL(blob)
         const link = document.createElement("a")
         link.href = url

@@ -182,11 +182,14 @@ class Frame {
         return $frame.find("img[data-src], video[data-src]").map(function () {
             $frame.attr("data-preloaded", 1) // prevent another preload
             const $el = $(this)
-            // Attribute preload – file src is held in the attribute
-            $el.attr("src", $el.data("src"))
+            // Attribute preload – file src is held in the data-src attribute
+            // However src might contain data (presentation exported as a single file), which we preserve.
+            if (["", EMPTY_SRC].includes($el.attr("src"))) {
+                $el.attr("src", $el.data("src"))
+            }
 
             if ($el.is("[data-src-cached]")) {  // Memory preload – we hold all data in the memory
-                if (POSTPONE_PRELOAD) {
+                if (POSTPONE_UPLOAD_READING) {
                     return $el.data("src-cached-data")()
                 } else {
                     $el.attr("src", $el.data("src-cached-data"))
@@ -195,35 +198,36 @@ class Frame {
                 }
             }
         }).get()
-
     }
 
     /**
      * Remove auxiliary parameters when exporting.
-     * @param {jQuery} $frame
+     * @param {jQuery} $contents Copy of $main, containing all frames.
      * @param {Boolean} prefer_raw If true a there are bytes in the memory, those are exported in the src. False → filename always exported.
      * @param {String} path Path where the presentation file will find the media folder.
      */
-    static finalize_tag($frame, prefer_raw = false, path = "") {
-        if (prefer_raw) { // if not preloaded yet, we have to be sure all bytes are put into the src
-            Frame.preload($frame)
-        }
-        $frame.removeAttr("data-preloaded").find("[data-src]").each(function () {
+    static finalize_frames($contents, prefer_raw = false, path = "") {
+        $("video[data-autoplay-prevented]", $contents).removeAttr("data-autoplay-prevented").attr("autoplay", "")
+        const $frames = $contents.find(FRAME_SELECTOR).removeAttr("data-preloaded")
+
+        $frames.find("[data-src]").each(function () {
             const $el = $(this)
 
             const src = $el.data("src")
-            if (!prefer_raw || src === EMPTY_SRC) {
+            if (!prefer_raw || src === EMPTY_SRC) { // → {data-src: filename, src: missing! (performance reasons for 1000+ photos)}
                 const full_path = src.includes("/") ? src : path + src
-                $el.attr("src", full_path)
-                $el.removeAttr("data-src") // when preferring raw, data-src keeps the original file name
+                if (EXPORT_AS_SRC) {
+                    $el.attr(EXPORT_SRC, full_path) // setting src would kill the tab for more than few hundred photos instantanely
+                    $el.removeAttr("data-src-cached data-src src") // when preferring raw, data-src keeps the original file name
+                } else {
+                    $el.attr("data-src", full_path) // setting src would prevent opening such tab
+                    $el.removeAttr("data-src-cached src")
+                }
+            } else { // → {src: base64_data, data-src: original_filename}
+                $el.removeAttr("data-src-cached")
+                // XX We might use EXPORT_AS_SRC and export {data-src-base64: base64_data, data-src: original_filename}
             }
-
-            $el.removeAttr("data-src-cached")
         })
-    }
-
-    static finalize_frames($contents) {
-        $("video[data-autoplay-prevented]", $contents).removeAttr("data-autoplay-prevented").attr("autoplay", "")
     }
 
     /**
@@ -231,18 +235,19 @@ class Frame {
      */
     static videoInit($articles) {
         $articles.find("video").each(function () {
-            const attributes = prop("video", "autoplay controls", $(this)).split(" ") || [] // ex: ["muted", "autoplay"]
+            const $el = $(this)
+            const attributes = prop("video", "autoplay controls", $el).replace("autoplay", "data-autoplay-prevented").split(" ") || [] // ex: ["muted", "autoplay"]
             attributes.forEach((k, v) => this[k] = true) // ex: video.muted = true
             // Following line has so more effect since it was already set by JS. However, for the readability
             // we display the attributes in the DOM too. We could skip the JS for the attribute 'controls'
             // but not for 'muted'. If the <video> is not <video muted> by the DOM load,
             // the attribute would have no effect.
-            $(this).attr(attributes.reduce((k, v) => ({ ...k, [v]: true }), {})) // ex: <video muted=true>
+            $el.attr(attributes.reduce((k, v) => ({ ...k, [v]: true }), {})) // ex: <video muted=true>
 
-            if ($(this)[0].hasAttribute("autoplay")) {
+            if ($el[0].hasAttribute("autoplay")) {
                 // While doing an export and preloading frame, it might start playing
                 // or sometimes a video in a presentation starts playing after load. Prevent this.
-                $(this).removeAttr("autoplay").attr("data-autoplay-prevented", 1)
+                $el.removeAttr("autoplay").attr("data-autoplay-prevented", 1)
             }
         })
     }

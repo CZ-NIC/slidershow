@@ -3,6 +3,7 @@ const $main = $("main").length ? $("main") : $("<main/>").appendTo("body")
 const $hud = $("#hud")
 const FRAME_SELECTOR = "article,article-map"
 const EMPTY_SRC = "data:"
+const EXPORT_SRC = "data-src-replaced"
 
 /*
 Private attributes that are not documented in the README because the user should not need them:
@@ -17,7 +18,12 @@ Private attributes that are not documented in the README because the user should
 // XX var might become data-attributes
 var READ_EXIF = true // power consuming
 var ROUTE_TIMEOUT = 1000
-var POSTPONE_PRELOAD = true // More memory efficient but might lag the user experience. May be removed in the future.
+var POSTPONE_UPLOAD_READING = true // More memory efficient but might lag the user experience. May be removed in the future.
+// Export as <img src> or <img data-src>
+// When exporting hundreds of media files, setting the src attribute would prevent the HTML being opened → default false.
+// However, for a smaller number, it is nicer to have the src, since when slideRshow does not work, it is somewhat
+// backwards compatible as raw HTML.
+var EXPORT_AS_SRC = false
 
 // Main launch and export to the dev console
 /** @type {Playback} */

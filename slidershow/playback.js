@@ -72,8 +72,8 @@ class Playback {
 
     reset() {
         this.$articles = Frame.load_all(this)
-        this.positionFrames()
         Frame.videoInit(this.$articles)
+        this.positionFrames()
     }
 
     positionFrames(x1 = null, x2 = null, x3 = null, x4 = null) {

@@ -41,9 +41,24 @@ loadjQuery(() => {
 
     const local = ["static.js", "frame_factory.js", "frame.js", "place.js", "map.js", "hud.js", "menu.js", "playback.js"].map(f => loadScript({ src: DIR + f }))
 
+    /**
+     When there were 60 photos and 10 videos in a 230 MB presentation file, these were started before we could
+     get rid of their autoplay attribute (especially if a user clicks to the loading page = interacts with it,
+        making the browser to have no objection for autoplaying).
+    They still starts playing for a bit but then end.
+    */
+    const stop_videos = () => {
+        console.log("Stopping videos", $("video[autoplay]").length)
+        $("video[autoplay]").removeAttr("autoplay").attr("data-autoplay-prevented", 1).each(function () { this.pause() })
+    }
+
     const load_launch = () => {
         get_menu().appendTo("body")
-        loadScript({ src: DIR + "launch.js" })
+        stop_videos()
+        $(document).ready(function () {
+            stop_videos()
+            loadScript({ src: DIR + "launch.js" })
+        })
     }
 
     // meta tag check (however, if not already present, export button displays as garbage)
@@ -106,7 +121,9 @@ function get_menu() {
     </div>
 
     <menu>
-        <h1>SlideRshow</h1>
+        <div>
+            <h1>SlideRshow</h1>
+        </div>
         <div id='start-wrapper'>
             Start presenting<br />
             <button id="start">&#9654;</button>

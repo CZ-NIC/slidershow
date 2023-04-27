@@ -43,7 +43,7 @@ class FrameFactory {
     }
 
     static _read(data, $el) {
-        if (POSTPONE_PRELOAD) {
+        if (POSTPONE_UPLOAD_READING) {
             $el
                 .attr("data-src-cached", 1)
                 .data("src-cached-data", () => {
