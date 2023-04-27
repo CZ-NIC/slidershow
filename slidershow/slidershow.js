@@ -95,13 +95,13 @@ function get_menu() {
 
     <menu>
         <h1>SlideRshow</h1>
-        <div>
+        <div id='start-wrapper'>
             Start presenting<br />
             <button id="start">&#9654;</button>
         </div>
 
         <div>
-            Or choose another frames<br />
+            Append frames<br />
             <input type="file" id="file" multiple>
 
             <div id="drop" data-placeholder="Drag files here">

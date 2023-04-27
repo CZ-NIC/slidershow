@@ -24,33 +24,29 @@ class Playback {
          * @type {Frame}
          */
         this.frame
-        this.appendEndSlide() // XX gets appended multiple times when playback starts multiple times
         this.slide_count
         this.$articles
-        this.positionFrames()
 
         this.$current
         this.index = 0
 
-        // this.$current.show()
-        this.shortcuts = this.shortcutsInit()
-        this.start()
-        this.videoInit()
+        this.shortcuts = this.shortcutsInit().map(s => s.disable() || s)
 
         this.debug = false
+        this.reset()
     }
 
     start() {
-        $articles.show()
+        this.$articles.show()
         $hud.show(0)
-        this.$current = $articles.first()
+        this.$current = this.$articles.first()
         this.goToFrame(this.index, true)
         this.shortcuts.forEach(s => s.enable())
     }
 
     stop() {
         this.moving_timeout.stop()
-        $articles.hide()
+        this.$articles.hide()
         $hud.hide(0)
         this.promise.aborted = true
         this.hud_map.hide()
@@ -72,16 +68,20 @@ class Playback {
         this.moving = moving
     }
 
-    positionFrames(x1 = null, x2 = null, x3 = null, x4 = null) {
-        $articles = this.$articles = Frame.load_all(this)
+    reset() {
+        this.$articles = Frame.load_all(this)
+        this.positionFrames()
+        this.videoInit()
+    }
 
+    positionFrames(x1 = null, x2 = null, x3 = null, x4 = null) {
         let slide_index = -1
         let frame_index = -1
 
         let clockwise = true
         let sectionCount = 0
 
-        $articles.each((_, el) => {
+        this.$articles.each((_, el) => {
             const $el = $(el)
             /** @type {Frame} */
             const frame = $el.data("frame")
@@ -145,14 +145,13 @@ class Playback {
 
 
         this.slide_count = slide_index + 1
-        return $articles
     }
 
     /**
      * Inherit attributes from the ancestors
      */
     videoInit() {
-        $articles.find("video").each(function () {
+        this.$articles.find("video").each(function () {
             const attributes = prop("video", "autoplay controls", $(this)).split(" ") || [] // ex: ["muted", "autoplay"]
             attributes.forEach((k, v) => this[k] = true) // ex: video.muted = true
             // Following line has so more effect since it was already set by JS. However, for the readability
@@ -161,10 +160,6 @@ class Playback {
             // the attribute would have no effect.
             $(this).attr(attributes.reduce((k, v) => ({ ...k, [v]: true }), {})) // ex: <video muted=true>
         })
-    }
-
-    appendEndSlide() {
-        FrameFactory.text("... end.")
     }
 
     shortcutsInit() {
@@ -191,7 +186,7 @@ class Playback {
         wh.press(KEY.PageUp, "Prev", () => this.previousFrame()),
 
         wh.press(KEY.Home, "Go to the first", () => this.goToFrame(0)),
-        wh.press(KEY.End, "Go to end", () => this.goToFrame($articles.length - 2)), // -2 and not -1 due to our artificial end slide
+        wh.press(KEY.End, "Go to end", () => this.goToFrame(this.$articles.length - 1)),
 
         wh.press(KEY.M, "Toggle hud map", () => this.notVideoFocus() && this.hud_map.toggle()),
 
@@ -249,7 +244,7 @@ class Playback {
      * Group frames according to the user tags across multiple <section> tags
      */
     group() {
-        $articles.each((_, el) => {
+        this.$articles.each((_, el) => {
             const $frame = $(el)
             /** @type {Frame} */
             const frame = $frame.data("frame")
@@ -328,7 +323,7 @@ class Playback {
         $(':focus', $last).blur()
         $last.find("video").each((_, el) => $(el).off("pause") && el.pause())
 
-        const next = $articles[index]
+        const next = this.$articles[index]
         const $current = this.$current = next ? $(next) : $last
         /**
          * @type {Frame}
@@ -341,6 +336,9 @@ class Playback {
         const last_frame = $last.data("frame")
         if (!same_frame) {
             last_frame.leave()
+        }
+        if (!next) {  // we failed to go to the intended frame
+            this.shake()
         }
         frame.prepare()
 
@@ -405,7 +403,7 @@ class Playback {
         switch (current.prop("transition")) {
             // XX document * `data-transition`: `fade` (default), `scroll-down`
             case "scroll-down": // XX deprec?
-                if ($articles.index($last) < $articles.index($current)) {
+                if (this.$articles.index($last) < this.$articles.index($current)) {
                     last.effect("go-up")
                     return current.effect("arrive-from-bottom")
                 } else {

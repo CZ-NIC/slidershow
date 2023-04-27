@@ -4,11 +4,17 @@
 class Menu {
     constructor() {
         this.$menu = $("menu").show(0)
+        this.$start_wrapper = $("#start-wrapper")
+        this.$export = $("#export")
 
         this.$start = $("#start").focus().click(() => this.start_playback())
 
-        this.playback = null
+        playback = this.playback = new Playback() // expose global `playback`
 
+        if(!$(FRAME_SELECTOR).length) {
+            this.$start_wrapper.hide()
+            this.$export.hide()
+        }
 
         // Global shortcuts
         wh.press(KEY.ESCAPE, "Go to menu", () => this.stop_playback())
@@ -52,11 +58,7 @@ class Menu {
 
     start_playback() {
         this.$menu.hide()
-        if (!this.playback) {
-            this.playback = playback = new Playback()
-        } else {
-            this.playback.start()
-        }
+        this.playback.start()
         this.shortcuts.forEach(s => s.disable())
     }
     stop_playback() {
@@ -71,12 +73,12 @@ class Menu {
         this.shortcuts.forEach(s => s.enable())
     }
 
-    clean_playback() {
+    clean_playback() { // XX not used right now
         if (this.playback) {
             this.playback.destroy()
             this.playback = playback = null
         }
-        $articles.remove() // delete old frames
+        $(FRAME_SELECTOR).remove()  // delete old frames
     }
 
     appendFiles(items) {
@@ -89,7 +91,7 @@ class Menu {
             folder = ""
         }
 
-        this.clean_playback()
+        // this.clean_playback()
         const $section = $("<section/>").appendTo($main);
         [...(new FormData($("#defaults")[0]))].map(([key, val]) => $section.attr("data-" + key, val))
 
@@ -106,6 +108,9 @@ class Menu {
                 $progress.circleProgress("value", ++progress)))
             .filter(x => !!x)
         $section.hide(0).append(elements).children().hide(0).parent().show(0)
+        this.$start_wrapper.show()
+        this.$export.show()
+        this.playback.reset()
         return true
     }
 

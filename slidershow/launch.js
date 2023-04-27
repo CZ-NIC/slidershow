@@ -9,10 +9,7 @@ var ROUTE_TIMEOUT = 1000
 var PRELOAD_EXPERIMENTAL = false // XX cannot be downloaded when preload used. But only when on RAM without path.
 
 // Main launch and export to the dev console
-let $articles = Frame.load_all()
-/**
- * @type {Playback}
- */
+/** @type {Playback} */
 var playback
 const menu = new Menu()
 
