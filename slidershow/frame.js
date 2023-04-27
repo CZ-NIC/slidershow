@@ -382,30 +382,25 @@ class Frame {
 
     zoom() {
         const $actor = this.$actor
-        $actor.off("click wheel").on("click wheel", () => {
-            if ($actor.data("wzoom-unload")) {
-                return
-            }
-            const maxScale_default = 5
-            const wzoom = WZoom.create($actor.get()[0], {
-                maxScale: maxScale_default,
-                minScale: 1,
-                speed: 1,
-                // We can wheel in for ever but keeping maxScale on leash.
-                // Because the click takes us to the current bed (and second click zooms out).
-                rescale: (wzoom) =>
-                    wzoom.content.maxScale = Math.max(maxScale_default, wzoom.content.currentScale + 3)
-            })
-            wzoom.zoomUp() // compensate the click already been consumed
-
-
-            $actor.data("wzoom-unload", () => setTimeout(() => { // we have to timeout - wzoom bug, has to finish before it can be destroyed
-                wzoom.destroy()
-                $actor.data("wzoom-unload", null).off("dblclick")
-            })).on("dblclick", () => $actor.data("wzoom-unload")())
-
-            this.playback.moving = false
+        const maxScale_default = 5
+        const wzoom = WZoom.create($actor.get()[0], {
+            maxScale: maxScale_default,
+            minScale: 1,
+            speed: 1,
+            // We can wheel in for ever but keeping maxScale on leash.
+            // Because the click takes us to the current bed (and second click zooms out).
+            rescale: (wzoom) =>
+            wzoom.content.maxScale = Math.max(maxScale_default, wzoom.content.currentScale + 3)
         })
+
+        // we have zoomed in, do not playback further
+        $actor.off("click wheel").on("click wheel", () => this.playback.moving = false)
+
+        // destruct zooming while leaving the frame
+        $actor.data("wzoom-unload", () => setTimeout(() => { // we have to timeout - wzoom bug, has to finish before it can be destroyed
+            wzoom.destroy()
+            $actor.data("wzoom-unload", null)
+        }))
     }
 
     get_filename($actor = null) {

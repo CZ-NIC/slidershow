@@ -85,7 +85,7 @@ To control the presentation flow, we use many attributes. These are resolved in 
 * `<div data-attribute='1'>` → 1 (also true)
 * `<div data-attribute='0'>` → 0 (also false)
 * `<div data-attribute='value'>` → value
-* `<div>` → null
+* `<div>` → default
 
 An element affected by an attribute searches for it amongst its own or ancestors' attributes.
 
@@ -119,9 +119,9 @@ Which contains arbitrary HTML code, such as images or videos (by default, one pe
     * `true=spiral`
     * `diagonal`
         * `data-x`, `data-y`: Override the default position. Attention, do not let the frames share the same position.
-* `data-loop`: If present, images in the body will rapidly loop, creating a funny animation. (Currenly allowed only `-1` value for an infitite loop.)
+* `data-loop`: If present, images in the body will rapidly loop, creating a funny animation. (Currenly allowed only `true` value for an infitite loop.)
     ```html
-    <article data-loop="-1">
+    <article data-loop>
         <img src="pic1.jpg" />
         <img src="pic2.jpg" />
     </article>
