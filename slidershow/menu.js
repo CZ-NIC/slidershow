@@ -11,7 +11,7 @@ class Menu {
 
         playback = this.playback = new Playback() // expose global `playback`
 
-        if(!$(FRAME_SELECTOR).length) {
+        if (!$(FRAME_SELECTOR).length) {
             this.$start_wrapper.hide()
             this.$export.hide()
         }
@@ -21,7 +21,7 @@ class Menu {
         wh.press(KEY.H, "Show help", () => {
             alert(wh.getText())
         })
-        wh.pressCtrl(KEY.S, "Export presentation", () => this.export())
+        wh.pressCtrl(KEY.S, "Export presentation", () => this.export_dialog())
 
         // Shortcuts available only in menu, not in playback
         this.shortcuts = []
@@ -54,6 +54,16 @@ class Menu {
         })
 
         $("#export").on("click", () => this.export())
+
+        // Load defaults from the main tag
+        $("input", "#defaults").each(function () {
+            const $el = $(this)
+            const def = $main.data($el.attr("name"))
+            if (def) {
+                $el.val(def)
+            }
+        })
+
     }
 
     start_playback() {
@@ -84,17 +94,13 @@ class Menu {
     appendFiles(items) {
         console.log("File items", items)
 
-        let ram_only = false
-        let folder = prompt("Do you want to specify folder?\nCancel – no, just display (RAM consuming)\nEmpty – the page folder", "")
-        if (folder === null) {
-            ram_only = true
-            folder = ""
-        }
+        const $section = $("<section/>").appendTo($main)
+        const formData = new FormData($("#defaults")[0])
+        const path = formData.get("path") // data-path does not belong to <section>
+        formData.delete('path');
+        [...formData].map(([key, val]) => $section.attr("data-" + key, val))
 
-        // this.clean_playback()
-        const $section = $("<section/>").appendTo($main);
-        [...(new FormData($("#defaults")[0]))].map(([key, val]) => $section.attr("data-" + key, val))
-
+        const ram_only = !Boolean(path)
 
         let progress = 0
         $("#progress").remove()
@@ -104,7 +110,7 @@ class Menu {
         })
 
         const elements = items.map(item =>
-            FrameFactory.file(folder + item.name, false, item, ram_only, () =>
+            FrameFactory.file(path + item.name, false, item, ram_only, () =>
                 $progress.circleProgress("value", ++progress)))
             .filter(x => !!x)
         $section.hide(0).append(elements).children().hide(0).parent().show(0)
@@ -114,13 +120,41 @@ class Menu {
         return true
     }
 
-    export() {
+    export_dialog() {
+        new $.Zebra_Dialog("Will you put the presentation file to the media folder?", {
+            type: "question",
+            title: "Export",
+            buttons: [{ caption: "Same folder (tiny presentation size)", callback: () => this.export() }, {
+                caption: "Another folder (tiny presentation size)", callback: () =>
+                    new $.Zebra_Dialog("Where will the presentation find the media folder?", {
+                        title: "The path to the media folder",
+                        default_value: $main.attr("data-path") || "./",
+                        type: "prompt",
+                        buttons: ["Cancel", {
+                            caption: "Ok",
+                            default_confirmation: true,
+                            callback: (_, path) => $main.attr("data-path", path) && this.export(false, path)
+                        }]
+                    })
+            }, {
+                caption: "Pack into one file (huge RAM + disk demand)", callback: () => this.export(true)
+            }]
+        })
+    }
+
+    async export(single_file = false, path = "") {
+        if (single_file) {
+            // RAM consuming operation
+            await Promise.all(this.playback.$articles.map((_, frame) => Frame.preload($(frame))).get().flat())
+        }
+
         const $contents = $($main.prop('outerHTML'))
 
         // reduce parameters
         $contents.removeAttr("style")
         $contents.find("*").removeAttr("style")
-        $contents.find(FRAME_SELECTOR).each(function () { Frame.preload($(this), true) })
+        $contents.find(FRAME_SELECTOR).each((_, frame) => Frame.finalize_tag($(frame), single_file, path))
+        Frame.finalize_frames($contents)
 
         const data = `<html>\n<head>
 <script src="${DIR}slidershow.js"></script>

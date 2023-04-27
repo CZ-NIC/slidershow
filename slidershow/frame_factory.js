@@ -16,7 +16,7 @@ class FrameFactory {
 
     static img(filename, append = true, data = null, ram_only = false, callback = null) {
         // data-src prevents the performance for serveral thousand frames
-        const $el = $(`<img src="data:" data-src="${filename}" />`)
+        const $el = $(`<img src="${EMPTY_SRC}" data-src="${filename}" />`)
         const $frame = FrameFactory.html($el, append)
 
         if (data) {
@@ -43,18 +43,25 @@ class FrameFactory {
     }
 
     static _read(data, $el) {
-        if (PRELOAD_EXPERIMENTAL) {
+        if (POSTPONE_PRELOAD) {
             $el
                 .attr("data-src-cached", 1)
-                .data("src-cached-data", (dom) => {
-                    const reader = new FileReader()
-                    reader.onload = (e) => dom.src = e.target.result
-                    reader.readAsDataURL(data)
+                .data("src-cached-data", () => {
+                    return new Promise(resolve => {
+                        const reader = new FileReader()
+                        reader.onload = () => {
+                            $el[0].src = reader.result
+                            resolve()
+                        }
+                        reader.readAsDataURL(data)
+
+                        $el.removeAttr("data-src-cached")
+                        $el.removeData("src-cached-data")
+                    })
                 })
         } else {
-
             const reader = new FileReader()
-            reader.onload = (e) => $el
+            reader.onload = e => $el
                 .attr("data-src-cached", 1)
                 .data("src-cached-data", e.target.result)
             reader.readAsDataURL(data)

@@ -89,11 +89,14 @@ class Hud {
     }
 
     alert(text, soft = false) {
-        // $("#letadylko-submit").after("<span class='map-broken alert alert-warning'></span>");
-        if (soft) {
-            console.warn(text) // XX GUI message overlay windowd
-        } else {
-            alert(text)
+        console.warn(text)
+        if (!soft) {
+            new $.Zebra_Dialog(text, {
+                auto_close: 2000,
+                buttons: false,
+                modal: false,
+                position: ["right - 20", "top + 20"]
+            })
         }
     }
 

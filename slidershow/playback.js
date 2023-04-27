@@ -45,6 +45,8 @@ class Playback {
     }
 
     stop() {
+        this.frame.leave()
+        this.frame.left()
         this.moving_timeout.stop()
         this.$articles.hide()
         $hud.hide(0)
@@ -71,7 +73,7 @@ class Playback {
     reset() {
         this.$articles = Frame.load_all(this)
         this.positionFrames()
-        this.videoInit()
+        Frame.videoInit(this.$articles)
     }
 
     positionFrames(x1 = null, x2 = null, x3 = null, x4 = null) {
@@ -145,21 +147,6 @@ class Playback {
 
 
         this.slide_count = slide_index + 1
-    }
-
-    /**
-     * Inherit attributes from the ancestors
-     */
-    videoInit() {
-        this.$articles.find("video").each(function () {
-            const attributes = prop("video", "autoplay controls", $(this)).split(" ") || [] // ex: ["muted", "autoplay"]
-            attributes.forEach((k, v) => this[k] = true) // ex: video.muted = true
-            // Following line has so more effect since it was already set by JS. However, for the readability
-            // we display the attributes in the DOM too. We could skip the JS for the attribute 'controls'
-            // but not for 'muted'. If the <video> is not <video muted> by the DOM load,
-            // the attribute would have no effect.
-            $(this).attr(attributes.reduce((k, v) => ({ ...k, [v]: true }), {})) // ex: <video muted=true>
-        })
     }
 
     shortcutsInit() {
@@ -280,14 +267,10 @@ class Playback {
     previousSection() {
         const $section = this.getSection()
         const $first = $(FRAME_SELECTOR, $section).first()
-        console.log("289: $first", $first)
-
         if ($first.data("frame").index === this.frame.index) {
             const $previous = $section.prev().find(FRAME_SELECTOR).first()
             this.goToArticle($previous)
         } else {
-            console.log("295: zde",)
-
             this.goToArticle($first)
         }
     }
@@ -321,7 +304,6 @@ class Playback {
         // Unload the frame
         // lose focus on anything on the past frame (but keep on HUD)
         $(':focus', $last).blur()
-        $last.find("video").each((_, el) => $(el).off("pause") && el.pause())
 
         const next = this.$articles[index]
         const $current = this.$current = next ? $(next) : $last
@@ -339,6 +321,7 @@ class Playback {
         }
         if (!next) {  // we failed to go to the intended frame
             this.shake()
+            moving = false
         }
         frame.prepare()
 

@@ -7,11 +7,8 @@ const USE_MAPY = true
 
 // style
 document.querySelector("html").style.display = "none" // so that body images are not shown before the style loads (short white blink appears instead)
-const link = document.createElement("link")
-link.href = DIR + "../style.css"
-link.rel = "stylesheet"
-link.onload = () => document.querySelector("html").removeAttribute("style")
-document.head.appendChild(link)
+
+loadStyle(DIR + "../style.css").then(() => document.querySelector("html").removeAttribute("style"))
 
 loadjQuery(() => {
 
@@ -36,8 +33,12 @@ loadjQuery(() => {
         { src: "https://cdn.jsdelivr.net/npm/js-circle-progress@0.2.4/dist/jquery.circle-progress.min.js" },
         { src: "https://cdn.jsdelivr.net/gh/e3rd/WebHotkeys@0.7/WebHotkeys.js" },
         { src: "https://cdn.jsdelivr.net/npm/exif-js" },
-        { src: "https://api.mapy.cz/loader.js" }
+        { src: "https://api.mapy.cz/loader.js" },
+        { src: "https://cdn.jsdelivr.net/npm/zebra_dialog@3.0.5/dist/zebra_dialog.min.js" }
     ].map(f => loadScript(f))
+
+    const vendor_styles = ["https://cdn.jsdelivr.net/npm/zebra_dialog@latest/dist/css/materialize/zebra_dialog.min.css"].map(f => loadStyle(f))
+
     const local = ["static.js", "frame_factory.js", "frame.js", "place.js", "map.js", "hud.js", "menu.js", "playback.js"].map(f => loadScript({ src: DIR + f }))
 
     const load_launch = () => {
@@ -75,7 +76,18 @@ function loadScript(attrs) {
         script.onload = resolve
         script.onerror = reject
         document.head.appendChild(script)
-    });
+    })
+}
+
+function loadStyle(url) {
+    return new Promise((resolve, reject) => {
+        const link = document.createElement("link")
+        link.href = url
+        link.rel = "stylesheet"
+        link.onload = resolve
+        link.onerror = reject
+        document.head.appendChild(link)
+    })
 }
 
 function get_menu() {
@@ -112,10 +124,11 @@ function get_menu() {
                 Defaults
                 <br />Duration <input name="duration" value="3" size="4" placeholder="0"> s
                 <br />Transition <input name="transition-duration" value="0" size="4" placeholder="0"> s
+                <br />Media folder path <input title="If not set, we put the media data inside the DOM (RAM consuming)" name="path" value="" placeholder="./">
             </form>
 
             <br/>
-            <button id="export" title="Export Ctrl+S">💾</button>
+            <button id="export" title="Export Ctrl+S">&#128190;</button>
         </div>
     </menu>`)
 }

@@ -166,34 +166,84 @@ class Frame {
     /**
      *   preload media
      *   for the case of several thousands file, the perfomarce is important
-     *   XX we should probably implement an unload too
+     *   XX we should probably implement an unload too (and set like unload if more than 100 media frames)
+     *
+     * * data-src: Optional attribute for <img>, <video>, holds the original file name.
+     * * data-src-cached: Such element might have a data-src-cached too which means the data is in the RAM.
+     *
      * @param {jQuery} $frame
-     * @param {bool} one_way Remove helper attributes but prevents further preload call
+     * @returns {Promise[]} Fulfilled when src loaded from the memory.
      */
-    static preload($frame, one_way = false) {
-        // Attribute preload – file src is held in the attribute
-        $frame.find("img[data-src]").each(function () {
-            $(this).attr("src", $(this).data("src"))
+    static preload($frame) {
+        if ($frame.attr("data-preloaded")) {
+            return [] // already done
+        }
 
-            if (one_way) {
-                $(this).removeAttr("data-src")
-            }
-        })
-        $frame.find("video[data-src]").each(function () {
-            $(this).empty().append($("<source/>", { src: $(this).data("src") }))
-        })
+        return $frame.find("img[data-src], video[data-src]").map(function () {
+            $frame.attr("data-preloaded", 1) // prevent another preload
+            const $el = $(this)
+            // Attribute preload – file src is held in the attribute
+            $el.attr("src", $el.data("src"))
 
-        // Memory preload – we hold all data in the memory
-        $frame.find("img[data-src-cached]").each(function () {
-            if (PRELOAD_EXPERIMENTAL) {
-                // .removeAttr("data-src-cached")
-                $(this).data("src-cached-data")(this)
-            } else {
-                $(this).attr("src", $(this).data("src-cached-data"))
+            if ($el.is("[data-src-cached]")) {  // Memory preload – we hold all data in the memory
+                if (POSTPONE_PRELOAD) {
+                    return $el.data("src-cached-data")()
+                } else {
+                    $el.attr("src", $el.data("src-cached-data"))
+                    $el.removeAttr("data-src-cached")
+                    $el.removeData("src-cached-data")
+                }
             }
+        }).get()
+
+    }
+
+    /**
+     * Remove auxiliary parameters when exporting.
+     * @param {jQuery} $frame
+     * @param {Boolean} prefer_raw If true a there are bytes in the memory, those are exported in the src. False → filename always exported.
+     * @param {String} path Path where the presentation file will find the media folder.
+     */
+    static finalize_tag($frame, prefer_raw = false, path = "") {
+        if (prefer_raw) { // if not preloaded yet, we have to be sure all bytes are put into the src
+            Frame.preload($frame)
+        }
+        $frame.removeAttr("data-preloaded").find("[data-src]").each(function () {
+            const $el = $(this)
+
+            const src = $el.data("src")
+            if (!prefer_raw || src === EMPTY_SRC) {
+                const full_path = src.includes("/") ? src : path + src
+                $el.attr("src", full_path)
+                $el.removeAttr("data-src") // when preferring raw, data-src keeps the original file name
+            }
+
+            $el.removeAttr("data-src-cached")
         })
-        $frame.find("video[data-src-cached]").each(function () {
-            $(this).empty().append($("<source/>", { src: $(this).data("src-cached-data") }))
+    }
+
+    static finalize_frames($contents) {
+        $("video[data-autoplay-prevented]", $contents).removeAttr("data-autoplay-prevented").attr("autoplay", "")
+    }
+
+    /**
+     * Inherit attributes from the ancestors
+     */
+    static videoInit($articles) {
+        $articles.find("video").each(function () {
+            const attributes = prop("video", "autoplay controls", $(this)).split(" ") || [] // ex: ["muted", "autoplay"]
+            attributes.forEach((k, v) => this[k] = true) // ex: video.muted = true
+            // Following line has so more effect since it was already set by JS. However, for the readability
+            // we display the attributes in the DOM too. We could skip the JS for the attribute 'controls'
+            // but not for 'muted'. If the <video> is not <video muted> by the DOM load,
+            // the attribute would have no effect.
+            $(this).attr(attributes.reduce((k, v) => ({ ...k, [v]: true }), {})) // ex: <video muted=true>
+
+            if ($(this)[0].hasAttribute("autoplay")) {
+                // While doing an export and preloading frame, it might start playing
+                // or sometimes a video in a presentation starts playing after load. Prevent this.
+                $(this).removeAttr("autoplay").attr("data-autoplay-prevented", 1)
+            }
         })
     }
 
@@ -235,11 +285,21 @@ class Frame {
 
         this.playback.hud.discreet_info(this.get_filename().split("#")[1])
 
+        if ($actor.attr("data-autoplay-prevented")) {
+            $actor.removeAttr("data-autoplay-prevented").attr("autoplay", "")
+        }
+
         if ($actor.attr("autoplay")) {
             // Video autoplay (when muted in chromium)
-            $actor[0].play().catch(() => {
-                this.playback.hud.alert("Interact with the page before the autoplay works.")
-            })
+            if ($actor[0].readyState > 3) {
+                $actor[0].play().catch(e => {
+                    this.playback.hud.alert("Interact with the page before the autoplay works.")
+                })
+            } else {
+                console.warn("Not ready for autoplay", $actor[0])
+                // However, we might get rid of this warning for the case the video is being preloaded.
+                // In such case, it still has the autoplay attribute, which causes it to play.
+            }
 
         }
         $actor[0].playbackRate = this.prop("playback-rate", 1, $actor)
@@ -308,6 +368,7 @@ class Frame {
     }
 
     leave() {
+        this.$frame.find("video").each((_, el) => $(el).off("pause") && el.pause())
         this.shortcuts.forEach(s => s.disable())
         this.shortcuts.length = 0
 
@@ -347,9 +408,6 @@ class Frame {
         if (w > main_w && w / h > this.prop("panorama-threshold", 2, $actor)) {
             // the image is wider than the sceen (would been shrinked) and its proportion looks like a panoramatic
             let speed = Math.min((trailing_width / 100), 5) * 1000 // 100 px / 1s, but max 5 sec
-            console.log("327: w, h, main_w, main_h", w, h, main_w, main_h)
-            console.log("328: small_height, medium_width", small_height, medium_width)
-            console.log("329: trailing_width", trailing_width)
 
             $actor.css({
                 width: "unset",
@@ -390,7 +448,7 @@ class Frame {
             // We can wheel in for ever but keeping maxScale on leash.
             // Because the click takes us to the current bed (and second click zooms out).
             rescale: (wzoom) =>
-            wzoom.content.maxScale = Math.max(maxScale_default, wzoom.content.currentScale + 3)
+                wzoom.content.maxScale = Math.max(maxScale_default, wzoom.content.currentScale + 3)
         })
 
         // we have zoomed in, do not playback further

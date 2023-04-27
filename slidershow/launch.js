@@ -2,11 +2,22 @@ const wh = new WebHotkeys()
 const $main = $("main").length ? $("main") : $("<main/>").appendTo("body")
 const $hud = $("#hud")
 const FRAME_SELECTOR = "article,article-map"
+const EMPTY_SRC = "data:"
+
+/*
+Private attributes that are not documented in the README because the user should not need them:
+
+* main[data-path] Path to the media folder.
+* [data-src] Public attribute. But know that every dragged file will have it.
+    + [data-src-cached]: Such element might have a data-src-cached too which means the data is in the RAM.
+* video[data-autoplay-prevented]
+
+*/
 
 // XX var might become data-attributes
 var READ_EXIF = true // power consuming
 var ROUTE_TIMEOUT = 1000
-var PRELOAD_EXPERIMENTAL = false // XX cannot be downloaded when preload used. But only when on RAM without path.
+var POSTPONE_PRELOAD = true // More memory efficient but might lag the user experience. May be removed in the future.
 
 // Main launch and export to the dev console
 /** @type {Playback} */
