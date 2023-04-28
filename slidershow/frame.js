@@ -184,7 +184,8 @@ class Frame {
             const $el = $(this)
             // Attribute preload – file src is held in the data-src attribute
             // However src might contain data (presentation exported as a single file), which we preserve.
-            if (["", EMPTY_SRC].includes($el.attr("src"))) {
+            const src = $el.attr("src")
+            if (!src || src ===  EMPTY_SRC) {
                 $el.attr("src", $el.data("src"))
             }
 
@@ -216,7 +217,7 @@ class Frame {
             const src = $el.data("src")
             if (!prefer_raw || src === EMPTY_SRC) { // → {data-src: filename, src: missing! (performance reasons for 1000+ photos)}
                 const full_path = src.includes("/") ? src : path + src
-                if (EXPORT_AS_SRC) {
+                if (PREFER_SRC_EXPORT) {
                     $el.attr(EXPORT_SRC, full_path) // setting src would kill the tab for more than few hundred photos instantanely
                     $el.removeAttr("data-src-cached data-src src") // when preferring raw, data-src keeps the original file name
                 } else {
@@ -225,7 +226,7 @@ class Frame {
                 }
             } else { // → {src: base64_data, data-src: original_filename}
                 $el.removeAttr("data-src-cached")
-                // XX We might use EXPORT_AS_SRC and export {data-src-base64: base64_data, data-src: original_filename}
+                // XX We might use PREFER_SRC_EXPORT and export {data-src-base64: base64_data, data-src: original_filename}
             }
         })
     }

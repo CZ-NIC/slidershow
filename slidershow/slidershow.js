@@ -2,6 +2,8 @@
 // We cannot use module as this would launch CORS blocking when using locally without server.
 
 // What is current directory
+//  User might use local: <script src="../slidershow/slidershow.js"></script>
+//  As well as: <script src="https://cdn.jsdelivr.net/gh/CZ-NIC/slidershow@latest/slidershow/slidershow.js"></script>
 const DIR = document.querySelector("script[src$='slidershow.js']").getAttribute("src").replace(/\/slidershow.js$/, "") + "/";
 const USE_MAPY = true
 
@@ -14,11 +16,6 @@ loadjQuery(() => {
 
     // external and local scripts
     const vendor = [
-        {
-            src: "https://code.jquery.com/jquery-3.6.4.min.js",
-            integrity: "sha256-oP6HI9z1XaZNBrJURtCoUT5SUnxFr8s3BzRl+cbzUq8=",
-            crossOrigin: "anonymous"
-        },
         {
             src: "https://cdnjs.cloudflare.com/ajax/libs/textfit/2.4.0/textFit.min.js",
             integrity: "sha512-vLs5rAqfvmv/IpN7JustROkGAvjK/L+vgVDFe7KpdtLztqF8mZDfleK2MZj/xuOrWjma0pW+lPCMcBbPKJVC7g==",
@@ -80,6 +77,8 @@ loadjQuery(() => {
 function loadjQuery(callback) {
     var el = document.createElement("script")
     el.src = "https://code.jquery.com/jquery-3.6.4.min.js"
+    el.integrity = "sha256-oP6HI9z1XaZNBrJURtCoUT5SUnxFr8s3BzRl+cbzUq8="
+    el.crossOrigin = "anonymous"
     el.addEventListener("load", () => callback())
     document.head.appendChild(el)
 }

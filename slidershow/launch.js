@@ -23,7 +23,7 @@ var POSTPONE_UPLOAD_READING = true // More memory efficient but might lag the us
 // When exporting hundreds of media files, setting the src attribute would prevent the HTML being opened → default false.
 // However, for a smaller number, it is nicer to have the src, since when slideRshow does not work, it is somewhat
 // backwards compatible as raw HTML.
-var EXPORT_AS_SRC = false
+var PREFER_SRC_EXPORT = false
 
 // Main launch and export to the dev console
 /** @type {Playback} */

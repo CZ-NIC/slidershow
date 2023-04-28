@@ -130,6 +130,21 @@ class Menu {
         }
     }
 
+    /**
+     * XX This is not used at the moment, I am not able to export CSS due to CORS.
+     * @returns
+     */
+    make_header_offline() {
+        return $("script", "head").map((_, el) =>
+        $.ajax({
+            url: el.src,
+            dataType: "text",
+        }).then(text => `<script data-url="${el.src}">${text}</script>`
+        ).catch(error => console.warn(el.src, error))
+        ).get()
+        // await Promise.all(head).then(contents => contents.join("\n\n"))
+    }
+
     export_dialog() {
         new $.Zebra_Dialog("Will you put the presentation file to the media folder?", {
             type: "question",
@@ -168,6 +183,7 @@ class Menu {
         $contents.removeAttr("style")
         $contents.find("*").removeAttr("style")
         Frame.finalize_frames($contents, single_file, path)
+
 
 
         const data = `<html>\n<head>
