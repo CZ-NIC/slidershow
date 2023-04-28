@@ -33,6 +33,7 @@ class Playback {
         this.shortcuts = this.shortcutsInit().map(s => s.disable() || s)
 
         this.debug = false
+        this.tagging_mode = false
         this.reset()
     }
 
@@ -150,6 +151,42 @@ class Playback {
     }
 
     shortcutsInit() {
+        const tagging = [
+            wh.pressAlt(KEY.G, "Group frames according to their tag", () => this.group()),
+            wh.press(KEY.N0, "Tag 0", () => this.frame.set_tag(null)),
+            wh.press(KEY.N1, "Tag 1", () => this.frame.set_tag(1)),
+            wh.press(KEY.N2, "Tag 2", () => this.frame.set_tag(2)),
+            wh.press(KEY.N3, "Tag 3", () => this.frame.set_tag(3)),
+            wh.press(KEY.N4, "Tag 4", () => this.frame.set_tag(4)),
+            wh.press(KEY.N5, "Tag 5", () => this.frame.set_tag(5)),
+            wh.press(KEY.N6, "Tag 6", () => this.frame.set_tag(6)),
+            wh.press(KEY.N7, "Tag 7", () => this.frame.set_tag(7)),
+            wh.press(KEY.N8, "Tag 8", () => this.frame.set_tag(8)),
+            wh.press(KEY.N9, "Tag 9", () => this.frame.set_tag(9)),
+
+            wh.press(KEY.Numpad0, "Tag 0", () => this.frame.set_tag(null)),
+            wh.press(KEY.Numpad1, "Tag 1", () => this.frame.set_tag(1)),
+            wh.press(KEY.Numpad2, "Tag 2", () => this.frame.set_tag(2)),
+            wh.press(KEY.Numpad3, "Tag 3", () => this.frame.set_tag(3)),
+            wh.press(KEY.Numpad4, "Tag 4", () => this.frame.set_tag(4)),
+            wh.press(KEY.Numpad5, "Tag 5", () => this.frame.set_tag(5)),
+            wh.press(KEY.Numpad6, "Tag 6", () => this.frame.set_tag(6)),
+            wh.press(KEY.Numpad7, "Tag 7", () => this.frame.set_tag(7)),
+            wh.press(KEY.Numpad8, "Tag 8", () => this.frame.set_tag(8)),
+            wh.press(KEY.Numpad9, "Tag 9", () => this.frame.set_tag(9)),
+
+            wh.pressAlt(KEY.Numpad0, "Tag 10", () => this.frame.set_tag(10)),
+            wh.pressAlt(KEY.Numpad1, "Tag 11", () => this.frame.set_tag(11)),
+            wh.pressAlt(KEY.Numpad2, "Tag 12", () => this.frame.set_tag(12)),
+            wh.pressAlt(KEY.Numpad3, "Tag 13", () => this.frame.set_tag(13)),
+            wh.pressAlt(KEY.Numpad4, "Tag 14", () => this.frame.set_tag(14)),
+            wh.pressAlt(KEY.Numpad5, "Tag 15", () => this.frame.set_tag(15)),
+            wh.pressAlt(KEY.Numpad6, "Tag 16", () => this.frame.set_tag(16)),
+            wh.pressAlt(KEY.Numpad7, "Tag 17", () => this.frame.set_tag(17)),
+            wh.pressAlt(KEY.Numpad8, "Tag 18", () => this.frame.set_tag(18)),
+            wh.pressAlt(KEY.Numpad9, "Tag 19", () => this.frame.set_tag(19))]
+        tagging.forEach(s => s.disable())
+
         return [wh.press(KEY.SPACE, "Next", (e) => {
             if (this.notVideoFocus()) {
                 return this.nextFrame()
@@ -172,6 +209,9 @@ class Playback {
         wh.press(KEY.PageDown, "Next", () => this.nextFrame()),
         wh.press(KEY.PageUp, "Prev", () => this.previousFrame()),
 
+        wh.pressAlt(KEY.PageDown, "Next section", () => this.nextSection()),
+        wh.pressAlt(KEY.PageUp, "Prev section", () => this.previousSection()),
+
         wh.press(KEY.Home, "Go to the first", () => this.goToFrame(0)),
         wh.press(KEY.End, "Go to end", () => this.goToFrame(this.$articles.length - 1)),
 
@@ -179,42 +219,14 @@ class Playback {
 
         wh.press(KEY.F, "Toggle file info", () => $("#hud-fileinfo").toggle()),
 
-        // XX Tagging is an undocumented feature
-        wh.pressAlt(KEY.G, "Group frames according to their tag", () => this.group()),
-        wh.press(KEY.N0, "Tag 0", () => this.frame.set_tag(null)),
-        wh.press(KEY.N1, "Tag 1", () => this.frame.set_tag(1)),
-        wh.press(KEY.N2, "Tag 2", () => this.frame.set_tag(2)),
-        wh.press(KEY.N3, "Tag 3", () => this.frame.set_tag(3)),
-        wh.press(KEY.N4, "Tag 4", () => this.frame.set_tag(4)),
-        wh.press(KEY.N5, "Tag 5", () => this.frame.set_tag(5)),
-        wh.press(KEY.N6, "Tag 6", () => this.frame.set_tag(6)),
-        wh.press(KEY.N7, "Tag 7", () => this.frame.set_tag(7)),
-        wh.press(KEY.N8, "Tag 8", () => this.frame.set_tag(8)),
-        wh.press(KEY.N9, "Tag 9", () => this.frame.set_tag(9)),
+        wh.pressAlt(KEY.T, "Toggle tagging mode", () => {
+            this.tagging_mode = !this.tagging_mode
+            // when there will be interfering shortcuts like numbers, we have retag the previous shortcuts
+            tagging.forEach(s => this.tagging_mode ? s.enable() : s.disable())
+            this.hud.alert(`Tagging mode ${this.tagging_mode ? "enabled, see H for shortcuts help" : "disabled."}`)
+        }),
 
-        wh.press(KEY.Numpad0, "Tag 0", () => this.frame.set_tag(null)),
-        wh.press(KEY.Numpad1, "Tag 1", () => this.frame.set_tag(1)),
-        wh.press(KEY.Numpad2, "Tag 2", () => this.frame.set_tag(2)),
-        wh.press(KEY.Numpad3, "Tag 3", () => this.frame.set_tag(3)),
-        wh.press(KEY.Numpad4, "Tag 4", () => this.frame.set_tag(4)),
-        wh.press(KEY.Numpad5, "Tag 5", () => this.frame.set_tag(5)),
-        wh.press(KEY.Numpad6, "Tag 6", () => this.frame.set_tag(6)),
-        wh.press(KEY.Numpad7, "Tag 7", () => this.frame.set_tag(7)),
-        wh.press(KEY.Numpad8, "Tag 8", () => this.frame.set_tag(8)),
-        wh.press(KEY.Numpad9, "Tag 9", () => this.frame.set_tag(9)),
 
-        wh.pressAlt(KEY.Numpad1, "Tag 10", () => this.frame.set_tag(10)),
-        wh.pressAlt(KEY.Numpad2, "Tag 11", () => this.frame.set_tag(11)),
-        wh.pressAlt(KEY.Numpad3, "Tag 12", () => this.frame.set_tag(12)),
-        wh.pressAlt(KEY.Numpad4, "Tag 13", () => this.frame.set_tag(13)),
-        wh.pressAlt(KEY.Numpad5, "Tag 14", () => this.frame.set_tag(14)),
-        wh.pressAlt(KEY.Numpad6, "Tag 15", () => this.frame.set_tag(15)),
-        wh.pressAlt(KEY.Numpad7, "Tag 16", () => this.frame.set_tag(16)),
-        wh.pressAlt(KEY.Numpad8, "Tag 17", () => this.frame.set_tag(17)),
-        wh.pressAlt(KEY.Numpad9, "Tag 18", () => this.frame.set_tag(18)),
-
-        wh.pressAlt(KEY.PageDown, "Next section", () => this.nextSection()),
-        wh.pressAlt(KEY.PageUp, "Prev section", () => this.previousSection()),
 
         // wh.pressAlt(KEY.T, "Thumbnails", () => this.thumbnails()),
 
@@ -222,6 +234,22 @@ class Playback {
             const zoom = $main.css("zoom")
             $main.css({ "zoom": zoom == "1" ? "0.05" : "1" })
             this.debug = !this.debug
+        }),
+
+        wh.press(KEY.G, "Go to frame", () => {
+            new $.Zebra_Dialog(`You are now at ${this.frame.slide_index + 1} / ${this.slide_count}`, {
+                title: "Go to slide number",
+                type: "prompt",
+                onOpen: function(dialog) {
+                    alert(11)
+                    dialog.disableKeys();
+                  },
+                buttons: ["Cancel", {
+                    caption: "Ok",
+                    default_confirmation: true,
+                    callback: (_, slide_number) => this.goToSlide(slide_number)
+                }]
+            })
         }),
         ]
 
@@ -281,6 +309,21 @@ class Playback {
 
     getSection() {
         return this.frame.$frame.closest("section, main")
+    }
+
+    /**
+     * Frame has an absolute index. If they are nested and become subframes, the still have the same slide_index.
+     * @param {Number|String} slide_index
+     */
+    goToSlide(slide_number) {
+        const slide_index = Number(slide_number) - 1
+        for (let i = slide_index; i < this.$articles.length; i++) {
+            const frame = this.$articles.eq(i).data("frame")
+            if (slide_index === frame.slide_index) {
+                return this.goToFrame(frame.index)
+            }
+        }
+        this.hud.alert("Cannot find given slide number " + slide_number)
     }
 
     goToArticle($frame, moving = false) {

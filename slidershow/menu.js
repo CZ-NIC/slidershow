@@ -17,9 +17,10 @@ class Menu {
         }
 
         // Global shortcuts
-        wh.press(KEY.ESCAPE, "Go to menu", () => this.stop_playback())
+        wh.press(KEY.ESCAPE, "Go to menu", () => !$(":focus").closest(".ZebraDialog").length && this.stop_playback()) // disable when in a dialog
         wh.press(KEY.H, "Show help", () => {
-            alert(wh.getText())
+            const text = wh.get_info_pairs().map(([shortcut, method]) => shortcut + ": " + method.hint).join("<br>")
+            new $.Zebra_Dialog(text, { type: "information", title: "Shortcuts" })
         })
         wh.pressCtrl(KEY.S, "Export presentation", () => this.export_dialog())
 

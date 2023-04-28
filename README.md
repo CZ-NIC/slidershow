@@ -11,10 +11,10 @@ What is SlideRshow and what advantages it has?
     * [Nomacs](https://nomacs.org/) – perfect but does not handle videos
     * [VLC](https://www.videolan.org/vlc/) – perfect but not stable with 100+ files in the playlist
 * **organizer**
-    * simply tag photos as you browse them to be regrouped for a screening
+    * Simply tag photos as you browse them to be regrouped for a screening.
 * **presentation software**
-    * Ridiculously small file size – given you do not have to keep the media copies as in other presentation software. Have you ever tried to put 1 GB of images onto slides?
-    * Super easy video trimming
+    * Ridiculously small file size – given you do not have to keep copies of media files as in other presentation software. Just link local or online files! Have you ever tried to put 1 GB of images onto slides?
+    * Super easy video trimming.
 
 # Usage
 
@@ -63,6 +63,8 @@ When played, keyboard shortcuts works.
 * Previous frame: <kbd>Left</kbd>, <kbd>PageUp</kbd>, <kbd>p</kbd>
 * Full controls: <kbd>h</kbd>
 * Video: Adjust speed by <kbd>Numpad +/-</kbd>
+* Toggle file info: <kbd>f</kbd>
+* Toggle HUD map: <kbd>m</kbd>
 * Menu: Hit <kbd>Esc</kbd>
 
 ## Start
@@ -71,7 +73,9 @@ The `<menu>` is displayed before the presentation starts, unless the `<main>` ha
 
 ## Organizing
 
-Use Numpad to tag the images. Then in the menu, hit <kbd>Alt+G</kbd> to group the images to the `<section>` according to tags. Export with <kbd>Ctrl+E</kbd>. Sorted & ready!
+Start tagging mode with <kbd>Alt+t</kbd>. Use Numpad to tag the images – think of a tag as a number that corresponds to one of your categories.. Then in the menu, hit <kbd>Alt+G</kbd> to group the images to the `<section>` according to tags. Export with <kbd>Ctrl+S</kbd>. Sorted & ready!
+
+<sub>Note that the tag is stored in the browser (local storage)[https://developer.mozilla.org/en-US/docs/Web/API/Window/localStorage] by the file name so that you do not lose the information at crash. In case you import another photo with the same name, it will inherit the tag from the clashing file.</sub>
 
 # Structure
 
@@ -110,7 +114,7 @@ Which contains arbitrary HTML code, such as images or videos (by default, one pe
 
     ```html
     <article data-duration="0.5">Short frame</article>
-    <article>You have to click to get further.</article>
+    <article>You have to click to get further</article>
     <article data-duration="0.5">Short frame</article>
     ```
 
@@ -118,7 +122,7 @@ Which contains arbitrary HTML code, such as images or videos (by default, one pe
 * `data-spread-frames=spiral`: A viewport stands for a chessboard field. This is how the frame are positioned in the chessboard.
     * `true=spiral`
     * `diagonal`
-        * `data-x`, `data-y`: Override the default position. Attention, do not let the frames share the same position.
+* `data-x`, `data-y`: Valid only for `data-spread-frames=dialogal`. Overrides the default position. Attention, do not let the frames share the same position.
 * `data-loop`: If present, images in the body will rapidly loop, creating a funny animation. (Currenly allowed only `true` value for an infitite loop.)
     ```html
     <article data-loop>
