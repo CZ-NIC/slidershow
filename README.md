@@ -47,7 +47,7 @@ What can you acheive? See a variety of features in another example at [examples/
     + [`<video>`](#--video--)
     + [Text](#text)
   * [Map](#map)
-    + [`<article-map>` frame](#--article-map-frame)
+    + [`<article-map>` frame](#article-map-frame)
   * [Frame group `<section>`](#frame-group-section)
     + [Nested `<article>` tags](#nested-article-tags)
   * [Further styling](#further-styling)

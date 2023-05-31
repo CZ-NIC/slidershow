@@ -87,20 +87,17 @@ class Frame {
         return prop(property, def, $el)
     }
 
+    /**
+     * Frame is going to be entered right now but is not visible yet.
+     */
     prepare() {
-        const $frame = this.$frame
-
         this.children.forEach(f => f.$frame.hide())
         if (this.parent) { // this is a child frame
-            $frame.show(0) // it was hidden before
+            this.$frame.show(0) // it was hidden before
         }
 
-        Frame.preload($frame)
-
-
-        // Get main media
-        const $actor = this.$actor
-        if ($actor.prop("tagName") === "IMG") {
+        // main media action
+        if (this.$actor.prop("tagName") === "IMG") {
             this.panorama()
         }
 
@@ -164,41 +161,49 @@ class Frame {
     }
 
     /**
-     *   preload media
-     *   for the case of several thousands file, the perfomarce is important
-     *   XX we should probably implement an unload too (and set like unload if more than 100 media frames)
+     *  Preload media; for the case of several thousands file, the perfomarce is important.
      *
+     * * data("read-src"): If present, this is the method to re-read the dragged media from the disk.
      * * data-src: Optional attribute for <img>, <video>, holds the original file name.
-     * * data-src-cached: Such element might have a data-src-cached too which means the data is in the RAM.
      *
-     * @param {jQuery} $frame
      * @returns {Promise[]} Fulfilled when src loaded from the memory.
      */
-    static preload($frame) {
+    preload() {
+        const $frame = this.$frame
         if ($frame.attr("data-preloaded")) {
             return [] // already done
         }
+        $frame.attr("data-preloaded", 1) // prevent another preload
 
         return $frame.find("img[data-src], video[data-src]").map(function () {
-            $frame.attr("data-preloaded", 1) // prevent another preload
             const $el = $(this)
-            // Attribute preload – file src is held in the data-src attribute
-            // However src might contain data (presentation exported as a single file), which we preserve.
-            const src = $el.attr("src")
-            if (!src || src ===  EMPTY_SRC) {
+            if (![undefined, "", EMPTY_SRC].includes($el.attr("src"))) {
+                return null // src is already set, do not re-write
+            }
+            const reader = $el.data("read-src")
+            if (reader) {  // read the media from the disk
+                reader()
+            } else if ($el.data("src")) {
+                // file path is held in the data-src attribute
                 $el.attr("src", $el.data("src"))
+            } else { // no place to set the src from
+                return null
             }
+            return new Promise(resolve => $el[0].onload = resolve)
+        }).get().filter(Boolean)
+    }
 
-            if ($el.is("[data-src-cached]")) {  // Memory preload – we hold all data in the memory
-                if (POSTPONE_UPLOAD_READING) {
-                    return $el.data("src-cached-data")()
-                } else {
-                    $el.attr("src", $el.data("src-cached-data"))
-                    $el.removeAttr("data-src-cached")
-                    $el.removeData("src-cached-data")
-                }
+    unload() {
+        const $frame = this.$frame
+        $frame.removeAttr("data-preloaded")
+
+        // Remove src if data can be retrieved from the memory data("read-src") or the attribute data-src
+        $frame.find("img[data-src], video[data-src]").map(function () {
+            const $el = $(this)
+            if ($el.data("read-src") || $el.data("src") && $el.data("src") === $el.attr("src")) {
+                $el.removeAttr("src")
             }
-        }).get()
+        })
     }
 
     /**
@@ -219,13 +224,13 @@ class Frame {
                 const full_path = src.includes("/") ? src : path + src
                 if (PREFER_SRC_EXPORT) {
                     $el.attr(EXPORT_SRC, full_path) // setting src would kill the tab for more than few hundred photos instantanely
-                    $el.removeAttr("data-src-cached data-src src") // when preferring raw, data-src keeps the original file name
+                    $el.removeAttr("data-src src") // when preferring raw, data-src keeps the original file name
                 } else {
                     $el.attr("data-src", full_path) // setting src would prevent opening such tab
-                    $el.removeAttr("data-src-cached src")
+                    $el.removeAttr("src")
                 }
             } else { // → {src: base64_data, data-src: original_filename}
-                $el.removeAttr("data-src-cached")
+                ;
                 // XX We might use PREFER_SRC_EXPORT and export {data-src-base64: base64_data, data-src: original_filename}
             }
         })
@@ -253,6 +258,9 @@ class Frame {
         })
     }
 
+    /**
+     * The frame is at the viewport.
+     */
     enter() {
         const $frame = this.$frame
 
@@ -446,7 +454,7 @@ class Frame {
 
     zoom() {
         const $actor = this.$actor
-        const maxScale_default = 5
+        const maxScale_default = 3
         const wzoom = WZoom.create($actor.get()[0], {
             maxScale: maxScale_default,
             minScale: 1,
@@ -513,6 +521,7 @@ class Frame {
 
     static exif($el, data = null, callback = null) {
         if (!READ_EXIF || $el.data("exif-done")) {
+            callback?.()
             return
         }
         const process = (exif) => {
@@ -540,9 +549,7 @@ class Frame {
             }
 
             $el.attr(attrs).data("exif-done", 1)
-            if (callback) {
-                callback()
-            }
+            callback?.()
         }
 
         // raises uncatcheable log when CORS encoutered
@@ -568,5 +575,14 @@ class Frame {
      */
     static load_all(playback = null) {
         return $(FRAME_SELECTOR).each((_, el) => $(el).data("frame", new Frame($(el), playback)))
+    }
+
+    /**
+     *
+     * @param {jQuery} $frames
+     * @returns {Frame[]}
+     */
+    static frames($frames) {
+        return $frames.get().map(frame_dom => $(frame_dom).data("frame"))
     }
 }

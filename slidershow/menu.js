@@ -174,7 +174,7 @@ class Menu {
             // RAM consuming operation
             // if not preloaded yet, we have to be sure all bytes are put into the src
             // XX instead of putting into src, we might use data-src-base64, much more efficient
-            await Promise.all(this.playback.$articles.map((_, frame) => Frame.preload($(frame))).get().flat())
+            await Promise.all(this.playback.$articles.map((_, frame) => $(frame).data("frame").preload()).get().flat())
         }
 
         const $contents = $($main.prop('outerHTML'))

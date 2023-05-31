@@ -10,20 +10,23 @@ Private attributes that are not documented in the README because the user should
 
 * main[data-path] Path to the media folder.
 * [data-src] Public attribute. But know that every dragged file will have it.
-    + [data-src-cached]: Such element might have a data-src-cached too which means the data is in the RAM.
 * video[data-autoplay-prevented]
-
 */
 
-// XX var might become data-attributes
-var READ_EXIF = true // power consuming
+// XX var variables that a hacky user might wish to change. Might become data-attributes in the future.
+/** power consuming */
+var READ_EXIF = true
 var ROUTE_TIMEOUT = 1000
-var POSTPONE_UPLOAD_READING = true // More memory efficient but might lag the user experience. May be removed in the future.
-// Export as <img src> or <img data-src>
-// When exporting hundreds of media files, setting the src attribute would prevent the HTML being opened → default false.
-// However, for a smaller number, it is nicer to have the src, since when slideRshow does not work, it is somewhat
-// backwards compatible as raw HTML.
+/** Export as <img src> or <img data-src>
+    When exporting hundreds of media files, setting the src attribute would prevent the HTML being opened → default false.
+    However, for a smaller number, it is nicer to have the src present
+    for the raw HTML backwards compatibility for the case slideRshow stopped working. */
 var PREFER_SRC_EXPORT = false
+
+/** How many frames should be preloaded. So that the frame does not blink when having no transition duration. */
+var PRELOAD_FORWARD = 50
+/** How many frames should be preloaded for the case the user goes back in the playback. */
+var PRELOAD_BACKWARD = 20
 
 // Main launch and export to the dev console
 /** @type {Playback} */

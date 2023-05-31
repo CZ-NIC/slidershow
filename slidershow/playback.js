@@ -35,6 +35,21 @@ class Playback {
         this.debug = false
         this.tagging_mode = false
         this.reset()
+
+        /** Frames that are going to be pre/unloaded.
+         * @type {Function[]}
+         */
+        this.bg_tasks = []
+
+        /** Preloading tasks background worker */
+        this.bg_worker = new Interval(async () => {
+            const task = this.bg_tasks.shift()
+            if (task) {
+                await task()
+            } else {
+                this.bg_worker.stop()
+            }
+        }, 1)
     }
 
     start() {
@@ -240,10 +255,6 @@ class Playback {
             new $.Zebra_Dialog(`You are now at ${this.frame.slide_index + 1} / ${this.slide_count}`, {
                 title: "Go to slide number",
                 type: "prompt",
-                onOpen: function(dialog) {
-                    alert(11)
-                    dialog.disableKeys();
-                  },
                 buttons: ["Cancel", {
                     caption: "Ok",
                     default_confirmation: true,
@@ -366,9 +377,16 @@ class Playback {
             this.shake()
             moving = false
         }
-        frame.prepare()
+
+        // Make sure that current frame was preloaded.
+        // We moved the playback position, old preloading tasks are no more valid, clear them.
+        // If we move ahead too quickly, all the preloading frames would make the last and only visible frame
+        // to wait all the previous to finish loading.
+        // That way (using a tiny interval), if going too fast, passing frames are not being preloaded.
+        this.process_bg_tasks([() => frame.preload()], true)
 
         // start transition
+        frame.prepare()
         this.play_pause(moving)
         this.moving_timeout.stop()
         this.promise.aborted = true
@@ -380,21 +398,18 @@ class Playback {
             $last.css({ "background": "unset" })
         }
 
-
         const trans = same_frame ? $main.css(frame.get_position()) : this.transition($last, $current)
         const promise = this.promise = trans.promise()
         const all_done = () => !promise.aborted && this.moving && this.nextFrame()
         promise.then(() => {
             // frame is at the viewport now
-            if (promise.aborted) { // another frame was raise meanwhile
-                return
-            }
-            console.log("Frame ready")
-            const duration = frame.enter()
-
             if (!same_frame) {
                 $last.data("frame").left()
             }
+            if (promise.aborted) { // another frame was raise meanwhile
+                return
+            }
+            const duration = frame.enter()
 
 
             // Duration
@@ -413,8 +428,25 @@ class Playback {
             } else if (this.moving && frame.video_finished) { // always go to the next frame when video ends, ignoring data-duration
                 frame.video_finished.then(all_done)
             }
+
+            // Work finished, now to the background tasks.
+            // Preload future frames and unload those preloaded frames which are far away.
+            const nearby = Frame.frames(this.$articles.slice(Math.max(0, index - PRELOAD_BACKWARD), index + PRELOAD_FORWARD))
+            this.process_bg_tasks([
+                ...nearby.filter(f => f.$frame.not("[data-preloaded]").length).map(f => () => f.preload()),
+                ...Frame.frames($("[data-preloaded]")).map(f => nearby.includes(f) ? null : () => f.unload()).filter(Boolean)
+            ])
         })
     }
+
+    process_bg_tasks(tasks, clear = false) {
+        if (clear) {
+            this.bg_tasks.length = 0
+        }
+        this.bg_tasks.push(...tasks)
+        this.bg_worker.start()
+    }
+
 
     /**
      * @returns {Object} that we can call promise() to

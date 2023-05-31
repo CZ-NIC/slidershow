@@ -43,29 +43,17 @@ class FrameFactory {
     }
 
     static _read(data, $el) {
-        if (POSTPONE_UPLOAD_READING) {
-            $el
-                .attr("data-src-cached", 1)
-                .data("src-cached-data", () => {
-                    return new Promise(resolve => {
-                        const reader = new FileReader()
-                        reader.onload = () => {
-                            $el[0].src = reader.result
-                            resolve()
-                        }
-                        reader.readAsDataURL(data)
-
-                        $el.removeAttr("data-src-cached")
-                        $el.removeData("src-cached-data")
-                    })
+        $el
+            .data("read-src", () => {
+                return new Promise(resolve => {
+                    const reader = new FileReader()
+                    reader.onload = () => {
+                        $el[0].src = reader.result
+                        resolve()
+                    }
+                    reader.readAsDataURL(data)
                 })
-        } else {
-            const reader = new FileReader()
-            reader.onload = e => $el
-                .attr("data-src-cached", 1)
-                .data("src-cached-data", e.target.result)
-            reader.readAsDataURL(data)
-        }
+            })
     }
 
     /**
