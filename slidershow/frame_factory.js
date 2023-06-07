@@ -16,7 +16,7 @@ class FrameFactory {
 
     static img(filename, append = true, data = null, ram_only = false, callback = null) {
         // data-src prevents the performance for serveral thousand frames
-        const $el = $(`<img src="${EMPTY_SRC}" data-src="${filename}" />`)
+        const $el = $(`<img data-src="${filename}" />`)
         const $frame = FrameFactory.html($el, append)
 
         if (data) {
@@ -44,14 +44,15 @@ class FrameFactory {
 
     static _read(data, $el) {
         $el
-            .data("read-src", () => {
+            .data(READ_SRC, (prefer_blob = false) => {
                 return new Promise(resolve => {
-                    const reader = new FileReader()
-                    reader.onload = () => {
-                        $el[0].src = reader.result
-                        resolve()
+                    if (prefer_blob) { // shorter but needed to revoke the URL manually
+                        resolve(URL.createObjectURL(new Blob([data])))
+                    } else {
+                        const reader = new FileReader()
+                        reader.onload = () => resolve(reader.result)
+                        reader.readAsDataURL(data)
                     }
-                    reader.readAsDataURL(data)
                 })
             })
     }

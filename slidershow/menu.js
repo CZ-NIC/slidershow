@@ -93,7 +93,7 @@ class Menu {
     }
 
     appendFiles(items) {
-        console.log("File items", items)
+        console.log("File items", items) // XX we might use item.size too
 
         const $section = $("<section/>").appendTo($main)
         const formData = new FormData($("#defaults")[0])
@@ -136,11 +136,11 @@ class Menu {
      */
     make_header_offline() {
         return $("script", "head").map((_, el) =>
-        $.ajax({
-            url: el.src,
-            dataType: "text",
-        }).then(text => `<script data-url="${el.src}">${text}</script>`
-        ).catch(error => console.warn(el.src, error))
+            $.ajax({
+                url: el.src,
+                dataType: "text",
+            }).then(text => `<script data-url="${el.src}">${text}</script>`
+            ).catch(error => console.warn(el.src, error))
         ).get()
         // await Promise.all(head).then(contents => contents.join("\n\n"))
     }
@@ -169,26 +169,21 @@ class Menu {
         })
     }
 
-    async export(single_file = false, path = "") {
-        if (single_file) {
-            // RAM consuming operation
-            // if not preloaded yet, we have to be sure all bytes are put into the src
-            // XX instead of putting into src, we might use data-src-base64, much more efficient
-            await Promise.all(this.playback.$articles.map((_, frame) => $(frame).data("frame").preload()).get().flat())
-        }
-
+    async export(compact_file = false, path = "") {
         const $contents = $($main.prop('outerHTML'))
 
         // reduce parameters
         $contents.removeAttr("style")
         $contents.find("*").removeAttr("style")
-        Frame.finalize_frames($contents, single_file, path)
+        await Frame.finalize_frames($contents, this.playback.$articles, compact_file, path, this.display_progress(this.playback.$articles.length))
 
-
-
-        const data = `<html>\n<head>
+        const html = $contents.prop("outerHTML")
+        if (!html.length) {
+            this.playback.hud.alert("Cannot export a single file – too big.")
+        }
+        const data = `<html>\n<head><meta charset="UTF-8">
 <script src="${DIR}slidershow.js"></script>
-</head>\n<body>` + $contents.prop("outerHTML") + "\n</body>\n</html>"
+</head>\n<body>` + html + "\n</body>\n</html>"
         const blob = new Blob([data.replaceAll(EXPORT_SRC, "src")], { type: "text/plain" })
         const url = URL.createObjectURL(blob)
         const link = document.createElement("a")

@@ -70,7 +70,7 @@ class Interval {
     }
 
     unfreeze() {
-        if(!this.freezed) {
+        if (!this.freezed) {
             return
         }
         this.freezed = false

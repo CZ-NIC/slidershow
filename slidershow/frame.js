@@ -168,28 +168,23 @@ class Frame {
      *
      * @returns {Promise[]} Fulfilled when src loaded from the memory.
      */
-    preload() {
+    async preload() {
         const $frame = this.$frame
         if ($frame.attr("data-preloaded")) {
             return [] // already done
         }
         $frame.attr("data-preloaded", 1) // prevent another preload
 
-        return $frame.find("img[data-src], video[data-src]").map(function () {
+        return $frame.find("img[data-src], video[data-src]").map(async function () {
             const $el = $(this)
-            if (![undefined, "", EMPTY_SRC].includes($el.attr("src"))) {
-                return null // src is already set, do not re-write
+            if (!$el.attr("src")) { // src is not set yet
+                const src = (await $el.data(READ_SRC)?.(true)) || $el.data("src")
+                if (src) { // there is a place to load src from
+                    this.src = src
+                    return new Promise(r => this.onload = r)
+                }
             }
-            const reader = $el.data("read-src")
-            if (reader) {  // read the media from the disk
-                reader()
-            } else if ($el.data("src")) {
-                // file path is held in the data-src attribute
-                $el.attr("src", $el.data("src"))
-            } else { // no place to set the src from
-                return null
-            }
-            return new Promise(resolve => $el[0].onload = resolve)
+            return null // src already set or no place to set the src from
         }).get().filter(Boolean)
     }
 
@@ -197,43 +192,71 @@ class Frame {
         const $frame = this.$frame
         $frame.removeAttr("data-preloaded")
 
-        // Remove src if data can be retrieved from the memory data("read-src") or the attribute data-src
-        $frame.find("img[data-src], video[data-src]").map(function () {
-            const $el = $(this)
-            if ($el.data("read-src") || $el.data("src") && $el.data("src") === $el.attr("src")) {
-                $el.removeAttr("src")
-            }
-        })
+        // Remove src if data can be retrieved from the memory data(READ_SRC) or the attribute data-src
+        $frame.find("img[data-src], video[data-src]").map((_, el) => Frame.unload_media($(el)))
+    }
+
+    /** If there is a place the `[src]` can be re-read, delete it. */
+    static unload_media($el, $el_original = null) {
+        if (($el_original || $el).data(READ_SRC) || $el.data("src") && $el.data("src") === $el.attr("src")) {
+            URL.revokeObjectURL($el.attr("src")) // for the case this is a blob URL given by FrameFactory reader
+            $el.removeAttr("src")
+        }
     }
 
     /**
      * Remove auxiliary parameters when exporting.
      * @param {jQuery} $contents Copy of $main, containing all frames.
-     * @param {Boolean} prefer_raw If true a there are bytes in the memory, those are exported in the src. False → filename always exported.
+     * @param {jQuery} $articles Original live articles = all frames.
+     * @param {Boolean} keep_raw Store raw bytes if possible. If true a there are bytes in the memory,
+     *  those are exported; we prefer raw bytes over the filename (the original will not be needed).
+     *  False → filename always exported.
      * @param {String} path Path where the presentation file will find the media folder.
+     * @param {Function} callback When frame done, call this to increase the progress bar.
      */
-    static finalize_frames($contents, prefer_raw = false, path = "") {
+    static async finalize_frames($contents, $articles, keep_raw = false, path = "", callback = null) {
         $("video[data-autoplay-prevented]", $contents).removeAttr("data-autoplay-prevented").attr("autoplay", "")
         const $frames = $contents.find(FRAME_SELECTOR).removeAttr("data-preloaded")
+        const $originals = $articles.find("img[data-src], video[data-src]")
+        const $media = $frames.find("img[data-src], video[data-src]")
+        let $frame = null
+        for (let index = 0; index < $media.length; index++) {
+            // process the media files one by one (we cannot use map since it would ignore `await reader()`)
+            const $el = $($media[index])
+            const $el_original = $($originals[index])
 
-        $frames.find("[data-src]").each(function () {
-            const $el = $(this)
-
-            const src = $el.data("src")
-            if (!prefer_raw || src === EMPTY_SRC) { // → {data-src: filename, src: missing! (performance reasons for 1000+ photos)}
-                const full_path = src.includes("/") ? src : path + src
-                if (PREFER_SRC_EXPORT) {
-                    $el.attr(EXPORT_SRC, full_path) // setting src would kill the tab for more than few hundred photos instantanely
-                    $el.removeAttr("data-src src") // when preferring raw, data-src keeps the original file name
-                } else {
-                    $el.attr("data-src", full_path) // setting src would prevent opening such tab
-                    $el.removeAttr("src")
-                }
-            } else { // → {src: base64_data, data-src: original_filename}
-                ;
-                // XX We might use PREFER_SRC_EXPORT and export {data-src-base64: base64_data, data-src: original_filename}
+            // progress bar
+            const $parent = $el.closest(FRAME_SELECTOR)
+            if ($frame !== $parent) {
+                Frame.unload_media($el, $el_original) // unload the frame copy
+                callback?.()  // this is a new frame, increase
             }
-        })
+            $frame = $parent
+
+            // summarize attributes
+            const reader = $el_original.data(READ_SRC)
+            let data_src = $el.data("src")
+            if (reader && !data_src.includes("/")) {
+                // Store full path to data-src.
+                // Dragged in files did not receive an absolute path from the system.
+                data_src = $el.attr("data-src", path + data_src).attr("data-src")
+            }
+            const attr_src = $el.attr("src")
+
+            // desired change
+            switch (true) {
+                case reader && keep_raw && PREFER_SRC_EXPORT:  // reader to src
+                    $el.attr(EXPORT_SRC, await reader())
+                    break
+                case reader && keep_raw && !PREFER_SRC_EXPORT:  // reader to data-src-bytes
+                    $el.attr(EXPORT_SRC_BYTES, await reader())
+                    break
+                case reader && !keep_raw && PREFER_SRC_EXPORT:
+                case !attr_src && data_src && PREFER_SRC_EXPORT:  // move data-src to src
+                    $el.attr(EXPORT_SRC, data_src).removeAttr("data-src")
+                    break
+            }
+        }
     }
 
     /**
@@ -475,8 +498,13 @@ class Frame {
         }))
     }
 
+    /**
+     * Base file name without the directory.
+     * There might be base64 data in the real src, hence we prefer the data-src
+     * @param {jQuery} $actor
+     * @returns {String}
+     */
     get_filename($actor = null) {
-        // there might be base64 data in the real src, hence we prefer the data-src
         $actor = $actor || this.$actor
         return ($actor.data("src") || $actor.attr("src") || $("source", $actor).attr("src"))?.split("/").pop()
     }
