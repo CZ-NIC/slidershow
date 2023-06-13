@@ -32,6 +32,7 @@ Private attributes that are not documented in the README because the user should
 * video[data-autoplay-prevented]
 * [data-src-bytes] Stored raw bytes, see EXPORT_SRC_BYTES.
 * [data-src-replaced] See EXPORT_SRC.
+* <frame-preview> Contents is a preview of a frame.
 */
 
 // var variables that a hacky user might wish to change. Might become data-attributes in the future.
@@ -49,26 +50,43 @@ var PRELOAD_FORWARD = 50
 /** How many frames should be preloaded for the case the user goes back in the playback. */
 var PRELOAD_BACKWARD = 20
 
+/** Experimental. Open auxiliary window. */
+var LAUNCH_AUX_WINDOW = true // false
+
 // Main launch and export to the dev console
 /** @type {Playback} */
 var playback
-const menu = new Menu()
+/** @type {Menu} */
+var menu
+/** @type {AuxWindow} */
+var aux_window
+main()
 
-// Loading actions
-// Pull out bytes from DOM to lighten it
-$(`[${EXPORT_SRC_BYTES}]`).map((_, el) => {
-    const contents = $(el).attr(EXPORT_SRC_BYTES)
-    $(el)
-        .data(READ_SRC, () => contents) // cannot use blob here, big video blocks fluent walkthrought (holding PgDown)
-        .removeAttr(EXPORT_SRC_BYTES)
-})
+function main() {
+    // Whether this window is the main one or an aux-window
+    const channel_id = new URLSearchParams((window.location.search)).get("controller")
+    if (channel_id) {
+        aux_window= new AuxWindow().overrun(channel_id)
+    } else {
+        menu = new Menu()
+    }
+
+    // Loading actions
+    // Pull out bytes from DOM to lighten it
+    $(`[${EXPORT_SRC_BYTES}]`).map((_, el) => {
+        const contents = $(el).attr(EXPORT_SRC_BYTES)
+        $(el)
+            .data(READ_SRC, () => contents) // cannot use blob here, big video blocks fluent walkthrought (holding PgDown)
+            .removeAttr(EXPORT_SRC_BYTES)
+    })
+}
 
 // Common functions
 
 /**
  * Return closest prop, defined in the DOM.
  * (Zero aware, you can safely set `data-prop=0`.)
- * @param {string} property
+ * @param {string} property For "data-start" use just "start"
  * @param {any} def Default value if undefined
  * @param {jQuery} $el What element to check the prop of.
  * @returns

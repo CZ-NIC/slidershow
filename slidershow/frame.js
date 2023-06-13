@@ -499,6 +499,51 @@ class Frame {
     }
 
     /**
+     * We do not guarantee the frame is preloaded.
+     * @returns {string} HTML
+     */
+    get_preview() {
+        const $clone = this.$frame.clone()
+        if(this.panorama_starter) { // remove panorama styling
+            $clone.find("video, img").first().removeAttr("style")
+        }
+        return $clone.html()
+    }
+
+    /**
+     * @returns {?string} The comment just before the frame or just inside the frame.
+     */
+    get_notes() {
+        const frame_dom = this.$frame.get()[0]
+        return find_comment(frame_dom.previousSibling, "previousSibling") || find_comment(frame_dom.firstChild, "nextSibling")
+
+        /**
+         *
+         * @param {HTMLElement|Comment|Text} node First node to search.
+         * @param {string} crossing Method
+         * @returns {?string}
+         */
+        function find_comment(node, crossing) {
+            while (node) {
+                switch (node.nodeType) {
+                    case Node.COMMENT_NODE:
+                        return node.nodeValue.trim()
+                    case Node.TEXT_NODE:
+                        if (node.nodeValue.trim()) {
+                            return
+                        }
+                        console.log("531: n,n.previousSibling", node, node[crossing])
+
+                        node = node[crossing] // ex: previousSibling
+                        continue // there is just empty text, like new line, ignore
+                    default:
+                        return
+                }
+            }
+        }
+    }
+
+    /**
      * Base file name without the directory.
      * There might be base64 data in the real src, hence we prefer the data-src
      * @param {jQuery} $actor

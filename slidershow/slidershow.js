@@ -36,7 +36,7 @@ loadjQuery(() => {
 
     const vendor_styles = ["https://cdn.jsdelivr.net/npm/zebra_dialog@latest/dist/css/materialize/zebra_dialog.min.css"].map(f => loadStyle(f))
 
-    const local = ["static.js", "frame_factory.js", "frame.js", "place.js", "map.js", "hud.js", "menu.js", "playback.js"].map(f => loadScript({ src: DIR + f }))
+    const local = ["static.js", "frame_factory.js", "frame.js", "place.js", "map.js", "hud.js", "menu.js", "playback.js", "aux_window.js"].map(f => loadScript({ src: DIR + f }))
 
     /**
      When there were 60 photos and 10 videos in a 230 MB presentation file, these were started before we could
@@ -125,8 +125,12 @@ function get_menu() {
         </div>
         <div id='start-wrapper'>
             Start presenting<br />
-            <button id="start">&#9654;</button>
-        </div>
+            <button id="start">&#9654;</button><br />
+            <button data-role="aux_window" title="Auxiliary window Alt+W">&#127916;</button>
+            <button data-role="tagging" title="Tagging mode Alt+T">&#128204;</button>
+            <button data-role="export" title="Export Ctrl+S">&#128190;</button>
+            <button data-role="help" title="Help H">&#8505;</button>
+            </div>
 
         <div>
             Append frames<br />
@@ -142,9 +146,6 @@ function get_menu() {
                 <br />Transition <input name="transition-duration" value="0" size="4" placeholder="0"> s
                 <br />Media folder path <input title="If not set, we put the media data inside the DOM (RAM consuming)" name="path" value="" placeholder="./">
             </form>
-
-            <br/>
-            <button id="export" title="Export Ctrl+S">&#128190;</button>
         </div>
     </menu>`)
 }

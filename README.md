@@ -35,6 +35,7 @@ What can you acheive? See a variety of features in another example at [examples/
 - [Playback](#playback)
   * [Controls](#controls)
   * [Start](#start)
+  * [Auxiliary window](#auxiliary-window)
   * [Organizing](#organizing)
 - [Structure](#structure)
   * [Frame `<article>`](#frame-article--)
@@ -70,6 +71,10 @@ When played, keyboard shortcuts works.
 ## Start
 
 The `<menu>` is displayed before the presentation starts, unless the `<main>` has the `data-start` attribute.
+
+## Auxiliary window
+
+While presenting, you may appraise an auxiliary window on the second monitor that shows you the next frame and presenting notes. Start it with <kbd>Alt+W</kbd>.
 
 ## Organizing
 
@@ -128,6 +133,20 @@ Which contains arbitrary HTML code, such as images or videos (by default, one pe
     <article data-loop>
         <img src="pic1.jpg" />
         <img src="pic2.jpg" />
+    </article>
+    ```
+* `<!-- presenter's notes -->` You may use HTML comments just before the frame or as the first frame child. These will be displayed in the auxiliary window while presenting.
+    Before the frame:
+    ```html
+    <!-- I should talk about cats. -->
+    <article><img src='cat.jpg' /></article>
+    ```
+
+    Inside the frame:
+    ```html
+    <article>
+        <!-- I should talk about cats. -->
+        <img src='cat.jpg' />
     </article>
     ```
 

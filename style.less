@@ -65,6 +65,36 @@ menu {
     }
 }
 
+#aux_window {
+    display: flex;
+
+    #slide-wrapper {
+        text-align: center;
+        display: flex;
+        flex-direction: column;
+        max-height: 100vh;
+        > :nth-child(1){
+            height: 70vh;
+        }
+        > :nth-child(2){
+            max-height: 30vh;
+        }
+    }
+
+    > :nth-child(2){
+        min-width: 50vw;
+    }
+}
+
+frame-preview {
+    overflow: hidden;
+
+    >* {
+        max-width: 100%;
+        max-height: 100%;
+    }
+}
+
 #hud {
     position: fixed; // note that when position:fixed does not work when moving body
     z-index: 10;
@@ -93,7 +123,8 @@ menu {
         }
     }
 
-    #hud-thumbnails { // XX not used
+    #hud-thumbnails {
+        // XX not used
         display: none;
         display: flex;
         width: 100vw;

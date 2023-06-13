@@ -52,6 +52,31 @@ menu #progress .circle-progress-text {
   font-weight: bold;
   fill: hsl(180, 80%, 47%);
 }
+#aux_window {
+  display: flex;
+}
+#aux_window #slide-wrapper {
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  max-height: 100vh;
+}
+#aux_window #slide-wrapper > :nth-child(1) {
+  height: 70vh;
+}
+#aux_window #slide-wrapper > :nth-child(2) {
+  max-height: 30vh;
+}
+#aux_window > :nth-child(2) {
+  min-width: 50vw;
+}
+frame-preview {
+  overflow: hidden;
+}
+frame-preview > * {
+  max-width: 100%;
+  max-height: 100%;
+}
 #hud {
   position: fixed;
   z-index: 10;

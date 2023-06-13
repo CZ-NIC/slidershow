@@ -3,31 +3,29 @@
 */
 class Menu {
     constructor() {
+        this.aux_window = new AuxWindow()
         this.$menu = $("menu").show(0)
         this.$start_wrapper = $("#start-wrapper")
-        this.$export = $("#export")
 
         this.$start = $("#start").focus().click(() => this.start_playback())
 
-        playback = this.playback = new Playback() // expose global `playback`
+        playback = this.playback = new Playback(this.aux_window) // expose global `playback`
+
 
         if (!$(FRAME_SELECTOR).length) {
             this.$start_wrapper.hide()
-            this.$export.hide()
         }
 
         // Global shortcuts
+        wh.pressAlt(KEY.W, "Controlling window", () => this.aux_window.open())
         wh.press(KEY.ESCAPE, "Go to menu", () => !$(":focus").closest(".ZebraDialog").length && this.stop_playback()) // disable when in a dialog
-        wh.press(KEY.H, "Show help", () => {
-            const text = wh.get_info_pairs().map(([shortcut, method]) => shortcut + ": " + method.hint).join("<br>")
-            new $.Zebra_Dialog(text, { type: "information", title: "Shortcuts" })
-        })
+        wh.press(KEY.H, "Show help", () => this.help())
         wh.pressCtrl(KEY.S, "Export presentation", () => this.export_dialog())
 
         // Shortcuts available only in menu, not in playback
         this.shortcuts = []
 
-        if ($main.attr("data-start") !== undefined) {
+        if (prop("start", false, $main)) {
             this.start_playback()
         }
 
@@ -54,7 +52,10 @@ class Menu {
             this.appendFiles([...$file[0].files])
         })
 
-        this.$export.on("click", () => this.export_dialog())
+        $("[data-role=export]").on("click", () => this.export_dialog())
+        $("[data-role=help]").on("click", () => this.help())
+        $("[data-role=aux_window]").on("click", () => this.aux_window.open())
+        $("[data-role=tagging]").on("click", () => this.playback.hud.alert("Hit Alt+T while presenting to start tagging mode."))
 
         // Load defaults from the main tag
         $("input", "#defaults").each(function () {
@@ -64,7 +65,6 @@ class Menu {
                 $el.val(def)
             }
         })
-
     }
 
     start_playback() {
@@ -82,6 +82,11 @@ class Menu {
         $main.css({ top: '0px', left: '0px' })
 
         this.shortcuts.forEach(s => s.enable())
+    }
+
+    help() {
+        const text = wh.get_info_pairs().map(([shortcut, method]) => shortcut + ": " + method.hint).join("<br>") + "<br><br>Hit H while presenting too see more help."
+        new $.Zebra_Dialog(text, { type: "information", title: "Shortcuts" })
     }
 
     clean_playback() { // XX not used right now
@@ -110,7 +115,6 @@ class Menu {
         $section.hide(0).append(elements).children().hide(0).parent().show(0)
         this.$start_wrapper.show()
         this.$start.focus()
-        this.$export.show()
         this.playback.reset()
         return true
     }

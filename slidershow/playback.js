@@ -5,7 +5,8 @@ const MAP_ENABLE = true
  */
 class Playback {
 
-    constructor() {
+    constructor(aux_window = null) {
+        this.aux_window = aux_window
         this.promise = {} // transition promise
         this.moving = true
         this.moving_timeout = new Interval().stop()
@@ -361,9 +362,7 @@ class Playback {
 
         const next = this.$articles[index]
         const $current = this.$current = next ? $(next) : $last
-        /**
-         * @type {Frame}
-        */
+        /** @type {Frame} */
         const frame = this.frame = $current.data("frame")
         this.index = frame.index
 
@@ -375,15 +374,23 @@ class Playback {
         }
         if (!next) {  // we failed to go to the intended frame
             this.shake()
-            moving = false
+            this.play_pause(false)
+            return
         }
+
+        /** @type {Frame|undefined} */
+        const following = $(this.$articles[index + 1]).data("frame")
 
         // Make sure that current frame was preloaded.
         // We moved the playback position, old preloading tasks are no more valid, clear them.
         // If we move ahead too quickly, all the preloading frames would make the last and only visible frame
         // to wait all the previous to finish loading.
         // That way (using a tiny interval), if going too fast, passing frames are not being preloaded.
-        this.process_bg_tasks([() => frame.preload()], true)
+        this.process_bg_tasks([
+            () => frame.preload(),
+            () => following?.preload(),
+            () => this.aux_window.info(frame.get_preview(), frame.get_notes(), following?.get_preview())  // send the new info to the aux-window
+        ], true)
 
         // start transition
         frame.prepare()
