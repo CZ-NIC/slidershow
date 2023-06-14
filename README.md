@@ -35,6 +35,7 @@ What can you acheive? See a variety of features in another example at [examples/
 - [Playback](#playback)
   * [Controls](#controls)
   * [Start](#start)
+  * [Thumbnails](#thumbnails)
   * [Auxiliary window](#auxiliary-window)
   * [Organizing](#organizing)
 - [Structure](#structure)
@@ -71,6 +72,10 @@ When played, keyboard shortcuts works.
 ## Start
 
 The `<menu>` is displayed before the presentation starts, unless the `<main>` has the `data-start` attribute.
+
+## Thumbnails
+
+While presenting, press <kbd>Alt+J</kbd> to display the thumbnail ribbon.
 
 ## Auxiliary window
 

@@ -242,9 +242,7 @@ class Playback {
             this.hud.alert(`Tagging mode ${this.tagging_mode ? "enabled, see H for shortcuts help" : "disabled."}`)
         }),
 
-
-
-        // wh.pressAlt(KEY.T, "Thumbnails", () => this.thumbnails()),
+        wh.pressAlt(KEY.J, "Thumbnails", () => this.hud.toggle_thumbnails()),
 
         wh.pressAlt(KEY.D, "Debug", () => {
             const zoom = $main.css("zoom")

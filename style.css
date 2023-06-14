@@ -100,26 +100,29 @@ frame-preview > * {
   background-color: blue;
   font-size: 300%;
 }
-#hud #hud-thumbnails {
+#hud #hud-fileinfo #hud-menu {
   display: none;
+}
+#hud #hud-thumbnails {
   display: flex;
   width: 100vw;
-  max-height: 40vh;
+  height: 30vh;
   bottom: 0;
-  background-color: blue;
+  background-color: lightgray;
   gap: 10px;
 }
-#hud #hud-thumbnails > div {
+#hud #hud-thumbnails > frame-preview {
+  text-align: center;
   position: relative;
-  max-width: 100px;
-  max-height: 100px;
+  width: 30vw;
+  height: 30vh;
+  color: black;
 }
-#hud #hud-thumbnails > div.current {
-  background-color: red;
-  border: 1px solid red;
-}
-#hud #hud-thumbnails > div > img {
-  max-width: 100%;
+#hud #hud-thumbnails > frame-preview.current {
+  color: white;
+  background-color: black;
+  border-left: 1px solid red;
+  border-right: 1px solid red;
 }
 #map-hud {
   position: fixed;

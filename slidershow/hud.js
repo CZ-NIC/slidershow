@@ -6,15 +6,14 @@ class Hud {
      */
     constructor(playback) {
         this.playback = playback
-        this.$hud_filename = $("#hud-filename")
+        this.$hud_filename = $("#hud-filename").on("mouseenter", () => this.$hud_menu.show(500))
         this.$hud_device = $("#hud-device")
         this.$hud_datetime = $("#hud-datetime")
         this.$hud_gps = $("#hud-gps")
         this.$hud_tag = $("#hud-tag")
         this.$hud_counter = $("#hud-counter")
-        this.$hud_thumbnails = $("#hud-thumbnails")
-
-        // this.thumbnails = false
+        this.$hud_menu = $("#hud-menu")
+        this.$hud_thumbnails = $("#hud-thumbnails").hide() // by default off
     }
 
     playback_icon(html) {
@@ -25,30 +24,46 @@ class Hud {
     }
 
 
+    toggle_thumbnails() {
+        if (this.$hud_thumbnails.toggle().is(":visible")) {
+            this.thumbnails(this.playback.frame)
+        }
+    }
+
     /**
      * Thumbnail ribbon
      * @param {Frame} frame
      */
-    refresh_thumbnails(frame) {
-        return;
-        // if (!this.thumbnails) {
-        //     return
-        // }
-        // this.hud.$hud_thumbnails.toggle()
-        const $frame = frame.$frame
-        this.$hud_thumbnails.html("")
-        // console.log("211: this.hud.$hud_thumbnails", $frame, $frame.index(), )
+    thumbnails(frame) {
+        const THUMBNAIL_COUNT = 6
+        const index = frame.index  // current frame index
+        const indices = Array.from({ length: THUMBNAIL_COUNT }, (_, i) => i + Math.max(0, index - Math.ceil(THUMBNAIL_COUNT / 2)))  // visible frames' indices
 
-        const index = $frame.data("frame").index
-        for (let i = index - 3; i < index + 3; i++) {
-            console.log("216: $(this.$articles[i]).html()", $(this.playback.$articles[i]).html(), i, this.playback.$articles)
+        // remove old unused thumbnails
+        $("frame-preview", this.$hud_thumbnails).each(function () {
+            if (!indices.includes(Number(this.dataset.ref))) {
+                $(this).remove()
+            }
+        })
 
-            const $frame = $(this.playback.$articles[i])
-            Frame.preload($frame) // XX this get preloaded multiple times
-            const $thumbnail = $("<div/>", { html: $frame.html() }).toggleClass("current", i === index)
+        // arrange thumbnails
+        for (let i of indices) {
+            let $thumbnail = $(`[data-ref=${i}]`, this.$hud_thumbnails)
+            if (!$thumbnail.length) { // this thumbnail does not exist yet
+                /** @type {?Frame} */
+                const frame = $(this.playback.$articles[i]).data("frame")
+                if (!frame) {
+                    break
+                }
+
+                $thumbnail = $("<frame-preview/>", { html: "...", "data-ref": frame.index }).on("click", () => this.playback.goToFrame(frame.index))
+                frame.preloaded.then(() => $thumbnail.html(frame.get_preview()))
+            }
             this.$hud_thumbnails.append($thumbnail)
         }
 
+        // highlight current
+        $("frame-preview", this.$hud_thumbnails).removeClass("current").filter(`[data-ref=${index}]`).addClass("current")
     }
 
     /**
@@ -56,6 +71,8 @@ class Hud {
      * @param {Frame} frame
      */
     fileinfo(frame) {
+        this.$hud_menu.hide() // hud menu hides by default with every frame change
+
         const $actor = frame.$actor
         if (!$actor) {
             $actor = { data: () => null }
@@ -81,7 +98,9 @@ class Hud {
         }
 
         // Thumbnails
-        this.refresh_thumbnails(frame)
+        if (this.$hud_thumbnails.is(":visible")) {
+            this.thumbnails(frame)
+        }
     }
 
     tag(tag = "") {

@@ -46,20 +46,15 @@ class AuxWindow {
         this.channel.postMessage(this.last_info)
     }
 
-    frame_preview($slot, html) {
-        $slot.html(html).find("video").each((_, el) => el.pause())
-    }
-
     /**
      * @param {*} e Message from an aux-window
      */
     controller_command(e) {
-        console.log("54: e", e)
         switch (e.action) {
             case "info":
-                this.frame_preview(this.$current_frame, e.frame)
+                this.$current_frame.html(e.frame)
                 this.$notes.html(e.notes || "").toggle(Boolean(this.$notes.html())) // hide notes if empty
-                this.frame_preview(this.$next_frame, e.next_frame || "END")
+                this.$next_frame.html(e.next_frame || "END")
                 break;
             case "get-last-state":
                 this.channel.postMessage(this.last_info)

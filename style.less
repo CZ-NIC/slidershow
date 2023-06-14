@@ -121,30 +121,33 @@ frame-preview {
             background-color: blue;
             font-size: 300%;
         }
+
+        #hud-menu {
+            display: none; // hidden by default
+        }
     }
 
+
     #hud-thumbnails {
-        // XX not used
-        display: none;
         display: flex;
         width: 100vw;
-        max-height: 40vh;
+        height: 30vh;
         bottom: 0;
-        background-color: blue;
+        background-color: lightgray;
         gap: 10px;
 
-        >div {
+        > frame-preview {
+            text-align: center;
             position: relative;
-            max-width: 100px;
-            max-height: 100px;
+            width: 30vw;
+            height: 30vh;
+            color: black;
 
             &.current {
-                background-color: red;
-                border: 1px solid red;
-            }
-
-            >img {
-                max-width: 100%;
+                color: white;
+                background-color: black;
+                border-left: 1px solid red;
+                border-right: 1px solid red;
             }
         }
     }

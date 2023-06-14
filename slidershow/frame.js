@@ -42,6 +42,9 @@ class Frame {
 
         /** @type {?Promise} */
         this.video_finished = null
+
+        /** @type {Promise} Register to this promise to be notified. (It fulfills when preload, not on the preloaded media onload.) */
+        this.preloaded = new Promise(r => this._preloaded = r)
     }
 
     register_parent(frame) {
@@ -175,17 +178,19 @@ class Frame {
         }
         $frame.attr("data-preloaded", 1) // prevent another preload
 
-        return $frame.find("img[data-src], video[data-src]").map(async function () {
-            const $el = $(this)
+        const loaded = $frame.find("img[data-src], video[data-src]").map(async (_, el) => {
+            const $el = $(el)
             if (!$el.attr("src")) { // src is not set yet
                 const src = (await $el.data(READ_SRC)?.(true)) || $el.data("src")
                 if (src) { // there is a place to load src from
-                    this.src = src
-                    return new Promise(r => this.onload = r)
+                    el.src = src
+                    return new Promise(r => el.onload = r)
                 }
             }
             return null // src already set or no place to set the src from
         }).get().filter(Boolean)
+        this._preloaded()
+        return loaded
     }
 
     unload() {
@@ -504,9 +509,10 @@ class Frame {
      */
     get_preview() {
         const $clone = this.$frame.clone()
-        if(this.panorama_starter) { // remove panorama styling
+        if (this.panorama_starter) { // remove panorama styling
             $clone.find("video, img").first().removeAttr("style")
         }
+        $clone.find("video").removeAttr("autoplay")
         return $clone.html()
     }
 
@@ -532,8 +538,6 @@ class Frame {
                         if (node.nodeValue.trim()) {
                             return
                         }
-                        console.log("531: n,n.previousSibling", node, node[crossing])
-
                         node = node[crossing] // ex: previousSibling
                         continue // there is just empty text, like new line, ignore
                     default:

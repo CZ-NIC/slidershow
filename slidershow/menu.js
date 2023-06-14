@@ -17,7 +17,7 @@ class Menu {
         }
 
         // Global shortcuts
-        wh.pressAlt(KEY.W, "Controlling window", () => this.aux_window.open())
+        wh.pressAlt(KEY.W, "Launch an auxiliary window", () => this.aux_window.open())
         wh.press(KEY.ESCAPE, "Go to menu", () => !$(":focus").closest(".ZebraDialog").length && this.stop_playback()) // disable when in a dialog
         wh.press(KEY.H, "Show help", () => this.help())
         wh.pressCtrl(KEY.S, "Export presentation", () => this.export_dialog())
@@ -52,10 +52,13 @@ class Menu {
             this.appendFiles([...$file[0].files])
         })
 
-        $("[data-role=export]").on("click", () => this.export_dialog())
-        $("[data-role=help]").on("click", () => this.help())
-        $("[data-role=aux_window]").on("click", () => this.aux_window.open())
-        $("[data-role=tagging]").on("click", () => this.playback.hud.alert("Hit Alt+T while presenting to start tagging mode."))
+        // The button in hud menu. (The UX might be done much better.)
+        $(document)
+            .on("click", "#hud-menu [data-role=export]", () => this.export_dialog())
+            .on("click", "#hud-menu [data-role=help]", () => this.help())
+            .on("click", "#hud-menu [data-role=aux_window]", () => this.aux_window.open())
+            .on("click", "#hud-menu [data-role=thumbnails]", () => this.playback.hud.toggle_thumbnails())
+            .on("click", "#hud-menu [data-role=tagging]", () => this.playback.hud.alert("Hit Alt+T while presenting to start tagging mode."))
 
         // Load defaults from the main tag
         $("input", "#defaults").each(function () {
