@@ -1,5 +1,5 @@
 const wh = new WebHotkeys()
-const $main = $("main").length ? $("main") : $("<main/>").appendTo("body")
+const $main = $("body > main").length ? $("body > main") : $("<main/>").appendTo("body")
 const $hud = $("#hud")
 const FRAME_SELECTOR = "article,article-map"
 

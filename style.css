@@ -152,6 +152,10 @@ article-map {
   font-size: 10vw;
   margin-bottom: 100vh;
 }
+article.debugged,
+article-map.debugged {
+  background-color: blue;
+}
 article img,
 article video {
   max-width: 100%;

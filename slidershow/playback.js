@@ -397,10 +397,10 @@ class Playback {
         this.promise.aborted = true
 
         if (this.debug) {
-            $last.css({ "background": "unset" })
-            $current.css({ "background": "blue" })
+            $last.removeClass("debugged")
+            $current.addClass("debugged")
         } else {
-            $last.css({ "background": "unset" })
+            $last.removeClass("debugged")
         }
 
         const trans = same_frame ? $main.css(frame.get_position()) : this.transition($last, $current)
