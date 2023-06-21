@@ -1,7 +1,7 @@
 const wh = new WebHotkeys()
 const $main = $("body > main").length ? $("body > main") : $("<main/>").appendTo("body")
 const $hud = $("#hud")
-const FRAME_SELECTOR = "article,article-map"
+const FRAME_SELECTOR = "main article,main article-map"
 
 /**
  * When exporting: Setting src directly on more than few hundred photos would kill the tab instantanely;

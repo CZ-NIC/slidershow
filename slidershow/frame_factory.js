@@ -67,11 +67,13 @@ class FrameFactory {
      */
 
     static file(filename, append = true, data = null, ram_only = false, callback = null) {
-        const suffix = filename.split('.').pop().toLowerCase()
-        switch (suffix) {
+        const identifier = data?.type.split("/")[0] || filename.split('.').pop().toLowerCase() // either mime type or the suffix
+        switch (identifier) {
+            case "video":
             case "mp4":
                 callback()
                 return FrameFactory.video(filename, append, data, ram_only)
+            case "image":
             case "heif":
             case "heic":
             case "gif":
