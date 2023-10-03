@@ -32,7 +32,7 @@ class AuxWindow {
 
     /** Open an aux window */
     open() {
-        window.open(`?controller=${this.instance_id}`, "Auxiliary window", "toolbar=no,menubar=no")
+        window.open(window.location.href.split("#")[0] + `?controller=${this.instance_id}`, "Auxiliary window", "toolbar=no,menubar=no")
     }
 
     /**

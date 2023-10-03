@@ -52,6 +52,8 @@ What can you acheive? See a variety of features in another example at [examples/
     + [`<article-map>` frame](#article-map-frame)
   * [Frame group `<section>`](#frame-group-section)
     + [Nested `<article>` tags](#nested-article-tags)
+  * [Template](#template)
+    + [Header and footer](#header-and-footer)
   * [Further styling](#further-styling)
 - [License](#license)
 
@@ -330,6 +332,28 @@ You may nest an `<article>` beneath another one. Which causes the children to be
 <article>
     <img src="flower.jpg" />
     <article>That is a flower!</article>
+</article>
+```
+
+## Template
+
+### Header and footer
+
+Tags `<header>` and `<footer>` used within a `<template>` are automatically inserted into frames that already contain such tags.
+
+```html
+<template>
+    <footer>This is the default footer</footer>
+</template>
+
+<article>
+    Here we get an automatic footer
+    <!-- Inserted: <footer>This is the default footer</footer> -->
+</article>
+
+<article>
+    No footer will be appended here
+    <footer></footer>
 </article>
 ```
 

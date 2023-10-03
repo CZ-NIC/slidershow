@@ -33,6 +33,8 @@ Private attributes that are not documented in the README because the user should
 * [data-src-bytes] Stored raw bytes, see EXPORT_SRC_BYTES.
 * [data-src-replaced] See EXPORT_SRC.
 * <frame-preview> Contents is a preview of a frame.
+* [data-templated] This element was inserted only temporarily throught a template (ex: footer in an article or a <head> vendor script). Should not be exported.
+* [data-preloaded] The frame has already been preloaded.
 */
 
 // var variables that a hacky user might wish to change. Might become data-attributes in the future.
@@ -49,9 +51,6 @@ var PREFER_SRC_EXPORT = false
 var PRELOAD_FORWARD = 50
 /** How many frames should be preloaded for the case the user goes back in the playback. */
 var PRELOAD_BACKWARD = 20
-
-/** Experimental. Open auxiliary window. */
-var LAUNCH_AUX_WINDOW = true // false
 
 // Main launch and export to the dev console
 /** @type {Playback} */
@@ -79,6 +78,12 @@ function main() {
             .data(READ_SRC, () => contents) // cannot use blob here, big video blocks fluent walkthrought (holding PgDown)
             .removeAttr(EXPORT_SRC_BYTES)
     })
+
+    // Restore frame size on window zoom
+    $(window).on("resize", ()=> menu?.playback.goToFrame(menu?.playback.index))
+
+    // Restore on hash
+    $(window).on("hashchange", ()=> menu?.playback.session.restore())
 }
 
 // Common functions

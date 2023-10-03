@@ -13,7 +13,6 @@ document.querySelector("html").style.display = "none" // so that body images are
 loadStyle(DIR + "../style.css").then(() => document.querySelector("html").removeAttribute("style"))
 
 loadjQuery(() => {
-
     // external and local scripts
     const vendor = [
         {
@@ -36,7 +35,7 @@ loadjQuery(() => {
 
     const vendor_styles = ["https://cdn.jsdelivr.net/npm/zebra_dialog@latest/dist/css/materialize/zebra_dialog.min.css"].map(f => loadStyle(f))
 
-    const local = ["static.js", "frame_factory.js", "frame.js", "place.js", "map.js", "hud.js", "menu.js", "playback.js", "aux_window.js"].map(f => loadScript({ src: DIR + f }))
+    const local = ["static.js", "frame_factory.js", "frame.js", "place.js", "map.js", "hud.js", "menu.js", "playback.js", "session.js", "aux_window.js"].map(f => loadScript({ src: DIR + f }))
 
     /**
      When there were 60 photos and 10 videos in a 230 MB presentation file, these were started before we could
@@ -79,6 +78,7 @@ function loadjQuery(callback) {
     el.src = "https://code.jquery.com/jquery-3.6.4.min.js"
     el.integrity = "sha256-oP6HI9z1XaZNBrJURtCoUT5SUnxFr8s3BzRl+cbzUq8="
     el.crossOrigin = "anonymous"
+    el.setAttribute('data-templated', '1')
     el.addEventListener("load", () => callback())
     document.head.appendChild(el)
 }
@@ -89,6 +89,7 @@ function loadScript(attrs) {
         Object.entries(attrs).forEach(([k, v]) => script[k] = v)
         script.onload = resolve
         script.onerror = reject
+        script.setAttribute('data-templated', '1')
         document.head.appendChild(script)
     })
 }
@@ -98,6 +99,7 @@ function loadStyle(url) {
         const link = document.createElement("link")
         link.href = url
         link.rel = "stylesheet"
+        link.setAttribute('data-templated', '1')
         link.onload = resolve
         link.onerror = reject
         document.head.appendChild(link)

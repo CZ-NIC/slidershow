@@ -23,41 +23,45 @@ class Playback {
 
         /**
          * @type {Frame}
-         */
-        this.frame
-        this.slide_count
-        this.$articles
+        */
+       this.frame
+       this.slide_count
+       this.$articles
 
-        this.$current
-        this.index = 0
+       this.$current
+       this.index = 0
 
-        this.shortcuts = this.shortcutsInit().map(s => s.disable() || s)
+       this.shortcuts = this.shortcutsInit().map(s => s.disable() || s)
 
-        this.debug = false
-        this.tagging_mode = false
-        this.reset()
+       this.debug = false
+       this.tagging_mode = false
+       this.reset()
 
-        /** Frames that are going to be pre/unloaded.
-         * @type {Function[]}
-         */
-        this.bg_tasks = []
+       /** Frames that are going to be pre/unloaded.
+        * @type {Function[]}
+       */
+      this.bg_tasks = []
 
-        /** Preloading tasks background worker */
-        this.bg_worker = new Interval(async () => {
-            const task = this.bg_tasks.shift()
-            if (task) {
-                await task()
+      /** Preloading tasks background worker */
+      this.bg_worker = new Interval(async () => {
+          const task = this.bg_tasks.shift()
+          if (task) {
+              await task()
             } else {
                 this.bg_worker.stop()
             }
         }, 1)
+
+        // Restore preferences
+        /** @type {Session} */
+        this.session = new Session(this)
     }
 
     start() {
         this.$articles.show()
         $hud.show(0)
         this.$current = this.$articles.first()
-        this.goToFrame(this.index, true)
+        this.goToFrame(this.index, true, true)
         this.shortcuts.forEach(s => s.enable())
     }
 
@@ -346,10 +350,11 @@ class Playback {
     }
 
     /**
-     * // XX expose to a shortcut
      * @param {Number} index
+     * @param {Boolean} moving Auto-playback
+     * @param {Boolean} supress_transition Block animation to the frame
      */
-    goToFrame(index, moving = false) {
+    goToFrame(index, moving = false, supress_transition=false) {
         console.log("Frame", index)
 
         const $last = this.$current
@@ -375,6 +380,9 @@ class Playback {
             this.play_pause(false)
             return
         }
+
+        // Change location hash
+        this.session.store()
 
         /** @type {Frame|undefined} */
         const following = $(this.$articles[index + 1]).data("frame")
@@ -403,7 +411,7 @@ class Playback {
             $last.removeClass("debugged")
         }
 
-        const trans = same_frame ? $main.css(frame.get_position()) : this.transition($last, $current)
+        const trans = same_frame || supress_transition ? $main.css(frame.get_position()) : this.transition($last, $current)
         const promise = this.promise = trans.promise()
         const all_done = () => !promise.aborted && this.moving && this.nextFrame()
         promise.then(() => {

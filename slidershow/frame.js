@@ -109,6 +109,12 @@ class Frame {
 
         // Map
         this.map_prepare()
+
+        // Insert templated header and footer
+        // If such template exists, insert it to the current frame if needed (it does not yet contain it)
+        const check = (tag, method) => $($("template")[0]?.content).find(tag).clone().attr("data-templated", 1)[method](this.$frame.not(`:has(${tag})`))
+        check("header", "prependTo")
+        check("footer", "appendTo")
     }
 
     map_prepare() {
@@ -211,7 +217,7 @@ class Frame {
 
     /**
      * Remove auxiliary parameters when exporting.
-     * @param {jQuery} $contents Copy of $main, containing all frames.
+     * @param {jQuery} $contents Copy of body, containing all frames.
      * @param {jQuery} $articles Original live articles = all frames.
      * @param {Boolean} keep_raw Store raw bytes if possible. If true a there are bytes in the memory,
      *  those are exported; we prefer raw bytes over the filename (the original will not be needed).
@@ -220,8 +226,12 @@ class Frame {
      * @param {Function} callback When frame done, call this to increase the progress bar.
      */
     static async finalize_frames($contents, $articles, keep_raw = false, path = "", callback = null) {
+        // batch execute operations otherwise done in methods like `unload` or `left`
         $("video[data-autoplay-prevented]", $contents).removeAttr("data-autoplay-prevented").attr("autoplay", "")
         const $frames = $contents.find(FRAME_SELECTOR).removeAttr("data-preloaded")
+        $frames.find("[data-templated]").remove()
+
+        // handling media
         const $originals = $articles.find("img[data-src], video[data-src]")
         const $media = $frames.find("img[data-src], video[data-src]")
         let $frame = null
@@ -262,6 +272,10 @@ class Frame {
                     break
             }
         }
+
+        // finish counter, since in the current implementation, it counts media only
+        // and some frames have no media (no increasing within)
+        callback?.(true)
     }
 
     /**
@@ -427,6 +441,7 @@ class Frame {
     left() {
         this.loop_interval?.stop()
         this.$actor.stop(true)
+        this.$frame.find("[data-templated]").remove()
     }
 
     panorama() {
