@@ -65,7 +65,7 @@ When played, keyboard shortcuts works.
 
 * Next frame: <kbd>Right</kbd>, <kbd>PageDown</kbd>, <kbd>n</kbd>, <kbd>Space</kbd>
 * Previous frame: <kbd>Left</kbd>, <kbd>PageUp</kbd>, <kbd>p</kbd>
-* Full controls: <kbd>h</kbd>
+* Full controls: <kbd>?</kbd>
 * Video: Adjust speed by <kbd>Numpad +/-</kbd>
 * Toggle file info: <kbd>f</kbd>
 * Toggle HUD map: <kbd>m</kbd>

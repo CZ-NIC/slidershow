@@ -392,9 +392,9 @@ class Frame {
             this.playback.hud.playback_icon(r + " ×")
         }
         this.shortcuts.push(
-            wh.press(KEY.KP_Add, "Faster video", () => playback_change(0.1)),
-            wh.press(KEY.KP_Subtract, "Faster video", () => playback_change(-0.1)),
-            wh.pressAlt(KEY.M, "Toggle muted", () => $actor[0].muted = !$actor[0].muted)
+            wh.grab("NumpadAdd", "Faster video", () => playback_change(0.1)),
+            wh.grab("NumpadSubtract", "Faster video", () => playback_change(-0.1)),
+            wh.grab("Alt+m", "Toggle muted", () => $actor[0].muted = !$actor[0].muted)
         )
 
     }
@@ -523,12 +523,14 @@ class Frame {
      * @returns {string} HTML
      */
     get_preview() {
-        const $clone = this.$frame.clone()
+        const $clone = this.$frame.clone().removeAttr("style")
         if (this.panorama_starter) { // remove panorama styling
             $clone.find("video, img").first().removeAttr("style")
         }
         $clone.find("video").removeAttr("autoplay")
-        return $clone.html()
+        $clone.find("[data-templated]").remove()
+        // Remove data-preloaded attribute for the case it is there
+        return $clone.removeAttr("data-preloaded").prop("outerHTML")
     }
 
     /**

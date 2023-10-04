@@ -57,9 +57,20 @@ class Hud {
                 }
 
                 $thumbnail = $("<frame-preview/>", { html: "...", "data-ref": frame.index }).on("click", () => this.playback.goToFrame(frame.index))
-                frame.preloaded.then(() => $thumbnail.html(frame.get_preview()))
+
+                frame.preloaded.then(() => {
+                    $thumbnail.html(frame.get_preview())
+
+                    // Scale – use the proportions of the full screen but shrink to max thumbnail width
+                    const scaleFactorX = $thumbnail.width() / this.playback.$current.width()
+                    $(":first", $thumbnail).css({ "scale": String(scaleFactorX) })
+                    // film-strip should not take excessive height
+                    this.$hud_thumbnails.css({ height: scaleFactorX * 100 + "vh" })
+                })
             }
             this.$hud_thumbnails.append($thumbnail)
+
+
         }
 
         // highlight current

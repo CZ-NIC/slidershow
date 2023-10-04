@@ -18,7 +18,7 @@ class AuxWindow {
 
 
         this.$current_frame = $("#current_frame")
-        this.$notes =$("#notes")
+        this.$notes = $("#notes")
         this.$next_frame = $("#next_frame")
 
 
@@ -26,6 +26,16 @@ class AuxWindow {
         master.addEventListener("message", e => this.controller_command(e.data))
         master.postMessage({ "action": "get-last-state" })
 
+        $(document).on("keydown", e => master.postMessage({
+            "action": "pressed-key", "key": {
+                "key": e.key,
+                "code": e.code,
+                "shiftKey": e.shiftKey,
+                "altKey": e.altKey,
+                "ctrlKey": e.ctrlKey,
+                "metaKey": e.metaKey,
+            }
+        }))
         return this
     }
 
@@ -55,9 +65,12 @@ class AuxWindow {
                 this.$current_frame.html(e.frame)
                 this.$notes.html(e.notes || "").toggle(Boolean(this.$notes.html())) // hide notes if empty
                 this.$next_frame.html(e.next_frame || "END")
-                break;
+                break
             case "get-last-state":
                 this.channel.postMessage(this.last_info)
+                break
+            case "pressed-key":
+                wh.trigger(e.key)
                 break
             default:
                 console.warn("Unknown message", e)

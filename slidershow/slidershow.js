@@ -27,7 +27,7 @@ loadjQuery(() => {
             crossOrigin: "anonymous"
         },
         { src: "https://cdn.jsdelivr.net/npm/js-circle-progress@0.2.4/dist/jquery.circle-progress.min.js" },
-        { src: "https://cdn.jsdelivr.net/gh/e3rd/WebHotkeys@0.7/WebHotkeys.js" },
+        { src: "https://cdn.jsdelivr.net/gh/e3rd/WebHotkeys@0.8.0/WebHotkeys.js" },
         { src: "https://cdn.jsdelivr.net/npm/exif-js" },
         { src: "https://api.mapy.cz/loader.js" },
         { src: "https://cdn.jsdelivr.net/npm/zebra_dialog@3.0.5/dist/zebra_dialog.min.js" }

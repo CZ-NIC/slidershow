@@ -60,22 +60,29 @@ menu #progress .circle-progress-text {
   display: flex;
   flex-direction: column;
   max-height: 100vh;
+  width: 50vw;
 }
-#aux_window #slide-wrapper > :nth-child(1) {
-  height: 70vh;
+#aux_window #slide-wrapper > frame-preview {
+  height: 60vh;
+}
+#aux_window #slide-wrapper > frame-preview > * {
+  scale: 0.5;
 }
 #aux_window #slide-wrapper > :nth-child(2) {
   max-height: 30vh;
 }
+#aux_window #slide-wrapper > :nth-child(2) frame-preview > * {
+  scale: 0.3;
+}
 #aux_window > :nth-child(2) {
-  min-width: 50vw;
+  width: 50vw;
+  padding-top: 5px;
 }
-frame-preview {
-  overflow: hidden;
-}
-frame-preview > * {
-  max-width: 100%;
-  max-height: 100%;
+frame-preview > article,
+frame-preview > article-map {
+  overflow: auto;
+  display: block;
+  transform-origin: 0 0;
 }
 #hud {
   position: fixed;
@@ -109,7 +116,7 @@ frame-preview > * {
   height: 30vh;
   bottom: 0;
   background-color: lightgray;
-  gap: 10px;
+  gap: 1px;
 }
 #hud #hud-thumbnails > frame-preview {
   text-align: center;
@@ -120,9 +127,10 @@ frame-preview > * {
 }
 #hud #hud-thumbnails > frame-preview.current {
   color: white;
-  background-color: black;
-  border-left: 1px solid red;
-  border-right: 1px solid red;
+  box-shadow: 0px 5px 3px 5px darkgray;
+}
+#hud #hud-thumbnails > frame-preview > * {
+  scale: 0.3;
 }
 #map-hud {
   position: fixed;

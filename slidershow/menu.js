@@ -17,10 +17,10 @@ class Menu {
         }
 
         // Global shortcuts
-        wh.pressAlt(KEY.W, "Launch an auxiliary window", () => this.aux_window.open())
-        wh.press(KEY.ESCAPE, "Go to menu", () => !$(":focus").closest(".ZebraDialog").length && this.stop_playback()) // disable when in a dialog
-        wh.press(KEY.H, "Show help", () => this.help())
-        wh.pressCtrl(KEY.S, "Export presentation", () => this.export_dialog())
+        wh.grab("Alt+w", "Launch an auxiliary window", () => this.aux_window.open())
+        wh.grab("Escape", "Go to menu", () => !$(":focus").closest(".ZebraDialog").length && this.stop_playback()) // disable when in a dialog
+        wh.grab("?", "Show help", () => this.help())
+        wh.grab("Ctrl+s", "Export presentation", () => this.export_dialog())
 
         // Shortcuts available only in menu, not in playback
         this.shortcuts = []
@@ -88,7 +88,7 @@ class Menu {
     }
 
     help() {
-        const text = wh.get_info_pairs().map(([shortcut, method]) => shortcut + ": " + method.hint).join("<br>") + "<br><br>Hit H while presenting too see more help."
+        const text = wh.getText().split("\n").join("<br>")
         new $.Zebra_Dialog(text, { type: "information", title: "Shortcuts" })
     }
 
