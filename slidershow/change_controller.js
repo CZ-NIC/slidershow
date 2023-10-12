@@ -62,5 +62,9 @@ class ChangeController {
         this.playback.hud.alert(`Could not undo ${name}`)
         break;
     }
+
+    if (!this.changes.length) {
+      this.unblock_unload()
+    }
   }
 }

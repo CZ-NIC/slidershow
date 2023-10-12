@@ -170,11 +170,31 @@ class Hud {
     properties(frame) {
         const pl = this.playback
         const $frame = frame.$frame
+        const $actor = frame.$actor
         const props = ["duration", "transition-duration"]
         this.$hud_properties
             .html($("<p/>").html("Properties panel (Alt+P)"))
-            .append(
-                props.map(p => generate_fields(p, $frame)).flat())
+            // TODO
+            .append(props.map(p => number_inputs(p, $frame)).flat())
+
+        if ($actor.length) {
+            if ($actor.prop("tagName") === "VIDEO") {
+                // XX I might add `video` attribute (which is not a number-type, has a system default to 'autoplay controls'
+                //  and can be derived from the real HTML attributes)
+                this.$hud_properties.append(["playback-rate"].map(p => number_inputs(p, $actor)).flat())
+
+                const original = frame.get_filename($actor).split("#")[1]
+
+                this.$hud_properties.append(input("video-cut", $actor, "", original, "text", "t=START[,STOP]", val => {
+                    const src = $actor.attr("src")
+                    if (src) {
+                        $actor.attr("src", [src.split("#")[0], val].join("#"))
+                    } else {
+                        this.playback.hud.alert("Not implemented changing this syntax of video URL")
+                    }
+                }))
+            }
+        }
 
         /**
          *
@@ -183,42 +203,51 @@ class Hud {
          * @param {string} name Parent name, prepended to the property <label>.
          * @returns
          */
-        function generate_fields(p, $el, name = "") {
-            const element_property = [
+        function number_inputs(p, $el, name = "") {
+            const original = $el.data(p)
+            const element_property = input(
+                p, $el, name, original, "number",
+                prop(p, null, $el.parent()),
+                v => {
+                    if (v === "") {
+                        $el.removeAttr(`data-${p}`)
+                        $el.removeData(p)
+                    } else {
+                        $el.attr(`data-${p}`, v)
+                        $el.data(p, v)
+                    }
+                })
+
+            // Ask all the parents to the same property (duplicating the <input>)
+            if ($el.parent().length && !$el.is("main")) {
+                $.merge(element_property, number_inputs(p, $el.parent(), $el.parent().prop("tagName")))
+            }
+            return element_property
+        }
+
+        function input(p, $el, name, original, type, placeholder, change) {
+            return [
                 $("<label/>", { "text": `${name} ${p}: ` }),
                 $("<input />")
-                    .attr("type", "number")
-                    .attr("placeholder", prop(p, null, $el.parent()))
+                    .attr("type", type)
+                    .attr("placeholder", placeholder)
                     .attr("name", `${name}${p}`)
-                    .val($el.data(p))
+                    .val(original)
                     .on("change", function () {
-                        const [v, a, prev, name] = [$(this).val(), `data-${p}`, $el.data(p), $(this).attr("name")]
-                        change(v)
+                        change($(this).val())
                         pl.change_controller.change(() => {
                             // Why accessing via name?
                             // Since we could changed the slide (and refreshed the panel HTML),
                             // the original element does not have to exist.
-                            $(`[name=${name}]`).val(prev)
-                            change(prev)
+                            $(`[name=${$(this).attr("name")}]`).val(original).focus()
+                            change(original)
+                            // TODO undo works bad when we change the frame. We should store the frame in the undo method, too.
+                            //      Otherwise, properties of different articles are undo-changed.
+                            // TODO General shortcuts should be disabled when editing inputs here. Like End. I thought INPUT is disabled by default, check.
                         })
-
-                        function change(v) {
-                            if (v === "") {
-                                $el.removeAttr(a)
-                                $el.removeData(p)
-                            } else {
-                                $el.attr(a, v)
-                                $el.data(p, v)
-                            }
-                        }
                     }),
                 "<br>"
             ]
-
-            if ($el.parent().length && !$el.is("main")) {
-                $.merge(element_property, generate_fields(p, $el.parent(), $el.parent().prop("tagName")))
-            }
-            return element_property
         }
     }
 }

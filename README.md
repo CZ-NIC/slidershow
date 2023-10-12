@@ -46,7 +46,7 @@ What can you acheive? See a variety of features in another example at [examples/
       - [Zoomable](#zoomable)
       - [Panoramatic images](#panoramatic-images)
       - [Preload](#preload)
-    + [`<video>`](#--video--)
+    + [`<video>`](#video)
     + [Text](#text)
   * [Map](#map)
     + [`<article-map>` frame](#article-map-frame)
