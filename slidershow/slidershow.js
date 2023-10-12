@@ -35,7 +35,7 @@ loadjQuery(() => {
 
     const vendor_styles = ["https://cdn.jsdelivr.net/npm/zebra_dialog@latest/dist/css/materialize/zebra_dialog.min.css"].map(f => loadStyle(f))
 
-    const local = ["static.js", "frame_factory.js", "frame.js", "place.js", "map.js", "hud.js", "change_controller.js", "menu.js", "playback.js", "session.js", "aux_window.js"].map(f => loadScript({ src: DIR + f }))
+    const local = ["static.js", "frame_factory.js", "frame.js", "place.js", "map.js", "hud.js", "shortcuts.js", "change_controller.js", "menu.js", "playback.js", "session.js", "aux_window.js"].map(f => loadScript({ src: DIR + f }))
 
     /**
      When there were 60 photos and 10 videos in a 230 MB presentation file, these were started before we could
@@ -121,10 +121,12 @@ function get_menu() {
                 <button data-role="aux_window" title="Auxiliary window Alt+W">&#127916;</button>
                 <button data-role="tagging" title="Tagging mode Alt+T">&#128204;</button>
                 <button data-role="thumbnails" title="Thumbnails Alt+J">&#127895;</button>
+                <button data-role="properties" title="Properties Alt+P">&#127920;</button>
                 <button data-role="export" title="Export Ctrl+S">&#128190;</button>
                 <button data-role="help" title="Help H">&#8505;</button>
             </div>
         </div>
+        <div id="hud-properties"></div>
         <div id="hud-thumbnails"></div>
     </div>
 

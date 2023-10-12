@@ -14,6 +14,7 @@ class Hud {
         this.$hud_counter = $("#hud-counter")
         this.$hud_menu = $("#hud-menu")
         this.$hud_thumbnails = $("#hud-thumbnails").hide() // by default off
+        this.$hud_properties = $("#hud-properties").hide() // by default off
     }
 
     playback_icon(html) {
@@ -25,9 +26,24 @@ class Hud {
 
 
     toggle_thumbnails() {
-        if (this.$hud_thumbnails.toggle().is(":visible")) {
+        this.$hud_thumbnails.toggle()
+        if (this.thumbnails_visible) {
             this.thumbnails(this.playback.frame)
         }
+        this.playback.session.store()
+    }
+    toggle_properties() {
+        this.$hud_properties.toggle()
+        if (this.properties_visible) {
+            this.properties(this.playback.frame)
+        }
+        this.playback.session.store()
+    }
+    get thumbnails_visible() {
+        return this.$hud_thumbnails.is(":visible")
+    }
+    get properties_visible() {
+        return this.$hud_properties.is(":visible")
     }
 
     /**
@@ -109,8 +125,11 @@ class Hud {
         }
 
         // Thumbnails
-        if (this.$hud_thumbnails.is(":visible")) {
+        if (this.thumbnails_visible) {
             this.thumbnails(frame)
+        }
+        if (this.properties_visible) {
+            this.properties(frame)
         }
     }
 
@@ -141,5 +160,65 @@ class Hud {
 
     reset() {
         this.$hud_thumbnails.html("")
+        this.$hud_properties.html("")
+    }
+
+    /**
+     * Thumbnail ribbon
+     * @param {Frame} frame
+    */
+    properties(frame) {
+        const pl = this.playback
+        const $frame = frame.$frame
+        const props = ["duration", "transition-duration"]
+        this.$hud_properties
+            .html($("<p/>").html("Properties panel (Alt+P)"))
+            .append(
+                props.map(p => generate_fields(p, $frame)).flat())
+
+        /**
+         *
+         * @param {string} p Property name
+         * @param {jQuery} $el $frame or its parents up to main (elements having properties)
+         * @param {string} name Parent name, prepended to the property <label>.
+         * @returns
+         */
+        function generate_fields(p, $el, name = "") {
+            const element_property = [
+                $("<label/>", { "text": `${name} ${p}: ` }),
+                $("<input />")
+                    .attr("type", "number")
+                    .attr("placeholder", prop(p, null, $el.parent()))
+                    .attr("name", `${name}${p}`)
+                    .val($el.data(p))
+                    .on("change", function () {
+                        const [v, a, prev, name] = [$(this).val(), `data-${p}`, $el.data(p), $(this).attr("name")]
+                        change(v)
+                        pl.change_controller.change(() => {
+                            // Why accessing via name?
+                            // Since we could changed the slide (and refreshed the panel HTML),
+                            // the original element does not have to exist.
+                            $(`[name=${name}]`).val(prev)
+                            change(prev)
+                        })
+
+                        function change(v) {
+                            if (v === "") {
+                                $el.removeAttr(a)
+                                $el.removeData(p)
+                            } else {
+                                $el.attr(a, v)
+                                $el.data(p, v)
+                            }
+                        }
+                    }),
+                "<br>"
+            ]
+
+            if ($el.parent().length && !$el.is("main")) {
+                $.merge(element_property, generate_fields(p, $el.parent(), $el.parent().prop("tagName")))
+            }
+            return element_property
+        }
     }
 }

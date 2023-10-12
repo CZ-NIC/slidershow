@@ -132,6 +132,15 @@ frame-preview > article-map {
 #hud #hud-thumbnails > frame-preview > * {
   scale: 0.3;
 }
+#hud #hud-properties {
+  max-width: 20vw;
+  max-height: 70vh;
+  top: 0;
+  right: 0;
+  background-color: lightgray;
+  color: black;
+  padding: 10px;
+}
 #map-hud {
   position: fixed;
   height: 10vh;

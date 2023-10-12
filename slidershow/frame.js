@@ -349,8 +349,8 @@ class Frame {
         $(EDITABLE_ELEMENTS, this.$frame)
             .attr("contenteditable", true)
         this.$frame
-            .on("focus", EDITABLE_ELEMENTS, () => [this.playback.shortcuts.disable(), this.playback.menu.global_shortcuts.disable()])
-            .on("focusout", EDITABLE_ELEMENTS, () => [this.playback.shortcuts.enable(), this.playback.menu.global_shortcuts.enable()])
+            .on("focus", EDITABLE_ELEMENTS, () => [this.playback.shortcuts.general.disable(), this.playback.menu.global_shortcuts.disable()])
+            .on("focusout", EDITABLE_ELEMENTS, () => [this.playback.shortcuts.general.enable(), this.playback.menu.global_shortcuts.enable()])
     }
 
     unmake_editable() {

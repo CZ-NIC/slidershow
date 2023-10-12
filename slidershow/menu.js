@@ -60,6 +60,7 @@ class Menu {
             .on("click", "#hud-menu [data-role=help]", () => this.help())
             .on("click", "#hud-menu [data-role=aux_window]", () => this.aux_window.open())
             .on("click", "#hud-menu [data-role=thumbnails]", () => this.playback.hud.toggle_thumbnails())
+            .on("click", "#hud-menu [data-role=properties]", () => this.playback.hud.toggle_properties())
             .on("click", "#hud-menu [data-role=tagging]", () => this.playback.hud.alert("Hit Alt+T while presenting to start tagging mode."))
 
         // Load defaults from the main tag
@@ -218,5 +219,8 @@ class Menu {
         link.click()
         URL.revokeObjectURL(url)
         document.body.removeChild(link)
+
+        // Changes saved, allow leaving
+        this.playback.change_controller.unblock_unload()
     }
 }
