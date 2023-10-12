@@ -5,13 +5,14 @@ const MAP_ENABLE = true
  */
 class Playback {
 
-    constructor(aux_window = null) {
+    constructor(menu = null, aux_window = null) {
+        this.menu = menu
         this.aux_window = aux_window
-        this.promise = {} // transition promise
+        this.change_controller = new ChangeController(this)
+        /** Transition promise */
+        this.promise = {}
         this.moving = true
         this.moving_timeout = new Interval().stop()
-
-
 
         const fact = (id) => $("<div/>", { id: id }).prependTo("body")
         this.hud = new Hud(this)
@@ -22,19 +23,22 @@ class Playback {
         }
 
         /**
-         * @type {Frame}
+         * @type {Frame} Current frame
         */
         this.frame
         this.slide_count
         this.$articles
-
+        /**
+         * @type {jQuery} Current frame DOM
+         */
         this.$current
         this.index = 0
 
-        this.shortcuts = this.shortcutsInit().map(s => s.disable() || s)
-
         this.debug = false
         this.tagging_mode = false
+        this.editing_mode = false
+
+        this.shortcuts = this.shortcutsInit().disable()
         this.reset()
 
         /** Frames that are going to be pre/unloaded.
@@ -91,10 +95,12 @@ class Playback {
         this.moving = moving
     }
 
+    /** Refresh frames from the DOM. Reposition. */
     reset() {
         this.$articles = Frame.load_all(this)
         Frame.videoInit(this.$articles)
         this.positionFrames()
+        this.hud.reset()
     }
 
     positionFrames(x1 = null, x2 = null, x3 = null, x4 = null) {
@@ -205,7 +211,40 @@ class Playback {
             ["Alt+Numpad7", "Tag 17", () => this.frame.set_tag(17)],
             ["Alt+Numpad8", "Tag 18", () => this.frame.set_tag(18)],
             ["Alt+Numpad9", "Tag 19", () => this.frame.set_tag(19)]
-        ]).map(s => s.disable())
+        ]).toggle(this.tagging_mode)
+
+        const editing = wh.group("Editing", [
+            ["Alt+d", "Duplicate frame", () => {
+                this.$current.clone().insertAfter(this.$current)
+                this.reset()
+                this.nextFrame()
+            }],
+            ["Enter", "Insert new &lt;li&gt;", () => {
+                const $el = $(":focus")
+                if (!$el.attr("contenteditable")) {
+                    return false
+                }
+                $("<li/>").attr("contenteditable", true).insertAfter($el).focus()
+            }],
+            ["Shift+Delete", "Remove element", () => {
+                const $el = $(":focus")
+                $el.next().focus()
+                this.change_controller.deleteItem($el)
+            }],
+            ["Delete", "Remove element if empty", () => {
+                if ($(":focus").text().trim() === "") {
+                    wh.simulate("Shift+Delete")
+                } else {
+                    return false
+                }
+            }],
+            ["Ctrl+Shift+Delete", "Undo change (removing element)", () => {
+                this.change_controller.undo()
+            }],
+            ["Escape", "Stop editing", () => {
+                $(":focus").blur()
+            }]
+        ]).toggle(this.editing_mode)
 
         return wh.group("General", [
             ["Space", "Next", (e) => {
@@ -239,16 +278,24 @@ class Playback {
 
             ["f", "Toggle file info", () => $("#hud-fileinfo").toggle()],
 
+            ["Alt+e", "Toggle editing mode", () => {
+                this.editing_mode = !this.editing_mode
+                // when there will be interfering shortcuts like numbers, we have retag the previous shortcuts
+                editing.toggle(this.editing_mode)
+                this.editing_mode ? this.frame.make_editable() : this.frame.unmake_editable()
+                this.hud.alert(`Editing mode ${this.editing_mode ? "enabled, see ? for shortcuts help" : "disabled."}`)
+            }],
+
             ["Alt+t", "Toggle tagging mode", () => {
                 this.tagging_mode = !this.tagging_mode
                 // when there will be interfering shortcuts like numbers, we have retag the previous shortcuts
-                tagging.forEach(s => this.tagging_mode ? s.enable() : s.disable())
+                tagging.toggle(this.tagging_mode)
                 this.hud.alert(`Tagging mode ${this.tagging_mode ? "enabled, see ? for shortcuts help" : "disabled."}`)
             }],
 
             ["Alt+j", "Thumbnails", () => this.hud.toggle_thumbnails()],
 
-            ["Alt+d", "Debug", () => {
+            ["Ctrl+Alt+d", "Debug", () => {
                 const zoom = $main.css("zoom")
                 $main.css({ "zoom": zoom == "1" ? "0.05" : "1" })
                 this.debug = !this.debug

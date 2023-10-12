@@ -10,17 +10,19 @@ class Menu {
         this.$start = $("#start").focus().click(() => this.start_playback())
 
         /** @type {Playback} */
-        playback = this.playback = new Playback(this.aux_window) // expose global `playback`
+        playback = this.playback = new Playback(this, this.aux_window) // expose global `playback`
 
         if (!$(FRAME_SELECTOR).length) {
             this.$start_wrapper.hide()
         }
 
         // Global shortcuts
-        wh.grab("Alt+w", "Launch an auxiliary window", () => this.aux_window.open())
-        wh.grab("Escape", "Go to menu", () => !$(":focus").closest(".ZebraDialog").length && this.stop_playback()) // disable when in a dialog
-        wh.grab("?", "Show help", () => this.help())
-        wh.grab("Ctrl+s", "Export presentation", () => this.export_dialog())
+        this.global_shortcuts = wh.group("Global", [
+            ["Alt+w", "Launch an auxiliary window", () => this.aux_window.open()],
+            ["Escape", "Go to menu", () => !$(":focus").closest(".ZebraDialog").length && this.stop_playback()], // disabled when in a dialog
+            ["?", "Show help", () => this.help()],
+            ["Ctrl+s", "Export presentation", () => this.export_dialog()],
+        ])
 
         // Shortcuts available only in menu, not in playback
         this.shortcuts = []
@@ -128,13 +130,13 @@ class Menu {
             max: max
         })
         let progress = 0
-        return (finish=false) => {
-            if(finish) {
-                progress = max-1
+        return (finish = false) => {
+            if (finish) {
+                progress = max - 1
             }
             $progress.circleProgress("value", ++progress)
             if (progress === max) {
-                $progress.fadeOut(2000, ()=>$progress.remove())
+                $progress.fadeOut(2000, () => $progress.remove())
             }
         }
     }
@@ -201,7 +203,7 @@ class Menu {
         // While accessing document.head in slidershow.js, link is still invisible. The slidershow.js needed to be
         // the very last tag in the head. Which would cover different problems:
         // CSS order, user might want to add another script accessing slidershow properties...
-        let $head = $("<div>" + $("head").prop('outerHTML')+ "</div>")
+        let $head = $("<div>" + $("head").prop('outerHTML') + "</div>")
         $head.find("[data-templated]").remove() // remove all dynamically added libraries
         $head.find("[src^='https://api.mapy.cz'],[href^='https://api.mapy.cz']").remove() // including vendor libraries that does not our honour [data-templated] attr
 

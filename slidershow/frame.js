@@ -1,3 +1,4 @@
+const EDITABLE_ELEMENTS = "h1,h2,h3,h4,h5,h6,p,li"
 class Frame {
     /**
      *
@@ -43,8 +44,11 @@ class Frame {
         /** @type {?Promise} */
         this.video_finished = null
 
-        /** @type {Promise} Register to this promise to be notified. (It fulfills when preload, not on the preloaded media onload.) */
-        this.preloaded = new Promise(r => this._preloaded = r)
+        /** @type {Promise} Register to this promise to be notified. (It fulfills when preload, not on the preloaded media onload.)
+         */
+        // When we call playback.reset() (ex: after frame duplication), we get here (to the recreation of the frame) with data-preloaded already true.
+        // Hence we set the Promise to be already resolved sometimes.
+        this.preloaded = this.$frame.attr("data-preloaded") ? Promise.resolve() : new Promise(r => this._preloaded = r)
     }
 
     register_parent(frame) {
@@ -332,7 +336,25 @@ class Frame {
         if ($actor.prop("tagName") === "VIDEO") {
             this.video_finished = new Promise((resolve) => this.video_enter(resolve))
         }
+
+        // Editing
+        if (this.playback.editing_mode) {
+            this.make_editable()
+        }
+
         return this.get_duration()
+    }
+
+    make_editable() {
+        $(EDITABLE_ELEMENTS, this.$frame)
+            .attr("contenteditable", true)
+        this.$frame
+            .on("focus", EDITABLE_ELEMENTS, () => [this.playback.shortcuts.disable(), this.playback.menu.global_shortcuts.disable()])
+            .on("focusout", EDITABLE_ELEMENTS, () => [this.playback.shortcuts.enable(), this.playback.menu.global_shortcuts.enable()])
+    }
+
+    unmake_editable() {
+        $(EDITABLE_ELEMENTS, this.$frame).removeAttr("contenteditable")
     }
 
     video_enter(resolve) {
@@ -435,6 +457,7 @@ class Frame {
         this.$actor?.data("wzoom-unload")?.()
 
         this.playback.hud_map.hide()
+        this.unmake_editable()
         return true
     }
 

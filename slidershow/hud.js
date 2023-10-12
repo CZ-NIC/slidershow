@@ -138,4 +138,8 @@ class Hud {
             console.log("INFO:", text)
         }
     }
+
+    reset() {
+        this.$hud_thumbnails.html("")
+    }
 }
