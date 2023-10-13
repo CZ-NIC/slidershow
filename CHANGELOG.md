@@ -7,6 +7,8 @@
 * header and footer template
 * stable save
 * F5 honours the current frame (hash)
+* properties panel
+* basic editing mode
 
 ## 0.7.0
 Every important feature working as expected.

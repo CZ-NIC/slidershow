@@ -49,10 +49,14 @@ class ChangeController {
     switch (name) {
       case this.DELETE_EL:
         const [originalIndex, $deletedItem, xpath] = instructions
+
         const $container = $(lookupElementByXPath(xpath))
         this.playback.goToArticle($container.closest(FRAME_SELECTOR))
-        this.playback.promise.then(() =>
-          $deletedItem.insertBefore($container.children().eq(originalIndex)).show(this.HIDE_DURATION).focus()
+        this.playback.promise.then(() => {
+          const $position = $container.children().eq(originalIndex)
+          const $inserted = $position.length ? $deletedItem.insertBefore($position) : $deletedItem.appendTo($container)
+          $inserted.show(this.HIDE_DURATION).focus()
+        }
         )
         break;
       case this.CALLBACK:  // Undo the operation with a non serialized callback

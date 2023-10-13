@@ -59,13 +59,25 @@ var playback
 var menu
 /** @type {AuxWindow} */
 var aux_window
+
+const PROP_DEFAULT = {
+    "duration": 0,
+    "transition-duration": 0,
+    "playback-rate": 1,
+    "video": "autoplay controls",
+    "fit": "auto",
+    "panorama-threshold": 2,
+    "start": false,
+    "spread-frames": "spiral",
+}
+
 main()
 
 function main() {
     // Whether this window is the main one or an aux-window
     const channel_id = new URLSearchParams((window.location.search)).get("controller")
     if (channel_id) {
-        aux_window= new AuxWindow().overrun(channel_id)
+        aux_window = new AuxWindow().overrun(channel_id)
     } else {
         menu = new Menu()
     }
@@ -80,10 +92,10 @@ function main() {
     })
 
     // Restore frame size on window zoom
-    $(window).on("resize", ()=> menu?.playback.goToFrame(menu?.playback.index))
+    $(window).on("resize", () => menu?.playback.goToFrame(menu?.playback.index))
 
     // Restore on hash
-    $(window).on("hashchange", ()=> menu?.playback.session.restore())
+    $(window).on("hashchange", () => menu?.playback.session.restore())
 }
 
 // Common functions
@@ -92,7 +104,7 @@ function main() {
  * Return closest prop, defined in the DOM.
  * (Zero aware, you can safely set `data-prop=0`.)
  * @param {string} property For "data-start" use just "start"
- * @param {any} def Default value if undefined
+ * @param {any} def Custom default value if not set in DOM (when PROP_DEFAULT default value is not desirable).
  * @param {jQuery} $el What element to check the prop of.
  * @returns
  */
@@ -107,9 +119,7 @@ function prop(property, def = null, $el) {
         case "true": // <main data-start='true'> -> true
             return true;
         case undefined:
-            if (def !== undefined) {
-                return def
-            }
+            return def !== null ? def : PROP_DEFAULT[property]
         default:
             const numeric_only = /^[-+]?\d*\.?\d+$/
             if (numeric_only.test(v)) { // <main data-start='0'> -> Boolean(Number(0)) === false

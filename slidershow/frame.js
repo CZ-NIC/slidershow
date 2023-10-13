@@ -85,7 +85,7 @@ class Frame {
      * Return closest prop, defined in the DOM.
      * (Zero aware, you can safely set `data-prop=0`.)
      * @param {string} property
-     * @param {any} def Default value if undefined
+     * @param {any} def Custom default value if not set in DOM (when PROP_DEFAULT default value is not desirable).
      * @param {jQuery|null} $actor What element to check the prop of. If null, frame is checked.
      * @returns
      */
@@ -288,7 +288,7 @@ class Frame {
     static videoInit($articles) {
         $articles.find("video").each(function () {
             const $el = $(this)
-            const attributes = prop("video", "autoplay controls", $el).replace("autoplay", "data-autoplay-prevented").split(" ") || [] // ex: ["muted", "autoplay"]
+            const attributes = prop("video", null, $el).replace("autoplay", "data-autoplay-prevented").split(" ") || [] // ex: ["muted", "autoplay"]
             attributes.forEach((k, v) => this[k] = true) // ex: video.muted = true
             // Following line has so more effect since it was already set by JS. However, for the readability
             // we display the attributes in the DOM too. We could skip the JS for the attribute 'controls'
@@ -327,7 +327,7 @@ class Frame {
         }
 
         // No HTML tag found, fit plain text to the screen size
-        const fit = this.prop("fit", "auto")
+        const fit = this.prop("fit")
         if (fit === true || fit === 1 || (fit === 'auto' && $frame.children().length === 0)) {
             textFit($frame)
         }
@@ -380,7 +380,7 @@ class Frame {
             }
 
         }
-        $actor[0].playbackRate = this.prop("playback-rate", 1, $actor)
+        $actor[0].playbackRate = this.prop("playback-rate", null, $actor)
         let next_interval = null
 
         // Pausing vs playback moving
@@ -441,8 +441,7 @@ class Frame {
     }
 
     get_duration() {
-        return this.prop("duration", 0)
-        // return this.$actor.prop("tagName") === "VIDEO" ? this.prop("duration-video", 0) : this.prop("duration", 0)
+        return this.prop("duration")
     }
 
     leave() {
@@ -485,7 +484,7 @@ class Frame {
 
         $actor.removeAttr("style")
 
-        if (w > main_w && w / h > this.prop("panorama-threshold", 2, $actor)) {
+        if (w > main_w && w / h > this.prop("panorama-threshold", null, $actor)) {
             // the image is wider than the sceen (would been shrinked) and its proportion looks like a panoramatic
             let speed = Math.min((trailing_width / 100), 5) * 1000 // 100 px / 1s, but max 5 sec
 

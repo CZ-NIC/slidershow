@@ -27,7 +27,7 @@ class Menu {
         // Shortcuts available only in menu, not in playback
         this.shortcuts = []
 
-        if (prop("start", false, $main)) {
+        if (prop("start", null, $main)) {
             this.start_playback()
         }
 
@@ -192,7 +192,7 @@ class Menu {
         $contents.find("> #map, > #map-hud, > #map-wrapper, > #hud, > menu, > .ZebraDialog, > .ZebraDialogBackdrop").remove()
         await Frame.finalize_frames($contents, this.playback.$articles, compact_file, path, this.display_progress(this.playback.$articles.length))
 
-        const html = $contents.prop("innerHTML")
+        const html = $contents.prop("innerHTML").replaceAll(EXPORT_SRC, "src")
         if (!html.length) {
             this.playback.hud.alert("Cannot export a single file – too big.")
         }
@@ -210,7 +210,15 @@ class Menu {
 
         // Export the data blob
         const data = `<!DOCTYPE html><html><head>\n${$head[0].innerHTML}</head>\n<body>` + html + "\n</body>\n</html>"
-        const blob = new Blob([data.replaceAll(EXPORT_SRC, "src")], { type: "text/plain" })
+
+        /*
+        // XX in Chrome, we can re-write the file every time
+        const newHandle = await window.showSaveFilePicker(suggestName) // ask once for the path – then keep newHandle
+        const fileStream = await newHandle.createWritable()
+        await fileStream.write(data)
+        fileStream.close()
+        */
+        const blob = new Blob([data], { type: "text/plain" })
         const url = URL.createObjectURL(blob)
         const link = document.createElement("a")
         link.href = url

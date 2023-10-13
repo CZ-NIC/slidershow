@@ -168,24 +168,20 @@ class Hud {
      * @param {Frame} frame
     */
     properties(frame) {
-        const pl = this.playback
         const $frame = frame.$frame
         const $actor = frame.$actor
         const props = ["duration", "transition-duration"]
         this.$hud_properties
             .html($("<p/>").html("Properties panel (Alt+P)"))
-            // TODO
-            .append(props.map(p => number_inputs(p, $frame)).flat())
+            .append(props.map(p => this._input_ancestored(p, $frame)).flat())
 
         if ($actor.length) {
             if ($actor.prop("tagName") === "VIDEO") {
-                // XX I might add `video` attribute (which is not a number-type, has a system default to 'autoplay controls'
-                //  and can be derived from the real HTML attributes)
-                this.$hud_properties.append(["playback-rate"].map(p => number_inputs(p, $actor)).flat())
+                this.$hud_properties.append(["playback-rate"].map(p => this._input_ancestored(p, $actor, "number")).flat())
 
                 const original = frame.get_filename($actor).split("#")[1]
 
-                this.$hud_properties.append(input("video-cut", $actor, "", original, "text", "t=START[,STOP]", val => {
+                this.$hud_properties.append(this._input("video-cut", $actor, "", original, "text", "t=START[,STOP]", val => {
                     const src = $actor.attr("src")
                     if (src) {
                         $actor.attr("src", [src.split("#")[0], val].join("#"))
@@ -193,61 +189,91 @@ class Hud {
                         this.playback.hud.alert("Not implemented changing this syntax of video URL")
                     }
                 }))
+
+                // The `video` attribute can be derived also from the real HTML attributes which is not here implemented to bear.
+                this.$hud_properties.append(this._input_ancestored("video", $actor))
             }
         }
+    }
 
-        /**
-         *
-         * @param {string} p Property name
-         * @param {jQuery} $el $frame or its parents up to main (elements having properties)
-         * @param {string} name Parent name, prepended to the property <label>.
-         * @returns
-         */
-        function number_inputs(p, $el, name = "") {
-            const original = $el.data(p)
-            const element_property = input(
-                p, $el, name, original, "number",
-                prop(p, null, $el.parent()),
-                v => {
-                    if (v === "") {
-                        $el.removeAttr(`data-${p}`)
-                        $el.removeData(p)
-                    } else {
-                        $el.attr(`data-${p}`, v)
-                        $el.data(p, v)
-                    }
-                })
+    /**
+     * Generate <input type=number> into the Properties panel.
+     * Recursively generate such input for the ancestors (<section>) too.
+     * @param {string} p Property name (ex: 'duration')
+     * @param {jQuery} $el $frame or its parents up to main (elements having properties)
+     * @param {string} name Tag name, prepended to the property <label>
+     * @returns
+     */
+    _input_ancestored(p, $el, type="text", name = "") {
+        const original = $el.data(p)
+        const element_property = this._input(
+            p, $el, name, original, type,
+            prop(p, null, $el.parent()),
+            v => {
+                // v is "" when user deletes input
+                // v is undefined when we undo a change and the original value was undefined
+                //  (and not converted to the empty string via <input> value)
+                if (v === "" || v === undefined) {
+                    $el.removeAttr(`data-${p}`)
+                    $el.removeData(p)
+                } else {
+                    $el.attr(`data-${p}`, v)
+                    $el.data(p, v)
+                }
+            })
 
-            // Ask all the parents to the same property (duplicating the <input>)
-            if ($el.parent().length && !$el.is("main")) {
-                $.merge(element_property, number_inputs(p, $el.parent(), $el.parent().prop("tagName")))
-            }
-            return element_property
+        // Ask all the parents to the same property (duplicating the <input>)
+        if ($el.parent().length && !$el.is("main")) {
+            $.merge(element_property, this._input_ancestored(p, $el.parent(), type, $el.parent().prop("tagName")))
         }
+        return element_property
+    }
 
-        function input(p, $el, name, original, type, placeholder, change) {
-            return [
-                $("<label/>", { "text": `${name} ${p}: ` }),
-                $("<input />")
-                    .attr("type", type)
-                    .attr("placeholder", placeholder)
-                    .attr("name", `${name}${p}`)
-                    .val(original)
-                    .on("change", function () {
-                        change($(this).val())
-                        pl.change_controller.change(() => {
-                            // Why accessing via name?
-                            // Since we could changed the slide (and refreshed the panel HTML),
-                            // the original element does not have to exist.
-                            $(`[name=${$(this).attr("name")}]`).val(original).focus()
-                            change(original)
-                            // TODO undo works bad when we change the frame. We should store the frame in the undo method, too.
-                            //      Otherwise, properties of different articles are undo-changed.
-                            // TODO General shortcuts should be disabled when editing inputs here. Like End. I thought INPUT is disabled by default, check.
-                        })
-                    }),
-                "<br>"
-            ]
-        }
+    /**
+     * Generate <input> into the Properies panel.
+     * @param {string} p Property name (ex: 'duration')
+     * @param {jQuery} $el $frame or its parents up to main (elements having properties)
+     * @param {string} name Tag name, prepended to the property <label>
+     * @param {string} value Initial value.
+     * @param {string} type <input> type, like "text"
+     * @param {string} placeholder HTML placeholder
+     * @param {Function} change Callback to revert changes
+     * @returns
+     */
+    _input(p, $el, name, value, type, placeholder, change) {
+        const pl = this.playback
+        const original_frame = pl.frame.index
+        return [
+            $("<label/>", { "text": `${name} ${p}: ` }),
+            $("<input />")
+                .attr("type", type)
+                .attr("placeholder", placeholder)
+                .attr("name", `${name}${p}`)
+                .val(value)
+                .on("change", function () {
+                    const previous = value
+                    value = $(this).val()
+                    change($(this).val()) // change the property in the DOM
+                    pl.change_controller.change(() => { // undo change
+                        // Other frame contents was changed. We have to return there first.
+                        // Note that we do not return in case of a common <section> or <main>.
+                        const $fr = pl.frame.$frame
+                        if (!($fr.closest($el).length || $fr.find($el).length)) {
+                            pl.goToFrame(original_frame)
+
+                        }
+                        // Change the properties panel <input> back
+                        // Why accessing via name?
+                        // Since we could changed the slide (and refreshed the panel HTML),
+                        // the original element does not have to exist.
+                        $(`[name=${$(this).attr("name")}]`).val(previous).focus()
+                        change(previous)
+                        value = previous
+
+                        // TODO General shortcuts should be disabled when editing inputs here. Like "n".
+                    })
+                }),
+            "<br>"
+        ]
     }
 }

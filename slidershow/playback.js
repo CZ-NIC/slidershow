@@ -125,7 +125,7 @@ class Playback {
             frame.index = ++frame_index
             frame.slide_index = slide_index
 
-            const positioning = prop("spread-frames", true, $main)
+            const positioning = prop("spread-frames", null, $main)
             switch (positioning) {
                 case "spiral":
                 case true:
@@ -376,7 +376,7 @@ class Playback {
         const last = $last.data("frame")
         /** @type {Frame} */
         const current = $current.data("frame")
-        const TRANS_DURATION = current.prop("transition-duration", 0) * 1000
+        const TRANS_DURATION = current.prop("transition-duration") * 1000
 
         switch (current.prop("transition")) {
             // XX document * `data-transition`: `fade` (default), `scroll-down`

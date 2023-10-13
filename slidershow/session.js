@@ -55,7 +55,8 @@ class Session {
             this.playback.hud.$hud_properties.is(":visible") ? "properties" : ""
         ].filter(Boolean).join(",")
 
-        window.location.hash = index + (state ? `&state=${state}` : "")
+        // update the hash without triggering hashchange event
+        history.replaceState(null, null, document.location.pathname + '#' + index + (state ? `&state=${state}` : ""))
     }
 
     /**
