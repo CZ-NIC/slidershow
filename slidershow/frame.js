@@ -44,6 +44,11 @@ class Frame {
         /** @type {?Promise} */
         this.video_finished = null
 
+        /** @type {jQuery} Which elements are to be showed progressivelly */
+        this.steps = []
+        /** Element that was just showed. The next is not yet shown.  */
+        this.step_index = 0
+
         /** @type {Promise} Register to this promise to be notified. (It fulfills when preload, not on the preloaded media onload.)
          */
         // When we call playback.reset() (ex: after frame duplication), we get here (to the recreation of the frame) with data-preloaded already true.
@@ -119,6 +124,9 @@ class Frame {
         const check = (tag, method) => $($("template")[0]?.content).find(tag).clone().attr("data-templated", 1)[method](this.$frame.not(`:has(${tag})`))
         check("header", "prependTo")
         check("footer", "appendTo")
+
+        const step_selector = [this.prop("li-stepped") ? "li" : "", "[data-step]"].filter(Boolean).join(",")
+        this.steps = $(step_selector, this.$frame).map((index, el) => index >= this.step_index ? $(el).hide() : $(el).show())
     }
 
     map_prepare() {
@@ -342,7 +350,7 @@ class Frame {
             this.make_editable()
         }
 
-        return this.get_duration()
+        return this.prop("duration")
     }
 
     make_editable() {
@@ -440,9 +448,32 @@ class Frame {
         }, 200)
     }
 
-    get_duration() {
-        return this.prop("duration")
+    /**
+     *
+     * @param {Number} step How many steps to go further.
+     * @returns {Boolean} Step was fullfilled. False if no step was to be done, frame is then complete.
+     */
+    step(step = 1) {
+        const range = [this.step_index, Math.max(Math.min(this.step_index + step, this.steps.length), 0)]
+        this.step_index = range[1]
+        const changed = this.steps
+            .slice(Math.min(...range), Math.max(...range)) // currently affected elements (normally just one)
+            .map((_, el) => step > 0 ? $(el).fadeIn(STEP_FADE_DELAY) : $(el).fadeOut(STEP_FADE_DELAY))
+
+        return changed.length // some change happened
     }
+
+    /*
+    playback.previousFrame might contain this:
+    this.frame.display_all_steps()
+
+    Show up all steps when going to the frame from the back.
+
+    display_all_steps() {
+        this.step_index = this.steps.length
+        this.steps.map((_, el) => $(el).show())
+    }
+    */
 
     leave() {
         this.$frame.find("video").each((_, el) => $(el).off("pause") && el.pause())
@@ -551,6 +582,7 @@ class Frame {
         }
         $clone.find("video").removeAttr("autoplay")
         $clone.find("[data-templated]").remove()
+        $clone.find("li, [data-step]").show() // ignore frame steps
         // Remove data-preloaded attribute for the case it is there
         return $clone.removeAttr("data-preloaded").prop("outerHTML")
     }

@@ -2,6 +2,7 @@ const wh = new WebHotkeys()
 const $main = $("body > main").length ? $("body > main") : $("<main/>").appendTo("body")
 const $hud = $("#hud")
 const FRAME_SELECTOR = "main article,main article-map"
+const FRAME_TAGS = "article, article-map" // Can be used only in the <main> context. Because sometimes FRAME_SELECTOR is too strict.
 
 /**
  * When exporting: Setting src directly on more than few hundred photos would kill the tab instantanely;
@@ -51,6 +52,8 @@ var PREFER_SRC_EXPORT = false
 var PRELOAD_FORWARD = 50
 /** How many frames should be preloaded for the case the user goes back in the playback. */
 var PRELOAD_BACKWARD = 20
+/** Element revealing in ms */
+var STEP_FADE_DELAY = 500
 
 // Main launch and export to the dev console
 /** @type {Playback} */

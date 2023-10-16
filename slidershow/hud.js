@@ -170,7 +170,7 @@ class Hud {
     properties(frame) {
         const $frame = frame.$frame
         const $actor = frame.$actor
-        const props = ["duration", "transition-duration"]
+        const props = ["duration", "transition-duration", "li-stepped"] // XX li-stepped might be checkbox
         this.$hud_properties
             .html($("<p/>").html("Properties panel (Alt+P)"))
             .append(props.map(p => this._input_ancestored(p, $frame)).flat())
@@ -194,6 +194,7 @@ class Hud {
                 this.$hud_properties.append(this._input_ancestored("video", $actor))
             }
         }
+        // XX data-step could be implemented for any focused element
     }
 
     /**

@@ -122,13 +122,14 @@ Every frame is represented by an `<article>` tag.
 
 Which contains arbitrary HTML code, such as images or videos (by default, one per slide). Use control attributes:
 
-* `data-duration=0`: How many seconds a frame will last. By default, indefinitely (waiting for a user action). Note a video frame is an exception: will hold till the video finishes and then change frame.
+* `data-duration=0`: How many seconds a frame step will last. By default, indefinitely (waiting for a user action).
 
     ```html
     <article data-duration="0.5">Short frame</article>
     <article>You have to click to get further</article>
     <article data-duration="0.5">Short frame</article>
     ```
+    Note a video frame is an exception: will hold till the video finishes and then change frame.
 
 * `data-transition-duration=0`: How many seconds will it take to change a frame.
 * `data-spread-frames=spiral`: A viewport stands for a chessboard field. This is how the frame are positioned in the chessboard.
@@ -140,6 +141,17 @@ Which contains arbitrary HTML code, such as images or videos (by default, one pe
     <article data-loop>
         <img src="pic1.jpg" />
         <img src="pic2.jpg" />
+    </article>
+    ```
+* `data-li-stepped`: Every `<li>` element is taken as having the `data-step` attribute. They are not initially displayed but appears gradually as the user progresses through the presentation.
+    ```html
+    <article data-li-stepped data-duration=1>
+        <ul>
+            <li>Lorem</li> <!-- displayed at time 1 -->
+            <li>ipsum</li> <!-- displayed at time 2 -->
+            <li>dolor</li> <!-- displayed at time 3 -->
+            <li>sit</li>   <!-- displayed at time 4 -->
+        </ul>
     </article>
     ```
 * `<!-- presenter's notes -->` You may use HTML comments just before the frame or as the first frame child. These will be displayed in the auxiliary window while presenting.
@@ -161,6 +173,17 @@ Which contains arbitrary HTML code, such as images or videos (by default, one pe
 
 Any HTML content is accepted.
 
+* `data-step`: This element is not initially displayed but appears gradually as the user progresses through the presentation. See also: `data-li-stepped`
+    ```html
+    <article data-li-stepped data-duration=1>
+        <p>Lorem ipsum</p>
+        <img data-step src="..."> <!-- displayed at time 1 -->
+        <p>dolor sit amet</p>
+        <img data-step src="..."> <!-- displayed at time 2 -->
+        <p data-step>consectetur adipiscing</p>  <!-- displayed at time 3 -->
+    </article>
+    ```
+
 ### `<img>`
 
 #### Exif info
@@ -169,7 +192,7 @@ We try to fetch Exif data for images.
 * `data-datetime`: picture time stamp
 * `data-gps`: point on the map (HUD map will be automatically displayed in the corner)
 
-However, this is a non-trivial task since the browser protects your photos privacy. This will work for images you drag and drop inside, images from the web (with the permitive CORS policy). Reading the Exif of your local images you just mention in the document will work only with the browser (CORS disabled)[https://stackoverflow.com/questions/4819060/allow-google-chrome-to-use-xmlhttprequest-to-load-a-url-from-a-local-file] – do that only if you know what are you doing.
+However, this is a non-trivial task since the browser protects your photos privacy. This will work for images you drag and drop inside, images from the web (with the permitive CORS policy). Reading the Exif of your local images you just mention in the document will work only with the browser [CORS disabled](https://stackoverflow.com/questions/4819060/allow-google-chrome-to-use-xmlhttprequest-to-load-a-url-from-a-local-file) – do that only if you know what are you doing.
 
 #### Zoomable
 

@@ -11,7 +11,9 @@ class Playback {
         this.change_controller = new ChangeController(this)
         /** Transition promise */
         this.promise = {}
+        /** @type {Boolean} Application is running */
         this.moving = true
+        /** @type {Interval} */
         this.moving_timeout = new Interval().stop()
 
         const fact = (id) => $("<div/>", { id: id }).prependTo("body")
@@ -202,6 +204,27 @@ class Playback {
         this.goToFrame(this.$current.data("frame").index - 1) // keeps you on the same frame (woorks badly)
     }
 
+    /**
+     * Go to the next step in the frame on to the next frame.
+     */
+    goNext() {
+        this.moving_timeout.stop()
+        if (this.frame.step(1)) {
+            this.moving_timeout.start()
+        } else {
+            this.nextFrame()
+        }
+    }
+    /**
+     * Go to the previous step in the frame on to the previous frame.
+    */
+   goPrev() {
+        this.moving_timeout.stop()
+        if (!this.frame.step(-1)) {
+            this.previousFrame()
+        }
+    }
+
     nextFrame() {
         this.goToFrame(this.index + 1, true)
     }
@@ -211,11 +234,11 @@ class Playback {
 
     nextSection() {
         const $next = this.getSection().next().find(FRAME_SELECTOR).first()
-        this.goToArticle($next, true)
+        this.goToArticle($next.length ? $next : this.$articles.last(), true)
     }
     previousSection() {
         const $section = this.getSection()
-        const $first = $(FRAME_SELECTOR, $section).first()
+        const $first = $(FRAME_TAGS, $section).first()
         if ($first.data("frame").index === this.frame.index) {
             const $previous = $section.prev().find(FRAME_SELECTOR).first()
             this.goToArticle($previous)
@@ -320,7 +343,7 @@ class Playback {
 
         const trans = same_frame || supress_transition ? $main.css(frame.get_position()) : this.transition($last, $current)
         const promise = this.promise = trans.promise()
-        const all_done = () => !promise.aborted && this.moving && this.nextFrame()
+        const all_done = () => !promise.aborted && this.moving && this.goNext()
         promise.then(() => {
             // frame is at the viewport now
             if (!same_frame) {

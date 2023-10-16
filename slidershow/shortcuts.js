@@ -93,7 +93,7 @@ class ShortcutsController {
         return wh.group("General", [
             ["Space", "Next", (e) => {
                 if (pl.notVideoFocus()) {
-                    return pl.nextFrame()
+                    return pl.goNext()
                 } else {
                     pl.play_pause(false)
                     return false
@@ -104,13 +104,16 @@ class ShortcutsController {
                 pl.play_pause(!pl.moving)
             }],
 
-            ["ArrowRight", "Next", () => pl.notVideoFocus() && pl.nextFrame()],
-            ["ArrowLeft", "Prev", () => pl.notVideoFocus() && pl.previousFrame()],
+            ["ArrowRight", "Next step", () => pl.notVideoFocus() && pl.goNext()],
+            ["ArrowLeft", "Prev step", () => pl.notVideoFocus() && pl.goPrev()],
 
-            ["n", "Next", () => pl.nextFrame()],
-            ["p", "Prev", () => pl.previousFrame()],
-            ["PageDown", "Next", () => pl.nextFrame()],
-            ["PageUp", "Prev", () => pl.previousFrame()],
+            ["n", "Next step", () => pl.goNext()],
+            ["p", "Prev step", () => pl.goPrev()],
+            ["PageDown", "Next step", () => pl.goNext()],
+            ["PageUp", "Prev step", () => pl.goPrev()],
+
+            ["Shift+PageDown", "Next frame", () => pl.nextFrame()],
+            ["Shift+PageUp", "Prev frame", () => pl.previousFrame()],
 
             ["Alt+PageDown", "Next section", () => pl.nextSection()],
             ["Alt+PageUp", "Prev section", () => pl.previousSection()],
