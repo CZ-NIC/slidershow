@@ -47,13 +47,25 @@ class AuxWindow {
 
     /**
      * Send the information to an aux-window.
-     * @param {string} frame HTML
-     * @param {string} notes HTML
-     * @param {string} next_frame HTML
+     * @param {Frame} frame
+     * @param {Frame?} following
      */
-    info(frame, notes, next_frame) {
-        this.last_info = { action: "info", frame: frame, notes: notes, next_frame: next_frame }
+    info(frame, following) {
+        this.last_info = {
+            action: "info",
+            frame: frame.get_preview(),
+            notes: frame.get_notes(),
+            next_frame: following?.get_preview(),
+            step_index: frame.step_index
+        }
         this.channel.postMessage(this.last_info)
+    }
+
+    /**
+     * @param {Frame} frame
+     */
+    update_step(frame) {
+        this.channel.postMessage({ "action": "update-step", "step_index": frame.step_index })
     }
 
     /**
@@ -63,14 +75,18 @@ class AuxWindow {
         switch (e.action) {
             case "info":
                 this.$current_frame.html(e.frame)
-                this.$notes.html(e.notes || "").toggle(Boolean(this.$notes.html())) // hide notes if empty
+                this.$notes.html((e.notes || "").replace("\n", "<br>")).toggle(Boolean(this.$notes.html())) // hide notes if empty
                 this.$next_frame.html(e.next_frame || "END")
+            case "update-step":
+                // Highlight the element to be revealed in the next step
+                this.$current_frame.find("[data-step-i]").removeClass("current-step")
+                this.$current_frame.find(`[data-step-i=${Number(e.step_index)}]`).addClass("current-step", true)
                 break
             case "get-last-state":
                 this.channel.postMessage(this.last_info)
                 break
             case "pressed-key":
-                wh.trigger(e.key)
+                wh.simulate(e.key)
                 break
             default:
                 console.warn("Unknown message", e)

@@ -4,12 +4,20 @@ class Session {
         this.playback = playback
     }
 
-    restore(init=false) {
+    restore(init = false) {
         const pl = this.playback
         const [index, state] = window.location.hash.substring(1).split("&") // #6&state=thumbnails
         pl.index = Math.max(0, Number(index) - 1)
 
-        if(init) {
+        // a real DOM element ID attribute in hash, not a frame number
+        if (isNaN(pl.index)) {  // ex : #foo <section id=foo>
+            // Why the reg? For security feeling, leave just signs allowed in the ID attr.
+            let $anchor = $("#" + index.replace(/[^a-zA-Z0-9_\-\.]/g, ''))
+            pl.goToArticle($anchor.is("section") ? $anchor.find(FRAME_TAGS) : $anchor)
+            return
+        }
+
+        if (init) {
             pl.goToFrame(pl.index, true, true)
         } else {
             pl.goToFrame(pl.index)

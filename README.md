@@ -122,7 +122,7 @@ Every frame is represented by an `<article>` tag.
 
 Which contains arbitrary HTML code, such as images or videos (by default, one per slide). Use control attributes:
 
-* `data-duration=0`: How many seconds a frame step will last. By default, indefinitely (waiting for a user action).
+* `data-duration=0`: How many seconds will a frame step last. By default, indefinitely (waiting for a user action).
 
     ```html
     <article data-duration="0.5">Short frame</article>
@@ -154,6 +154,18 @@ Which contains arbitrary HTML code, such as images or videos (by default, one pe
         </ul>
     </article>
     ```
+* `id`: Standard HTML ID serves for navigation.
+    ```html
+    <article>
+        <a href="#my_frame">go to a specific frame</a>
+        <a href="#my_section">go to the first frame in a specific section</a>
+        <a href="#2">go to the second frame (number may change if you add frames later)</a>
+    </article>
+    <section id=my_section>
+        <article>...</article>
+        <article id=my_frame>...</article>
+    </section>
+    ```
 * `<!-- presenter's notes -->` You may use HTML comments just before the frame or as the first frame child. These will be displayed in the auxiliary window while presenting.
     Before the frame:
     ```html
@@ -173,16 +185,39 @@ Which contains arbitrary HTML code, such as images or videos (by default, one pe
 
 Any HTML content is accepted.
 
-* `data-step`: This element is not initially displayed but appears gradually as the user progresses through the presentation. See also: `data-li-stepped`
+* `data-step`: This element is not initially displayed but appears gradually as the user progresses through the presentation.
     ```html
-    <article data-li-stepped data-duration=1>
+    <article data-duration=1>
         <p>Lorem ipsum</p>
-        <img data-step src="..."> <!-- displayed at time 1 -->
+        <img data-step src="..."> <!-- displayed at step 1 -->
         <p>dolor sit amet</p>
-        <img data-step src="..."> <!-- displayed at time 2 -->
-        <p data-step>consectetur adipiscing</p>  <!-- displayed at time 3 -->
+        <img data-step src="..."> <!-- displayed at step 2 -->
+        <p data-step>consectetur adipiscing</p>  <!-- displayed at step 3 -->
     </article>
     ```
+
+    Steps work in a very intuitive way.
+
+    ```html
+    <article data-li-stepped>
+        <h1>Seen from the beginning</h1>
+        <ul>
+            <li>step 3</li>
+            <li>step 4</li>
+            <li data-step="1">step 1</li>
+            <li>step 8</li>
+            <li data-step="4">step 5</li>
+            <li>step 9</li>
+        </ul>
+        <p data-step>step 10</p>
+        <p data-step="1">step 2</p>
+        <p data-step="5">step 6</p>
+        <p data-step="5">step 7</p>
+        <p>seen from the beginning</p>
+    </article>
+    ```
+
+    See also: `data-li-stepped`.
 
 ### `<img>`
 
@@ -345,6 +380,19 @@ As the ultimate default the `<main>` tag may be used.
 <main data-duration='0.5'>
     <article>Short frame (inherits 0.5)</article>
 </main>
+```
+
+Standard HTML ID attribute serves for navigation.
+```html
+<article>
+    <a href="#my_frame">go to a specific frame</a>
+    <a href="#my_section">go to the first frame in a specific section</a>
+    <a href="#2">go to the second frame (number may change if you add frames later)</a>
+</article>
+<section id=my_section>
+    <article>...</article>
+    <article id=my_frame>...</article>
+</section>
 ```
 
 ### Nested `<article>` tags

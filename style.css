@@ -68,6 +68,17 @@ menu #progress .circle-progress-text {
 #aux_window #slide-wrapper > frame-preview > * {
   scale: 0.5;
 }
+#aux_window #slide-wrapper > frame-preview .current-step:before {
+  content: '';
+  position: absolute;
+  margin-left: -60px;
+  margin-top: 15x;
+  height: 25px;
+  width: 25px;
+  background-color: red;
+  border-radius: 50%;
+  display: inline-block;
+}
 #aux_window #slide-wrapper > :nth-child(2) {
   max-height: 30vh;
 }

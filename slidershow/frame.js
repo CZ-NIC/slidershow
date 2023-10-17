@@ -125,8 +125,24 @@ class Frame {
         check("header", "prependTo")
         check("footer", "appendTo")
 
-        const step_selector = [this.prop("li-stepped") ? "li" : "", "[data-step]"].filter(Boolean).join(",")
-        this.steps = $(step_selector, this.$frame).map((index, el) => index >= this.step_index ? $(el).hide() : $(el).show())
+        // Sort elements to be stepped through. Some of them might have `data-step=number` (which we honour),
+        // those with `data-step` are to be filled around.
+        const $steppable = $([this.prop("li-stepped") ? "li" : "", "[data-step]"].filter(Boolean).join(","), this.$frame)
+        const step_index = this.step_index
+        let index = 0
+        this.steps = $steppable
+            .attr("data-step-i", function () {
+                let step = $(this).data("step")
+                if (step === '' || step === undefined) { // this element has its data-step already set
+                    while ($steppable.filter(`[data-step=${++index}]`).length) {
+                        // find first free position
+                    }
+                    step = index
+                }
+                $(this).toggle(step < step_index)  // check if the element should be already revealed
+                return step
+            })
+            .sort((a, b) => $(a).data("step-i") - $(b).data("step-i"))
     }
 
     map_prepare() {
@@ -242,6 +258,7 @@ class Frame {
         $("video[data-autoplay-prevented]", $contents).removeAttr("data-autoplay-prevented").attr("autoplay", "")
         const $frames = $contents.find(FRAME_SELECTOR).removeAttr("data-preloaded")
         $frames.find("[data-templated]").remove()
+        $frames.find("[data-step-i]").removeAttr("data-step-i")
 
         // handling media
         const $originals = $articles.find("img[data-src], video[data-src]")
@@ -494,7 +511,9 @@ class Frame {
     left() {
         this.loop_interval?.stop()
         this.$actor.stop(true)
-        this.$frame.find("[data-templated]").remove()
+        this.$frame
+            .removeAttr("data-step-i")
+            .find("[data-templated]").remove()
     }
 
     panorama() {

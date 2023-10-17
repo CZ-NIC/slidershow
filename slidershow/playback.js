@@ -211,6 +211,7 @@ class Playback {
         this.moving_timeout.stop()
         if (this.frame.step(1)) {
             this.moving_timeout.start()
+            this.aux_window.update_step(this.frame)
         } else {
             this.nextFrame()
         }
@@ -218,9 +219,11 @@ class Playback {
     /**
      * Go to the previous step in the frame on to the previous frame.
     */
-   goPrev() {
+    goPrev() {
         this.moving_timeout.stop()
-        if (!this.frame.step(-1)) {
+        if (this.frame.step(-1)) {
+            this.aux_window.update_step(this.frame)
+        } else {
             this.previousFrame()
         }
     }
@@ -233,15 +236,17 @@ class Playback {
     }
 
     nextSection() {
-        const $next = this.getSection().next().find(FRAME_SELECTOR).first()
+        // XX Inintuitive. When being at the first article at <main><article /><section /><article last>,
+        // next sections puts you to the last, skipping all the sections.
+        const $next = this.getSection().next().find(FRAME_TAGS).first()
         this.goToArticle($next.length ? $next : this.$articles.last(), true)
     }
     previousSection() {
         const $section = this.getSection()
         const $first = $(FRAME_TAGS, $section).first()
         if ($first.data("frame").index === this.frame.index) {
-            const $previous = $section.prev().find(FRAME_SELECTOR).first()
-            this.goToArticle($previous)
+            const $previous = $section.prev().find(FRAME_TAGS).first()
+            this.goToArticle($previous.length ? $previous : this.$articles.first())
         } else {
             this.goToArticle($first)
         }
@@ -325,7 +330,7 @@ class Playback {
         this.process_bg_tasks([
             () => frame.preload(),
             () => following?.preload(),
-            () => this.aux_window.info(frame.get_preview(), frame.get_notes(), following?.get_preview())  // send the new info to the aux-window
+            () => this.aux_window.info(frame, following)  // send the new info to the aux-window
         ], true)
 
         // start transition

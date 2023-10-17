@@ -36,6 +36,7 @@ Private attributes that are not documented in the README because the user should
 * <frame-preview> Contents is a preview of a frame.
 * [data-templated] This element was inserted only temporarily throught a template (ex: footer in an article or a <head> vendor script). Should not be exported.
 * [data-preloaded] The frame has already been preloaded.
+* [data-step-i] Temporarily resolved frame step index.
 */
 
 // var variables that a hacky user might wish to change. Might become data-attributes in the future.
