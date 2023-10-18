@@ -36,7 +36,10 @@ Private attributes that are not documented in the README because the user should
 * <frame-preview> Contents is a preview of a frame.
 * [data-templated] This element was inserted only temporarily throught a template (ex: footer in an article or a <head> vendor script). Should not be exported.
 * [data-preloaded] The frame has already been preloaded.
-* [data-step-i] Temporarily resolved frame step index.
+* [data-step-i] Step index resolved.
+* data("step-original") Temporarily change [data-step] value.
+* .step-not-visible Frame step index has lower value so we do not see this element.
+* .step-not-yet-visible Auxiliary window highlights not-yet-seen elements.
 */
 
 // var variables that a hacky user might wish to change. Might become data-attributes in the future.
@@ -53,8 +56,6 @@ var PREFER_SRC_EXPORT = false
 var PRELOAD_FORWARD = 50
 /** How many frames should be preloaded for the case the user goes back in the playback. */
 var PRELOAD_BACKWARD = 20
-/** Element revealing in ms */
-var STEP_FADE_DELAY = 500
 
 // Main launch and export to the dev console
 /** @type {Playback} */
@@ -110,7 +111,7 @@ function main() {
  * @param {string} property For "data-start" use just "start"
  * @param {any} def Custom default value if not set in DOM (when PROP_DEFAULT default value is not desirable).
  * @param {jQuery} $el What element to check the prop of.
- * @returns
+ * @returns {*} Undefined if not set neither in the def param, nor in the PROP_DEFAULT.
  */
 function prop(property, def = null, $el) {
     const v = $el.closest(`[data-${property}]`).data(property)

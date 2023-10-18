@@ -46,7 +46,7 @@ class Frame {
 
         /** @type {jQuery} Which elements are to be showed progressivelly */
         this.steps = []
-        /** Element that was just showed. The next is not yet shown.  */
+        /** Element in this.steps that was just showed. The next is not yet shown.  */
         this.step_index = 0
 
         /** @type {Promise} Register to this promise to be notified. (It fulfills when preload, not on the preloaded media onload.)
@@ -131,18 +131,25 @@ class Frame {
         const step_index = this.step_index
         let index = 0
         this.steps = $steppable
-            .attr("data-step-i", function () {
-                let step = $(this).data("step")
-                if (step === '' || step === undefined) { // this element has its data-step already set
+            .attr("data-step", function (_, step) {
+                // Conserve the original.
+                // Why null? This helps to restore the value through .attr later, having .attr(..., undefined) would be same as reading.
+                $(this).data("step-original", step === undefined ? null : step)
+                $(this).addClass(prop("step-class", null, $(this)))
+                if (step === '' || step === undefined) { // this element has not its data-step set yet
                     while ($steppable.filter(`[data-step=${++index}]`).length) {
                         // find first free position
                     }
                     step = index
                 }
-                $(this).toggle(step < step_index)  // check if the element should be already revealed
+
+                if (step > step_index) {  // check if the element should be hidden at the beginning
+                    $(this).addClass("step-not-visible").hide()
+                }
                 return step
             })
-            .sort((a, b) => $(a).data("step-i") - $(b).data("step-i"))
+            .sort((a, b) => $(a).data("step") - $(b).data("step"))
+            .map((index, el)=> $(el).attr("data-step-i", index+1))
     }
 
     map_prepare() {
@@ -258,7 +265,7 @@ class Frame {
         $("video[data-autoplay-prevented]", $contents).removeAttr("data-autoplay-prevented").attr("autoplay", "")
         const $frames = $contents.find(FRAME_SELECTOR).removeAttr("data-preloaded")
         $frames.find("[data-templated]").remove()
-        $frames.find("[data-step-i]").removeAttr("data-step-i")
+        Frame._clean_step($frames.find("[data-step]"))
 
         // handling media
         const $originals = $articles.find("img[data-src], video[data-src]")
@@ -475,8 +482,12 @@ class Frame {
         this.step_index = range[1]
         const changed = this.steps
             .slice(Math.min(...range), Math.max(...range)) // currently affected elements (normally just one)
-            .map((_, el) => step > 0 ? $(el).fadeIn(STEP_FADE_DELAY) : $(el).fadeOut(STEP_FADE_DELAY))
-
+            .map((_, el) => $(el).toggleClass("step-not-visible", step < 0)
+                .hasClass("step-not-visible")
+                // Since CSS animation cannot hide the element, we hide them manually.
+                // Why toggle instead of hide? Class can change before animation ends.
+                ? $(el).one("animationend", () => $(el).toggle(!$(el).hasClass("step-not-visible")))
+                : $(el).show())
         return changed.length // some change happened
     }
 
@@ -511,9 +522,22 @@ class Frame {
     left() {
         this.loop_interval?.stop()
         this.$actor.stop(true)
-        this.$frame
+        this.$frame.find("[data-templated]").remove()
+        Frame._clean_step($("[data-step]", this.$frame))
+    }
+
+    /**
+     * Clean up step functionality data
+     * @param {jQuery} $el
+     */
+    static _clean_step($el) {
+        $el
+            .attr("data-step", function () {
+                return $(this).data("step-original")
+            })
+            .removeData("step-original")
+            .removeClass("step-not-visible")
             .removeAttr("data-step-i")
-            .find("[data-templated]").remove()
     }
 
     panorama() {
@@ -594,14 +618,18 @@ class Frame {
      * We do not guarantee the frame is preloaded.
      * @returns {string} HTML
      */
-    get_preview() {
+    get_preview(suppress_step_animation=true) {
         const $clone = this.$frame.clone().removeAttr("style")
         if (this.panorama_starter) { // remove panorama styling
             $clone.find("video, img").first().removeAttr("style")
         }
         $clone.find("video").removeAttr("autoplay")
         $clone.find("[data-templated]").remove()
-        $clone.find("li, [data-step]").show() // ignore frame steps
+        $clone.find("[data-step]").show() // ignore frame steps
+        if(suppress_step_animation) {
+            Frame._clean_step($clone)
+            $clone.addClass("prevent-animation-important")
+        }
         // Remove data-preloaded attribute for the case it is there
         return $clone.removeAttr("data-preloaded").prop("outerHTML")
     }

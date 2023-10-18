@@ -53,7 +53,7 @@ class AuxWindow {
     info(frame, following) {
         this.last_info = {
             action: "info",
-            frame: frame.get_preview(),
+            frame: frame.get_preview(false),
             notes: frame.get_notes(),
             next_frame: following?.get_preview(),
             step_index: frame.step_index
@@ -79,7 +79,9 @@ class AuxWindow {
                 this.$next_frame.html(e.next_frame || "END")
             case "update-step":
                 // Highlight the element to be revealed in the next step
-                this.$current_frame.find("[data-step-i]").removeClass("current-step")
+                this.$current_frame.find("[data-step-i]")
+                    .removeClass("current-step step-not-visible step-not-yet-visible")
+                    .filter((_, el) => $(el).attr("data-step-i") > e.step_index).addClass("step-not-yet-visible")
                 this.$current_frame.find(`[data-step-i=${Number(e.step_index)}]`).addClass("current-step", true)
                 break
             case "get-last-state":

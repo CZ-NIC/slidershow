@@ -39,8 +39,10 @@ What can you acheive? See a variety of features in another example at [examples/
   * [Auxiliary window](#auxiliary-window)
   * [Organizing](#organizing)
 - [Structure](#structure)
-  * [Frame `<article>`](#frame-article--)
+  * [Frame `<article>`](#frame-article)
   * [Frame content](#frame-content)
+      - [`data-step`](#data-step)
+      - [`data-step-class`](#data-step-class)
     + [`<img>`](#img)
       - [Exif info](#exif-info)
       - [Zoomable](#zoomable)
@@ -143,7 +145,7 @@ Which contains arbitrary HTML code, such as images or videos (by default, one pe
         <img src="pic2.jpg" />
     </article>
     ```
-* `data-li-stepped`: Every `<li>` element is taken as having the `data-step` attribute. They are not initially displayed but appears gradually as the user progresses through the presentation.
+* `data-li-stepped`: Every `<li>` element is taken as having the `data-step` attribute (see also: [`data-step`](#data-step)). They are not initially displayed but appears gradually as the user progresses through the presentation.
     ```html
     <article data-li-stepped data-duration=1>
         <ul>
@@ -185,7 +187,8 @@ Which contains arbitrary HTML code, such as images or videos (by default, one pe
 
 Any HTML content is accepted.
 
-* `data-step`: This element is not initially displayed but appears gradually as the user progresses through the presentation.
+#### `data-step`
+This very element is not initially displayed but appears gradually as the user progresses through the presentation.
     ```html
     <article data-duration=1>
         <p>Lorem ipsum</p>
@@ -217,7 +220,43 @@ Any HTML content is accepted.
     </article>
     ```
 
+    By default, the animation is fade in/out. It was made easy to change it. Example via pure CSS:
+
+    ```html
+    <style>
+        [data-step] {
+            // all steps appear with a blue flash
+            animation-name: blue-flash;
+        }
+
+        @keyframes blue-flash {
+            from {
+                background-color: blue;
+            }
+
+            to {
+                background-color: unset;
+            }
+        }
+    </style>
+    ```
+    Example using Animate.css:
+
+
     See also: `data-li-stepped`.
+
+ #### `data-step-class`
+ Any contained elements with `[data-step]` will have this class set. Example using [Animate.css](https://animate.style/):
+
+    ```html
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css" />
+    <article data-li-stepped>
+        <ul data-step-class="animate__animated animate__backInDown">
+            <li>I will fall from the top</li>
+            <li>Me too</li>
+        </ul>
+    </article>
+    ```
 
 ### `<img>`
 

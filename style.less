@@ -122,6 +122,18 @@ frame-preview {
         overflow: auto;
         display: block; // by default, article is hidden; overwrite this for previews
         transform-origin: 0 0;
+
+        &.prevent-animation-important * {
+            animation: unset !important;
+        }
+
+        [data-step].step-not-yet-visible {
+            // Aux window uses this to display elements hidden in the main window
+            opacity: .5;
+            border: 1px dotted red;
+            // so that the opacity could be seen when animation ended on opacity:0
+            animation-fill-mode: unset;
+        }
     }
 }
 
@@ -236,6 +248,16 @@ article-map {
     }
 }
 
+// We put the [data-step] to the root to lower down specificity.
+// So that the user does not have to use important when re-writing rules (or when using Animate.css).
+[data-step] {
+    animation: fade-in .5s forwards;
+
+    &.step-not-visible {
+        animation: fade-out .3s forwards;
+    }
+}
+
 article {
 
     img,
@@ -261,4 +283,24 @@ article-map {
     // pointer-events: none;
     // z-index: 1;
     // color: black;
+}
+
+@keyframes fade-in {
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
+}
+
+@keyframes fade-out {
+    from {
+        opacity: 1;
+    }
+
+    to {
+        opacity: 0;
+    }
 }
