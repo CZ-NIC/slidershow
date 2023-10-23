@@ -197,8 +197,11 @@ article-map.debugged {
 [data-step] {
   animation: fade-in 0.5s forwards;
 }
-[data-step].step-not-visible {
+[data-step].step-hidden {
   animation: fade-out 0.3s forwards;
+}
+[data-step][data-step-shown]:not([data-step-shown='0']):not([data-step-shown='false']) {
+  animation: unset;
 }
 article img,
 article video {

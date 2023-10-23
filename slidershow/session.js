@@ -7,6 +7,9 @@ class Session {
     restore(init = false) {
         const pl = this.playback
         const [index, state] = window.location.hash.substring(1).split("&") // #6&state=thumbnails
+        if (state) {
+            this.restore_state(state)
+        }
         pl.index = Math.max(0, Number(index) - 1)
 
         // a real DOM element ID attribute in hash, not a frame number
@@ -22,34 +25,42 @@ class Session {
         } else {
             pl.goToFrame(pl.index)
         }
+    }
 
-        if (state) {
-            state.split("=")[1].split(",").forEach(key => {
-                switch (key) {
-                    case "editing":
-                        pl.editing_mode = true
-                        pl.shortcuts.editing.enable()
-                        break;
-                    case "tagging":
-                        pl.tagging_mode = true
-                        pl.shortcuts.tagging.enable()
-                        break;
-                    case "thumbnails":
-                        if (!pl.hud.thumbnails_visible) {
-                            pl.hud.toggle_thumbnails()
-                        }
-                        break;
-                    case "properties":
-                        if (!pl.hud.properties_visible) {
-                            pl.hud.toggle_properties()
-                        }
-                        break;
-                    default:
-                        console.warn("[slidershow] Unknown hash key:" + key)
-                        break;
-                }
-            })
-        }
+    restore_state(state) {
+        const pl = this.playback
+        state.split("=")[1].split(",").forEach(key => {
+            switch (key) {
+                case "editing":
+                    pl.editing_mode = true
+                    pl.shortcuts.editing.enable()
+                    break;
+                case "tagging":
+                    pl.tagging_mode = true
+                    pl.shortcuts.tagging.enable()
+                    break;
+                case "no-steps":
+                    pl.step_disabled = true
+                    break
+                case "thumbnails":
+                    if (!pl.hud.thumbnails_visible) {
+                        pl.hud.toggle_thumbnails()
+                    }
+                    break;
+                case "properties":
+                    if (!pl.hud.properties_visible) {
+                        pl.hud.toggle_properties()
+                    }
+                    break;
+                case "map-disabled":
+                    // already handled at program start
+                    // XX undocumented feature: Append this to file name to disable maps `#&state=map-disabled`
+                    break;
+                default:
+                    console.warn("[slidershow] Unknown hash key:" + key)
+                    break;
+            }
+        })
     }
 
 
@@ -59,8 +70,10 @@ class Session {
         const state = [
             this.playback.editing_mode ? "editing" : "",
             this.playback.tagging_mode ? "tagging" : "",
+            this.playback.step_disabled ? "no-steps" : "",
             this.playback.hud.$hud_thumbnails.is(":visible") ? "thumbnails" : "",
-            this.playback.hud.$hud_properties.is(":visible") ? "properties" : ""
+            this.playback.hud.$hud_properties.is(":visible") ? "properties" : "",
+            !MAP_ENABLE ? "map-disabled" : "",
         ].filter(Boolean).join(",")
 
         // update the hash without triggering hashchange event

@@ -44,9 +44,11 @@ class Frame {
         /** @type {?Promise} */
         this.video_finished = null
 
-        /** @type {jQuery} Which elements are to be showed progressivelly */
+        /** @type {Array<HtmlElement|Function>} Which elements are to be showed progressivelly.
+         * They are grouped by the same data-set: [ [data-step=2, 2], [4], [5,5,5], [12]]
+         */
         this.steps = []
-        /** Element in this.steps that was just showed. The next is not yet shown.  */
+        /** Element in this.steps that is going to be shown in the next step. Elements with lower index are already shown. */
         this.step_index = 0
 
         /** @type {Promise} Register to this promise to be notified. (It fulfills when preload, not on the preloaded media onload.)
@@ -54,6 +56,11 @@ class Frame {
         // When we call playback.reset() (ex: after frame duplication), we get here (to the recreation of the frame) with data-preloaded already true.
         // Hence we set the Promise to be already resolved sometimes.
         this.preloaded = this.$frame.attr("data-preloaded") ? Promise.resolve() : new Promise(r => this._preloaded = r)
+
+        /**
+         * TODO Experimental
+         */
+        this._EXP_wzoom = null
     }
 
     register_parent(frame) {
@@ -90,13 +97,13 @@ class Frame {
      * Return closest prop, defined in the DOM.
      * (Zero aware, you can safely set `data-prop=0`.)
      * @param {string} property
-     * @param {any} def Custom default value if not set in DOM (when PROP_DEFAULT default value is not desirable).
      * @param {jQuery|null} $actor What element to check the prop of. If null, frame is checked.
+     * @param {any} def Custom default value if not set in DOM (when PROP_DEFAULT default value is not desirable).
      * @returns
      */
-    prop(property, def = null, $actor = null) {
+    prop(property, $actor = null, def = null) {
         const $el = $actor?.length ? $actor : this.$frame
-        return prop(property, def, $el)
+        return prop(property, $el, def)
     }
 
     /**
@@ -125,31 +132,60 @@ class Frame {
         check("header", "prependTo")
         check("footer", "appendTo")
 
+        if (!this.playback.step_disabled) {
+            this.steps_prepare()
+            console.log("177: this.steps", this.steps) // TODO
+        }
+    }
+
+    steps_prepare() {
+        const points = this.$actor.data("step-points")
+        if (points) {
+            // TODO init step is the default
+            this.steps = points.map(p => () => {
+                console.log("146: clb", ) // TODO
+                this._EXP_set_wzoom_position(...p)
+            }) // TODO
+
+            return // TODO merge with the other steps
+        }
+
         // Sort elements to be stepped through. Some of them might have `data-step=number` (which we honour),
         // those with `data-step` are to be filled around.
-        const $steppable = $([this.prop("li-stepped") ? "li" : "", "[data-step]"].filter(Boolean).join(","), this.$frame)
-        const step_index = this.step_index
+        const $steppable = $("li", this.$frame).filter((_, el) => this.prop("step-li", $(el))).add($("[data-step]", this.$frame))
+
         let index = 0
-        this.steps = $steppable
+        let [last_step, pointer] = [null, null]
+        this.steps = []
+        $steppable
             .attr("data-step", function (_, step) {
                 // Conserve the original.
                 // Why null? This helps to restore the value through .attr later, having .attr(..., undefined) would be same as reading.
                 $(this).data("step-original", step === undefined ? null : step)
-                $(this).addClass(prop("step-class", null, $(this)))
+                // adds a class, unless step-shown is set
+                $(this).addClass(prop("step-shown", $(this)) ? null : prop("step-class", $(this)))
                 if (step === '' || step === undefined) { // this element has not its data-step set yet
                     while ($steppable.filter(`[data-step=${++index}]`).length) {
                         // find first free position
                     }
                     step = index
                 }
-
-                if (step > step_index) {  // check if the element should be hidden at the beginning
-                    $(this).addClass("step-not-visible").hide()
-                }
                 return step
             })
             .sort((a, b) => $(a).data("step") - $(b).data("step"))
-            .map((index, el)=> $(el).attr("data-step-i", index+1))
+            .map((_, el) => {
+                const $el = $(el)
+                const step = $el.data("step")
+                if (step > last_step) {
+                    pointer = []
+                    this.steps.push(pointer)
+                }
+                pointer.push(el)
+                last_step = step
+
+                // check if the element should be hidden at the beginning
+                this.step_shown($el, this.steps.length <= this.step_index, true)
+            })
     }
 
     map_prepare() {
@@ -170,12 +206,12 @@ class Frame {
             const last_places = get_places(this.$frame.prev().data("frame")) || get_places(this.$frame.parent().data("frame"))
 
             map.engage(places,
-                this.prop("map-animate", true),
-                this.prop("map-geometry-show", false),
-                this.prop("map-geometry-criterion", ""),
-                this.prop("map-markers-show", true),
-                this.prop("map-geometry-clear", true),
-                this.prop("map-markers-clear", true),
+                this.prop("map-animate", null, true),
+                this.prop("map-geometry-show", null, false),
+                this.prop("map-geometry-criterion", null, ""),
+                this.prop("map-markers-show", null, true),
+                this.prop("map-geometry-clear", null, true),
+                this.prop("map-markers-clear", null, true),
                 this.prop("map-zoom"),
                 last_places)
         }
@@ -191,12 +227,12 @@ class Frame {
                 return null
             }
             const places = []
-            const gps = frame.prop("gps", null, frame.$actor)
+            const gps = frame.prop("gps", frame.$actor)
             if (gps) {
                 places.push(Place.from_coordinates(...gps.split(",")))
             }
 
-            const names = frame.prop("places", null, frame.$actor)
+            const names = frame.prop("places", frame.$actor)
             if (names) {
                 places.push(...names.split(",").map(name => new Place(name)))
             }
@@ -320,7 +356,7 @@ class Frame {
     static videoInit($articles) {
         $articles.find("video").each(function () {
             const $el = $(this)
-            const attributes = prop("video", null, $el).replace("autoplay", "data-autoplay-prevented").split(" ") || [] // ex: ["muted", "autoplay"]
+            const attributes = prop("video", $el).replace("autoplay", "data-autoplay-prevented").split(" ") || [] // ex: ["muted", "autoplay"]
             attributes.forEach((k, v) => this[k] = true) // ex: video.muted = true
             // Following line has so more effect since it was already set by JS. However, for the readability
             // we display the attributes in the DOM too. We could skip the JS for the attribute 'controls'
@@ -412,7 +448,7 @@ class Frame {
             }
 
         }
-        $actor[0].playbackRate = this.prop("playback-rate", null, $actor)
+        $actor[0].playbackRate = this.prop("playback-rate", $actor)
         let next_interval = null
 
         // Pausing vs playback moving
@@ -478,17 +514,26 @@ class Frame {
      * @returns {Boolean} Step was fullfilled. False if no step was to be done, frame is then complete.
      */
     step(step = 1) {
-        const range = [this.step_index, Math.max(Math.min(this.step_index + step, this.steps.length), 0)]
-        this.step_index = range[1]
-        const changed = this.steps
-            .slice(Math.min(...range), Math.max(...range)) // currently affected elements (normally just one)
-            .map((_, el) => $(el).toggleClass("step-not-visible", step < 0)
-                .hasClass("step-not-visible")
-                // Since CSS animation cannot hide the element, we hide them manually.
-                // Why toggle instead of hide? Class can change before animation ends.
-                ? $(el).one("animationend", () => $(el).toggle(!$(el).hasClass("step-not-visible")))
-                : $(el).show())
-        return changed.length // some change happened
+        const new_step = Math.max(Math.min(this.step_index + step, this.steps.length), 0)
+        const range = [this.step_index, new_step]
+
+        const $changed = $(this.steps.slice(Math.min(...range), Math.max(...range)).flat())  // currently affected elements (normally just one)
+
+        if (step > 0) {
+            this.step_shown($changed, true)
+            // $changed.addClass("step-shown").removeClass("step-hidden").show()
+        } else {
+            this.step_shown($changed, false)
+            // $changed
+            //     .addClass("step-hidden")
+            //     .removeClass("step-shown")
+            // .map((_, el) => $(el).one("animationend", () =>
+            //     // Since CSS animation cannot hide the element, we hide them manually.
+            //     // Why toggle instead of hide? Class can change before animation ends.
+            //     $(el).toggle(!$(el).hasClass("step-hidden"))))
+        }
+        this.step_index = new_step
+        return $changed.length  // some change happened
     }
 
     /*
@@ -503,6 +548,58 @@ class Frame {
     }
     */
 
+    clean_steps() {
+        Frame._clean_step($("[data-step]", this.$frame))
+        this.steps = []
+        // this.step_index = this.steps.length
+    }
+
+    /**
+     * Show or hide elements in the collection.
+     * @param {jQuery} $els
+     * @param {boolean} shown
+     * @param {boolean} immediate Does not allow animation
+     * @returns
+     */
+    step_shown($els, shown, immediate = false) {
+        if (typeof $els[0] === "function") {
+            console.log("563: $els", $els) // TODO
+
+            $els.map((_, clb) => clb())
+            return // TODO merge
+        }
+
+        $els
+            .addClass(shown ? "step-shown" : "step-hidden")
+            .removeClass(shown ? "step-hidden" : "step-shown")
+        // elements with step-shown are handled differently; they just get a class
+        const usual = $els.filter((_, el) => {
+            const $el = $(el)
+            const mark = prop("step-shown",  $el)
+            return mark ? $el[shown ? "addClass" : "removeClass"](mark) && false : true
+        })
+        // handle other elements showing/hiding
+        if (shown) {
+            usual.show()
+        } else if (immediate) {
+            usual.hide()
+        } else {
+            usual.map((_, el) => $(el).one("animationend", () =>
+                $(el).toggle(!$(el).hasClass("step-hidden")))
+            )
+        }
+        return $els
+    }
+
+    /**
+     * @returns The data-step attribute of an element displayed in the current step.
+     *  This differs from this.step_index (which corresponds to the actual number of user-produced steps)
+     *  because data-step do not have to be continuous.
+     */
+    get_step() {
+        return $(this.steps[this.step_index - 1]?.[0]).data("step")
+    }
+
     leave() {
         this.$frame.find("video").each((_, el) => $(el).off("pause") && el.pause())
         this.shortcuts.forEach(s => s.disable())
@@ -514,7 +611,7 @@ class Frame {
         }
         this.$actor?.data("wzoom-unload")?.()
 
-        this.playback.hud_map.hide()
+        this.playback.hud_map?.hide()
         this.unmake_editable()
         return true
     }
@@ -523,7 +620,7 @@ class Frame {
         this.loop_interval?.stop()
         this.$actor.stop(true)
         this.$frame.find("[data-templated]").remove()
-        Frame._clean_step($("[data-step]", this.$frame))
+        this.clean_steps()
     }
 
     /**
@@ -536,8 +633,8 @@ class Frame {
                 return $(this).data("step-original")
             })
             .removeData("step-original")
-            .removeClass("step-not-visible")
-            .removeAttr("data-step-i")
+            .removeClass("step-hidden step-shown")
+            .show()
     }
 
     panorama() {
@@ -558,7 +655,7 @@ class Frame {
 
         $actor.removeAttr("style")
 
-        if (w > main_w && w / h > this.prop("panorama-threshold", null, $actor)) {
+        if (w > main_w && w / h > this.prop("panorama-threshold", $actor)) {
             // the image is wider than the sceen (would been shrinked) and its proportion looks like a panoramatic
             let speed = Math.min((trailing_width / 100), 5) * 1000 // 100 px / 1s, but max 5 sec
 
@@ -594,7 +691,7 @@ class Frame {
     zoom() {
         const $actor = this.$actor
         const maxScale_default = 3
-        const wzoom = WZoom.create($actor.get()[0], {
+        const wzoom = this._EXP_wzoom = WZoom.create($actor.get()[0], {
             maxScale: maxScale_default,
             minScale: 1,
             speed: 1,
@@ -614,11 +711,37 @@ class Frame {
         }))
     }
 
+    _EXP_get_wzoom_position() {
+        const c = this._EXP_wzoom.content
+        const { currentLeft, currentTop, currentScale } = c
+        return [currentLeft, currentTop, currentScale]
+    }
+
+    /**
+     *
+     * @param {*} left
+     * @param {*} top
+     * @param {*} scale
+     * @param {*} delay
+     * @returns {Promise} Fullfilled when transition ends
+     */
+    _EXP_set_wzoom_position(left, top, scale, delay = 1) {
+        const c = this._EXP_wzoom.content
+        c.currentLeft = left
+        c.currentTop = top
+        c.currentScale = scale
+        const orig = this._EXP_wzoom.options.smoothExtinction
+        this._EXP_wzoom.options.smoothExtinction = delay
+        this._EXP_wzoom._transform()
+        this._EXP_wzoom.options.smoothExtinction = orig
+        return new Promise(resolve => $(c.$element).on("transitionend", () => resolve()))
+    }
+
     /**
      * We do not guarantee the frame is preloaded.
      * @returns {string} HTML
      */
-    get_preview(suppress_step_animation=true) {
+    get_preview(suppress_step_animation = true) {
         const $clone = this.$frame.clone().removeAttr("style")
         if (this.panorama_starter) { // remove panorama styling
             $clone.find("video, img").first().removeAttr("style")
@@ -626,7 +749,7 @@ class Frame {
         $clone.find("video").removeAttr("autoplay")
         $clone.find("[data-templated]").remove()
         $clone.find("[data-step]").show() // ignore frame steps
-        if(suppress_step_animation) {
+        if (suppress_step_animation) {
             Frame._clean_step($clone)
             $clone.addClass("prevent-animation-important")
         }

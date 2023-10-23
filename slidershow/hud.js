@@ -170,7 +170,7 @@ class Hud {
     properties(frame) {
         const $frame = frame.$frame
         const $actor = frame.$actor
-        const props = ["duration", "transition-duration", "li-stepped"] // XX li-stepped might be checkbox
+        const props = ["duration", "transition-duration", "step-li"] // XX step-li might be checkbox
         this.$hud_properties
             .html($("<p/>").html("Properties panel (Alt+P)"))
             .append(props.map(p => this._input_ancestored(p, $frame)).flat())
@@ -209,7 +209,7 @@ class Hud {
         const original = $el.data(p)
         const element_property = this._input(
             p, $el, name, original, type,
-            prop(p, null, $el.parent()),
+            prop(p, $el.parent()),
             v => {
                 // v is "" when user deletes input
                 // v is undefined when we undo a change and the original value was undefined

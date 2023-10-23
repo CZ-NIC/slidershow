@@ -27,7 +27,7 @@ class Menu {
         // Shortcuts available only in menu, not in playback
         this.shortcuts = []
 
-        if (prop("start", null, $main)) {
+        if (prop("start", $main)) {
             this.start_playback()
         }
 
@@ -60,6 +60,7 @@ class Menu {
             .on("click", "#hud-menu [data-role=help]", () => this.help())
             .on("click", "#hud-menu [data-role=aux_window]", () => this.aux_window.open())
             .on("click", "#hud-menu [data-role=thumbnails]", () => this.playback.hud.toggle_thumbnails())
+            .on("click", "#hud-menu [data-role=steps]", () => this.playback.toggle_steps())
             .on("click", "#hud-menu [data-role=properties]", () => this.playback.hud.toggle_properties())
             .on("click", "#hud-menu [data-role=tagging]", () => this.playback.hud.alert("Hit Alt+T while presenting to start tagging mode."))
 

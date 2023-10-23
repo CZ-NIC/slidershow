@@ -141,6 +141,7 @@ class ShortcutsController {
                 pl.hud.alert(`Tagging mode ${pl.tagging_mode ? "enabled, see ? for shortcuts help" : "disabled."}`)
                 pl.session.store()
             }],
+            ["Ctrl+Alt+s", "Toggle steps in presentation", () => pl.toggle_steps()],
 
             ["Alt+j", "Thumbnails", () => pl.hud.toggle_thumbnails()],
             ["Alt+p", "Properties", () => pl.hud.toggle_properties()],

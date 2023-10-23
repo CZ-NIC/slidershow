@@ -5,7 +5,7 @@
 //  User might use local: <script src="../slidershow/slidershow.js"></script>
 //  As well as: <script src="https://cdn.jsdelivr.net/gh/CZ-NIC/slidershow@latest/slidershow/slidershow.js"></script>
 const DIR = document.querySelector("script[src$='slidershow.js']").getAttribute("src").replace(/\/slidershow.js$/, "") + "/";
-const USE_MAPY = true
+const MAP_ENABLE = !location.hash.includes("map-disabled")
 
 // style
 document.querySelector("html").style.display = "none" // so that body images are not shown before the style loads (short white blink appears instead)
@@ -29,13 +29,13 @@ loadjQuery(() => {
         { src: "https://cdn.jsdelivr.net/npm/js-circle-progress@0.2.4/dist/jquery.circle-progress.min.js" },
         { src: "https://cdn.jsdelivr.net/gh/e3rd/WebHotkeys@0.8.1/WebHotkeys.js" },
         { src: "https://cdn.jsdelivr.net/npm/exif-js" },
-        { src: "https://api.mapy.cz/loader.js" },
+        MAP_ENABLE ? { src: "https://api.mapy.cz/loader.js" } : null,
         { src: "https://cdn.jsdelivr.net/npm/zebra_dialog@3.0.5/dist/zebra_dialog.min.js" }
-    ].map(f => loadScript(f))
+    ].filter(Boolean).map(f => loadScript(f))
 
     const vendor_styles = ["https://cdn.jsdelivr.net/npm/zebra_dialog@latest/dist/css/materialize/zebra_dialog.min.css"].map(f => loadStyle(f))
 
-    const local = ["static.js", "frame_factory.js", "frame.js", "place.js", "map.js", "hud.js", "shortcuts.js", "change_controller.js", "menu.js", "playback.js", "session.js", "aux_window.js"].map(f => loadScript({ src: DIR + f }))
+    const local = ["static.js", "frame_factory.js", "frame.js", "place.js", "map.js", "hud.js", "shortcuts.js", "change_controller.js", "menu.js", "playback.js", "session.js", "aux_window.js"].filter(Boolean).map(f => loadScript({ src: DIR + f }))
 
     /**
      When there were 60 photos and 10 videos in a 230 MB presentation file, these were started before we could
@@ -64,7 +64,7 @@ loadjQuery(() => {
 
     // wait for all scripts to load
     Promise.all(vendor.concat(local)).then(() => {
-        if (USE_MAPY) {
+        if (MAP_ENABLE) {
             Loader.async = true
             Loader.load(null, { suggest: true }, load_launch)
         } else {
@@ -74,7 +74,14 @@ loadjQuery(() => {
 })
 
 function loadjQuery(callback) {
-    var el = document.createElement("script")
+    if (window.jQuery) { // do not re-load jQuery if already loaded in the head before
+        return callback()
+    }
+    // Allow using $ in the body without the need of load blocks.
+    document.write('<script data-templated=1 src="https://code.jquery.com/jquery-3.7.1.min.js" integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo=" crossorigin="anonymous"></script>')
+    document.querySelector("script[data-templated]").addEventListener("load", () => callback())
+    return
+    const el = document.createElement("script")
     el.src = "https://code.jquery.com/jquery-3.6.4.min.js"
     el.integrity = "sha256-oP6HI9z1XaZNBrJURtCoUT5SUnxFr8s3BzRl+cbzUq8="
     el.crossOrigin = "anonymous"
@@ -121,6 +128,7 @@ function get_menu() {
                 <button data-role="aux_window" title="Auxiliary window Alt+W">&#127916;</button>
                 <button data-role="tagging" title="Tagging mode Alt+T">&#128204;</button>
                 <button data-role="thumbnails" title="Thumbnails Alt+J">&#127895;</button>
+                <button data-role="steps" title="Steps Ctrl+Alt+S">&#128095;</button>
                 <button data-role="properties" title="Properties Alt+P">&#127920;</button>
                 <button data-role="export" title="Export Ctrl+S">&#128190;</button>
                 <button data-role="help" title="Help H">&#8505;</button>

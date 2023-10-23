@@ -56,7 +56,7 @@ class AuxWindow {
             frame: frame.get_preview(false),
             notes: frame.get_notes(),
             next_frame: following?.get_preview(),
-            step_index: frame.step_index
+            step: frame.get_step()
         }
         this.channel.postMessage(this.last_info)
     }
@@ -65,7 +65,7 @@ class AuxWindow {
      * @param {Frame} frame
      */
     update_step(frame) {
-        this.channel.postMessage({ "action": "update-step", "step_index": frame.step_index })
+        this.channel.postMessage({ "action": "update-step", "step": frame.get_step() })
     }
 
     /**
@@ -79,10 +79,10 @@ class AuxWindow {
                 this.$next_frame.html(e.next_frame || "END")
             case "update-step":
                 // Highlight the element to be revealed in the next step
-                this.$current_frame.find("[data-step-i]")
-                    .removeClass("current-step step-not-visible step-not-yet-visible")
-                    .filter((_, el) => $(el).attr("data-step-i") > e.step_index).addClass("step-not-yet-visible")
-                this.$current_frame.find(`[data-step-i=${Number(e.step_index)}]`).addClass("current-step", true)
+                this.$current_frame.find("[data-step]")
+                    .removeClass("current-step step-hidden step-not-yet-visible")
+                    .filter((_, el) => $(el).data("step") > e.step).addClass("step-not-yet-visible")
+                this.$current_frame.find(`[data-step=${Number(e.step)}]`).addClass("current-step", true)
                 break
             case "get-last-state":
                 this.channel.postMessage(this.last_info)

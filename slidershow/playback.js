@@ -1,5 +1,3 @@
-const MAP_ENABLE = true
-
 /**
  * Frame playback controller.
  */
@@ -14,15 +12,14 @@ class Playback {
         /** @type {Boolean} Application is running */
         this.moving = true
         /** @type {Interval} */
-        this.moving_timeout = new Interval().stop()
+        // Why the empty callback? The interval might be started while handling steps, before a frame change initiates the proper callback.
+        this.moving_timeout = new Interval(() => { }).stop()
 
         const fact = (id) => $("<div/>", { id: id }).prependTo("body")
         this.hud = new Hud(this)
 
-        if (MAP_ENABLE) {
-            this.map = new MapWidget(fact("map"), this).map_start()
-            this.hud_map = new MapWidget(fact("map-hud"), this).map_start()
-        }
+        this.map = new MapWidget(fact("map"), this).map_start()
+        this.hud_map = new MapWidget(fact("map-hud"), this).map_start()
 
         /**
          * @type {Frame} Current frame
@@ -39,6 +36,7 @@ class Playback {
         this.debug = false
         this.tagging_mode = false
         this.editing_mode = false
+        this.step_disabled = false
 
         this.shortcuts = new ShortcutsController(this)
         this.reset()
@@ -127,7 +125,7 @@ class Playback {
             frame.index = ++frame_index
             frame.slide_index = slide_index
 
-            const positioning = prop("spread-frames", null, $main)
+            const positioning = prop("spread-frames", $main)
             switch (positioning) {
                 case "spiral":
                 case true:
@@ -162,8 +160,8 @@ class Playback {
                     break;
                 case "diagonal":
                     $el.css({
-                        top: frame.prop("y", slide_index) * 100 + "vh",
-                        left: frame.prop("x", slide_index) * 100 + "vw",
+                        top: frame.prop("y", null, slide_index) * 100 + "vh",
+                        left: frame.prop("x", null, slide_index) * 100 + "vw",
                     })
                     break;
                 default:
@@ -385,6 +383,15 @@ class Playback {
                 ...Frame.frames($("[data-preloaded]")).map(f => nearby.includes(f) ? null : () => f.unload()).filter(Boolean)
             ])
         })
+    }
+
+    toggle_steps() {
+        this.step_disabled = !this.step_disabled
+        this.hud.alert("Presentation steps were " + (this.step_disabled ? "disabled" : "enabled"))
+        if (this.step_disabled) {
+            this.frame.clean_steps()
+        }
+        this.session.store()
     }
 
     process_bg_tasks(tasks, clear = false) {

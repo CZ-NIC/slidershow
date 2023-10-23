@@ -251,10 +251,16 @@ article-map {
 // We put the [data-step] to the root to lower down specificity.
 // So that the user does not have to use important when re-writing rules (or when using Animate.css).
 [data-step] {
+    // &:not([data-step-shown]) {
     animation: fade-in .5s forwards;
 
-    &.step-not-visible {
+    &.step-hidden {
         animation: fade-out .3s forwards;
+    }
+
+    &[data-step-shown]:not([data-step-shown='0']):not([data-step-shown='false']) {
+        // This is also specified under `[data-step]` and not like `[data-step]:not([data-step-shown])` to reduce specificity.
+        animation: unset;
     }
 }
 

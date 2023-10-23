@@ -80,6 +80,9 @@ class MapWidget {
      * @returns MapWidget
      */
     map_start() {
+        if(!MAP_ENABLE) {
+            return this
+        }
         const center = SMap.Coords.fromWGS84(14.41790, 50.12655)
         const map = this.map = new SMap(JAK.gel(this.$map[0]), center)
 
@@ -157,6 +160,9 @@ class MapWidget {
      * @param {*} markers_show
      */
     async engage(places, animate, geometry_show, geometry_criterion, markers_show, geometry_clear, markers_clear, zoom, last_places) {
+        if(!MAP_ENABLE) {
+            return
+        }
         this.$map.show(0)
         this.last_places = last_places || []
         this.geometry_clear = geometry_clear

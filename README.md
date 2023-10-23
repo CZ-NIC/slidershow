@@ -42,7 +42,9 @@ What can you acheive? See a variety of features in another example at [examples/
   * [Frame `<article>`](#frame-article)
   * [Frame content](#frame-content)
       - [`data-step`](#data-step)
+        * [Step styling](#step-styling)
       - [`data-step-class`](#data-step-class)
+      - [`data-step-li`](#data-step-li)
     + [`<img>`](#img)
       - [Exif info](#exif-info)
       - [Zoomable](#zoomable)
@@ -145,17 +147,6 @@ Which contains arbitrary HTML code, such as images or videos (by default, one pe
         <img src="pic2.jpg" />
     </article>
     ```
-* `data-li-stepped`: Every `<li>` element is taken as having the `data-step` attribute (see also: [`data-step`](#data-step)). They are not initially displayed but appears gradually as the user progresses through the presentation.
-    ```html
-    <article data-li-stepped data-duration=1>
-        <ul>
-            <li>Lorem</li> <!-- displayed at time 1 -->
-            <li>ipsum</li> <!-- displayed at time 2 -->
-            <li>dolor</li> <!-- displayed at time 3 -->
-            <li>sit</li>   <!-- displayed at time 4 -->
-        </ul>
-    </article>
-    ```
 * `id`: Standard HTML ID serves for navigation.
     ```html
     <article>
@@ -187,76 +178,115 @@ Which contains arbitrary HTML code, such as images or videos (by default, one pe
 
 Any HTML content is accepted.
 
+A tag have following attributes:
+
 #### `data-step`
-This very element is not initially displayed but appears gradually as the user progresses through the presentation.
-    ```html
-    <article data-duration=1>
-        <p>Lorem ipsum</p>
-        <img data-step src="..."> <!-- displayed at step 1 -->
-        <p>dolor sit amet</p>
-        <img data-step src="..."> <!-- displayed at step 2 -->
-        <p data-step>consectetur adipiscing</p>  <!-- displayed at step 3 -->
-    </article>
-    ```
+This element is not initially displayed but gradually appears as the user progresses through the presentation. If the value is not set, it will receive the next available unfilled number. If two elements share the same number, they will appear (or disappear) simultaneously. The numbers do not need to be assigned successively; you can skip values.
 
-    Steps work in a very intuitive way.
+The property is not inherited, it concerns this particular element only. In gains `.step-shown` or `.step-hidden` class.
 
-    ```html
-    <article data-li-stepped>
-        <h1>Seen from the beginning</h1>
-        <ul>
-            <li>step 3</li>
-            <li>step 4</li>
-            <li data-step="1">step 1</li>
-            <li>step 8</li>
-            <li data-step="4">step 5</li>
-            <li>step 9</li>
-        </ul>
-        <p data-step>step 10</p>
-        <p data-step="1">step 2</p>
-        <p data-step="5">step 6</p>
-        <p data-step="5">step 7</p>
-        <p>seen from the beginning</p>
-    </article>
-    ```
+A basic example:
 
-    By default, the animation is fade in/out. It was made easy to change it. Example via pure CSS:
+```html
+<article data-duration=1>
+    <p>Lorem ipsum</p>
+    <img data-step src="..."> <!-- displayed at step 1 -->
+    <p>dolor sit amet</p>
+    <img data-step src="..."> <!-- displayed at step 2 -->
+    <p data-step>consectetur adipiscing</p>  <!-- displayed at step 3 -->
+</article>
+```
 
-    ```html
-    <style>
-        [data-step] {
-            // all steps appear with a blue flash
-            animation-name: blue-flash;
+Steps work in a very intuitive way.
+
+```html
+    <h1>Seen from the beginning</h1>
+<article data-step-li>
+    <h1>Seen from the beginning</h1>
+    <ul>
+        <li>step 2</li>
+        <li>step 3</li>
+        <li data-step="1">step 1</li>
+        <li>step 6</li>
+        <li data-step="4">step 4</li>
+        <li>step 7</li>
+    </ul>
+    <p data-step>step 8</p>
+    <p data-step="100">step last</p> <!-- you can skip numbers -->
+    <p data-step="1">step 1 (too)</p>
+    <p data-step="5">step 5</p>
+    <p data-step>step 9</p>
+    <p data-step="5">step 5 (too)</p>
+    <p>seen from the beginning</p>
+</article>
+```
+
+##### Step styling
+By default, the animation is fade in/out. It was made easy to change it. Example via pure CSS:
+
+```html
+<style>
+    [data-step] {
+        /* all steps appear with a blue flash */
+        animation-name: blue-flash;
+    }
+
+    @keyframes blue-flash {
+        from {
+            background-color: blue;
         }
 
-        @keyframes blue-flash {
-            from {
-                background-color: blue;
-            }
-
-            to {
-                background-color: unset;
-            }
+        to {
+            background-color: unset;
         }
-    </style>
-    ```
-    Example using Animate.css:
-
-
-    See also: `data-li-stepped`.
+    }
+</style>
+```
 
  #### `data-step-class`
- Any contained elements with `[data-step]` will have this class set. Example using [Animate.css](https://animate.style/):
+ Any contained elements with [`[data-step]`](#data-step) will have this class set. Ignored when having [`[data-step-shown]`](#data-step-shown) set. Example using [Animate.css](https://animate.style/):
 
-    ```html
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css" />
-    <article data-li-stepped>
-        <ul data-step-class="animate__animated animate__backInDown">
-            <li>I will fall from the top</li>
-            <li>Me too</li>
-        </ul>
-    </article>
-    ```
+```html
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css" />
+<article data-step-li>
+    <ul data-step-class="animate__animated animate__backInDown">
+        <li>I will fall from the top</li>
+        <li>Me too</li>
+    </ul>
+</article>
+```
+
+#### `data-step-shown`
+Any contained elements with [`[data-step]`](#data-step) will not be hidden automatically. Instead of being shown, they receive the class given by the attribute. Supresses [`[data-step-class]`](#data-step-class).
+
+```html
+<style>
+    .my-class {font-weight: bold;}
+</style>
+<article data-step-li>
+    <ul>
+        <li>Will be shown.</li>
+        <li data-step-shown="my-class">Still visible. Becomes bold at step 2.</li>
+    </ul>
+</article>
+```
+
+#### `data-step-li`
+Every contained `<li>` element is taken as having the `data-step` attribute (see also: [`data-step`](#data-step)). They are not initially displayed but appears gradually as the user progresses through the presentation.
+
+```html
+<article data-duration=1>
+    <ul data-step-li>
+        <li>Lorem</li> <!-- displayed at step 1 -->
+        <li>ipsum</li> <!-- displayed at step 2 -->
+        <li>dolor</li> <!-- displayed at step 3 -->
+        <li>sit</li>   <!-- displayed at step 4 -->
+    </ul>
+    <ul>
+        <li>Always visible</li>
+    </ul>
+</article>
+```
 
 ### `<img>`
 

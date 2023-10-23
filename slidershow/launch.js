@@ -36,9 +36,9 @@ Private attributes that are not documented in the README because the user should
 * <frame-preview> Contents is a preview of a frame.
 * [data-templated] This element was inserted only temporarily throught a template (ex: footer in an article or a <head> vendor script). Should not be exported.
 * [data-preloaded] The frame has already been preloaded.
-* [data-step-i] Step index resolved.
 * data("step-original") Temporarily change [data-step] value.
-* .step-not-visible Frame step index has lower value so we do not see this element.
+* .step-shown Frame step index has greater value so we see this element.
+* .step-hidden Frame step index has lower value so we do not see this element.
 * .step-not-yet-visible Auxiliary window highlights not-yet-seen elements.
 */
 
@@ -74,6 +74,7 @@ const PROP_DEFAULT = {
     "panorama-threshold": 2,
     "start": false,
     "spread-frames": "spiral",
+    "step-shown": false
 }
 
 main()
@@ -109,11 +110,12 @@ function main() {
  * Return closest prop, defined in the DOM.
  * (Zero aware, you can safely set `data-prop=0`.)
  * @param {string} property For "data-start" use just "start"
- * @param {any} def Custom default value if not set in DOM (when PROP_DEFAULT default value is not desirable).
  * @param {jQuery} $el What element to check the prop of.
+ * @param {any} def Custom default value if not set in DOM or via defProperty. If null, the PROP_DEFAULT default value is used.
+ * @param {string} defProperty Name of a property whose value should be used as a default.
  * @returns {*} Undefined if not set neither in the def param, nor in the PROP_DEFAULT.
  */
-function prop(property, def = null, $el) {
+function prop(property, $el, def = null, defProperty = null) {
     const v = $el.closest(`[data-${property}]`).data(property)
     switch (v) {
         case "false": // <main data-start='false'> -> false
@@ -124,6 +126,9 @@ function prop(property, def = null, $el) {
         case "true": // <main data-start='true'> -> true
             return true;
         case undefined:
+            if(defProperty) {
+                return prop(defProperty, $el, def)
+            }
             return def !== null ? def : PROP_DEFAULT[property]
         default:
             const numeric_only = /^[-+]?\d*\.?\d+$/
