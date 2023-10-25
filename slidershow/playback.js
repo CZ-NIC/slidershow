@@ -12,8 +12,10 @@ class Playback {
         /** @type {Boolean} Application is running */
         this.moving = true
         /** @type {Interval} */
-        // Why the empty callback? The interval might be started while handling steps, before a frame change initiates the proper callback.
-        this.moving_timeout = new Interval(() => { }).stop()
+        this.moving_timeout = new Interval(() => {
+            this.moving_timeout.stop()
+            Promise.all([this.frame.video_finished, this.map.finished, this.hud_map.finished]).then(() => this.tryGoNext())
+        }).stop()
 
         const fact = (id) => $("<div/>", { id: id }).prependTo("body")
         this.hud = new Hud(this)
@@ -72,10 +74,9 @@ class Playback {
     stop() {
         this.frame.leave()
         this.frame.left()
-        this.moving_timeout.stop()
+        this.doNotWaitAndGo()
         this.$articles.hide()
         $hud.hide(0)
-        this.promise.aborted = true
         this.hud_map.hide()
         this.shortcuts.general.disable()
     }
@@ -203,12 +204,36 @@ class Playback {
     }
 
     /**
+     *
+     * @param {number} duration [ms] How long should we wait.
+     * @returns {Promise|undefined} If we are planning to go further, return Promise; else undefined.
+     */
+    waitAndGo(duration) {
+        if (this.moving && duration) {
+            return Promise.all(this.frame.effects).then(() => this.moving_timeout.start(duration * 1000))
+        }
+    }
+    doNotWaitAndGo() {
+        this.moving_timeout.stop()
+        this.promise.aborted = true
+    }
+
+    tryGoNext() {
+        if (this.moving && !this.promise.aborted) {
+            this.goNext()
+        }
+    }
+
+    /**
      * Go to the next step in the frame on to the next frame.
      */
     goNext() {
-        this.moving_timeout.stop()
         if (this.frame.step(1)) {
-            this.moving_timeout.start()
+            this.play_pause(true)
+            this.moving_timeout.stop()
+            // unabort the promise: we can go back in steps, then restore the auto-step with goNext
+            this.promise.aborted = false
+            this.waitAndGo(this.frame.step_duration)
             this.aux_window.update_step(this.frame)
         } else {
             this.nextFrame()
@@ -218,8 +243,10 @@ class Playback {
      * Go to the previous step in the frame on to the previous frame.
     */
     goPrev() {
-        this.moving_timeout.stop()
         if (this.frame.step(-1)) {
+            // while frame effects promise finishes, this.moving_timeout would be started
+            // and we would proceed to the next step
+            this.doNotWaitAndGo()
             this.aux_window.update_step(this.frame)
         } else {
             this.previousFrame()
@@ -334,8 +361,7 @@ class Playback {
         // start transition
         frame.prepare()
         this.play_pause(moving)
-        this.moving_timeout.stop()
-        this.promise.aborted = true
+        this.doNotWaitAndGo()
 
         if (this.debug) {
             $last.removeClass("debugged")
@@ -346,33 +372,19 @@ class Playback {
 
         const trans = same_frame || supress_transition ? $main.css(frame.get_position()) : this.transition($last, $current)
         const promise = this.promise = trans.promise()
-        const all_done = () => !promise.aborted && this.moving && this.goNext()
-        promise.then(() => {
-            // frame is at the viewport now
-            if (!same_frame) {
-                $last.data("frame").left()
+        promise.then(() => {  // frame is at the viewport now
+            if (last_frame !== this.frame) {
+                // we cannot use `same_frame` here because this.frame might have changed meanwhile
+                // (the user might have gone back meanwhile)
+                last_frame.left()
             }
-            if (promise.aborted) { // another frame was raise meanwhile
+            if (promise.aborted) { // another frame was raised meanwhile
                 return
             }
-            const duration = frame.enter()
 
-
-            // Duration
-            // XX If stopped because of the duration, give info.
-            // if(moving && !duration && last_frame.get_duration()) {
-            //     console.log("343: CHANGE", last_frame.get_duration(), duration)
-            //     this.hud.playback_icon("(&#9612;&#9612;)")
-            // }
-            if (this.moving && duration) {
-                Promise.all(frame.effects).then(() =>
-                    this.moving_timeout.fn(() => {
-                        this.moving_timeout.stop()
-                        Promise.all([frame.video_finished, this.map.finished, this.hud_map.finished]).then(all_done)
-                    }).start(duration * 1000)
-                )
-            } else if (this.moving && frame.video_finished) { // always go to the next frame when video ends, ignoring data-duration
-                frame.video_finished.then(all_done)
+            // Enter the frame
+            if (!this.waitAndGo(frame.enter()) && this.moving && frame.video_finished) { // always go to the next frame when video ends, ignoring data-duration
+                frame.video_finished.then(() => this.tryGoNext())
             }
 
             // Work finished, now to the background tasks.

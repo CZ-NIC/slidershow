@@ -40,6 +40,7 @@ Private attributes that are not documented in the README because the user should
 * .step-shown Frame step index has greater value so we see this element.
 * .step-hidden Frame step index has lower value so we do not see this element.
 * .step-not-yet-visible Auxiliary window highlights not-yet-seen elements.
+* <img-temp-animation-step> Tags that help distinguish image zoom step from the image step.
 */
 
 // var variables that a hacky user might wish to change. Might become data-attributes in the future.
@@ -67,7 +68,9 @@ var aux_window
 
 const PROP_DEFAULT = {
     "duration": 0,
+    "step-duration": 0,
     "transition-duration": 0,
+    "step-transition-duration": 1,
     "playback-rate": 1,
     "video": "autoplay controls",
     "fit": "auto",

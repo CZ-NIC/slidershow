@@ -7,7 +7,7 @@ class Interval {
      *  Auto-delaying/boosting depending on server lag.
      *  Faking intervals by timeouts.
      *
-     * @param {type} fn
+     * @param {type} fn If callback is set, the interval directly starts.
      * @param {type} delay
      * @param {bool} blocking If true, the fn is an AJAX call. The fn will not be called again unless it calls `this.blocking = false` when AJAX is finished.
      *      You may want to include `.always(() => {this.blocking = false;})` after the AJAX call. (In 'this' should be instance of the Interval object.)
@@ -28,7 +28,9 @@ class Interval {
                 this.start()
             }
         }
-        this.start()
+        if (fn) {
+            this.start()
+        }
     }
 
     /**
@@ -129,26 +131,26 @@ class Interval {
  */
 function createXPathFromElement(elm) {
     var allNodes = document.getElementsByTagName('*');
-    for (var segs = []; elm && elm.nodeType == 1; elm = elm.parentNode)
-    {
+    for (var segs = []; elm && elm.nodeType == 1; elm = elm.parentNode) {
         if (elm.hasAttribute('id')) {
-                var uniqueIdCount = 0;
-                for (var n=0;n < allNodes.length;n++) {
-                    if (allNodes[n].hasAttribute('id') && allNodes[n].id == elm.id) uniqueIdCount++;
-                    if (uniqueIdCount > 1) break;
-                };
-                if ( uniqueIdCount == 1) {
-                    segs.unshift('id("' + elm.getAttribute('id') + '")');
-                    return segs.join('/');
-                } else {
-                    segs.unshift(elm.localName.toLowerCase() + '[@id="' + elm.getAttribute('id') + '"]');
-                }
+            var uniqueIdCount = 0;
+            for (var n = 0; n < allNodes.length; n++) {
+                if (allNodes[n].hasAttribute('id') && allNodes[n].id == elm.id) uniqueIdCount++;
+                if (uniqueIdCount > 1) break;
+            };
+            if (uniqueIdCount == 1) {
+                segs.unshift('id("' + elm.getAttribute('id') + '")');
+                return segs.join('/');
+            } else {
+                segs.unshift(elm.localName.toLowerCase() + '[@id="' + elm.getAttribute('id') + '"]');
+            }
         } else if (elm.hasAttribute('class')) {
             segs.unshift(elm.localName.toLowerCase() + '[@class="' + elm.getAttribute('class') + '"]');
         } else {
             for (i = 1, sib = elm.previousSibling; sib; sib = sib.previousSibling) {
-                if (sib.localName == elm.localName)  i++; };
-                segs.unshift(elm.localName.toLowerCase() + '[' + i + ']');
+                if (sib.localName == elm.localName) i++;
+            };
+            segs.unshift(elm.localName.toLowerCase() + '[' + i + ']');
         };
     };
     return segs.length ? '/' + segs.join('/') : null;
@@ -161,6 +163,6 @@ function createXPathFromElement(elm) {
  */
 function lookupElementByXPath(path) {
     var evaluator = new XPathEvaluator();
-    var result = evaluator.evaluate(path, document.documentElement, null,XPathResult.FIRST_ORDERED_NODE_TYPE, null);
-    return  result.singleNodeValue;
+    var result = evaluator.evaluate(path, document.documentElement, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null);
+    return result.singleNodeValue;
 }

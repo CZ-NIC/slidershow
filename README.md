@@ -45,9 +45,12 @@ What can you acheive? See a variety of features in another example at [examples/
         * [Step styling](#step-styling)
       - [`data-step-class`](#data-step-class)
       - [`data-step-li`](#data-step-li)
+      - [`data-step-duration`](#data-step-duration)
+      - [`data-step-transition-duration`](#data-step-transition-duration)
     + [`<img>`](#img)
       - [Exif info](#exif-info)
       - [Zoomable](#zoomable)
+        * [`data-step-points`](#data-step-points)
       - [Panoramatic images](#panoramatic-images)
       - [Preload](#preload)
     + [`<video>`](#video)
@@ -200,7 +203,6 @@ A basic example:
 Steps work in a very intuitive way.
 
 ```html
-    <h1>Seen from the beginning</h1>
 <article data-step-li>
     <h1>Seen from the beginning</h1>
     <ul>
@@ -288,6 +290,14 @@ Every contained `<li>` element is taken as having the `data-step` attribute (see
 </article>
 ```
 
+#### `data-step-duration`
+
+How many seconds will a frame step last. By default, it takes [`data-duration`](#data-duration).
+
+#### `data-step-transition-duration`
+
+How many seconds will it take to change an image zoom step. By default, it takes [`data-transition-duration`](#data-transition-duration).
+
 ### `<img>`
 
 #### Exif info
@@ -301,6 +311,20 @@ However, this is a non-trivial task since the browser protects your photos priva
 #### Zoomable
 
 Zoomable on click/mouse wheel. Double click restores image original size.
+
+##### `data-step-points`
+
+Array of points an image should pass. The first is the initial image position. Works for the image itself or any contained image.
+
+Point: `[left = 0, top = 0, scale = 1, transition_duration = data-step-transition-duration | data-transition-duration, duration = data-step-duration | data-duration ]`
+
+In this example, the image starts at `[100, 10, 2]`, then zooms out `[]`, then goes slowly (note the delay paramater) to `[150,10,3,3]`. Next, while using the default `transition_duration` (note the `null` -> becomes `1.5`), we set `duration` to 0.5 second for this step only `[200,10,4,null,.5]`.
+
+```html
+<article data-transition-duration=1.5>
+    <img data-step-points="[[100,10,2], [], [150,10,3,3], [200,10,4,null,1] , [250,10,5] , [300,10,6] , [350,10,7]]" src="..."/>
+</article>
+```
 
 #### Panoramatic images
 

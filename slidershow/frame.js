@@ -2,6 +2,8 @@ const EDITABLE_ELEMENTS = "h1,h2,h3,h4,h5,h6,p,li"
 class Frame {
     /**
      *
+     * Frame lifecycle is as follows prepare / enter / leave / left (left is not guaranteed to run).
+     *
      * @param {jQuery} $el
      * @param {?Playback} playback
      */
@@ -13,7 +15,7 @@ class Frame {
         /**  @type {?jQuery}         */
         this.$actor = this.$frame.find("video, img").first()
         this.panorama_starter = null
-        this.loop_interval = null
+        this.loop_interval = new Interval()
 
         /**
          * If set, this frame is a subframe.
@@ -50,6 +52,8 @@ class Frame {
         this.steps = []
         /** Element in this.steps that is going to be shown in the next step. Elements with lower index are already shown. */
         this.step_index = 0
+        /** @type {number|null} How long the last active step should last. */
+        this.step_duration = null
 
         /** @type {Promise} Register to this promise to be notified. (It fulfills when preload, not on the preloaded media onload.)
          */
@@ -57,10 +61,6 @@ class Frame {
         // Hence we set the Promise to be already resolved sometimes.
         this.preloaded = this.$frame.attr("data-preloaded") ? Promise.resolve() : new Promise(r => this._preloaded = r)
 
-        /**
-         * TODO Experimental
-         */
-        this._EXP_wzoom = null
     }
 
     register_parent(frame) {
@@ -134,25 +134,36 @@ class Frame {
 
         if (!this.playback.step_disabled) {
             this.steps_prepare()
-            console.log("177: this.steps", this.steps) // TODO
         }
     }
 
     steps_prepare() {
-        const points = this.$actor.data("step-points")
-        if (points) {
-            // TODO init step is the default
-            this.steps = points.map(p => () => {
-                console.log("146: clb", ) // TODO
-                this._EXP_set_wzoom_position(...p)
-            }) // TODO
-
-            return // TODO merge with the other steps
-        }
-
         // Sort elements to be stepped through. Some of them might have `data-step=number` (which we honour),
         // those with `data-step` are to be filled around.
-        const $steppable = $("li", this.$frame).filter((_, el) => this.prop("step-li", $(el))).add($("[data-step]", this.$frame))
+        const $steppable = $("[data-step]", this.$frame)
+            // [data-step-li] affects all <li>
+            .add($("li", this.$frame)
+                .filter((_, el) => this.prop("step-li", $(el))))
+            // [data-step-points] affects all <img>
+            .add($("img", this.$frame)
+                .filter((_, el) => this.prop("step-points", $(el)))
+                .map((_, el) => {
+                    // generate multiple steps (dummy <img-temp-animation-step>) for points
+                    const $el = $(el)
+                    const points = $el.data("step-points")
+                    // what is the first zoom position we see
+                    const init_point = Array.from(points[this.step_index])
+                    if (init_point) {
+                        // init point has no transition duration, it's straight there when we come to the frame
+                        init_point[3] = 0
+                        this.step_duration = this.zoom_set($el, ...init_point) ?? prop("step-duration", $el, null, "duration")
+                    }
+                    return $.map(points.slice(1), // the init point has already been zoomed into, slice it out
+                        (point, index) => $("<img-temp-animation-step/>")
+                            // show the next or the previous animation step (we sliced the points due to the init point)
+                            .data("callback", shown => this.zoom_set($el, ...shown ? point : points[index]))
+                        [0])
+                }))
 
         let index = 0
         let [last_step, pointer] = [null, null]
@@ -184,7 +195,9 @@ class Frame {
                 last_step = step
 
                 // check if the element should be hidden at the beginning
-                this.step_shown($el, this.steps.length <= this.step_index, true)
+                if (!$el.is("img-temp-animation-step")) {
+                    this.step_process($el, this.steps.length <= this.step_index, true)
+                }
             })
     }
 
@@ -385,7 +398,7 @@ class Frame {
 
         // Image frame
         if ($actor.prop("tagName") === "IMG") {
-            this.zoom()
+            this.zoom_init(this.$actor)
             Frame.exif($actor)
             this.panorama_starter?.()
             const loop = this.prop("loop")
@@ -410,7 +423,7 @@ class Frame {
             this.make_editable()
         }
 
-        return this.prop("duration")
+        return this.step_duration ?? this.prop("duration")
     }
 
     make_editable() {
@@ -502,10 +515,12 @@ class Frame {
         }
         const gen = stepGen([...$children])
 
-        this.loop_interval = new Interval(() => {
-            $children.hide()
-            $(gen.next().value).show()
-        }, 200)
+        this.loop_interval
+            .fn(() => {
+                $children.hide()
+                $(gen.next().value).show()
+            })
+            .start(200)
     }
 
     /**
@@ -519,19 +534,7 @@ class Frame {
 
         const $changed = $(this.steps.slice(Math.min(...range), Math.max(...range)).flat())  // currently affected elements (normally just one)
 
-        if (step > 0) {
-            this.step_shown($changed, true)
-            // $changed.addClass("step-shown").removeClass("step-hidden").show()
-        } else {
-            this.step_shown($changed, false)
-            // $changed
-            //     .addClass("step-hidden")
-            //     .removeClass("step-shown")
-            // .map((_, el) => $(el).one("animationend", () =>
-            //     // Since CSS animation cannot hide the element, we hide them manually.
-            //     // Why toggle instead of hide? Class can change before animation ends.
-            //     $(el).toggle(!$(el).hasClass("step-hidden"))))
-        }
+        this.step_process($changed, step > 0)
         this.step_index = new_step
         return $changed.length  // some change happened
     }
@@ -556,39 +559,54 @@ class Frame {
 
     /**
      * Show or hide elements in the collection.
-     * @param {jQuery} $els
+     * Or adds them classes or zoom images.
+     * @param {jQuery<HTMLElement|Function>} $els
      * @param {boolean} shown
      * @param {boolean} immediate Does not allow animation
      * @returns
      */
-    step_shown($els, shown, immediate = false) {
-        if (typeof $els[0] === "function") {
-            console.log("563: $els", $els) // TODO
+    step_process($els, shown, immediate = false) {
+        // separate standard frame jQuery elements and img[data-step-animation] elements
+        const [$tags, $animations] = [$els.not("img-temp-animation-step"), $els.filter("img-temp-animation-step")]
 
-            $els.map((_, clb) => clb())
-            return // TODO merge
-        }
+        // evaluate step duration, either from usual tags or from an img zoom animation step point
+        const durations = $animations.map((_, el) => $(el).data("callback")(shown))
+            .add(...$tags.map((_, el) => prop("step-duration", $(el), null, "duration"))).get()
+        // step-duration is either 0 (if any of the elements sets it) or the max value or the frame default
+        // Why checking length? Prevent `Math.max(empty) -> -Infinity`
+        this.step_duration = durations.length ? durations.includes(0) ? 0 : Math.max(...durations) : null
 
-        $els
+
+
+
+        // we have only jQuery elements there
+        $tags
             .addClass(shown ? "step-shown" : "step-hidden")
             .removeClass(shown ? "step-hidden" : "step-shown")
         // elements with step-shown are handled differently; they just get a class
-        const usual = $els.filter((_, el) => {
+        const $usual = $tags.filter((_, el) => {
             const $el = $(el)
-            const mark = prop("step-shown",  $el)
+            const mark = prop("step-shown", $el)
             return mark ? $el[shown ? "addClass" : "removeClass"](mark) && false : true
         })
         // handle other elements showing/hiding
         if (shown) {
-            usual.show()
+            $usual.show()
         } else if (immediate) {
-            usual.hide()
+            $usual.hide()
         } else {
-            usual.map((_, el) => $(el).one("animationend", () =>
-                $(el).toggle(!$(el).hasClass("step-hidden")))
+            // Why checking `:animated` when there is default CSS animation?
+            // User could change the animation wrongly:
+            // [data-step] { animation-name: fadeIn; }
+            // Instead of:
+            // [data-step].step-shown { animation-name: fadeIn; }
+            // Which would cause when going a step back the element to already being faded in
+            // and animationend never triggered.
+            $usual.map((_, el) => $(el).is(":animated") ?
+                $(el).one("animationend", () => $(el).toggle(!$(el).hasClass("step-hidden")))
+                : $(el).hide(500)
             )
         }
-        return $els
     }
 
     /**
@@ -609,18 +627,27 @@ class Frame {
             this.$video_pause_listener.trigger("slidershow-leave")
             this.$video_pause_listener = null
         }
-        this.$actor?.data("wzoom-unload")?.()
 
         this.playback.hud_map?.hide()
         this.unmake_editable()
         return true
     }
 
+    /**
+     * Clean up because the frame is not visible anymore.
+     *
+     * This method is not guaranteed to run because of the following usecase:
+     * 1. Leave to the next frame
+     * 2. Go back before the transition finishes (and `left` could be run)
+     * 3. prepare() is run again
+     * 4. When transition finished, we are back in the current frame, hence the left() is blocked.
+     */
     left() {
         this.loop_interval?.stop()
         this.$actor.stop(true)
         this.$frame.find("[data-templated]").remove()
         this.clean_steps()
+        this.zoom_destroy()
     }
 
     /**
@@ -684,57 +711,84 @@ class Frame {
         }
     }
 
+    /**
+     *
+     * @param {Function} promise
+     */
     add_effect(promise) {
         this.effects.push(new Promise(promise))
     }
 
-    zoom() {
-        const $actor = this.$actor
+    zoom_init($el = null) {
+        if ($el.data("wzoom")) {
+            return $el.data("wzoom") // already initialized
+        }
         const maxScale_default = 3
-        const wzoom = this._EXP_wzoom = WZoom.create($actor.get()[0], {
+        const wzoom = WZoom.create($el.get()[0], {
             maxScale: maxScale_default,
             minScale: 1,
             speed: 1,
             // We can wheel in for ever but keeping maxScale on leash.
             // Because the click takes us to the current bed (and second click zooms out).
-            rescale: (wzoom) =>
+            rescale: wzoom =>
                 wzoom.content.maxScale = Math.max(maxScale_default, wzoom.content.currentScale + 3)
         })
 
-        // we have zoomed in, do not playback further
-        $actor.off("click wheel").on("click wheel", () => this.playback.moving = false)
-
-        // destruct zooming while leaving the frame
-        $actor.data("wzoom-unload", () => setTimeout(() => { // we have to timeout - wzoom bug, has to finish before it can be destroyed
-            wzoom.destroy()
-            $actor.data("wzoom-unload", null)
-        }))
+        $el
+            // we have zoomed in, do not playback further
+            .off("click wheel")
+            .on("click wheel", () => this.playback.moving = false)
+            // zooming modifiable from the outside
+            .attr("data-wzoom", true)
+            .data("wzoom", wzoom)
+        return wzoom
     }
 
-    _EXP_get_wzoom_position() {
-        const c = this._EXP_wzoom.content
-        const { currentLeft, currentTop, currentScale } = c
+    // destruct zooming while leaving the frame
+    zoom_destroy() {
+        $("[data-wzoom]", this.$frame).each((_, el) => {
+            const $el = $(el)
+            setTimeout(() => { // we have to timeout - wzoom bug, has to finish before it can be destroyed
+                $el.data("wzoom").destroy()
+                $el.data("wzoom", null)
+                $el.attr("data-wzoom", null)
+            })
+        })
+    }
+
+    zoom_get($el) {
+        const { currentLeft, currentTop, currentScale } = this.zoom_init($el).content
         return [currentLeft, currentTop, currentScale]
     }
 
     /**
-     *
-     * @param {*} left
-     * @param {*} top
-     * @param {*} scale
-     * @param {*} delay
-     * @returns {Promise} Fullfilled when transition ends
-     */
-    _EXP_set_wzoom_position(left, top, scale, delay = 1) {
-        const c = this._EXP_wzoom.content
+     * @param {jQuery} $el Zoomed element
+     * @param {number} left
+     * @param {number} top
+     * @param {number} scale
+     * @param {number} transition_duration
+     * @param {number} duration
+     * @returns {number} After zoom step duration.
+    */
+    zoom_set($el, left = 0, top = 0, scale = 1, transition_duration = null, duration = null) {
+        const wzoom = this.zoom_init($el)
+
+        transition_duration ??= prop("step-transition-duration", $el, null, "transition-duration")
+
+        const c = wzoom.content
+        if (!c) {
+            return console.warn("Zoomed img does not exist", $el, wzoom)
+
+        }
         c.currentLeft = left
         c.currentTop = top
         c.currentScale = scale
-        const orig = this._EXP_wzoom.options.smoothExtinction
-        this._EXP_wzoom.options.smoothExtinction = delay
-        this._EXP_wzoom._transform()
-        this._EXP_wzoom.options.smoothExtinction = orig
-        return new Promise(resolve => $(c.$element).on("transitionend", () => resolve()))
+        const orig = wzoom.options.smoothExtinction
+        wzoom.options.smoothExtinction = transition_duration
+        wzoom._transform()
+        wzoom.options.smoothExtinction = orig
+        this.add_effect(resolve => $(c.$element).on("transitionend", () => resolve()))
+        return duration ?? prop("step-duration", $el, null, "duration")
     }
 
     /**
