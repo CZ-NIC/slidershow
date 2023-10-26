@@ -7,9 +7,9 @@ class Interval {
      *  Auto-delaying/boosting depending on server lag.
      *  Faking intervals by timeouts.
      *
-     * @param {type} fn If callback is set, the interval directly starts.
-     * @param {type} delay
-     * @param {bool} blocking If true, the fn is an AJAX call. The fn will not be called again unless it calls `this.blocking = false` when AJAX is finished.
+     * @param {Function} fn If callback is set, the interval directly starts.
+     * @param {number} delay
+     * @param {boolean} blocking If true, the fn is an AJAX call. The fn will not be called again unless it calls `this.blocking = false` when AJAX is finished.
      *      You may want to include `.always(() => {this.blocking = false;})` after the AJAX call. (In 'this' should be instance of the Interval object.)
      *
      *      (Note that we preferred that.blocking setter over method unblock() because interval function
@@ -86,10 +86,10 @@ class Interval {
      * @return {Interval}
      */
     call_now() {
-        this.stop();
-        this._delayed();
-        this.start();
-        return this;
+        this.stop()
+        this._delayed()
+        this.start()
+        return this
     }
 
     /**
@@ -98,27 +98,27 @@ class Interval {
      */
     toggle(start = null) {
         if (start === null) {
-            this.toggle(!this.running);
+            this.toggle(!this.running)
         } else if (start) {
-            this.start();
+            this.start()
         } else {
-            this.stop();
+            this.stop()
         }
-        return this;
+        return this
     }
 
     set blocking(b) {
         if (b === false) {
-            let rtt = +new Date() - this.time1;
+            const rtt = +new Date() - this.time1
             if (rtt > this._delay / 3) {
                 if (this._delay < this.delay * 10) {
-                    this._delay += 100;
+                    this._delay += 100
                 }
             } else if (rtt < this._delay / 4 && this._delay >= this.delay) {
-                this._delay -= 100;
+                this._delay -= 100
             }
             if (this.running) {
-                this.start();
+                this.start()
             }
         }
     }
@@ -166,3 +166,14 @@ function lookupElementByXPath(path) {
     var result = evaluator.evaluate(path, document.documentElement, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null);
     return result.singleNodeValue;
 }
+
+/**
+ * Are elements of the arrays equal?
+ * https://stackoverflow.com/a/39967517/2036148
+ * @param {Array} a
+ * @param {Array} b
+ * @returns {Boolean}
+ */
+function arraysEqual(a, b) {
+    return a.length === b.length && a.every((el, ix) => el === b[ix])
+  }

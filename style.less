@@ -209,6 +209,34 @@ frame-preview {
 
         color: black;
         padding: 10px;
+        overflow: auto;
+
+        label {
+            cursor: help;
+        }
+
+        .hud-point {
+            display: block;
+            margin-bottom: 2px;
+
+            >span {
+                cursor: pointer;
+                display: inline-block;
+                background-color: lightyellow;
+                border-radius: 5px;
+                padding: 3px;
+            }
+
+            &.active>span {
+                background-color: yellow;
+            }
+
+        }
+
+        >.hud-point {
+            padding: 5px;
+            display: inline-block;
+        }
     }
 }
 

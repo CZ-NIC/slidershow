@@ -6,6 +6,7 @@ class Menu {
         this.aux_window = new AuxWindow()
         this.$menu = $("menu").show(0)
         this.$start_wrapper = $("#start-wrapper")
+        this.markdown = new showdown.Converter()
 
         this.$start = $("#start").focus().click(() => this.start_playback())
 

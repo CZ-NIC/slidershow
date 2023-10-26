@@ -40,10 +40,18 @@ What can you acheive? See a variety of features in another example at [examples/
   * [Organizing](#organizing)
 - [Structure](#structure)
   * [Frame `<article>`](#frame-article)
+      - [`data-duration`](#data-duration)
+      - [`data-transition-duration`](#data-transition-duration)
+      - [`data-spread-frames`](#data-spread-frames)
+      - [`data-x`, `data-y`](#data-x-data-y)
+      - [`data-loop`](#data-loop)
+      - [`id`](#id)
+      - [`<!-- presenter's notes -->`](#---presenters-notes---)
   * [Frame content](#frame-content)
       - [`data-step`](#data-step)
         * [Step styling](#step-styling)
       - [`data-step-class`](#data-step-class)
+      - [`data-step-shown`](#data-step-shown)
       - [`data-step-li`](#data-step-li)
       - [`data-step-duration`](#data-step-duration)
       - [`data-step-transition-duration`](#data-step-transition-duration)
@@ -54,6 +62,8 @@ What can you acheive? See a variety of features in another example at [examples/
       - [Panoramatic images](#panoramatic-images)
       - [Preload](#preload)
     + [`<video>`](#video)
+      - [`data-playback-rate`](#data-playback-rate)
+      - [`data-video`](#data-video)
     + [Text](#text)
   * [Map](#map)
     + [`<article-map>` frame](#article-map-frame)
@@ -129,53 +139,64 @@ Every frame is represented by an `<article>` tag.
 
 Which contains arbitrary HTML code, such as images or videos (by default, one per slide). Use control attributes:
 
-* `data-duration=0`: How many seconds will a frame step last. By default, indefinitely (waiting for a user action).
+### `data-duration`
+(default `0`) How many seconds will a frame step last. By default, indefinitely (waiting for a user action).
 
-    ```html
-    <article data-duration="0.5">Short frame</article>
-    <article>You have to click to get further</article>
-    <article data-duration="0.5">Short frame</article>
-    ```
-    Note a video frame is an exception: will hold till the video finishes and then change frame.
+```html
+<article data-duration="0.5">Short frame</article>
+<article>You have to click to get further</article>
+<article data-duration="0.5">Short frame</article>
+```
+Note a video frame is an exception: will hold till the video finishes and then change frame.
 
-* `data-transition-duration=0`: How many seconds will it take to change a frame.
-* `data-spread-frames=spiral`: A viewport stands for a chessboard field. This is how the frame are positioned in the chessboard.
-    * `true=spiral`
-    * `diagonal`
-* `data-x`, `data-y`: Valid only for `data-spread-frames=dialogal`. Overrides the default position. Attention, do not let the frames share the same position.
-* `data-loop`: If present, images in the body will rapidly loop, creating a funny animation. (Currenly allowed only `true` value for an infitite loop.)
-    ```html
-    <article data-loop>
-        <img src="pic1.jpg" />
-        <img src="pic2.jpg" />
-    </article>
-    ```
-* `id`: Standard HTML ID serves for navigation.
-    ```html
-    <article>
-        <a href="#my_frame">go to a specific frame</a>
-        <a href="#my_section">go to the first frame in a specific section</a>
-        <a href="#2">go to the second frame (number may change if you add frames later)</a>
-    </article>
-    <section id=my_section>
-        <article>...</article>
-        <article id=my_frame>...</article>
-    </section>
-    ```
-* `<!-- presenter's notes -->` You may use HTML comments just before the frame or as the first frame child. These will be displayed in the auxiliary window while presenting.
-    Before the frame:
-    ```html
+### `data-transition-duration`
+(default `0`) How many seconds will it take to change a frame.
+
+### `data-spread-frames`
+(default `spiral`) A viewport stands for a chessboard field. This is how the frame are positioned in the chessboard.
+* `true=spiral`
+* `diagonal`
+### `data-x`, `data-y`
+Valid only for `data-spread-frames=dialogal`. Overrides the default position. Attention, do not let the frames share the same position.
+
+### `data-loop`
+If present, images in the body will rapidly loop, creating a funny animation. (Currenly allowed only `true` value for an infitite loop.)
+```html
+<article data-loop>
+    <img src="pic1.jpg" />
+    <img src="pic2.jpg" />
+</article>
+```
+
+### `id`
+Standard HTML ID serves for navigation.
+```html
+<article>
+    <a href="#my_frame">go to a specific frame</a>
+    <a href="#my_section">go to the first frame in a specific section</a>
+    <a href="#2">go to the second frame (number may change if you add frames later)</a>
+</article>
+<section id=my_section>
+    <article>...</article>
+    <article id=my_frame>...</article>
+</section>
+```
+### `<!-- presenter's notes -->`
+You may use HTML comments just before the frame or as the first frame child. Markdown syntax is supported. These will be displayed in the auxiliary window while presenting.
+
+Before the frame:
+```html
+<!-- I should talk about cats. -->
+<article><img src='cat.jpg' /></article>
+```
+
+Inside the frame:
+```html
+<article>
     <!-- I should talk about cats. -->
-    <article><img src='cat.jpg' /></article>
-    ```
-
-    Inside the frame:
-    ```html
-    <article>
-        <!-- I should talk about cats. -->
-        <img src='cat.jpg' />
-    </article>
-    ```
+    <img src='cat.jpg' />
+</article>
+```
 
 ## Frame content
 
@@ -351,7 +372,9 @@ When having thousands of images, your browser may choke. Use `data-src` instead 
 * The `<video>` tag benefits from standard attributes like `loop`, `muted`, `autoplay` and `controls` (so that controls are visible). In Chromium based browsers, only `muted` video respects `autoplay` so we recommend using `controls` too so that you may start the video with the <kbd>Space</kbd>.
 * When a new frame appears, first video gets focus. Whether `autoplay` is present, it starts playing. Keys like <kbd>Space</kbd>, <kbd>Left</kbd>, <kbd>Right</kbd> stop working for frame switching to avoid interfering with the video controls.
 
-* `data-playback-rate`: The speed of the video.
+#### `data-playback-rate`
+The speed of the video.
+
 Tip: Can be adjusted by <kbd>Numpad +/-</kbd> while presenting.
 ```html
 <article> <!-- fast video -->
@@ -362,23 +385,25 @@ Tip: Can be adjusted by <kbd>Numpad +/-</kbd> while presenting.
 </article>
 ```
 
-* `data-video='autoplay controls'`: All `<video>` tags inherits its value as attributes (`autoplay controls muted loop`). Tip: toggle muted by <kbd>Alt+M</kbd> while presenting.
-    ```html
-    <article data-video="autoplay muted">
-        <video> <!-- becomes <video autoplay muted> -->
-            <source src="my_video.mp4#t=8,10" type="video/mp4">
-        </video>
-    </article>
-    <article>
-        <video src="my_video.mp4"> <!-- becomes <video autoplay controls> because that is the default --></video>
-    </article>
-    <article>
-        <video data-video='muted' src="my_video.mp4"> <!-- becomes <video muted> --></video>
-    </article>
-    <article>
-        <video muted src="my_video.mp4"> <!-- becomes <video autoplay controls muted> --></video>
-    </article>
-    ```
+#### `data-video`
+(default `'autoplay controls'`) All `<video>` tags inherits its value as attributes (`autoplay controls muted loop`). Tip: toggle muted by <kbd>Alt+M</kbd> while presenting.
+
+```html
+<article data-video="autoplay muted">
+    <video> <!-- becomes <video autoplay muted> -->
+        <source src="my_video.mp4#t=8,10" type="video/mp4">
+    </video>
+</article>
+<article>
+    <video src="my_video.mp4"> <!-- becomes <video autoplay controls> because that is the default --></video>
+</article>
+<article>
+    <video data-video='muted' src="my_video.mp4"> <!-- becomes <video muted> --></video>
+</article>
+<article>
+    <video muted src="my_video.mp4"> <!-- becomes <video autoplay controls muted> --></video>
+</article>
+```
 
 ### Text
 

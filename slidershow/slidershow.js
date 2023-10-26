@@ -22,20 +22,20 @@ loadjQuery(() => {
             referrerpolicy: "no-referrer"
         },
         {
-            src: "https://cdn.jsdelivr.net/npm/vanilla-js-wheel-zoom@6.21.0/dist/wheel-zoom.min.js",
-            integrity: "sha256-iew84VMdav48KUPfYXOXyChG413xDhB4NlDngkmVfTg=",
+            src: "https://cdn.jsdelivr.net/npm/vanilla-js-wheel-zoom@8.1.0/dist/wheel-zoom.min.js",
             crossOrigin: "anonymous"
         },
         { src: "https://cdn.jsdelivr.net/npm/js-circle-progress@0.2.4/dist/jquery.circle-progress.min.js" },
         { src: "https://cdn.jsdelivr.net/gh/e3rd/WebHotkeys@0.8.1/WebHotkeys.js" },
         { src: "https://cdn.jsdelivr.net/npm/exif-js" },
+        { src: "https://cdn.jsdelivr.net/npm/showdown@2.1.0/dist/showdown.min.js" },
         MAP_ENABLE ? { src: "https://api.mapy.cz/loader.js" } : null,
         { src: "https://cdn.jsdelivr.net/npm/zebra_dialog@3.0.5/dist/zebra_dialog.min.js" }
     ].filter(Boolean).map(f => loadScript(f))
 
     const vendor_styles = ["https://cdn.jsdelivr.net/npm/zebra_dialog@latest/dist/css/materialize/zebra_dialog.min.css"].map(f => loadStyle(f))
 
-    const local = ["static.js", "frame_factory.js", "frame.js", "place.js", "map.js", "hud.js", "shortcuts.js", "change_controller.js", "menu.js", "playback.js", "session.js", "aux_window.js"].filter(Boolean).map(f => loadScript({ src: DIR + f }))
+    const local = ["static.js", "frame_factory.js", "frame.js", "place.js", "map.js", "hud.js", "property_panel.js", "shortcuts.js", "change_controller.js", "menu.js", "playback.js", "session.js", "aux_window.js"].filter(Boolean).map(f => loadScript({ src: DIR + f }))
 
     /**
      When there were 60 photos and 10 videos in a 230 MB presentation file, these were started before we could

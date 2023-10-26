@@ -4,6 +4,11 @@ const $hud = $("#hud")
 const FRAME_SELECTOR = "main article,main article-map"
 const FRAME_TAGS = "article, article-map" // Can be used only in the <main> context. Because sometimes FRAME_SELECTOR is too strict.
 
+/** To fetch docs */
+const DOCS_URI = "https://cdn.jsdelivr.net/gh/CZ-NIC/slidershow@main/README.md"
+/** To link docs */
+const HOME_PAGE = "https://github.com/CZ-NIC/slidershow/"
+
 /**
  * When exporting: Setting src directly on more than few hundred photos would kill the tab instantanely;
  * hence we use EXPORT_SRC instead. (The browser will not start loading.)
@@ -37,10 +42,12 @@ Private attributes that are not documented in the README because the user should
 * [data-templated] This element was inserted only temporarily throught a template (ex: footer in an article or a <head> vendor script). Should not be exported.
 * [data-preloaded] The frame has already been preloaded.
 * data("step-original") Temporarily change [data-step] value.
+* data("hud-stringified") The attribute data is not a scalar.
 * .step-shown Frame step index has greater value so we see this element.
 * .step-hidden Frame step index has lower value so we do not see this element.
 * .step-not-yet-visible Auxiliary window highlights not-yet-seen elements.
 * <img-temp-animation-step> Tags that help distinguish image zoom step from the image step.
+* trigger("wzoomed") Img with wzoom action.
 */
 
 // var variables that a hacky user might wish to change. Might become data-attributes in the future.

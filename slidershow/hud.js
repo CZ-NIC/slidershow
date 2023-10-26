@@ -34,7 +34,8 @@ class Hud {
     }
     toggle_properties() {
         this.$hud_properties.toggle()
-        if (this.properties_visible) {
+        if (this.properties_visible && this.playback.frame) {
+            // when restoring session from the hash, frame is not ready yet
             this.properties(this.playback.frame)
         }
         this.playback.session.store()
@@ -167,114 +168,97 @@ class Hud {
      * Thumbnail ribbon
      * @param {Frame} frame
     */
-    properties(frame) {
+    async properties(frame) {
+        await this.fetch_help()
+        const pp = new PropertyPanel(this)
         const $frame = frame.$frame
         const $actor = frame.$actor
-        const props = ["duration", "transition-duration", "step-li"] // XX step-li might be checkbox
-        this.$hud_properties
+        const $props = this.$hud_properties
             .html($("<p/>").html("Properties panel (Alt+P)"))
-            .append(props.map(p => this._input_ancestored(p, $frame)).flat())
 
+        // undo button
+        this.$hud_properties.append(this.playback.change_controller.get_button(), "<br>")
+
+        // element properties
         if ($actor.length) {
-            if ($actor.prop("tagName") === "VIDEO") {
-                this.$hud_properties.append(["playback-rate"].map(p => this._input_ancestored(p, $actor, "number")).flat())
+            if ($actor.prop("tagName") === "IMG") {
+                // handle [data-property=step-points]
+                const step_inputs = pp.input_ancestored("step-points", $actor)
+
+                console.log("183:  step_inputs", step_inputs) // TODO
+
+                $props.append(step_inputs)
+                $(step_inputs.filter(a => a.is?.("input"))).map((_, el) => pp.gui_step_points(frame, $(el)))
+            } else if ($actor.prop("tagName") === "VIDEO") {
+                $props.append(["playback-rate"].map(p => pp.input_ancestored(p, $actor, "number")).flat())
 
                 const original = frame.get_filename($actor).split("#")[1]
 
-                this.$hud_properties.append(this._input("video-cut", $actor, "", original, "text", "t=START[,STOP]", val => {
+                $props.append(pp.input("video-cut", $actor, "", original, "text", "t=START[,STOP]", val => {
                     const src = $actor.attr("src")
                     if (src) {
                         $actor.attr("src", [src.split("#")[0], val].join("#"))
                     } else {
-                        this.playback.hud.alert("Not implemented changing this syntax of video URL")
+                        this.alert("Not implemented changing this syntax of video URL")
                     }
                 }))
 
                 // The `video` attribute can be derived also from the real HTML attributes which is not here implemented to bear.
-                this.$hud_properties.append(this._input_ancestored("video", $actor))
+                $props.append(pp.input_ancestored("video", $actor))
             }
         }
+
+        // frame properties
+        // XX step-li might be checkbox, some of them can go to any element, not just its frame
+        const props = ["duration", "transition-duration", "step-li", "step-duration", "step-class", "step-shown", "step-transition-duration"]
+        $props
+            .append(props.map(p => pp.input_ancestored(p, $frame)).flat())
         // XX data-step could be implemented for any focused element
     }
 
-    /**
-     * Generate <input type=number> into the Properties panel.
-     * Recursively generate such input for the ancestors (<section>) too.
-     * @param {string} p Property name (ex: 'duration')
-     * @param {jQuery} $el $frame or its parents up to main (elements having properties)
-     * @param {string} name Tag name, prepended to the property <label>
-     * @returns
-     */
-    _input_ancestored(p, $el, type="text", name = "") {
-        const original = $el.data(p)
-        const element_property = this._input(
-            p, $el, name, original, type,
-            prop(p, $el.parent()),
-            v => {
-                // v is "" when user deletes input
-                // v is undefined when we undo a change and the original value was undefined
-                //  (and not converted to the empty string via <input> value)
-                if (v === "" || v === undefined) {
-                    $el.removeAttr(`data-${p}`)
-                    $el.removeData(p)
-                } else {
-                    $el.attr(`data-${p}`, v)
-                    $el.data(p, v)
-                }
+    async fetch_help() {
+        if (!this._help) {
+            this._help = await $.ajax({
+                dataType: "text",
+                url: DOCS_URI
             })
-
-        // Ask all the parents to the same property (duplicating the <input>)
-        if ($el.parent().length && !$el.is("main")) {
-            $.merge(element_property, this._input_ancestored(p, $el.parent(), type, $el.parent().prop("tagName")))
         }
-        return element_property
     }
 
-    /**
-     * Generate <input> into the Properies panel.
-     * @param {string} p Property name (ex: 'duration')
-     * @param {jQuery} $el $frame or its parents up to main (elements having properties)
-     * @param {string} name Tag name, prepended to the property <label>
-     * @param {string} value Initial value.
-     * @param {string} type <input> type, like "text"
-     * @param {string} placeholder HTML placeholder
-     * @param {Function} change Callback to revert changes
-     * @returns
-     */
-    _input(p, $el, name, value, type, placeholder, change) {
-        const pl = this.playback
-        const original_frame = pl.frame.index
-        return [
-            $("<label/>", { "text": `${name} ${p}: ` }),
-            $("<input />")
-                .attr("type", type)
-                .attr("placeholder", placeholder)
-                .attr("name", `${name}${p}`)
-                .val(value)
-                .on("change", function () {
-                    const previous = value
-                    value = $(this).val()
-                    change($(this).val()) // change the property in the DOM
-                    pl.change_controller.change(() => { // undo change
-                        // Other frame contents was changed. We have to return there first.
-                        // Note that we do not return in case of a common <section> or <main>.
-                        const $fr = pl.frame.$frame
-                        if (!($fr.closest($el).length || $fr.find($el).length)) {
-                            pl.goToFrame(original_frame)
+    get_help(property, short = false, display = true) {
+        let text
+        if (!this._help) {
+            this.fetch_help()
+            text = "Loading docs, try again"
+        } else {
+            const real_name = "data-" + property
+            const rr = short ? `#+ \`${real_name}\`\\n([\\s\\S]*?)(?=\\n)` : `#+ \`${real_name}\`\\n([\\s\\S]*?)(?=\\n#)`
+            const r = new RegExp(rr, "m")
 
-                        }
-                        // Change the properties panel <input> back
-                        // Why accessing via name?
-                        // Since we could changed the slide (and refreshed the panel HTML),
-                        // the original element does not have to exist.
-                        $(`[name=${$(this).attr("name")}]`).val(previous).focus()
-                        change(previous)
-                        value = previous
+            const m = this._help.match(r)
+            if (m) {
+                if (short) {
+                    text = m[1]
+                } else {
+                    const docs_link = `<a href="${HOME_PAGE}#${real_name}">→ docs</a>`
+                    // point internal links to the homepage
+                    const links = m[1].replaceAll("`](#", "`](" + HOME_PAGE + "#")
+                    // TODO check XSS risk
+                    const markdown = this.playback.menu.markdown.makeHtml(links)
+                    text = docs_link + markdown
+                }
+            }
+        }
 
-                        // TODO General shortcuts should be disabled when editing inputs here. Like "n".
-                    })
-                }),
-            "<br>"
-        ]
+        const error = `Cannot fetch help for ${property}`
+        if (display) {
+            if (!text) {
+                this.alert(error)
+            } else {
+                new $.Zebra_Dialog(text, { type: "information", title: property })
+            }
+        } else {
+            return text || error
+        }
     }
 }

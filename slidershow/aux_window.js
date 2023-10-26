@@ -75,7 +75,7 @@ class AuxWindow {
         switch (e.action) {
             case "info":
                 this.$current_frame.html(e.frame)
-                this.$notes.html((e.notes || "").replace("\n", "<br>")).toggle(Boolean(this.$notes.html())) // hide notes if empty
+                this.$notes.html((e.notes || "")).toggle(Boolean(this.$notes.html())) // hide notes if empty
                 this.$next_frame.html(e.next_frame || "END")
             case "update-step":
                 // Highlight the element to be revealed in the next step

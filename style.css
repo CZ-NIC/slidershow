@@ -161,6 +161,28 @@ frame-preview > article-map [data-step].step-not-yet-visible {
   background-color: lightgray;
   color: black;
   padding: 10px;
+  overflow: auto;
+}
+#hud #hud-properties label {
+  cursor: help;
+}
+#hud #hud-properties .hud-point {
+  display: block;
+  margin-bottom: 2px;
+}
+#hud #hud-properties .hud-point > span {
+  cursor: pointer;
+  display: inline-block;
+  background-color: lightyellow;
+  border-radius: 5px;
+  padding: 3px;
+}
+#hud #hud-properties .hud-point.active > span {
+  background-color: yellow;
+}
+#hud #hud-properties > .hud-point {
+  padding: 5px;
+  display: inline-block;
 }
 #map-hud {
   position: fixed;

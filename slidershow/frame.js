@@ -151,6 +151,9 @@ class Frame {
                     // generate multiple steps (dummy <img-temp-animation-step>) for points
                     const $el = $(el)
                     const points = $el.data("step-points")
+                    if(!points.length) {
+                        return
+                    }
                     // what is the first zoom position we see
                     const init_point = Array.from(points[this.step_index])
                     if (init_point) {
@@ -723,16 +726,36 @@ class Frame {
         if ($el.data("wzoom")) {
             return $el.data("wzoom") // already initialized
         }
-        const maxScale_default = 3
+        const maxScale_default = 5
+        let last_scale = null
         const wzoom = WZoom.create($el.get()[0], {
             maxScale: maxScale_default,
             minScale: 1,
-            speed: 1,
+            speed: 1.5,
             // We can wheel in for ever but keeping maxScale on leash.
             // Because the click takes us to the current bed (and second click zooms out).
-            rescale: wzoom =>
-                wzoom.content.maxScale = Math.max(maxScale_default, wzoom.content.currentScale + 3)
+            rescale: wzoom => { // the function seems to be called unintuitively with grab moving
+                const scale = wzoom.content.currentScale
+                wzoom.content.maxScale = Math.max(maxScale_default, scale + 3)
+                $el.trigger("wzoomed", [wzoom, last_scale===scale])
+                last_scale = scale
+            },
+            dragScrollableOptions: {
+                onDrop: (_, wzoom) => $el.trigger("wzoomed", wzoom)
+            }
         })
+        // Why correcting viewport? When having data-step-points and calling `zoom_set` from `prepare`,
+        // the frame is not at the viewport yet, thus the values are wrong. Such image seem to work
+        // but whenever manually zoomed, it vanishes out of the screen.
+        // Besides, we should center the image to a parent. However, we do not want to wrap it,
+        // this simulates the parent.
+        wzoom.viewport.originalLeft = $el.position().left
+        wzoom.viewport.originalTop = $el.position().top
+        wzoom.viewport.originalWidth = $el.width()
+        wzoom.viewport.originalHeight = $el.height()
+
+        console.log("753:  wzoom.viewport", wzoom.viewport) // TODO
+
 
         $el
             // we have zoomed in, do not playback further
@@ -772,22 +795,12 @@ class Frame {
     */
     zoom_set($el, left = 0, top = 0, scale = 1, transition_duration = null, duration = null) {
         const wzoom = this.zoom_init($el)
-
         transition_duration ??= prop("step-transition-duration", $el, null, "transition-duration")
-
-        const c = wzoom.content
-        if (!c) {
-            return console.warn("Zoomed img does not exist", $el, wzoom)
-
-        }
-        c.currentLeft = left
-        c.currentTop = top
-        c.currentScale = scale
-        const orig = wzoom.options.smoothExtinction
-        wzoom.options.smoothExtinction = transition_duration
-        wzoom._transform()
-        wzoom.options.smoothExtinction = orig
-        this.add_effect(resolve => $(c.$element).on("transitionend", () => resolve()))
+        const orig = wzoom.options.smoothTime
+        wzoom.options.smoothTime = transition_duration
+        wzoom.transform(top, left, scale)
+        wzoom.options.smoothTime = orig
+        this.add_effect(resolve => $el.on("transitionend", () => resolve()))
         return duration ?? prop("step-duration", $el, null, "duration")
     }
 
@@ -816,7 +829,8 @@ class Frame {
      */
     get_notes() {
         const frame_dom = this.$frame.get()[0]
-        return find_comment(frame_dom.previousSibling, "previousSibling") || find_comment(frame_dom.firstChild, "nextSibling")
+        const txt = find_comment(frame_dom.previousSibling, "previousSibling") || find_comment(frame_dom.firstChild, "nextSibling")
+        return this.playback.menu.markdown.makeHtml(txt)
 
         /**
          *
