@@ -95,7 +95,7 @@ class Menu {
 
     help() {
         const text = wh.getText().split("\n").join("<br>")
-        new $.Zebra_Dialog(text, { type: "information", title: "Shortcuts" })
+        this.playback.hud.ok("Shortcuts", text)
     }
 
     clean_playback() { // XX not used right now

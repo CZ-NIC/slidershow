@@ -151,6 +151,15 @@ class Hud {
     }
 
     /**
+     * Ok dialog
+     * @param {string} title
+     * @param {string} text
+     */
+    ok(title, text) {
+        new $.Zebra_Dialog(text, { type: "information", title: title })
+    }
+
+    /**
      * Information for the presenter, not for the public.
      */
     discreet_info(text) {
@@ -253,7 +262,7 @@ class Hud {
             if (!text) {
                 this.alert(error)
             } else {
-                new $.Zebra_Dialog(text, { type: "information", title: property })
+                this.ok(property, text)
             }
         } else {
             return text || error

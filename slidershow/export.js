@@ -6,11 +6,31 @@ class Export {
     constructor(menu) {
         this.menu = menu
         this.playback = menu.playback
+
+        this.file_handler_allowed = Boolean(window.showSaveFilePicker)
+        this.file_handler_wanted = this.file_handler_allowed
+        this.file_handler = null
+    }
+
+    file_handler_checkbox() {
+        if (!this.file_handler_allowed) {
+            return "(In this browser, you are not allowed to rewrite local files.)"
+        }
+        return $("<label />",
+            { "text": "Rewrite local file next time? (Chrome only)" })
+            .prepend(
+                $("<input />", { "type": "checkbox", "checked": this.file_handler_wanted })
+                    .on("click", (e) => {
+                        this.file_handler_wanted = $(e.target).prop("checked")
+                    })
+            )
     }
 
 
     export_dialog() {
-        new $.Zebra_Dialog("Will you put the presentation file to the media folder?", {
+        new $.Zebra_Dialog({
+            message: "Will you put the presentation file to the media folder?<br>",
+            source: { inline: this.file_handler_checkbox() },
             type: "question",
             title: "Export",
             buttons: [{
@@ -48,7 +68,8 @@ class Export {
 
         const html = $contents.prop("innerHTML").replaceAll(EXPORT_SRC, "src")
         if (!html.length) {
-            this.playback.hud.alert("Cannot export a single file – too big.")
+            this.playback.hud.ok("Export failed", "Cannot export a single file – too big.")
+            return
         }
 
         // Prepare the original head.
@@ -65,15 +86,28 @@ class Export {
         // Export the data blob
         const data = `<!DOCTYPE html><html><head>\n${$head[0].innerHTML}</head>\n<body>` + html + "\n</body>\n</html>"
 
-        /*
-        // XX in Chrome, we can re-write the file every time
-        if(window.showSaveFilePicker) {
-            const newHandle = await window.showSaveFilePicker(suggestName) // ask once for the path – then keep newHandle
+        if (this.file_handler_wanted && window.showSaveFilePicker) {
+            const newHandle = await this.assure_handler()
             const fileStream = await newHandle.createWritable()
             await fileStream.write(data)
             fileStream.close()
+            this.menu.playback.hud.alert("Saved")
+        } else {
+            this.download(data)
         }
-        */
+
+        // Changes saved, allow leaving
+        this.playback.change_controller.unblock_unload()
+    }
+
+    async assure_handler() {
+        if (!this.file_handler) {
+            this.file_handler = await window.showSaveFilePicker({suggestName: this.playback.session.docname}) // ask once for the path – then keep newHandle
+        }
+        return this.file_handler
+    }
+
+    download(data) {
         const blob = new Blob([data], { type: "text/plain" })
         const url = URL.createObjectURL(blob)
         const link = document.createElement("a")
@@ -83,9 +117,6 @@ class Export {
         link.click()
         URL.revokeObjectURL(url)
         document.body.removeChild(link)
-
-        // Changes saved, allow leaving
-        this.playback.change_controller.unblock_unload()
     }
 
 }
