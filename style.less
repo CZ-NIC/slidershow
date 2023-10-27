@@ -215,27 +215,29 @@ frame-preview {
             cursor: help;
         }
 
-        .hud-point {
-            display: block;
-            margin-bottom: 2px;
+        div {
+            .point-wrapper .hud-point {
+                display: block;
+                margin-bottom: 2px;
+            }
 
-            >span {
-                cursor: pointer;
+            .hud-point {
+                // common for points and the new point button
                 display: inline-block;
-                background-color: lightyellow;
-                border-radius: 5px;
-                padding: 3px;
+
+                >span {
+                    cursor: pointer;
+                    display: inline-block;
+                    background-color: lightyellow;
+                    border: 1px solid gray;
+                    border-radius: 5px;
+                    padding: 3px;
+                }
+
+                &.active>span {
+                    background-color: yellow;
+                }
             }
-
-            &.active>span {
-                background-color: yellow;
-            }
-
-        }
-
-        >.hud-point {
-            padding: 5px;
-            display: inline-block;
         }
     }
 }

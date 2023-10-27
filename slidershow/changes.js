@@ -1,4 +1,4 @@
-class ChangeController {
+class Changes {
 
   HIDE_DURATION = 200
 
@@ -22,36 +22,30 @@ class ChangeController {
      */
     this.changes = []
 
-    this.$button = $("<button/>", { "text": "undo", })
-      .on("click", () => {
-        this.undo()
-        return false
-      })
-      .prop("disabled", !this.changes.length)
+    /**
+    * @type {Array<Array>}
+    */
+    this.applied_changes = []
+
+    this.playback.hud.$hud_properties.on("click", "button.undo", () => this.undo())
+    this.$button = $("<button/>", { "text": "undo", "class": "undo", "title": "Ctrl+Alt+Z" }).prop("disabled", !this.changes.length)
+    this.playback.hud.$hud_properties.on("click", "button.redo", () => this.redo())
+    this.$button_redo = $("<button/>", { "text": "redo", "class": "redo", "title": "Ctrl+Alt+Shift+Z" }).prop("disabled", !this.applied_changes.length)
   }
 
 
   /**
    *
-   * @param {Function} undo
-   * @param {*} identity Prevent registering two successive events with the same identity check in a row.
-   * @param {*} extra Any parameter given to the undo callback. TODO not used
+   * @param {Function} fn Bidirectionally reversible operation. Gets called immediately with the `val` parameter.
+   * @param {*} val Parameter given to the redo callback.
+   * @param {*} previous Parameter given to the undo callback.
    * @returns
    */
-  change(undo, identity = null, extra = null) {
-    if (identity && this.changes.length && this.changes.slice(-1)[0][2] === identity) {
-
-      console.log("43:  identity", identity) // TODO
-
-      return
-    }
-
-    console.log("48:  identity", identity) // TODO
-
+  change(fn, val = null, previous = null) {
     if (this.performing) { // already doing an undo operation
       return
     }
-    this._change(this.CALLBACK, undo, identity, extra)
+    this._change(this.CALLBACK, fn, val, previous)
   }
 
   deleteItem($el) {
@@ -60,9 +54,11 @@ class ChangeController {
   }
 
 
-  _change(name, instructions, identity = null, extra = null) {
-    this.changes.push([name, instructions, identity, extra])
+  _change(name, fn, val = null, prev_val = null) {
+    this.changes.push([name, fn, val, prev_val])
 
+    this.applied_changes.length = 0
+    this.$button_redo.prop("disabled", true)
     this.$button.prop("disabled", false)
     $(window).on('beforeunload', () => true)
   }
@@ -71,14 +67,26 @@ class ChangeController {
     $(window).off("beforeunload")
   }
 
+  redo() {
+    this._perform(this.applied_changes, this.changes, true)
+  }
+
   undo() {
-    if (!this.changes.length) {
+    this._perform(this.changes, this.applied_changes, false)
+  }
+
+  _perform(stack1, stack2, redo = true) {
+    if (!stack1.length) {
       return
     }
-    const [name, instructions, _, extra] = this.changes.pop()
+    const change = stack1.pop()
+    stack2.push(change)
+    const [name, fn, val, prev_val] = change
+    const value = redo ? val : prev_val
+
     switch (name) {
       case this.DELETE_EL:
-        const [originalIndex, $deletedItem, xpath] = instructions
+        const [originalIndex, $deletedItem, xpath] = fn
 
         const $container = $(lookupElementByXPath(xpath))
         this.playback.goToArticle($container.closest(FRAME_SELECTOR))
@@ -91,7 +99,7 @@ class ChangeController {
         break;
       case this.CALLBACK:  // Undo the operation with a non serialized callback
         this.performing = true
-        instructions(extra)
+        fn(value)
         this.performing = false
         break;
       default:
@@ -99,13 +107,17 @@ class ChangeController {
         break;
     }
 
+    this.$button.prop("disabled", !this.changes.length)
     if (!this.changes.length) {
-      this.$button.prop("disabled", true)
       this.unblock_unload()
     }
+    this.$button_redo.prop("disabled", !this.applied_changes.length)
   }
 
   get_button() {
     return this.$button
+  }
+  get_button_redo() {
+    return this.$button_redo
   }
 }

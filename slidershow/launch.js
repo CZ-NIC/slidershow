@@ -42,12 +42,15 @@ Private attributes that are not documented in the README because the user should
 * [data-templated] This element was inserted only temporarily throught a template (ex: footer in an article or a <head> vendor script). Should not be exported.
 * [data-preloaded] The frame has already been preloaded.
 * data("step-original") Temporarily change [data-step] value.
-* data("hud-stringified") The attribute data is not a scalar.
 * .step-shown Frame step index has greater value so we see this element.
 * .step-hidden Frame step index has lower value so we do not see this element.
 * .step-not-yet-visible Auxiliary window highlights not-yet-seen elements.
 * <img-temp-animation-step> Tags that help distinguish image zoom step from the image step.
-* trigger("wzoomed") Img with wzoom action.
+* Img with wzoom:
+*   trigger("wzoomed") new position
+*   data("wzoom_get_ratio") screen aware ratio
+*   data("wzoom_resize_off") event destructor
+*   $(window).on("resize.wzoom")
 */
 
 // var variables that a hacky user might wish to change. Might become data-attributes in the future.
@@ -85,6 +88,9 @@ const PROP_DEFAULT = {
     "start": false,
     "spread-frames": "spiral",
     "step-shown": false
+}
+const PROP_NONSCALAR = {
+    "step-points": true
 }
 
 main()

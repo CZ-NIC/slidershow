@@ -6,7 +6,8 @@ class Playback {
     constructor(menu = null, aux_window = null) {
         this.menu = menu
         this.aux_window = aux_window
-        this.change_controller = new ChangeController(this)
+        this.hud = new Hud(this)
+        this.change_controller = new Changes(this)
         /** Transition promise */
         this.promise = {}
         /** @type {Boolean} Application is running */
@@ -17,9 +18,7 @@ class Playback {
             Promise.all([this.frame.video_finished, this.map.finished, this.hud_map.finished]).then(() => this.tryGoNext())
         }).stop()
 
-        const fact = (id) => $("<div/>", { id: id }).prependTo("body")
-        this.hud = new Hud(this)
-
+        const fact = id => $("<div/>", { id: id }).prependTo("body")
         this.map = new MapWidget(fact("map"), this).map_start()
         this.hud_map = new MapWidget(fact("map-hud"), this).map_start()
 

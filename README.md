@@ -347,6 +347,18 @@ In this example, the image starts at `[100, 10, 2]`, then zooms out `[]`, then g
 </article>
 ```
 
+Position `0,0` is at the image centre. Its real dimension is taken into account so the value remains stable while changing the browser size (different displays). We recommend to use the property panel (<kbd>Alt+P</kbd>) to determine the coordinates.
+
+Every image in the sections slowly zooms out from the center. (Images in header and footer are ignored.)
+
+```html
+<section data-step-points="[[0,0,15,5], [0,0,1,5]]">
+    <article><img src="..."/></article>
+    <article><img src="..."/></article>
+    <article><img src="..."/></article>
+</section>
+```
+
 #### Panoramatic images
 
 When an image is much longer than the screen, we show it slowly first before resizing it to fit the screen. This will delay the `<article>`'s `data-duration`. It starts when the image proportion width / height > `data-panorama-threshold=2`.

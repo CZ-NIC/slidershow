@@ -83,7 +83,6 @@ class ShortcutsController {
                     return false
                 }
             }],
-            ["Ctrl+Shift+Delete", "Undo change (removing element)", () => pl.change_controller.undo()],
             ["Escape", "Stop editing", () => $(":focus").blur()]
         ]).toggle(pl.editing_mode)
     }
@@ -163,6 +162,9 @@ class ShortcutsController {
                     }]
                 })
             }],
+
+            ["Ctrl+Alt+z", "Undo change", () => pl.change_controller.undo()],
+            ["Ctrl+Alt+Shift+z", "Redo change", () => pl.change_controller.redo()],
         ]).disable()
     }
 }

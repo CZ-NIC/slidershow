@@ -1,4 +1,8 @@
 class PropertyPanel {
+    /**
+     *
+     * @param {Hud} hud
+     */
     constructor(hud) {
         this.hud = hud
         this.playback = hud.playback
@@ -11,12 +15,14 @@ class PropertyPanel {
      * @param {jQuery} $input <input> for a [data-step-points] element
      */
     gui_step_points(frame, $input) {
-        const $wrap = $("<div />").insertAfter($input)
+        const $wrap = $("<div />", { "class": "point-wrapper" }).hide().insertAfter($input)
+        const $hud = this.hud.$hud_properties
         const cc = this.playback.change_controller
         const $actor = frame.$actor
         const points = JSON.parse($input.val() || '[]')  // load set of points from the given <input>
-
-        $wrap.append(points.map(p => new_point(p)))
+        if (points.length) {
+            $wrap.show().append(points.map(p => new_point(p)))
+        }
         $input // refresh from either: user editing <input>, user did undo, not from us having edited <input>
             .off("change.step-points undo-performed")
             .on("change.step-points undo-performed", () => {
@@ -28,30 +34,30 @@ class PropertyPanel {
 
         // new point button
         const $button = new_tag("+")
-            .on("click", () => {
-                const $new_point = new_point(frame.zoom_get($actor), true).trigger("click").appendTo($wrap)
-                cc.change(() => $new_point.trigger("dblclick"))
-            })
-            .insertAfter($wrap)
+            .on("click", () => new_point(frame.zoom_get($actor), true)
+                .trigger("click")
+                .appendTo($wrap.show()))
+            .insertAfter($input)
 
         function new_point(point, push = false) {
             if (push) {
                 points.push(point)
+                refresh_points()
             }
 
             const $point = new_tag(point, true)
                 .on("click", function () { // zoom to given point
                     if ($(this).hasClass("active")) { // blur
-                        $("div", $wrap).removeClass("active")
+                        $(".hud-point", $hud).removeClass("active")
                         $actor.off("wzoomed")
                         return
                     }
-                    $("div", $wrap).removeClass("active")
+                    $(".hud-point", $hud).removeClass("active")
                     $(this).addClass("active")
                     $actor
                         .off("wzoomed")
-                        .on("wzoomed", (_, wzoom, minor_move) => {
-                            const { currentLeft, currentTop, currentScale } = wzoom.content
+                        .on("wzoomed", (_, minor_move) => {
+                            const [currentLeft, currentTop, currentScale] = frame.zoom_get($actor)
                             point[0] = Math.round(currentLeft)
                             point[1] = Math.round(currentTop)
                             point[2] = Math.round(currentScale)
@@ -67,19 +73,14 @@ class PropertyPanel {
                     points.splice(index, 1)
                     $(this).fadeOut()
                     refresh_points()
-                    cc.change(() => {
-                        points.splice(index, 0, point)
-                        $(this).fadeIn()
-                        refresh_points()
-                    })
                 })
             return $point
 
             function refresh_points(minor_move = false) {
-                // Why `change.$`? We want to ignore our `change.step-points`
-                // that would create a loop and delete this very container.
-                $input.val(JSON.stringify(points))
+                $input.val(points.length ? JSON.stringify(points) : "")
                 if (!minor_move) {
+                    // Why `change.$`? We want to ignore our `change.step-points`
+                    // that would create a loop and delete this very container.
                     $input.trigger("change.$")
                 }
             }
@@ -115,7 +116,7 @@ class PropertyPanel {
                     $el.removeData(p)
                 } else {
                     $el.attr(`data-${p}`, v)
-                    $el.data(p, $el.data("hud-stringified") ? JSON.parse(v) : v)
+                    $el.data(p, PROP_NONSCALAR[p] ? JSON.parse(v) : v)
                 }
             })
 
@@ -129,24 +130,23 @@ class PropertyPanel {
     /**
      * Generate <input> into the Properies panel.
      * @param {string} p Property name (ex: 'duration')
-     * @param {jQuery} $el $frame or its parents up to main (elements having properties)
+     * @param {jQuery} $el $frame or its parent up to main (element having the property)
      * @param {string} name Tag name, prepended to the property <label>
      * @param {string} value Initial value.
      * @param {string} type <input> type, like "text"
      * @param {string} placeholder HTML placeholder
-     * @param {Function} change Callback to revert changes
+     * @param {Function} change Callback to revert changes, i.e. on the DOM element.
      * @returns
      */
     input(p, $el, name, value, type, placeholder, change) {
         const pl = this.playback
         const original_frame = pl.frame.index
 
-        if (typeof value === "object") {
-            $el.data("hud-stringified", true)
+        if (PROP_NONSCALAR[p]) {
             value = JSON.stringify(value) // ex: step-points
         }
 
-        return [
+        return $.merge(
             $("<label/>", { "text": `${name ? " - " + name : p}: `, "title": this.hud.get_help(p, true, false) })
                 .on("click", () => this.hud.get_help(p)),
             $("<input />")
@@ -154,30 +154,51 @@ class PropertyPanel {
                 .attr("placeholder", placeholder)
                 .attr("name", `${name}${p}`)
                 .attr("data-property", p)
+                .data("target", $el[0])
+                .data("previous", value)
                 .val(value)
                 .on("change", function (_) {
-                    const previous = value
+                    // Determine the previous value.
+                    // Since the $input gets deleted while changing frame,
+                    // we have to store the value in the element data instead in a closure variable
+                    // i.e. like `const previous = value`.
+                    // Do not allow undefined because that would make .data("previous", undefined)
+                    //  a reading operation. We prefer "" as this is an <input> text.
+                    const _p = $(this).data("previous")
+                    const previous = _p === undefined ? "" : _p
                     value = $(this).val()
-                    change($(this).val()) // change the property in the DOM
-                    pl.change_controller.change(() => { // undo change
+
+                    if (previous === value) {
+                        return
+                    }
+
+                    $(this).data("previous", value)
+
+                    change(value) // change the property in the DOM
+                    pl.change_controller.change((previous) => { // undo change
                         // Other frame contents was changed. We have to return there first.
                         // Note that we do not return in case of a common <section> or <main>.
                         const $fr = pl.frame.$frame
                         if (!($fr.closest($el).length || $fr.find($el).length)) {
                             pl.goToFrame(original_frame)
-
                         }
+                        // Change the DOM back
+                        change(previous)
                         // Change the properties panel <input> back
                         // Why accessing via name?
                         // Since we could changed the slide (and refreshed the panel HTML),
                         // the original element does not have to exist.
-                        $(`[name=${$(this).attr("name")}]`).val(previous).focus()
-                        change(previous)
-                        value = previous
-                        $(this).trigger("undo-performed")
-                    })
-                }),
-            "<br>"
-        ]
+                        // Besides, as the element can be nested under two <section> tags,
+                        // we filter by .data("target") too.
+                        $($(`[name=${$(this).attr("name")}]`)
+                            .get()
+                            .find(input => $(input).data("target") === $el[0]))
+                            .val(previous)
+                            .data("previous", previous)
+                            .trigger("undo-performed")
+                            .focus()
+                    }, value, previous)
+                })
+        ).wrapAll($("<div/>")).parent()
     }
 }

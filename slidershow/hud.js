@@ -177,18 +177,16 @@ class Hud {
             .html($("<p/>").html("Properties panel (Alt+P)"))
 
         // undo button
-        this.$hud_properties.append(this.playback.change_controller.get_button(), "<br>")
+        this.$hud_properties.append(this.playback.change_controller.get_button(), this.playback.change_controller.get_button_redo(), "<br>")
 
         // element properties
         if ($actor.length) {
             if ($actor.prop("tagName") === "IMG") {
                 // handle [data-property=step-points]
-                const step_inputs = pp.input_ancestored("step-points", $actor)
-
-                console.log("183:  step_inputs", step_inputs) // TODO
-
-                $props.append(step_inputs)
-                $(step_inputs.filter(a => a.is?.("input"))).map((_, el) => pp.gui_step_points(frame, $(el)))
+                pp
+                    .input_ancestored("step-points", $actor)
+                    .appendTo($props)
+                    .find("input").map((_, el) => pp.gui_step_points(frame, $(el)))
             } else if ($actor.prop("tagName") === "VIDEO") {
                 $props.append(["playback-rate"].map(p => pp.input_ancestored(p, $actor, "number")).flat())
 
@@ -232,7 +230,7 @@ class Hud {
             text = "Loading docs, try again"
         } else {
             const real_name = "data-" + property
-            const rr = short ? `#+ \`${real_name}\`\\n([\\s\\S]*?)(?=\\n)` : `#+ \`${real_name}\`\\n([\\s\\S]*?)(?=\\n#)`
+            const rr = short ? `#+ \`${real_name}\`\\n\\n?([\\s\\S]*?)(?=\\n)` : `#+ \`${real_name}\`\\n\\n?([\\s\\S]*?)(?=\\n#)`
             const r = new RegExp(rr, "m")
 
             const m = this._help.match(r)

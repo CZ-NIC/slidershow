@@ -146,16 +146,20 @@ class Frame {
                 .filter((_, el) => this.prop("step-li", $(el))))
             // [data-step-points] affects all <img>
             .add($("img", this.$frame)
-                .filter((_, el) => this.prop("step-points", $(el)))
+                .filter((_, el) => !$(el).closest("header, footer").length) // filter out images in header/footer
                 .map((_, el) => {
                     // generate multiple steps (dummy <img-temp-animation-step>) for points
                     const $el = $(el)
-                    const points = $el.data("step-points")
-                    if(!points.length) {
+                    const points = this.prop("step-points", $(el))
+                    if (!points?.length) {
                         return
                     }
+
                     // what is the first zoom position we see
-                    const init_point = Array.from(points[this.step_index])
+                    // XX When multiple zoomed images at frame (or zooming steps along with classic data-step) are tested,
+                    // this will pose a problem. Because this.step_index points to the frame step,
+                    // not to the image animation step.
+                    const init_point = Array.from(points[this.step_index] || points.slice(-1))
                     if (init_point) {
                         // init point has no transition duration, it's straight there when we come to the frame
                         init_point[3] = 0
@@ -737,11 +741,15 @@ class Frame {
             rescale: wzoom => { // the function seems to be called unintuitively with grab moving
                 const scale = wzoom.content.currentScale
                 wzoom.content.maxScale = Math.max(maxScale_default, scale + 3)
-                $el.trigger("wzoomed", [wzoom, last_scale===scale])
+                if (last_scale !== null) {
+                    // when created, it directly triggers rescale. Might cause a loop when triggered function
+                    // calls zoom_get (which calls zoom_init again)
+                    $el.trigger("wzoomed", [last_scale === scale])
+                }
                 last_scale = scale
             },
             dragScrollableOptions: {
-                onDrop: (_, wzoom) => $el.trigger("wzoomed", wzoom)
+                onDrop: () => $el.trigger("wzoomed")
             }
         })
         // Why correcting viewport? When having data-step-points and calling `zoom_set` from `prepare`,
@@ -751,13 +759,19 @@ class Frame {
         // this simulates the parent.
         wzoom.viewport.originalLeft = $el.position().left
         wzoom.viewport.originalTop = $el.position().top
-        wzoom.viewport.originalWidth = $el.width()
-        wzoom.viewport.originalHeight = $el.height()
-
-        console.log("753:  wzoom.viewport", wzoom.viewport) // TODO
-
+        const refresh_viewport = () => {
+            wzoom.viewport.originalWidth = $el.width()
+            wzoom.viewport.originalHeight = $el.height()
+            // Accessing $el.width seems to be a costly operation. When I did not cache the result, it made the image shake
+            // while dragging and setting the point property if and only if the DevTools were open.
+            const ratio = $el.width() / $el.prop("naturalWidth")
+            $el.data("wzoom_get_ratio", () => ratio)
+        }
+        refresh_viewport()
+        $(window).on("resize.wzoom", refresh_viewport)
 
         $el
+            .data("wzoom_resize_off", () => $(window).off("resize.wzoom", refresh_viewport))
             // we have zoomed in, do not playback further
             .off("click wheel")
             .on("click wheel", () => this.playback.moving = false)
@@ -773,15 +787,20 @@ class Frame {
             const $el = $(el)
             setTimeout(() => { // we have to timeout - wzoom bug, has to finish before it can be destroyed
                 $el.data("wzoom").destroy()
-                $el.data("wzoom", null)
-                $el.attr("data-wzoom", null)
+                $el.data("wzoom_resize_off")()
+                $el
+                    .data("wzoom", null)
+                    .data("wzoom_get_ratio", null)
+                    .data("wzoom_resize_off", null)
+                    .attr("data-wzoom", null)
             })
         })
     }
 
     zoom_get($el) {
         const { currentLeft, currentTop, currentScale } = this.zoom_init($el).content
-        return [currentLeft, currentTop, currentScale]
+        const ratio = $el.data("wzoom_get_ratio")()
+        return [currentLeft / ratio, currentTop / ratio, currentScale]
     }
 
     /**
@@ -796,9 +815,10 @@ class Frame {
     zoom_set($el, left = 0, top = 0, scale = 1, transition_duration = null, duration = null) {
         const wzoom = this.zoom_init($el)
         transition_duration ??= prop("step-transition-duration", $el, null, "transition-duration")
+        const ratio = $el.data("wzoom_get_ratio")()
         const orig = wzoom.options.smoothTime
         wzoom.options.smoothTime = transition_duration
-        wzoom.transform(top, left, scale)
+        wzoom.transform(top * ratio, left * ratio, scale)
         wzoom.options.smoothTime = orig
         this.add_effect(resolve => $el.on("transitionend", () => resolve()))
         return duration ?? prop("step-duration", $el, null, "duration")
