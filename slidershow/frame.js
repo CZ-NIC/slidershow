@@ -321,6 +321,7 @@ class Frame {
         $("video[data-autoplay-prevented]", $contents).removeAttr("data-autoplay-prevented").attr("autoplay", "")
         const $frames = $contents.find(FRAME_SELECTOR).removeAttr("data-preloaded")
         $frames.find("[data-templated]").remove()
+        Frame.unmake_editable($frames)
         Frame._clean_step($frames.find("[data-step]"))
 
         // handling media
@@ -441,8 +442,14 @@ class Frame {
             .on("focusout", EDITABLE_ELEMENTS, () => [this.playback.shortcuts.general.enable(), this.playback.menu.global_shortcuts.enable()])
     }
 
-    unmake_editable() {
-        $(EDITABLE_ELEMENTS, this.$frame).removeAttr("contenteditable")
+    unmake_editable($container = null) {
+        Frame.unmake_editable(this.$frame)
+    }
+    /**
+     * @param {jQuery} $container
+     */
+    static unmake_editable($container) {
+        $(EDITABLE_ELEMENTS, $container).removeAttr("contenteditable")
     }
 
     video_enter(resolve) {
@@ -671,6 +678,24 @@ class Frame {
             .show()
     }
 
+    delete() {
+        const pl = this.playback
+        const $frame = pl.frame.$frame
+        const $prev = $frame.prev()
+        const index = pl.frame.index
+
+        pl.changes.undoable("Inserted new frame",
+            () => {
+                $frame.detach()
+                pl.reset()
+                pl.goToFrame(index)
+            }, () => {
+                $frame.insertAfter($prev)
+                pl.reset()
+                pl.goToFrame(index)
+            })
+    }
+
     panorama() {
         const $actor = this.$actor
         this.panorama_starter = null
@@ -759,12 +784,18 @@ class Frame {
         // this simulates the parent.
         wzoom.viewport.originalLeft = $el.position().left
         wzoom.viewport.originalTop = $el.position().top
+        const orig_ratio = $el.prop("naturalHeight") / $el.prop("naturalWidth")
         const refresh_viewport = () => {
             wzoom.viewport.originalWidth = $el.width()
             wzoom.viewport.originalHeight = $el.height()
             // Accessing $el.width seems to be a costly operation. When I did not cache the result, it made the image shake
             // while dragging and setting the point property if and only if the DevTools were open.
-            const ratio = $el.width() / $el.prop("naturalWidth")
+            // The space the <img> occupies in the DOM is bigger than the actual image size.
+            // Either the width is not fully stretched or the height.
+            // The ratio we need to count is then dependent on either dimension that corresponds with the actual image dimension,
+            // not the other suppressed.
+            const curr_ratio = $el.height() / $el.width()
+            const ratio = curr_ratio > orig_ratio ? $el.width() / $el.prop("naturalWidth") : $el.height() / $el.prop("naturalHeight")
             $el.data("wzoom_get_ratio", () => ratio)
         }
         refresh_viewport()
@@ -785,22 +816,22 @@ class Frame {
     zoom_destroy() {
         $("[data-wzoom]", this.$frame).each((_, el) => {
             const $el = $(el)
-            setTimeout(() => { // we have to timeout - wzoom bug, has to finish before it can be destroyed
-                $el.data("wzoom").destroy()
-                $el.data("wzoom_resize_off")()
-                $el
-                    .data("wzoom", null)
-                    .data("wzoom_get_ratio", null)
-                    .data("wzoom_resize_off", null)
-                    .attr("data-wzoom", null)
-            })
+            // Maybe no more needed as this method got into .left().
+            // setTimeout(() => { // we have to timeout - wzoom bug, has to finish before it can be destroyed
+            $el.data("wzoom").destroy()
+            $el.data("wzoom_resize_off")()
+            $el
+                .data("wzoom", null)
+                .data("wzoom_get_ratio", null)
+                .data("wzoom_resize_off", null)
+                .attr("data-wzoom", null)
         })
     }
 
     zoom_get($el) {
         const { currentLeft, currentTop, currentScale } = this.zoom_init($el).content
         const ratio = $el.data("wzoom_get_ratio")()
-        return [currentLeft / ratio, currentTop / ratio, currentScale]
+        return [currentLeft / ratio / currentScale, currentTop / ratio / currentScale, currentScale]
     }
 
     /**
@@ -818,7 +849,7 @@ class Frame {
         const ratio = $el.data("wzoom_get_ratio")()
         const orig = wzoom.options.smoothTime
         wzoom.options.smoothTime = transition_duration
-        wzoom.transform(top * ratio, left * ratio, scale)
+        wzoom.transform(top * ratio * scale, left * ratio * scale, scale)
         wzoom.options.smoothTime = orig
         this.add_effect(resolve => $el.on("transitionend", () => resolve()))
         return duration ?? prop("step-duration", $el, null, "duration")

@@ -17,7 +17,7 @@ class PropertyPanel {
     gui_step_points(frame, $input) {
         const $wrap = $("<div />", { "class": "point-wrapper" }).hide().insertAfter($input)
         const $hud = this.hud.$hud_properties
-        const cc = this.playback.change_controller
+        const cc = this.playback.changes
         const $actor = frame.$actor
         const points = JSON.parse($input.val() || '[]')  // load set of points from the given <input>
         if (points.length) {
@@ -47,13 +47,12 @@ class PropertyPanel {
 
             const $point = new_tag(point, true)
                 .on("click", function () { // zoom to given point
-                    if ($(this).hasClass("active")) { // blur
-                        $(".hud-point", $hud).removeClass("active")
-                        $actor.off("wzoomed")
-                        return
+                    if ($(this).hasClass("active")) {
+                        return blur()
                     }
                     $(".hud-point", $hud).removeClass("active")
                     $(this).addClass("active")
+                    $(window).on("resize.wzoom-properties", blur)
                     $actor
                         .off("wzoomed")
                         .on("wzoomed", (_, minor_move) => {
@@ -83,6 +82,12 @@ class PropertyPanel {
                     // that would create a loop and delete this very container.
                     $input.trigger("change.$")
                 }
+            }
+
+            function blur() {
+                $(".hud-point", $hud).removeClass("active")
+                $(window).off("resize.wzoom-properties")
+                $actor.off("wzoomed")
             }
         }
         function new_tag(html, stringify = false) {
@@ -175,29 +180,30 @@ class PropertyPanel {
                     $(this).data("previous", value)
 
                     change(value) // change the property in the DOM
-                    pl.change_controller.change((previous) => { // undo change
-                        // Other frame contents was changed. We have to return there first.
-                        // Note that we do not return in case of a common <section> or <main>.
-                        const $fr = pl.frame.$frame
-                        if (!($fr.closest($el).length || $fr.find($el).length)) {
-                            pl.goToFrame(original_frame)
-                        }
-                        // Change the DOM back
-                        change(previous)
-                        // Change the properties panel <input> back
-                        // Why accessing via name?
-                        // Since we could changed the slide (and refreshed the panel HTML),
-                        // the original element does not have to exist.
-                        // Besides, as the element can be nested under two <section> tags,
-                        // we filter by .data("target") too.
-                        $($(`[name=${$(this).attr("name")}]`)
-                            .get()
-                            .find(input => $(input).data("target") === $el[0]))
-                            .val(previous)
-                            .data("previous", previous)
-                            .trigger("undo-performed")
-                            .focus()
-                    }, value, previous)
+                    pl.changes.change(`Changing ${p} ${previous} → ${value}`,
+                        (previous) => { // undo change
+                            // Other frame contents was changed. We have to return there first.
+                            // Note that we do not return in case of a common <section> or <main>.
+                            const $fr = pl.frame.$frame
+                            if (!($fr.closest($el).length || $fr.find($el).length)) {
+                                pl.goToFrame(original_frame)
+                            }
+                            // Change the DOM back
+                            change(previous)
+                            // Change the properties panel <input> back
+                            // Why accessing via name?
+                            // Since we could changed the slide (and refreshed the panel HTML),
+                            // the original element does not have to exist.
+                            // Besides, as the element can be nested under two <section> tags,
+                            // we filter by .data("target") too.
+                            $($(`[name=${$(this).attr("name")}]`)
+                                .get()
+                                .find(input => $(input).data("target") === $el[0]))
+                                .val(previous)
+                                .data("previous", previous)
+                                .trigger("undo-performed")
+                                .focus()
+                        }, value, previous)
                 })
         ).wrapAll($("<div/>")).parent()
     }

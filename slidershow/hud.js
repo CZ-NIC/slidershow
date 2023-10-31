@@ -27,7 +27,8 @@ class Hud {
 
     toggle_thumbnails() {
         this.$hud_thumbnails.toggle()
-        if (this.thumbnails_visible) {
+        if (this.thumbnails_visible && this.playback.frame) {
+            // when restoring session from the hash, frame is not ready yet
             this.thumbnails(this.playback.frame)
         }
         this.playback.session.store()
@@ -55,6 +56,7 @@ class Hud {
         const THUMBNAIL_COUNT = 6
         const index = frame.index  // current frame index
         const indices = Array.from({ length: THUMBNAIL_COUNT }, (_, i) => i + Math.max(0, index - Math.ceil(THUMBNAIL_COUNT / 2)))  // visible frames' indices
+        const pl = this.playback
 
         // remove old unused thumbnails
         $("frame-preview", this.$hud_thumbnails).each(function () {
@@ -68,7 +70,7 @@ class Hud {
             let $thumbnail = $(`[data-ref=${i}]`, this.$hud_thumbnails)
             if (!$thumbnail.length) { // this thumbnail does not exist yet
                 /** @type {?Frame} */
-                const frame = $(this.playback.$articles[i]).data("frame")
+                const frame = $(pl.$articles[i]).data("frame")
                 if (!frame) {
                     break
                 }
@@ -78,8 +80,12 @@ class Hud {
                 frame.preloaded.then(() => {
                     $thumbnail.html(frame.get_preview())
 
+                    if (pl.editing_mode) {
+                        $thumbnail.append($("<span/>", { html: "&#10006;", class: "delete" }).on("click", () => frame.delete()))
+                    }
+
                     // Scale – use the proportions of the full screen but shrink to max thumbnail width
-                    const scaleFactorX = $thumbnail.width() / this.playback.$current.width()
+                    const scaleFactorX = $thumbnail.width() / pl.$current.width()
                     $(":first", $thumbnail).css({ "scale": String(scaleFactorX) })
                     // film-strip should not take excessive height
                     this.$hud_thumbnails.css({ height: scaleFactorX * 100 + "vh" })
@@ -145,7 +151,7 @@ class Hud {
                 auto_close: 2000,
                 buttons: false,
                 modal: false,
-                position: ["right - 20", "top + 20"]
+                position: ["right - " + (this.properties_visible ? Math.round(this.$hud_properties.width()) + 10 + 20 : 20), "top + 20"]
             })
         }
     }
@@ -169,8 +175,12 @@ class Hud {
     }
 
     reset() {
-        this.$hud_thumbnails.html("")
+        this.reset_thumbnails()
         this.$hud_properties.html("")
+    }
+
+    reset_thumbnails() {
+        this.$hud_thumbnails.html("")
     }
 
     /**
@@ -186,7 +196,7 @@ class Hud {
             .html($("<p/>").html("Properties panel (Alt+P)"))
 
         // undo button
-        this.$hud_properties.append(this.playback.change_controller.get_button(), this.playback.change_controller.get_button_redo(), "<br>")
+        this.$hud_properties.append(this.playback.changes.get_button(), this.playback.changes.get_button_redo(), "<br>")
 
         // element properties
         if ($actor.length) {

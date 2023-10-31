@@ -150,7 +150,12 @@ frame-preview > article-map [data-step].step-not-yet-visible {
   color: white;
   box-shadow: 0px 5px 3px 5px darkgray;
 }
-#hud #hud-thumbnails > frame-preview > * {
+#hud #hud-thumbnails > frame-preview .delete {
+  position: absolute;
+  right: 0;
+}
+#hud #hud-thumbnails > frame-preview > article,
+#hud #hud-thumbnails > frame-preview > article-map {
   scale: 0.3;
 }
 #hud #hud-properties {

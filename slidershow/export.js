@@ -97,12 +97,12 @@ class Export {
         }
 
         // Changes saved, allow leaving
-        this.playback.change_controller.unblock_unload()
+        this.playback.changes.unblock_unload()
     }
 
     async assure_handler() {
         if (!this.file_handler) {
-            this.file_handler = await window.showSaveFilePicker({suggestName: this.playback.session.docname}) // ask once for the path – then keep newHandle
+            this.file_handler = await window.showSaveFilePicker({suggestedName: this.playback.session.docname}) // ask once for the path – then keep newHandle
         }
         return this.file_handler
     }

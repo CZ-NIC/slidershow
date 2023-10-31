@@ -39,28 +39,36 @@ class Changes {
    * @param {Function} fn Bidirectionally reversible operation. Gets called immediately with the `val` parameter.
    * @param {*} val Parameter given to the redo callback.
    * @param {*} previous Parameter given to the undo callback.
+   * @param {boolean} run_now Directly run `fn(val)`
    * @returns
    */
-  change(fn, val = null, previous = null) {
+  change(title, fn, val = null, previous = null, run_now = true) {
+    this._change(this.CALLBACK, fn, fn, val, previous, run_now, title)
+  }
+
+  /**
+   *
+   * @param {Function} fn
+   * @param {Function} undo_fn
+   * @param {boolean} run_now Directly run `fn(val)`
+   */
+  undoable(title, fn, undo_fn, run_now = true) {
+    this._change(this.CALLBACK, fn, undo_fn, null, null, run_now, title)
+  }
+
+  _change(name, fn_redo, fn_undo = null, val = null, prev_val = null, run_now = true, title = "") {
     if (this.performing) { // already doing an undo operation
       return
     }
-    this._change(this.CALLBACK, fn, val, previous)
-  }
-
-  deleteItem($el) {
-    const xpath = createXPathFromElement($el.parent()[0])
-    $el.hide(this.HIDE_DURATION, () => this._change(this.DELETE_EL, [$el.index(), $el.detach(), xpath]))
-  }
-
-
-  _change(name, fn, val = null, prev_val = null) {
-    this.changes.push([name, fn, val, prev_val])
+    this.changes.push([name, fn_redo, fn_undo, val, prev_val, title])
 
     this.applied_changes.length = 0
     this.$button_redo.prop("disabled", true)
     this.$button.prop("disabled", false)
     $(window).on('beforeunload', () => true)
+    if (run_now) {
+      fn_redo(val)
+    }
   }
 
   unblock_unload() {
@@ -81,25 +89,18 @@ class Changes {
     }
     const change = stack1.pop()
     stack2.push(change)
-    const [name, fn, val, prev_val] = change
+    const [name, fn_redo, fn_undo, val, prev_val, title] = change
     const value = redo ? val : prev_val
+    const fn = redo ? fn_redo : fn_undo
 
     switch (name) {
-      case this.DELETE_EL:
-        const [originalIndex, $deletedItem, xpath] = fn
-
-        const $container = $(lookupElementByXPath(xpath))
-        this.playback.goToArticle($container.closest(FRAME_SELECTOR))
-        this.playback.promise.then(() => {
-          const $position = $container.children().eq(originalIndex)
-          const $inserted = $position.length ? $deletedItem.insertBefore($position) : $deletedItem.appendTo($container)
-          $inserted.show(this.HIDE_DURATION).focus()
-        }
-        )
-        break;
+      // TODO
       case this.CALLBACK:  // Undo the operation with a non serialized callback
         this.performing = true
         fn(value)
+        if (title) {
+          this.playback.hud.alert((redo ? "Redo" : "Undo") + ": " + title)
+        }
         this.performing = false
         break;
       default:

@@ -7,7 +7,7 @@ class Playback {
         this.menu = menu
         this.aux_window = aux_window
         this.hud = new Hud(this)
-        this.change_controller = new Changes(this)
+        this.changes = new Changes(this)
         /** Transition promise */
         this.promise = {}
         /** @type {Boolean} Application is running */
@@ -68,6 +68,7 @@ class Playback {
         this.$current = this.$articles.first()
         this.session.restore(true)
         this.shortcuts.general.enable()
+        this.shortcuts.switches.enable()
     }
 
     stop() {
@@ -78,6 +79,7 @@ class Playback {
         $hud.hide(0)
         this.hud_map.hide()
         this.shortcuts.general.disable()
+        this.shortcuts.switches.disable()
     }
     destroy() {
         this.map.destroy()
@@ -97,7 +99,9 @@ class Playback {
 
     /** Refresh frames from the DOM. Reposition. */
     reset() {
-        this.$articles = Frame.load_all(this)
+        const last_index = this.frame?.index
+        this.$articles = Frame.load_all(this).show()
+        this.$current = $(this.$articles.get(last_index) ?? this.$articles.first())
         Frame.videoInit(this.$articles)
         this.positionFrames()
         this.hud.reset()
@@ -452,6 +456,9 @@ class Playback {
         }
     }
 
+    /**
+     * @returns {jQuery|null}
+     */
     getFocused() {
         const $el = $(":focus", "main")
         return $el.length ? $el : null
