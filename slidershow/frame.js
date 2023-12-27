@@ -2,7 +2,7 @@ const EDITABLE_ELEMENTS = "h1,h2,h3,h4,h5,h6,p,li"
 class Frame {
     /**
      *
-     * Frame lifecycle is as follows prepare / enter / leave / left (left is not guaranteed to run).
+     * Frame lifecycle is as follows: preload / prepare / enter / leave / left (not guaranteed to run) / unload
      *
      * @param {jQuery} $el
      * @param {?Playback} playback
@@ -275,6 +275,7 @@ class Frame {
         }
         $frame.attr("data-preloaded", 1) // prevent another preload
 
+        // Process media
         const loaded = $frame.find("img[data-src], video[data-src]").map(async (_, el) => {
             const $el = $(el)
             if (!$el.attr("src")) { // src is not set yet
@@ -286,16 +287,44 @@ class Frame {
             }
             return null // src already set or no place to set the src from
         }).get().filter(Boolean)
+
+        // Process markdown
+        // XX Not used right now.
+        if (this.prop("markdown")) {
+            // What to take care of: html entities `&lt;`, html tags `<b>`, non-tags at hash lines `# <class>` (just text, not tag)
+            // I think the only chance here is to register a new element <article-md> (inherited from <textarea>).
+            // Code editor must not format lines.
+            // String `# <class '__main__.Kocicka'>` must not add a pairing `</class>`
+            // String `# &#x3C;class &#x27;__main__.Kocicka&#x27;&#x3E;` must be displayed correctly.
+            // A wild tag `<b>bold</b>` must remain.
+            // <pre>
+            // <code>
+            // const md = this.$frame.find("pre").html()
+            // this.$frame.data("md", md)
+            // this.$frame.find("pre").html(this.playback.menu.md(md))
+            // Article may begin with a HTML comment. I presume these must not be taken into markdown.
+        }
+
         this._preloaded()
         return loaded
     }
 
+    /**
+     * Opposite of this.preload()
+     * Functionality should be duplicated finalize_frames (due to performance reasons).
+     */
     unload() {
         const $frame = this.$frame
         $frame.removeAttr("data-preloaded")
 
         // Remove src if data can be retrieved from the memory data(READ_SRC) or the attribute data-src
         $frame.find("img[data-src], video[data-src]").map((_, el) => Frame.unload_media($(el)))
+
+        // XX Not used right now and missing in the global unload.
+        // const md = this.$frame.data("md")
+        // if (md) {
+        //     this.$frame.find("pre").text(md)
+        // }
     }
 
     /** If there is a place the `[src]` can be re-read, delete it. */
@@ -632,6 +661,10 @@ class Frame {
         return $(this.steps[this.step_index - 1]?.[0]).data("step")
     }
 
+    /**
+     * Opposite of this.enter()
+     * Functionality should be duplicated finalize_frames (due to performance reasons).
+     */
     leave() {
         this.$frame.find("video").each((_, el) => $(el).off("pause") && el.pause())
         this.shortcuts.forEach(s => s.disable())
@@ -648,6 +681,7 @@ class Frame {
     }
 
     /**
+     * Opposite of this.prepare()
      * Clean up because the frame is not visible anymore.
      *
      * This method is not guaranteed to run because of the following usecase:
@@ -655,6 +689,8 @@ class Frame {
      * 2. Go back before the transition finishes (and `left` could be run)
      * 3. prepare() is run again
      * 4. When transition finished, we are back in the current frame, hence the left() is blocked.
+     *
+     * Functionality should be duplicated finalize_frames (due to performance reasons).
      */
     left() {
         this.loop_interval?.stop()

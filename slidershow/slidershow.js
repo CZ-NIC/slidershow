@@ -26,7 +26,7 @@ loadjQuery(() => {
             crossOrigin: "anonymous"
         },
         { src: "https://cdn.jsdelivr.net/npm/js-circle-progress@0.2.4/dist/jquery.circle-progress.min.js" },
-        { src: "https://cdn.jsdelivr.net/gh/e3rd/WebHotkeys@c7a03cd24c62e95faf5911c7c8969459abd2066f/WebHotkeys.js" }, // put proper version TODO
+        { src: "https://cdn.jsdelivr.net/gh/e3rd/WebHotkeys@0.8.2/WebHotkeys.js" },
         { src: "https://cdn.jsdelivr.net/npm/exif-js" },
         { src: "https://cdn.jsdelivr.net/npm/showdown@2.1.0/dist/showdown.min.js" },
         MAP_ENABLE ? { src: "https://api.mapy.cz/loader.js" } : null,

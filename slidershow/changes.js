@@ -2,9 +2,6 @@ class Changes {
 
   HIDE_DURATION = 200
 
-  DELETE_EL = 0
-  CALLBACK = 1
-
   /**
    *
    * @param {Playback} playback
@@ -43,7 +40,7 @@ class Changes {
    * @returns
    */
   change(title, fn, val = null, previous = null, run_now = true) {
-    this._change(this.CALLBACK, fn, fn, val, previous, run_now, title)
+    this._change(fn, fn, val, previous, run_now, title)
   }
 
   /**
@@ -53,14 +50,14 @@ class Changes {
    * @param {boolean} run_now Directly run `fn(val)`
    */
   undoable(title, fn, undo_fn, run_now = true) {
-    this._change(this.CALLBACK, fn, undo_fn, null, null, run_now, title)
+    this._change(fn, undo_fn, null, null, run_now, title)
   }
 
-  _change(name, fn_redo, fn_undo = null, val = null, prev_val = null, run_now = true, title = "") {
+  _change(fn_redo, fn_undo = null, val = null, prev_val = null, run_now = true, title = "") {
     if (this.performing) { // already doing an undo operation
       return
     }
-    this.changes.push([name, fn_redo, fn_undo, val, prev_val, title])
+    this.changes.push([fn_redo, fn_undo, val, prev_val, title])
 
     this.applied_changes.length = 0
     this.$button_redo.prop("disabled", true)
@@ -89,24 +86,17 @@ class Changes {
     }
     const change = stack1.pop()
     stack2.push(change)
-    const [name, fn_redo, fn_undo, val, prev_val, title] = change
+    const [fn_redo, fn_undo, val, prev_val, title] = change
     const value = redo ? val : prev_val
     const fn = redo ? fn_redo : fn_undo
 
-    switch (name) {
-      // TODO
-      case this.CALLBACK:  // Undo the operation with a non serialized callback
-        this.performing = true
-        fn(value)
-        if (title) {
-          this.playback.hud.alert((redo ? "Redo" : "Undo") + ": " + title)
-        }
-        this.performing = false
-        break;
-      default:
-        this.playback.hud.alert(`Could not undo ${name}`)
-        break;
+    // Undo operation
+    this.performing = true
+    fn(value)
+    if (title) {
+      this.playback.hud.alert((redo ? "Redo" : "Undo") + ": " + title)
     }
+    this.performing = false
 
     this.$button.prop("disabled", !this.changes.length)
     if (!this.changes.length) {

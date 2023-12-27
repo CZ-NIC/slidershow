@@ -23,6 +23,7 @@ class Menu {
             ["Alt+w", "Launch an auxiliary window", () => this.aux_window.open()],
             ["Escape", "Go to menu", () => !$(":focus").closest(".ZebraDialog").length && this.stop_playback()], // disabled when in a dialog
             ["?", "Show help", () => this.help()],
+            ["F1", "Show help", () => this.help()],
             ["Ctrl+s", "Export presentation", () => this.export.export_dialog()],
         ])
 
@@ -34,7 +35,7 @@ class Menu {
         }
 
         // Drop new files
-        const $drop = this.$drop = $("#drop").on("drop", (ev) => {
+        const $drop = this.$drop = $("#drop").on("drop", ev => {
             ev.preventDefault()
             const items = [...ev.originalEvent.dataTransfer.items].filter(i => i.kind === "file").map(i => i.getAsFile())
             if (this.appendFiles(items)) {
@@ -42,11 +43,11 @@ class Menu {
             } else {
                 $drop.text('Drop cancelled')
             }
-        }).on("dragover", (ev) => {
+        }).on("dragover", ev => {
             $drop.text("Drop")
             ev.preventDefault()
 
-        }).on("dragleave", (ev) => {
+        }).on("dragleave", ev => {
             $drop.text($drop.data("placeholder"))
             ev.preventDefault()
         })
@@ -159,4 +160,21 @@ class Menu {
         ).get()
         // await Promise.all(head).then(contents => contents.join("\n\n"))
     }
+
+    /**
+     * XX Not used at the moment.
+     * remove initial space if formatted by the editor
+     * The code does not have to be written at line beginnings.
+     *          But it can be written
+     *          in the middle.
+     * @param {*} v
+     * @returns
+     */
+    md (v) {
+        const lines = v.split("\n")
+        const beginnings = lines.filter(l => l.trim()).map(l => l.match(/^\s+/)?.[0].length || 0)
+        const space = Math.min(...(beginnings.length ? beginnings : [0]))
+        return this.markdown.makeHtml(lines.map(line => line.substring(space)).join("\n"))
+    }
+
 }

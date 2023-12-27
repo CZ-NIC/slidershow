@@ -176,12 +176,10 @@ class PropertyPanel {
                     if (previous === value) {
                         return
                     }
-
                     $(this).data("previous", value)
 
-                    change(value) // change the property in the DOM
                     pl.changes.change(`Changing ${p} ${previous} → ${value}`,
-                        (previous) => { // undo change
+                        val => { // undo change
                             // Other frame contents was changed. We have to return there first.
                             // Note that we do not return in case of a common <section> or <main>.
                             const $fr = pl.frame.$frame
@@ -189,7 +187,7 @@ class PropertyPanel {
                                 pl.goToFrame(original_frame)
                             }
                             // Change the DOM back
-                            change(previous)
+                            change(val) // change the property in the DOM
                             // Change the properties panel <input> back
                             // Why accessing via name?
                             // Since we could changed the slide (and refreshed the panel HTML),
@@ -199,8 +197,8 @@ class PropertyPanel {
                             $($(`[name=${$(this).attr("name")}]`)
                                 .get()
                                 .find(input => $(input).data("target") === $el[0]))
-                                .val(previous)
-                                .data("previous", previous)
+                                .val(val)
+                                .data("previous", val)
                                 .trigger("undo-performed")
                                 .focus()
                         }, value, previous)
