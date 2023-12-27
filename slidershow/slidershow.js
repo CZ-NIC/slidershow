@@ -157,7 +157,7 @@ function get_menu() {
 
             <form id="defaults">
                 Defaults
-                <br />Duration <input name="duration" value="3" size="4" placeholder="0"> s
+                <br />Duration <input name="duration" value="0" size="4" placeholder="0"> s
                 <br />Transition <input name="transition-duration" value="0" size="4" placeholder="0"> s
                 <br />Media folder path <input title="If not set, we put the media data inside the DOM (RAM consuming)" name="path" value="" placeholder="./">
             </form>

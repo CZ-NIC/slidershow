@@ -73,6 +73,9 @@ class MapWidget {
 
         /** @type {Boolean} Whether the map is on its initial position. */
         this.used = false
+
+        /** Display suppressed by the user */
+        this.blocked = false
     }
 
     /**
@@ -80,7 +83,7 @@ class MapWidget {
      * @returns MapWidget
      */
     map_start() {
-        if(!MAP_ENABLE) {
+        if (!MAP_ENABLE) {
             return this
         }
         const center = SMap.Coords.fromWGS84(14.41790, 50.12655)
@@ -142,8 +145,9 @@ class MapWidget {
         }
     }
 
-    toggle() {
+    toggle(force = false) {
         this.$map.toggle()
+        this.blocked = force && this.$map.is(":hidden")
     }
     hide() {
         this.$map.hide()
@@ -160,10 +164,12 @@ class MapWidget {
      * @param {*} markers_show
      */
     async engage(places, animate, geometry_show, geometry_criterion, markers_show, geometry_clear, markers_clear, zoom, last_places) {
-        if(!MAP_ENABLE) {
+        if (!MAP_ENABLE) {
             return
         }
-        this.$map.show(0)
+        if (!this.blocked) {
+            this.$map.show(0)
+        }
         this.last_places = last_places || []
         this.geometry_clear = geometry_clear
         this.markers_clear = markers_clear

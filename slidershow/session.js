@@ -10,7 +10,7 @@ class Session {
         if (state) {
             this.restore_state(state)
         }
-        pl.index = Math.max(0, Number(index) - 1)
+        pl.index = Math.min(Math.max(0, Number(index) - 1), pl.$articles.length -1)
 
         // a real DOM element ID attribute in hash, not a frame number
         if (isNaN(pl.index)) {  // ex : #foo <section id=foo>

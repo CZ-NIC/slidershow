@@ -169,7 +169,7 @@ class ShortcutsController {
             ["Home", "Go to the first", () => pl.goToFrame(0)],
             ["End", "Go to end", () => pl.goToFrame(pl.$articles.length - 1)],
 
-            ["m", "Toggle hud map", () => pl.notVideoFocus() && pl.hud_map.toggle()],
+            ["m", "Toggle hud map", () => pl.notVideoFocus() && pl.hud_map.toggle(true)],
 
             ["f", "Toggle file info", () => $("#hud-fileinfo").toggle()],
 

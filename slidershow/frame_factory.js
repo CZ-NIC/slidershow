@@ -15,7 +15,7 @@ class FrameFactory {
     }
 
     static img(filename, append = true, data = null, ram_only = false, callback = null) {
-        // data-src prevents the performance for serveral thousand frames
+        // data-src preserve the performance for serveral thousand frames
         const $el = $(`<img data-src="${filename}" />`)
         const $frame = FrameFactory.html($el, append)
 

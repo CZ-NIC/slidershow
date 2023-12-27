@@ -55,12 +55,15 @@ class Frame {
         /** @type {number|null} How long the last active step should last. */
         this.step_duration = null
 
-        /** @type {Promise} Register to this promise to be notified. (It fulfills when preload, not on the preloaded media onload.)
+        /** @type {Promise} Register to this promise to be notified. (It fulfills when preload started, not on the preloaded media onload.)
          */
-        // When we call playback.reset() (ex: after frame duplication), we get here (to the recreation of the frame) with data-preloaded already true.
-        // Hence we set the Promise to be already resolved sometimes.
-        this.preloaded = this.$frame.attr("data-preloaded") ? Promise.resolve() : new Promise(r => this._preloaded = r)
+        this.preloaded = new Promise(r => this._preloaded = r)
 
+        /**
+         * @type {Promise} Fulfilled on all media loaded.
+        */
+        // Apart from all the standard media loaded we await the signal from .preload method that all re-srced media are loaded.
+        this.loaded = Promise.all([new Promise(r => this._loaded = r), ...this.$frame.find("video, img").map((_, el) => el.complete || new Promise(r => $(el).one("load", r)))])
     }
 
     register_parent(frame) {
@@ -116,9 +119,11 @@ class Frame {
         }
 
         // main media action
-        if (this.$actor.prop("tagName") === "IMG") {
-            this.panorama()
-        }
+        this.loaded.then(() => {
+            if (this.$actor.prop("tagName") === "IMG") {
+                this.panorama()
+            }
+        })
 
         // File name
         this.playback.hud.fileinfo(this)
@@ -271,6 +276,9 @@ class Frame {
     async preload() {
         const $frame = this.$frame
         if ($frame.attr("data-preloaded")) {
+            // When we call playback.reset() (ex: after frame duplication), we get here (to the recreation of the frame) with data-preloaded already true.
+            this._preloaded()
+            this._loaded()
             return [] // already done
         }
         $frame.attr("data-preloaded", 1) // prevent another preload
@@ -306,6 +314,7 @@ class Frame {
         }
 
         this._preloaded()
+        Promise.all(loaded).then(() => this._loaded())
         return loaded
     }
 
@@ -434,15 +443,20 @@ class Frame {
         this.effects.length = 0 // flush out any unsettled promises
 
         // Image frame
-        if ($actor.prop("tagName") === "IMG") {
-            this.zoom_init(this.$actor)
-            Frame.exif($actor)
-            this.panorama_starter?.()
-            const loop = this.prop("loop")
-            if (loop) {
-                this.loop(loop)
+        this.loaded.then(() => {
+            if ($actor.prop("tagName") === "IMG") {
+                Frame.exif($actor)
+                this.panorama_starter?.()
+                Promise.all(this.effects).then(() => {
+                    this.zoom_init(this.$actor)
+
+                    const loop = this.prop("loop")
+                    if (loop) {
+                        this.loop(loop)
+                    }
+                })
             }
-        }
+        })
 
         // No HTML tag found, fit plain text to the screen size
         const fit = this.prop("fit")
@@ -452,7 +466,7 @@ class Frame {
 
         // Video frame
         if ($actor.prop("tagName") === "VIDEO") {
-            this.video_finished = new Promise((resolve) => this.video_enter(resolve))
+            this.video_finished = new Promise(r => this.video_enter(r))
         }
 
         // Editing
@@ -694,7 +708,7 @@ class Frame {
      */
     left() {
         this.loop_interval?.stop()
-        this.$actor.stop(true)
+        this.$actor.finish()
         this.$frame.find("[data-templated]").remove()
         this.clean_steps()
         this.zoom_destroy()

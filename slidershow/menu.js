@@ -126,6 +126,7 @@ class Menu {
         this.$start_wrapper.show()
         this.$start.focus()
         this.playback.reset()
+        this.start_playback()
         return true
     }
 
