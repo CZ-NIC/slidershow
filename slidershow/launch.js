@@ -47,6 +47,7 @@ Private attributes that are not documented in the README because the user should
 * .step-not-yet-visible Auxiliary window highlights not-yet-seen elements.
 * <img-temp-animation-step> Tags that help distinguish image zoom step from the image step.
 * Img with wzoom:
+*   [data-wzoom] Wzoom active
 *   trigger("wzoomed") new position
 *   data("wzoom_get_ratio") screen aware ratio
 *   data("wzoom_resize_off") event destructor

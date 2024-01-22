@@ -357,6 +357,7 @@ class Frame {
     static async finalize_frames($contents, $articles, keep_raw = false, path = "", callback = null) {
         // batch execute operations otherwise done in methods like `unload` or `left`
         $("video[data-autoplay-prevented]", $contents).removeAttr("data-autoplay-prevented").attr("autoplay", "")
+        $("[data-wzoom]", $contents).removeAttr("data-wzoom")
         const $frames = $contents.find(FRAME_SELECTOR).removeAttr("data-preloaded")
         $frames.find("[data-templated]").remove()
         Frame.unmake_editable($frames)

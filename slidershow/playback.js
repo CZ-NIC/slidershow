@@ -328,10 +328,6 @@ class Playback {
 
         const next = this.$articles[index]
         const $current = this.$current = next ? $(next) : $last
-        /** @type {Frame} */
-        const frame = this.frame = $current.data("frame")
-        this.index = frame.index
-
         const same_frame = $last[0] === $current[0]
         /** @type {Frame} */
         const last_frame = $last.data("frame")
@@ -343,6 +339,10 @@ class Playback {
             this.play_pause(false)
             return
         }
+
+        /** @type {Frame} */
+        const frame = this.frame = $current.data("frame")
+        this.index = frame.index
 
         // Change location hash
         this.session.store()
