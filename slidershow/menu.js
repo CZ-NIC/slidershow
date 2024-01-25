@@ -11,7 +11,8 @@ class Menu {
         this.$start = $("#start").focus().click(() => this.start_playback())
 
         /** @type {Playback} */
-        playback = this.playback = new Playback(this, this.aux_window) // expose global `playback`
+        const pl = playback = this.playback = new Playback(this, this.aux_window) // expose global `playback`
+
         this.export = new Export(this)
 
         if (!$(FRAME_SELECTOR).length) {
@@ -20,15 +21,11 @@ class Menu {
 
         // Global shortcuts
         this.global_shortcuts = wh.group("Global", [
-            ["Alt+w", "Launch an auxiliary window", () => this.aux_window.open()],
-            ["Escape", "Go to menu", () => !$(":focus").closest(".ZebraDialog").length && this.stop_playback()], // disabled when in a dialog
-            ["?", "Show help", () => this.help()],
-            ["F1", "Show help", () => this.help()],
-            ["Ctrl+s", "Export presentation", () => this.export.export_dialog()],
-        ])
+
+        ]) // TODO
 
         // Shortcuts available only in menu, not in playback
-        this.shortcuts = []
+        this.shortcuts = [] // TODO
 
         if (prop("start", $main)) {
             this.start_playback()
@@ -57,15 +54,7 @@ class Menu {
             this.appendFiles([...$file[0].files])
         })
 
-        // The button in hud menu. (The UX might be done much better.)
-        $(document)
-            .on("click", "#hud-menu [data-role=export]", () => this.export.export_dialog())
-            .on("click", "#hud-menu [data-role=help]", () => this.help())
-            .on("click", "#hud-menu [data-role=aux_window]", () => this.aux_window.open())
-            .on("click", "#hud-menu [data-role=thumbnails]", () => this.playback.hud.toggle_thumbnails())
-            .on("click", "#hud-menu [data-role=steps]", () => this.playback.toggle_steps())
-            .on("click", "#hud-menu [data-role=properties]", () => this.playback.hud.toggle_properties())
-            .on("click", "#hud-menu [data-role=tagging]", () => this.playback.hud.alert("Hit Alt+T while presenting to start tagging mode."))
+        // ShortcutsController.global(this)
 
         // Load defaults from the main tag
         $("input", "#defaults").each(function () {
@@ -171,7 +160,7 @@ class Menu {
      * @param {*} v
      * @returns
      */
-    md (v) {
+    md(v) {
         const lines = v.split("\n")
         const beginnings = lines.filter(l => l.trim()).map(l => l.match(/^\s+/)?.[0].length || 0)
         const space = Math.min(...(beginnings.length ? beginnings : [0]))

@@ -125,13 +125,18 @@ function get_menu() {
             <div id="hud-tag"></div>
             <div id="hud-counter"></div>
             <div id="hud-menu">
-                <button data-role="aux_window" title="Auxiliary window Alt+W">&#127916;</button>
-                <button data-role="tagging" title="Tagging mode Alt+T">&#128204;</button>
-                <button data-role="thumbnails" title="Thumbnails Alt+J">&#127895;</button>
-                <button data-role="steps" title="Steps Ctrl+Alt+S">&#128095;</button>
-                <button data-role="properties" title="Properties Alt+P">&#127920;</button>
-                <button data-role="export" title="Export Ctrl+S">&#128190;</button>
-                <button data-role="help" title="Help H">&#8505;</button>
+            <span data-hotkey-group="Switches">
+                <button data-role="editing" title="Editing mode" data-hotkey="Alt+e">&#9998;</button>
+                <button data-role="tagging" title="Tagging mode" data-hotkey="Alt+t">&#128204;</button>
+                <button data-role="thumbnails" title="Thumbnails" data-hotkey="Alt+j">&#127895;</button>
+                <button data-role="steps" title="Steps" data-hotkey='Ctrl+Alt+s'>&#128095;</button>
+                <button data-role="properties" title="Properties" data-hotkey="Alt+p">&#127920;</button>
+            </span>
+            <span data-hotkey-group="Global">
+                <button data-role="aux_window" title="Auxiliary window" data-hotkey="Alt+w">&#127916;</button>
+                <button data-role="export" title="Export" data-hotkey='Ctrl+s'>&#128190;</button>
+                <button data-role="help" title="Help" data-hotkey='F1'>&#8505;</button>
+            </span>
             </div>
         </div>
         <div id="hud-properties"></div>

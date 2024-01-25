@@ -1,4 +1,6 @@
-const wh = new WebHotkeys()
+const wh = new WebHotkeys({
+    onToggle: (el, enabled) => $(el).toggle(enabled)
+})
 const $main = $("body > main").length ? $("body > main") : $("<main/>").appendTo("body")
 const $hud = $("#hud")
 const FRAME_SELECTOR = "main article,main article-map"
@@ -143,7 +145,7 @@ function prop(property, $el, def = null, defProperty = null) {
         case "true": // <main data-start='true'> -> true
             return true;
         case undefined:
-            if(defProperty) {
+            if (defProperty) {
                 return prop(defProperty, $el, def)
             }
             return def !== null ? def : PROP_DEFAULT[property]

@@ -151,6 +151,7 @@ frame-preview > article-map [data-step].step-not-yet-visible {
   box-shadow: 0px 5px 3px 5px darkgray;
 }
 #hud #hud-thumbnails > frame-preview .delete {
+  cursor: pointer;
   position: absolute;
   right: 0;
 }

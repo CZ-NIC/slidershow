@@ -81,7 +81,7 @@ class Hud {
                     $thumbnail.html(frame.get_preview())
 
                     if (pl.editing_mode) {
-                        $thumbnail.append($("<span/>", { html: "&#10006;", class: "delete" }).on("click", () => frame.delete()))
+                        $thumbnail.append($("<span/>", { html: "&#10006;", class: "delete", title: "Delete frame" }).on("click", () => frame.delete()))
                     }
 
                     // Scale – use the proportions of the full screen but shrink to max thumbnail width

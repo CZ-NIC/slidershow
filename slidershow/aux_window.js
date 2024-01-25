@@ -85,7 +85,9 @@ class AuxWindow {
                 this.$current_frame.find(`[data-step=${Number(e.step)}]`).addClass("current-step", true)
                 break
             case "get-last-state":
+                if (this.last_info) {
                 this.channel.postMessage(this.last_info)
+                }
                 break
             case "pressed-key":
                 wh.simulate(e.key)
