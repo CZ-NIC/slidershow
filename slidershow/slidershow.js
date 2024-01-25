@@ -35,7 +35,7 @@ loadjQuery(() => {
 
     const vendor_styles = ["https://cdn.jsdelivr.net/npm/zebra_dialog@latest/dist/css/materialize/zebra_dialog.min.css"].map(f => loadStyle(f))
 
-    const local = ["static.js", "frame_factory.js", "frame.js", "place.js", "map.js", "hud.js", "export.js", "property_panel.js", "shortcuts.js", "changes.js", "menu.js", "playback.js", "session.js", "aux_window.js"].filter(Boolean).map(f => loadScript({ src: DIR + f }))
+    const local = ["static.js", "frame_factory.js", "frame.js", "place.js", "map.js", "hud.js", "export.js", "property_panel.js", "operation.js", "changes.js", "menu.js", "playback.js", "session.js", "aux_window.js"].filter(Boolean).map(f => loadScript({ src: DIR + f }))
 
     /**
      When there were 60 photos and 10 videos in a 230 MB presentation file, these were started before we could
@@ -124,20 +124,7 @@ function get_menu() {
             <div id="hud-gps"></div>
             <div id="hud-tag"></div>
             <div id="hud-counter"></div>
-            <div id="hud-menu">
-            <span data-hotkey-group="Switches">
-                <button data-role="editing" title="Editing mode" data-hotkey="Alt+e">&#9998;</button>
-                <button data-role="tagging" title="Tagging mode" data-hotkey="Alt+t">&#128204;</button>
-                <button data-role="thumbnails" title="Thumbnails" data-hotkey="Alt+j">&#127895;</button>
-                <button data-role="steps" title="Steps" data-hotkey='Ctrl+Alt+s'>&#128095;</button>
-                <button data-role="properties" title="Properties" data-hotkey="Alt+p">&#127920;</button>
-            </span>
-            <span data-hotkey-group="Global">
-                <button data-role="aux_window" title="Auxiliary window" data-hotkey="Alt+w">&#127916;</button>
-                <button data-role="export" title="Export" data-hotkey='Ctrl+s'>&#128190;</button>
-                <button data-role="help" title="Help" data-hotkey='F1'>&#8505;</button>
-            </span>
-            </div>
+            <div id="hud-menu"></div>
         </div>
         <div id="hud-properties"></div>
         <div id="hud-thumbnails"></div>

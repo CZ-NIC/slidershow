@@ -33,11 +33,11 @@ class Session {
             switch (key) {
                 case "editing":
                     pl.editing_mode = true
-                    pl.shortcuts.editing.enable()
+                    pl.operation.editing.enable()
                     break;
                 case "tagging":
                     pl.tagging_mode = true
-                    pl.shortcuts.tagging.enable()
+                    pl.operation.tagging.enable()
                     break;
                 case "no-steps":
                     pl.step_disabled = true

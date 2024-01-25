@@ -96,8 +96,32 @@ class Hud {
 
         }
 
-        // highlight current
-        $("frame-preview", this.$hud_thumbnails).removeClass("current").filter(`[data-ref=${index}]`).addClass("current")
+        // draggable and highlighted
+        $("frame-preview", this.$hud_thumbnails)
+            .draggable({  // drag them
+                snap: "frame-preview",
+                containment: "parent",
+                helper: "clone",
+                snapTolerance: 30,
+                scroll: false, // this scrolls main frame, not the thumbnails
+                start: (_, ui) => ui.helper.data('originalPosition', ui.helper.position()),
+                stop: (_, ui) => {
+                    const targetPosition = findClosestSnapPosition(ui.position.left, ui.position.top)[2]
+                    pl.operation.insertFrameBefore(ui.helper.data("ref"), targetPosition.dataset.ref)
+                }
+            })
+            .removeClass("current").filter(`[data-ref=${index}]`).addClass("current")  // highlight current frame preview
+
+        function findClosestSnapPosition(x0, y0) {
+            let [closestSnapPosition, closestDistance] = [null, Infinity]
+            for (const [x, y, el] of $('frame-preview:not(.ui-draggable-dragging)').toArray().map(el => { const { left, top } = $(el).position(); return [left, top, el] })) {
+                const distance = Math.sqrt((x - x0) ** 2 + (y - y0) ** 2)
+                if (distance < closestDistance) {
+                    [closestSnapPosition, closestDistance] = [[x, y, el], distance]
+                }
+            }
+            return closestSnapPosition
+        }
     }
 
     /**
@@ -170,7 +194,7 @@ class Hud {
      */
     discreet_info(text) {
         if (text) {
-            console.log("INFO:", text)
+            console.info("INFO:", text)
         }
     }
 

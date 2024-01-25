@@ -19,13 +19,8 @@ class Menu {
             this.$start_wrapper.hide()
         }
 
-        // Global shortcuts
-        this.global_shortcuts = wh.group("Global", [
-
-        ]) // TODO
-
         // Shortcuts available only in menu, not in playback
-        this.shortcuts = [] // TODO
+        this.shortcuts = [] // none right now
 
         if (prop("start", $main)) {
             this.start_playback()

@@ -1,11 +1,11 @@
-class ShortcutsController {
+class Operation {
     /**
      *
      * @param {Playback} playback
      */
     constructor(playback) {
         this.playback = playback
-        this.globalInit()
+        this.global_shortcuts = this.globalInit()
         this.switches = this.switchesInit()
         this.general = this.generalInit()
         this.tagging = this.taggingInit()
@@ -207,7 +207,7 @@ class ShortcutsController {
                 ["Alt+e", "&#9998;", "Editing mode", () => {
                     pl.editing_mode = !pl.editing_mode
                     // when there will be interfering shortcuts like numbers, we have retag the previous shortcuts
-                    pl.shortcuts.editing.toggle(pl.editing_mode)
+                    pl.operation.editing.toggle(pl.editing_mode)
                     pl.editing_mode ? pl.frame.make_editable() : pl.frame.unmake_editable()
                     pl.hud.reset_thumbnails()
                     pl.hud.thumbnails(pl.frame)
@@ -217,7 +217,7 @@ class ShortcutsController {
                 ["Alt+t", "&#128204;", "Tagging mode", () => {
                     pl.tagging_mode = !pl.tagging_mode
                     // when there will be interfering shortcuts like numbers, we have retag the previous shortcuts
-                    pl.shortcuts.tagging.toggle(pl.tagging_mode)
+                    pl.operation.tagging.toggle(pl.tagging_mode)
                     pl.hud.alert(`Tagging mode ${pl.tagging_mode ? "enabled, see F1 for shortcuts help" : "disabled."}`)
                     pl.session.store()
                 }]
@@ -233,5 +233,36 @@ class ShortcutsController {
             ['Ctrl+s', "&#128190;", "Export", () => menu.export.export_dialog()],
             ['F1', "&#9432;", "Help", () => menu.help()],
         ].map(this._button("Global")))
+    }
+
+    /**
+     *
+     * @param {number} frameIndex Initial frame
+     * @param {number} rootIndex Target frame
+     * @returns
+     */
+    insertFrameBefore(frameIndex, rootIndex) {
+        if (frameIndex === rootIndex) {
+            return
+        }
+        const pl = this.playback
+        const cc = pl.changes
+        const refresh = () => {
+            const currentFrame = pl.frame
+            pl.reset()
+            pl.goToFrame(currentFrame.index)
+        }
+        cc.undoable("Swap frame",
+            () => {
+                $(pl.$articles[frameIndex]).insertBefore(pl.$articles[rootIndex])
+                refresh()
+            }, () => {
+                if (frameIndex > rootIndex) {
+                    $(pl.$articles[rootIndex]).insertAfter(pl.$articles[frameIndex])
+                } else {
+                    $(pl.$articles[rootIndex - 1]).insertBefore(pl.$articles[frameIndex])
+                }
+                refresh()
+            })
     }
 }

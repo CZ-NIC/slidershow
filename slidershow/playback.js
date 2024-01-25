@@ -39,7 +39,7 @@ class Playback {
         this.editing_mode = false
         this.step_disabled = false
 
-        this.shortcuts = new ShortcutsController(this)
+        this.operation = new Operation(this)
         this.reset()
 
         /** Frames that are going to be pre/unloaded.
@@ -67,8 +67,8 @@ class Playback {
         $hud.show(0)
         this.$current = this.$articles.first()
         this.session.restore(true)
-        this.shortcuts.general.enable()
-        this.shortcuts.switches.enable()
+        this.operation.general.enable()
+        this.operation.switches.enable()
     }
 
     stop() {
@@ -78,8 +78,8 @@ class Playback {
         this.$articles.hide()
         $hud.hide(0)
         this.hud_map.hide()
-        this.shortcuts.general.disable()
-        this.shortcuts.switches.disable()
+        this.operation.general.disable()
+        this.operation.switches.disable()
     }
     destroy() {
         this.map.destroy()
@@ -97,7 +97,11 @@ class Playback {
         this.moving = moving
     }
 
-    /** Refresh frames from the DOM. Reposition. */
+    /** Refresh frames from the DOM. Reposition.
+     *
+     *  Does not thrash out underlying Frame objects.
+     *
+     */
     reset() {
         const last_index = this.frame?.index
         this.$articles = Frame.load_all(this).show()

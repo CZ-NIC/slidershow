@@ -175,7 +175,6 @@ frame-preview {
         width: 100vw;
         height: 30vh;
         bottom: 0;
-        background-color: lightgray;
         gap: 1px;
 
         >frame-preview {
@@ -184,6 +183,7 @@ frame-preview {
             width: 30vw;
             height: 30vh;
             color: black;
+            background-color: lightgray;
 
             &.current {
                 color: white;
@@ -202,6 +202,13 @@ frame-preview {
             >article,
             >article-map {
                 scale: 0.3;
+            }
+            &.ui-draggable-dragging {
+                scale: 0.75;
+                width: unset;
+                height: unset;
+                box-shadow: unset;
+                z-index:10;
             }
         }
     }

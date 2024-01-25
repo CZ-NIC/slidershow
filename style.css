@@ -136,7 +136,6 @@ frame-preview > article-map [data-step].step-not-yet-visible {
   width: 100vw;
   height: 30vh;
   bottom: 0;
-  background-color: lightgray;
   gap: 1px;
 }
 #hud #hud-thumbnails > frame-preview {
@@ -145,6 +144,7 @@ frame-preview > article-map [data-step].step-not-yet-visible {
   width: 30vw;
   height: 30vh;
   color: black;
+  background-color: lightgray;
 }
 #hud #hud-thumbnails > frame-preview.current {
   color: white;
@@ -158,6 +158,13 @@ frame-preview > article-map [data-step].step-not-yet-visible {
 #hud #hud-thumbnails > frame-preview > article,
 #hud #hud-thumbnails > frame-preview > article-map {
   scale: 0.3;
+}
+#hud #hud-thumbnails > frame-preview.ui-draggable-dragging {
+  scale: 0.75;
+  width: unset;
+  height: unset;
+  box-shadow: unset;
+  z-index: 10;
 }
 #hud #hud-properties {
   max-width: 20vw;

@@ -482,8 +482,8 @@ class Frame {
         $(EDITABLE_ELEMENTS, this.$frame)
             .attr("contenteditable", true)
         this.$frame
-            .on("focus", EDITABLE_ELEMENTS, () => [this.playback.shortcuts.general.disable(), this.playback.menu.global_shortcuts.disable()])
-            .on("focusout", EDITABLE_ELEMENTS, () => [this.playback.shortcuts.general.enable(), this.playback.menu.global_shortcuts.enable()])
+            .on("focus", EDITABLE_ELEMENTS, () => [this.playback.operation.general.disable(), this.playback.operation.global_shortcuts.disable()])
+            .on("focusout", EDITABLE_ELEMENTS, () => [this.playback.operation.general.enable(), this.playback.operation.global_shortcuts.enable()])
     }
 
     unmake_editable($container = null) {
@@ -1062,7 +1062,11 @@ class Frame {
      * @returns {jQuery[]}
      */
     static load_all(playback = null) {
-        return $(FRAME_SELECTOR).each((_, el) => $(el).data("frame", new Frame($(el), playback)))
+        return $(FRAME_SELECTOR).each((_, el) => { // creates a frame if not existed before
+            if (!$(el).data("frame")) {
+                $(el).data("frame", new Frame($(el), playback))
+            }
+        })
     }
 
     /**
