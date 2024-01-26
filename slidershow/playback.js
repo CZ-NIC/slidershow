@@ -4,6 +4,7 @@
 class Playback {
 
     constructor(menu = null, aux_window = null) {
+        /** @type {Menu} */
         this.menu = menu
         this.aux_window = aux_window
         this.hud = new Hud(this)
@@ -60,6 +61,20 @@ class Playback {
         // Restore preferences
         /** @type {Session} */
         this.session = new Session(this)
+
+
+        // Importable
+        this.menu.importable($main, frames => {
+            const $target = this.$current
+            this.changes.undoable("Import files after current frame",
+                () => $target.after(frames),
+                () => frames.forEach($frame => $frame.detach()),
+                () => {
+                    this.reset()
+                    this.goToFrame(this.frame.index)
+                }
+            )
+        })
     }
 
     start() {
@@ -103,7 +118,7 @@ class Playback {
      *
      */
     reset() {
-        const last_index = this.frame?.index
+        const last_index = this.frame?.index || Infinity
         this.$articles = Frame.load_all(this).show()
         this.$current = $(this.$articles.get(last_index) ?? this.$articles.first())
         Frame.videoInit(this.$articles)

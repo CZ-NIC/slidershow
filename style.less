@@ -137,6 +137,25 @@ frame-preview {
     }
 }
 
+.dragover {
+    >* {
+        // do not blur the after effect
+        filter: blur(10px);
+    }
+
+    &::after,
+    article::after {
+        content: 'Import here';
+        display: block;
+        position: absolute;
+        background-color: blue;
+        color: #fff;
+        margin: 15px;
+        padding: 10px;
+        border-radius: 15px;
+    }
+}
+
 #hud {
     position: fixed; // note that when position:fixed does not work when moving body
     z-index: 10;
@@ -172,8 +191,12 @@ frame-preview {
 
     #hud-thumbnails {
         display: flex;
+
+        // flex-wrap: wrap ; // TODO GRID
+
         width: 100vw;
         height: 30vh;
+        // height: unset; // TODO GRID
         bottom: 0;
         gap: 1px;
 
@@ -187,9 +210,6 @@ frame-preview {
 
             &.current {
                 color: white;
-                // background-color: black;
-                // border-left: 1px solid red;
-                // border-right: 1px solid red;
                 box-shadow: 0px 5px 3px 5px darkgray;
             }
 
@@ -203,12 +223,13 @@ frame-preview {
             >article-map {
                 scale: 0.3;
             }
-            &.ui-draggable-dragging {
+
+            &.ui-draggable-dragging { // changing frame order
                 scale: 0.75;
                 width: unset;
                 height: unset;
                 box-shadow: unset;
-                z-index:10;
+                z-index: 10;
             }
         }
     }

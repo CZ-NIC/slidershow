@@ -54,9 +54,11 @@ class Hud {
      */
     thumbnails(frame) {
         const THUMBNAIL_COUNT = 6
+        // const THUMBNAIL_COUNT = 60 // TODO GRID
         const index = frame.index  // current frame index
         const indices = Array.from({ length: THUMBNAIL_COUNT }, (_, i) => i + Math.max(0, index - Math.ceil(THUMBNAIL_COUNT / 2)))  // visible frames' indices
         const pl = this.playback
+        const cc = pl.changes
 
         // remove old unused thumbnails
         $("frame-preview", this.$hud_thumbnails).each(function () {
@@ -75,11 +77,13 @@ class Hud {
                     break
                 }
 
+                // go to frame
                 $thumbnail = $("<frame-preview/>", { html: "...", "data-ref": frame.index }).on("click", () => this.playback.goToFrame(frame.index))
 
                 frame.preloaded.then(() => {
                     $thumbnail.html(frame.get_preview())
 
+                    // delete frame
                     if (pl.editing_mode) {
                         $thumbnail.append($("<span/>", { html: "&#10006;", class: "delete", title: "Delete frame" }).on("click", () => frame.delete()))
                     }
@@ -88,7 +92,7 @@ class Hud {
                     const scaleFactorX = $thumbnail.width() / pl.$current.width()
                     $(":first", $thumbnail).css({ "scale": String(scaleFactorX) })
                     // film-strip should not take excessive height
-                    this.$hud_thumbnails.css({ height: scaleFactorX * 100 + "vh" })
+                    this.$hud_thumbnails.css({ height: scaleFactorX * 100 + "vh" }) // TODO GRID -> comment
                 })
             }
             this.$hud_thumbnails.append($thumbnail)
@@ -97,7 +101,16 @@ class Hud {
         }
 
         // draggable and highlighted
-        $("frame-preview", this.$hud_thumbnails)
+        pl.menu.importable($("frame-preview", this.$hud_thumbnails), (frames, target) =>
+            cc.undoable("Import files to thumbnail ribbon",
+                () => $(pl.$articles[target.dataset.ref]).before(frames),
+                () => frames.forEach($frame => $frame.detach()),
+                () => {
+                    pl.reset()
+                    pl.goToFrame(pl.frame.index)
+                }
+            )
+        )
             .draggable({  // drag them
                 snap: "frame-preview",
                 containment: "parent",

@@ -45,19 +45,20 @@ class Changes {
 
   /**
    *
-   * @param {Function} fn
-   * @param {Function} undo_fn
+   * @param {function} fn
+   * @param {function} undo_fn
+   * @param {?function} do_always Run both after fn and undo_fn.
    * @param {boolean} run_now Directly run `fn(val)`
    */
-  undoable(title, fn, undo_fn, run_now = true) {
-    this._change(fn, undo_fn, null, null, run_now, title)
+  undoable(title, fn, undo_fn, do_always = null, run_now = true) {
+    this._change(fn, undo_fn, null, null, run_now, title, do_always)
   }
 
-  _change(fn_redo, fn_undo = null, val = null, prev_val = null, run_now = true, title = "") {
+  _change(fn_redo, fn_undo = null, val = null, prev_val = null, run_now = true, title = "", do_always = null) {
     if (this.performing) { // already doing an undo operation
       return
     }
-    this.changes.push([fn_redo, fn_undo, val, prev_val, title])
+    this.changes.push([fn_redo, fn_undo, val, prev_val, title, do_always])
 
     this.applied_changes.length = 0
     this.$button_redo.prop("disabled", true)
@@ -65,6 +66,7 @@ class Changes {
     $(window).on('beforeunload', () => true)
     if (run_now) {
       fn_redo(val)
+      do_always?.()
     }
   }
 
@@ -86,13 +88,14 @@ class Changes {
     }
     const change = stack1.pop()
     stack2.push(change)
-    const [fn_redo, fn_undo, val, prev_val, title] = change
+    const [fn_redo, fn_undo, val, prev_val, title, do_always] = change
     const value = redo ? val : prev_val
     const fn = redo ? fn_redo : fn_undo
 
     // Undo operation
     this.performing = true
     fn(value)
+    do_always?.()
     if (title) {
       this.playback.hud.alert((redo ? "Redo" : "Undo") + ": " + title)
     }

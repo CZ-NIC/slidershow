@@ -731,19 +731,19 @@ class Frame {
 
     delete() {
         const pl = this.playback
-        const $frame = pl.frame.$frame
-        const $prev = $frame.prev()
-        const index = pl.frame.index
+        const $frame = this.$frame
+        const reinsert = $frame.prev().length ? [$frame.prev(), "after"] : [$frame.parent(), "prepend"]
 
-        pl.changes.undoable("Inserted new frame",
+        pl.changes.undoable("Delete frame",
+            () => $frame.detach(),
+            () => reinsert[0][reinsert[1]]($frame),
             () => {
-                $frame.detach()
                 pl.reset()
-                pl.goToFrame(index)
-            }, () => {
-                $frame.insertAfter($prev)
-                pl.reset()
-                pl.goToFrame(index)
+                pl.goToFrame( // if we deleted current frame, go on a nearest one
+                    (this === pl.frame && !this.$frame.parent().length ?
+                        $(pl.$articles[this.index] ?? pl.$articles[pl.$articles.length - 1]).data("frame")
+                        : pl.frame) // or stay on the current frame (unrelated to the deletion)
+                        .index)
             })
     }
 

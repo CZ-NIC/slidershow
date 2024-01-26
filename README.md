@@ -10,6 +10,7 @@ What is SlideRshow and what advantages it has?
 * **media player**
     * [Nomacs](https://nomacs.org/) – perfect but does not handle videos
     * [VLC](https://www.videolan.org/vlc/) – perfect but not stable with 100+ files in the playlist
+    * Windows Photo Viewer – cannot set the presentation order
 * **organizer**
     * Simply tag photos as you browse them to be regrouped for a screening.
 * **presentation software**

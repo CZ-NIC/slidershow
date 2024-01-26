@@ -91,27 +91,79 @@ class Menu {
         $(FRAME_SELECTOR).remove()  // delete old frames
     }
 
+    /**
+     *
+     * @param {File[]} items
+     */
     appendFiles(items) {
-        console.log("File items", items) // XX we might use item.size too
-
         const $section = $("<section/>").appendTo($main)
-        const formData = new FormData($("#defaults")[0])
-        const path = formData.get("path") // data-path does not belong to <section>
-        formData.delete('path');
-        [...formData].map(([key, val]) => $section.attr("data-" + key, val))
+        const $frames = this.loadFiles(items, $section)
 
-        const ram_only = !Boolean(path)
-        const spin = this.display_progress(items.length, this.$drop)
-
-        const elements = items.map(item =>
-            FrameFactory.file(path + item.name, false, item, ram_only, spin))
-            .filter(x => !!x)
-        $section.hide(0).append(elements).children().hide(0).parent().show(0)
+        // Insert frames to the new section of the document and show the controls
+        $section.hide(0).append($frames).children().hide(0).parent().show(0)
         this.$start_wrapper.show()
         this.$start.focus()
         this.playback.reset()
         this.start_playback()
         return true
+    }
+
+    /**
+     * @param {File[]} items
+     * @param {?jQuery} $container If set, the default options will be written inside as attributes.
+     * @returns {jQuery[]} frames
+     */
+    loadFiles(items, $container = null) {
+        console.log("File items", items) // XX we might use item.size too
+
+        // Process options
+        const formData = new FormData($("#defaults")[0])
+        const path = formData.get("path") // data-path does not belong to <section>
+        formData.delete('path')
+        if ($container) {
+            [...formData].map(([key, val]) => $container.attr("data-" + key, val))
+        }
+
+        // Prepare frames
+        const ram_only = !Boolean(path)
+        const spin = this.display_progress(items.length, this.$drop)
+        return items.map(item =>
+            FrameFactory.file(path + item.name, false, item, ram_only, spin))
+            .filter(x => !!x)
+    }
+
+    /**
+     * Make the element importable = able to receive the files being dropped on.
+     * @param {jQuery} $el
+     * @param {requestCallback} onDrop Called on successful drop.
+     * @returns {jQuery}
+     * @callback requestCallback
+     * @param {jQuery[]} frames Frames not yet inserted into the DOM.
+     * @param {HTMLElement} target Element being dropped on.
+     */
+    importable($el, onDrop) {
+        $el.on("drop", e => {
+            e.preventDefault()
+            e.stopPropagation()
+            $(e.currentTarget).removeClass("dragover")
+            const items = [...e.originalEvent.dataTransfer.items].filter(i => i.kind === "file").map(i => i.getAsFile())
+            const frames = this.loadFiles(items)
+            if (frames) {
+                console.log(`Dropped ${items.length} files.`)
+                onDrop(frames, e.currentTarget) // we should insert them into DOM
+            } else {
+                this.playback.hud.alert("Drop cancelled")
+            }
+        }).on("dragover", e => {
+            e.preventDefault()
+            e.stopPropagation()
+            $(e.currentTarget).addClass("dragover")
+        }).on("dragleave", e => {
+            e.preventDefault()
+            e.stopPropagation()
+            $(e.currentTarget).removeClass("dragover")
+        })
+        return $el
     }
 
     display_progress(max, $placement = null) {

@@ -105,6 +105,20 @@ frame-preview > article-map [data-step].step-not-yet-visible {
   border: 1px dotted red;
   animation-fill-mode: unset;
 }
+.dragover > * {
+  filter: blur(10px);
+}
+.dragover::after,
+.dragover article::after {
+  content: 'Import here';
+  display: block;
+  position: absolute;
+  background-color: blue;
+  color: #fff;
+  margin: 15px;
+  padding: 10px;
+  border-radius: 15px;
+}
 #hud {
   position: fixed;
   z-index: 10;

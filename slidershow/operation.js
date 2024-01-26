@@ -247,22 +247,18 @@ class Operation {
         }
         const pl = this.playback
         const cc = pl.changes
-        const refresh = () => {
-            const currentFrame = pl.frame
-            pl.reset()
-            pl.goToFrame(currentFrame.index)
-        }
         cc.undoable("Swap frame",
+            () => $(pl.$articles[frameIndex]).insertBefore(pl.$articles[rootIndex]),
             () => {
-                $(pl.$articles[frameIndex]).insertBefore(pl.$articles[rootIndex])
-                refresh()
-            }, () => {
                 if (frameIndex > rootIndex) {
                     $(pl.$articles[rootIndex]).insertAfter(pl.$articles[frameIndex])
                 } else {
                     $(pl.$articles[rootIndex - 1]).insertBefore(pl.$articles[frameIndex])
                 }
-                refresh()
+            }, () => {
+                const currentFrame = pl.frame
+                pl.reset()
+                pl.goToFrame(currentFrame.index)
             })
     }
 }
