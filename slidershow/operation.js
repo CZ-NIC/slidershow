@@ -35,7 +35,7 @@ class Operation {
             ["Digit8", "Tag 8", () => pl.frame.set_tag(8)],
             ["Digit9", "Tag 9", () => pl.frame.set_tag(9)],
             ...[
-                ["Alt+g", "🔀", "Group frames according to their tag", () => pl.group()],
+                ["Alt+Shift+g", "🔀", "Group frames according to their tag", () => pl.group()],
                 ["Numpad0", "⛔", "Tag 0", () => pl.frame.set_tag(null)],
                 ["Numpad1", "1", "Tag 1", () => pl.frame.set_tag(1)],
                 ["Numpad2", "2", "Tag 2", () => pl.frame.set_tag(2)],
@@ -231,8 +231,8 @@ class Operation {
     globalInit() {
         const menu = this.playback.menu
         return wh.group("Global", [
-            ["Alt+m", "☰", "Show menu", () => this.playback.hud.$playback_icon.click()],
-            ["Escape", "🧰", "Go to menu", () => !$(":focus").closest(".ZebraDialog").length && menu.stop_playback()], // disabled when in a dialog
+            ["Escape", "☰", "Show menu", () => this.playback.hud.$playback_icon.click()],
+            ["Alt+m", "🧰", "Go to menu", () => !$(":focus").closest(".ZebraDialog").length && menu.stop_playback()], // disabled when in a dialog
             ["Alt+w", "&#127916;", "Auxiliary window", () => menu.aux_window.open()],
             ['Ctrl+s', "&#128190;", "Export", () => menu.export.export_dialog()],
             ['F1', "&#9432;", "Help", () => menu.help()],

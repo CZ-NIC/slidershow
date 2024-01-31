@@ -17,8 +17,7 @@ class Hud {
         this.$hud_grid = $("#hud-grid").hide() // by default off
         this.$hud_properties = $("#hud-properties").hide() // by default off
 
-        // grid disappears on double click
-        this.$hud_grid.on("dblclick", "frame-preview", () => this.toggle_grid())
+        this.init_grid()
 
         // Playback icon shows the menu
         this.playback_icon_interval = new Interval(() => this.$playback_icon.fadeOut(500, () => this.$playback_icon.html("☰")), 1000)
@@ -26,7 +25,7 @@ class Hud {
             .appendTo($hud)
             .hide()
             .on("click", () => this.$hud_menu.fadeToggle(500) && this.playback_icon("☰"))
-            .on("mouseenter", () => this.playback_icon_interval.freeze()) // icon will not disappear on hover
+            .on("mouseenter", () => this.$playback_icon.html("☰") && this.playback_icon_interval.freeze()) // icon will not disappear on hover
             .on("mouseleave", () => this.playback_icon_interval.unfreeze())
         $(document).on("mousemove", () => this.playback_icon())
         this.$hud_menu.on("mousemove", "button", e => this.playback_icon(e.target.title)) // menu hover hint
@@ -77,6 +76,58 @@ class Hud {
         return this.$hud_properties.is(":visible")
     }
 
+    /** Grid setup */
+    init_grid() {
+        const pl = this.playback
+        this.$hud_grid
+            // grid disappears on double click
+            .on("dblclick", "frame-preview", () => this.toggle_grid())
+            // grid section buttons
+            .on("click", "section-controller button", e => { // order
+                const $section = $($(e.target.closest("section-controller")).data("section"))
+                const $frames = $section.children(FRAME_SELECTOR)
+                const cc = pl.changes
+
+                /**
+                 * Order frames
+                 * @param {frames} callback
+                 * @callback frames
+                 * @param {Frame} frame1
+                 * @param {Frame} frame2
+                 *
+                 */
+                const order = callback => {
+                    const $orig_frames = $frames.map((_, e) => e)
+                    $frames.sort((a, b) => callback($(a).data("frame"), $(b).data("frame")))
+                    cc.undoable("Sort frames",
+                        () => $section.append($frames),
+                        () => $section.append($orig_frames),
+                        () => {
+                            pl.reset()
+                            pl.goToArticle(this.playback.frame.$frame)
+                        })
+                }
+
+                switch (e.target.dataset.role) {
+                    case "name-desc":
+                        order((frame1, frame2) => frame2.get_filename().localeCompare(frame1.get_filename()))
+                        break
+                    case "name-asc":
+                        order((frame1, frame2) => frame1.get_filename().localeCompare(frame2.get_filename()))
+                        break
+                    case "date-desc":
+                        order((frame1, frame2) => frame2.$actor?.data("datetime") < frame1.$actor?.data("datetime") ? 1 : -1)
+                        break
+                    case "date-asc":
+                        order((frame1, frame2) => frame1.$actor?.data("datetime") < frame2.$actor?.data("datetime") ? 1 : -1)
+                        break
+                    default:
+                        this.alert("Unknown action")
+                        break
+                }
+            })
+    }
+
     /**
      * Thumbnail ribbon
      * @param {Frame} frame
@@ -97,7 +148,7 @@ class Hud {
         $("frame-preview", $container).filter((_, el) => !frameIds.includes(Number(el.dataset.ref))).remove()
 
         // arrange thumbnails
-        frameIds.forEach(index => this.assure_thumbnail(index, $container))
+        this._index2frames(frameIds).forEach(frame => this.assure_thumbnail(frame, $container))
 
         // film-strip should not take excessive height
         const scaleFactorX = $("frame-preview:first", $container).width() / pl.$current.width()
@@ -107,23 +158,63 @@ class Hud {
         this.make_thumbnails_importable($container, frame.index, false) // prevent scrolling which scrolls main frame, not the thumbnails because there are only little of them
     }
 
-    grid(frame) {
-        const pl = this.playback
-        const $container = this.$hud_grid
-        Array.from(pl.$articles).map((_, i) => this.assure_thumbnail(i, $container))
-        this.make_thumbnails_importable($container, frame.index)
+    /**
+     *
+     * @param {number[]|jQuery} indices of frames, or whole jQuery object, containing frames
+     * @returns {Frame[]}
+     */
+    _index2frames(indices) {
+        if (indices instanceof jQuery) {
+            return Array.from(indices).map(el => $(el).data("frame"))
+        }
+        return indices.map(index => $(this.playback.$articles[index]).data("frame"))
     }
 
-    assure_thumbnail(index, $container) {
-        const pl = this.playback
-        let $thumbnail = $(`[data-ref=${index}]`, $container)
-        if (!$thumbnail.length) { // this thumbnail does not exist yet
-            /** @type {?Frame} */
-            const frame = $(pl.$articles[index]).data("frame")
-            if (!frame) {
-                return this.alert("unknown frame index", index)
-            }
+    grid(frame) {
+        const $container = this.$hud_grid
+        if (!$("frame-preview", $container).length) {
+            // Grid is called every frame change. But as it is generated for every frame in the first run, no need to re-run.
+            // (Sections would be duplicated.)
 
+            const pl = this.playback
+            let last_section
+            for (const frame of this._index2frames(pl.$articles)) {
+                const section = frame.$frame.closest("main,section")?.[0]
+                if (last_section !== section) {
+                    last_section = section
+                    section_delimiter(section)
+                }
+
+                this.assure_thumbnail(frame, $container)
+            }
+        }
+        this.make_thumbnails_importable($container, frame.index)
+
+        /**
+         * Insert new section to the grid
+         * @param {HTMLElement} section
+         */
+        function section_delimiter(section) {
+            $(`<section-controller>
+                            <button data-role='name-desc'>order by name ⇓</button>
+                            <button data-role='name-asc'>order by name ⇑</button>
+                            <button data-role='date-desc'>order by date ⇓</button>
+                            <button data-role='date-asc'>order by date ⇑</button>
+                        </section-controller>`)
+                .appendTo($container)
+                .data("section", section)
+        }
+    }
+
+    /**
+     *
+     * @param {?Frame} frame
+     * @param {jQuery} $container Ribbon or grid
+     */
+    assure_thumbnail(frame, $container) {
+        const pl = this.playback
+        let $thumbnail = $(`[data-ref=${frame.index}]`, $container)
+        if (!$thumbnail.length) { // this thumbnail does not exist yet
             // go to frame
             $thumbnail = $("<frame-preview/>", { html: "...", "data-ref": frame.index }).on("click", () => this.playback.goToFrame(frame.index))
 
@@ -211,8 +302,6 @@ class Hud {
      * @param {Frame} frame
      */
     fileinfo(frame) {
-        // this.$hud_menu.hide() // hud menu hides by default with every frame change TODO
-
         const $actor = frame.$actor
         if (!$actor) {
             $actor = { data: () => null }

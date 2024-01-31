@@ -179,6 +179,20 @@ frame-preview > article-map [data-step].step-not-yet-visible {
   width: 19vw;
   height: 19vh;
 }
+#hud #hud-thumbnails#hud-grid section-controller,
+#hud #hud-grid#hud-grid section-controller {
+  margin: 10px;
+  text-align: center;
+  flex-basis: 100%;
+}
+#hud #hud-thumbnails#hud-grid section-controller button,
+#hud #hud-grid#hud-grid section-controller button {
+  display: inline-block;
+  background-color: blue;
+  color: #fff;
+  padding: 10px;
+  border-radius: 15px;
+}
 #hud #hud-thumbnails > frame-preview,
 #hud #hud-grid > frame-preview {
   text-align: center;

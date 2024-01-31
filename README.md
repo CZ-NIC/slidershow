@@ -30,7 +30,7 @@ When in the application, drag and drop media files into the page and just start 
 What can you acheive? See a variety of features in another example at [examples/tutorial.html](https://cz-nic.github.io/slidershow/examples/tutorial.html).
 
 # Contents
-- [Prologue](#slidershow-more-than-a-slideshow)
+- [Prologue](#slidershow--more-than-a-slideshow)
 - [Usage](#usage)
 - [Contents](#contents)
 - [Playback](#playback)
@@ -79,23 +79,21 @@ What can you acheive? See a variety of features in another example at [examples/
 
 ## Controls
 
-When played, keyboard shortcuts works.
+There is a varienty of keyboard shortcuts. Click the menu button in the top right corner (<kbd>Esc</kbd>) or hit <kbd>F1</kbd> to see a complete list.
 
 * Next frame: <kbd>Right</kbd>, <kbd>PageDown</kbd>, <kbd>n</kbd>, <kbd>Space</kbd>
 * Previous frame: <kbd>Left</kbd>, <kbd>PageUp</kbd>, <kbd>p</kbd>
-* Full controls: <kbd>?</kbd>
 * Video: Adjust speed by <kbd>Numpad +/-</kbd>
 * Toggle file info: <kbd>f</kbd>
 * Toggle HUD map: <kbd>m</kbd>
-* Menu: Hit <kbd>Esc</kbd>
 
 ## Start
 
 The `<menu>` is displayed before the presentation starts, unless the `<main>` has the `data-start` attribute.
 
-## Thumbnails
+## Thumbnails ribbon and grid
 
-While presenting, press <kbd>Alt+J</kbd> to display the thumbnail ribbon.
+While presenting, press <kbd>Alt+J</kbd> to display the thumbnail ribbon or <kbd>Alt+G</kbd> to see full grid. There, you can easily sort the frames. Either move them one by one or sort whole section (by EXIF date or file names). Import new images just by tragging them in.
 
 ## Auxiliary window
 
@@ -103,7 +101,7 @@ While presenting, you may appraise an auxiliary window on the second monitor tha
 
 ## Organizing
 
-Start tagging mode with <kbd>Alt+t</kbd>. Use Numpad to tag the images – think of a tag as a number that corresponds to one of your categories.. Then in the menu, hit <kbd>Alt+G</kbd> to group the images to the `<section>` according to tags. Export with <kbd>Ctrl+S</kbd>. Sorted & ready!
+Start tagging mode with <kbd>Alt+T</kbd>. Use Numpad to tag the images – think of a tag as a number that corresponds to one of your categories.. Then in the menu, hit <kbd>Alt+Shift+G</kbd> to group the images to the `<section>` according to tags. Export with <kbd>Ctrl+S</kbd>. Sorted & ready!
 
 <sub>Note that the tag is stored in the browser (local storage)[https://developer.mozilla.org/en-US/docs/Web/API/Window/localStorage] by the file name so that you do not lose the information at crash. In case you import another photo with the same name, it will inherit the tag from the clashing file.</sub>
 

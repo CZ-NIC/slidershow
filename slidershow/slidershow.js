@@ -26,7 +26,8 @@ loadjQuery(() => {
             crossOrigin: "anonymous"
         },
         { src: "https://cdn.jsdelivr.net/npm/js-circle-progress@0.2.4/dist/jquery.circle-progress.min.js" },
-        { src: "https://code.jquery.com/ui/1.13.1/jquery-ui.min.js"},
+        { src: "https://code.jquery.com/ui/1.13.1/jquery-ui.min.js" },
+        { src: "https://cdn.jsdelivr.net/gh/e3rd/WebHotkeys@0.9.1/WebHotkeys.js" },
         { src: "https://cdn.jsdelivr.net/npm/exif-js" },
         { src: "https://cdn.jsdelivr.net/npm/showdown@2.1.0/dist/showdown.min.js" },
         MAP_ENABLE ? { src: "https://api.mapy.cz/loader.js" } : null,
@@ -117,6 +118,7 @@ function get_menu() {
     return $(`<div id="map-wrapper"></div>
 
     <div id="hud">
+        <div id="hud-menu"></div>
         <div id="hud-fileinfo">
             <div id="hud-filename"></div>
             <div id="hud-device"></div>
@@ -124,10 +126,10 @@ function get_menu() {
             <div id="hud-gps"></div>
             <div id="hud-tag"></div>
             <div id="hud-counter"></div>
-            <div id="hud-menu"></div>
         </div>
         <div id="hud-properties"></div>
         <div id="hud-thumbnails"></div>
+        <div id="hud-grid"></div>
     </div>
 
     <menu>
