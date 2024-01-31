@@ -55,15 +55,14 @@ class Frame {
         /** @type {number|null} How long the last active step should last. */
         this.step_duration = null
 
-        /** @type {Promise} Register to this promise to be notified. (It fulfills when preload started, not on the preloaded media onload.)
-         */
-        this.preloaded = new Promise(r => this._preloaded = r)
-
         /**
          * @type {Promise} Fulfilled on all media loaded.
         */
         // Apart from all the standard media loaded we await the signal from .preload method that all re-srced media are loaded.
-        this.loaded = Promise.all([new Promise(r => this._loaded = r), ...this.$frame.find("video, img").map((_, el) => el.complete || new Promise(r => $(el).one("load", r)))])
+        this.loaded = Promise.all([
+            new Promise(r => this._loaded = r),
+            ...this.$frame.find("video, img")
+                .map((_, el) => el.complete || new Promise(r => $(el).one("load", r)))])
     }
 
     register_parent(frame) {
@@ -277,9 +276,7 @@ class Frame {
         const $frame = this.$frame
         if ($frame.attr("data-preloaded")) {
             // When we call playback.reset() (ex: after frame duplication), we get here (to the recreation of the frame) with data-preloaded already true.
-            this._preloaded()
-            this._loaded()
-            return [] // already done
+            return [this.loaded] // might be already done (or might be still running when preload called twice at the same moment)
         }
         $frame.attr("data-preloaded", 1) // prevent another preload
 
@@ -297,7 +294,7 @@ class Frame {
         }).get().filter(Boolean)
 
         // Process markdown
-        // XX Not used right now.
+        // XX Not used right now. + Check XSS risk if used.
         if (this.prop("markdown")) {
             // What to take care of: html entities `&lt;`, html tags `<b>`, non-tags at hash lines `# <class>` (just text, not tag)
             // I think the only chance here is to register a new element <article-md> (inherited from <textarea>).
@@ -313,7 +310,6 @@ class Frame {
             // Article may begin with a HTML comment. I presume these must not be taken into markdown.
         }
 
-        this._preloaded()
         Promise.all(loaded).then(() => this._loaded())
         return loaded
     }
@@ -325,6 +321,7 @@ class Frame {
     unload() {
         const $frame = this.$frame
         $frame.removeAttr("data-preloaded")
+        this.loaded = Promise.all([this.loaded, new Promise(r => this._loaded = r)])
 
         // Remove src if data can be retrieved from the memory data(READ_SRC) or the attribute data-src
         $frame.find("img[data-src], video[data-src]").map((_, el) => Frame.unload_media($(el)))

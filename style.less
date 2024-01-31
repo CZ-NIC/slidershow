@@ -167,6 +167,23 @@ frame-preview {
     #playback-icon {
         right: 3vw;
         top: 3vh;
+
+        &:hover {
+            cursor: pointer;
+            text-shadow: 0 0 7px #fff, 0 0 10px #fff, 0 0 21px #fff, 0 0 42px #0fa, 0 0 82px #0fa, 0 0 92px #0fa, 0 0 102px #0fa, 0 0 151px #0fa;
+        }
+    }
+
+    #hud-menu {
+        display: none; // hidden by default
+        right: 3vw;
+        top: 6vh;
+        text-align: right;
+        z-index: 1; // placed over the thumbnails grid
+
+        button {
+            font-size: 100%;
+        }
     }
 
     #hud-fileinfo {
@@ -182,23 +199,37 @@ frame-preview {
             background-color: blue;
             font-size: 300%;
         }
-
-        #hud-menu {
-            display: none; // hidden by default
-        }
     }
 
 
-    #hud-thumbnails {
+    #hud-thumbnails,
+    #hud-grid {
         display: flex;
 
-        // flex-wrap: wrap ; // TODO GRID
-
         width: 100vw;
-        height: 30vh;
-        // height: unset; // TODO GRID
-        bottom: 0;
-        gap: 1px;
+
+        &#hud-thumbnails {
+            // thumbnail ribbon
+            height: 30vh;
+            bottom: 0;
+            gap: 1px;
+        }
+
+        &#hud-grid {
+            // thumbnail grid
+            flex-wrap: wrap;
+            overflow: auto;
+            height: 100vh;
+            // background-color: rgba(255, 255, 255, 0.4);
+            background: black;
+
+            // bottom: 0;
+            // top: 0;
+            >frame-preview {
+                width: 19vw;
+                height: 19vh;
+            }
+        }
 
         >frame-preview {
             text-align: center;
@@ -209,8 +240,10 @@ frame-preview {
             background-color: lightgray;
 
             &.current {
+                filter: drop-shadow(16px 16px 20px darkblue);
                 color: white;
                 box-shadow: 0px 5px 3px 5px darkgray;
+                background-color: darkblue;
             }
 
             .delete {
@@ -224,7 +257,12 @@ frame-preview {
                 scale: 0.3;
             }
 
-            &.ui-draggable-dragging { // changing frame order
+            &.draggable-target {
+                box-shadow: inset 20px 0px 0px 0px yellow;
+            }
+
+            &.ui-draggable-dragging {
+                // changing frame order
                 scale: 0.75;
                 width: unset;
                 height: unset;

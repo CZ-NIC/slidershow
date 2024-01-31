@@ -13,7 +13,7 @@ class Operation {
     }
 
     _button(group_name) {
-        const $group = $("<div/>", { "data-hotkey-group": group_name }).appendTo($("#hud-menu"))
+        const $group = $("<div/>", { "data-hotkey-group": group_name }).appendTo(this.playback.hud.$hud_menu)
         return ([hotkey, symbol, hint, fn]) => [hotkey,
             $("<button/>", { "title": hint, "data-hotkey": hotkey, "html": symbol })
                 .click(fn)
@@ -202,6 +202,7 @@ class Operation {
             ["Ctrl+Alt+Shift+z", "Redo change", () => pl.changes.redo()],
             ...[
                 ["Alt+j", "&#127895;", "Thumbnails", () => pl.hud.toggle_thumbnails()],
+                ["Alt+g", "&#119584;", "Grid", () => pl.hud.toggle_grid()],
                 ["Ctrl+Alt+s", "&#128095;", "Steps", () => pl.toggle_steps()],
                 ["Alt+p", "&#127920;", "Properties", () => pl.hud.toggle_properties()],
                 ["Alt+e", "&#9998;", "Editing mode", () => {
@@ -211,6 +212,8 @@ class Operation {
                     pl.editing_mode ? pl.frame.make_editable() : pl.frame.unmake_editable()
                     pl.hud.reset_thumbnails()
                     pl.hud.thumbnails(pl.frame)
+                    pl.hud.reset_grid()
+                    pl.hud.grid(pl.frame)
                     pl.hud.alert(`Editing mode ${pl.editing_mode ? "enabled, see F1 for shortcuts help" : "disabled."}`)
                     pl.session.store()
                 }],
@@ -228,7 +231,8 @@ class Operation {
     globalInit() {
         const menu = this.playback.menu
         return wh.group("Global", [
-            ["Escape", "☰", "Go to menu", () => !$(":focus").closest(".ZebraDialog").length && menu.stop_playback()], // disabled when in a dialog
+            ["Alt+m", "☰", "Show menu", () => this.playback.hud.$playback_icon.click()],
+            ["Escape", "🧰", "Go to menu", () => !$(":focus").closest(".ZebraDialog").length && menu.stop_playback()], // disabled when in a dialog
             ["Alt+w", "&#127916;", "Auxiliary window", () => menu.aux_window.open()],
             ['Ctrl+s', "&#128190;", "Export", () => menu.export.export_dialog()],
             ['F1', "&#9432;", "Help", () => menu.help()],

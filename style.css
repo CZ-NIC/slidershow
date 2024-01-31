@@ -130,6 +130,20 @@ frame-preview > article-map [data-step].step-not-yet-visible {
   right: 3vw;
   top: 3vh;
 }
+#hud #playback-icon:hover {
+  cursor: pointer;
+  text-shadow: 0 0 7px #fff, 0 0 10px #fff, 0 0 21px #fff, 0 0 42px #0fa, 0 0 82px #0fa, 0 0 92px #0fa, 0 0 102px #0fa, 0 0 151px #0fa;
+}
+#hud #hud-menu {
+  display: none;
+  right: 3vw;
+  top: 6vh;
+  text-align: right;
+  z-index: 1;
+}
+#hud #hud-menu button {
+  font-size: 100%;
+}
 #hud #hud-fileinfo {
   right: 3vw;
   bottom: 10vw;
@@ -142,17 +156,31 @@ frame-preview > article-map [data-step].step-not-yet-visible {
   background-color: blue;
   font-size: 300%;
 }
-#hud #hud-fileinfo #hud-menu {
-  display: none;
-}
-#hud #hud-thumbnails {
+#hud #hud-thumbnails,
+#hud #hud-grid {
   display: flex;
   width: 100vw;
+}
+#hud #hud-thumbnails#hud-thumbnails,
+#hud #hud-grid#hud-thumbnails {
   height: 30vh;
   bottom: 0;
   gap: 1px;
 }
-#hud #hud-thumbnails > frame-preview {
+#hud #hud-thumbnails#hud-grid,
+#hud #hud-grid#hud-grid {
+  flex-wrap: wrap;
+  overflow: auto;
+  height: 100vh;
+  background: black;
+}
+#hud #hud-thumbnails#hud-grid > frame-preview,
+#hud #hud-grid#hud-grid > frame-preview {
+  width: 19vw;
+  height: 19vh;
+}
+#hud #hud-thumbnails > frame-preview,
+#hud #hud-grid > frame-preview {
   text-align: center;
   position: relative;
   width: 30vw;
@@ -160,20 +188,31 @@ frame-preview > article-map [data-step].step-not-yet-visible {
   color: black;
   background-color: lightgray;
 }
-#hud #hud-thumbnails > frame-preview.current {
+#hud #hud-thumbnails > frame-preview.current,
+#hud #hud-grid > frame-preview.current {
+  filter: drop-shadow(16px 16px 20px darkblue);
   color: white;
   box-shadow: 0px 5px 3px 5px darkgray;
+  background-color: darkblue;
 }
-#hud #hud-thumbnails > frame-preview .delete {
+#hud #hud-thumbnails > frame-preview .delete,
+#hud #hud-grid > frame-preview .delete {
   cursor: pointer;
   position: absolute;
   right: 0;
 }
 #hud #hud-thumbnails > frame-preview > article,
-#hud #hud-thumbnails > frame-preview > article-map {
+#hud #hud-grid > frame-preview > article,
+#hud #hud-thumbnails > frame-preview > article-map,
+#hud #hud-grid > frame-preview > article-map {
   scale: 0.3;
 }
-#hud #hud-thumbnails > frame-preview.ui-draggable-dragging {
+#hud #hud-thumbnails > frame-preview.draggable-target,
+#hud #hud-grid > frame-preview.draggable-target {
+  box-shadow: inset 20px 0px 0px 0px yellow;
+}
+#hud #hud-thumbnails > frame-preview.ui-draggable-dragging,
+#hud #hud-grid > frame-preview.ui-draggable-dragging {
   scale: 0.75;
   width: unset;
   height: unset;

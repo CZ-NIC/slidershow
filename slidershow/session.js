@@ -10,7 +10,7 @@ class Session {
         if (state) {
             this.restore_state(state)
         }
-        pl.index = Math.min(Math.max(0, Number(index) - 1), pl.$articles.length -1)
+        pl.index = Math.min(Math.max(0, Number(index) - 1), pl.$articles.length - 1)
 
         // a real DOM element ID attribute in hash, not a frame number
         if (isNaN(pl.index)) {  // ex : #foo <section id=foo>
@@ -47,6 +47,11 @@ class Session {
                         pl.hud.toggle_thumbnails()
                     }
                     break;
+                case "grid":
+                    if (!pl.hud.grid_visible) {
+                        pl.hud.toggle_grid()
+                    }
+                    break;
                 case "properties":
                     if (!pl.hud.properties_visible) {
                         pl.hud.toggle_properties()
@@ -72,6 +77,7 @@ class Session {
             this.playback.tagging_mode ? "tagging" : "",
             this.playback.step_disabled ? "no-steps" : "",
             this.playback.hud.$hud_thumbnails.is(":visible") ? "thumbnails" : "",
+            this.playback.hud.$hud_grid.is(":visible") ? "grid" : "",
             this.playback.hud.$hud_properties.is(":visible") ? "properties" : "",
             !MAP_ENABLE ? "map-disabled" : "",
         ].filter(Boolean).join(",")
