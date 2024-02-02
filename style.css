@@ -105,16 +105,16 @@ frame-preview > article-map [data-step].step-not-yet-visible {
   border: 1px dotted red;
   animation-fill-mode: unset;
 }
-.dragover > * {
+.importable-target > * {
   filter: blur(10px);
 }
-.dragover::after,
-.dragover article::after {
+.importable-target::after,
+.importable-target article::after {
   content: 'Import here';
   display: block;
   position: absolute;
-  background-color: blue;
-  color: #fff;
+  background-color: yellow;
+  color: black;
   margin: 15px;
   padding: 10px;
   border-radius: 15px;
@@ -126,11 +126,14 @@ frame-preview > article-map [data-step].step-not-yet-visible {
 #hud > * {
   position: fixed;
 }
-#hud #playback-icon {
+#hud #control-icons {
+  display: flex;
+  gap: 10px;
+  user-select: none;
   right: 3vw;
   top: 3vh;
 }
-#hud #playback-icon:hover {
+#hud #control-icons > :hover {
   cursor: pointer;
   text-shadow: 0 0 7px #fff, 0 0 10px #fff, 0 0 21px #fff, 0 0 42px #0fa, 0 0 82px #0fa, 0 0 92px #0fa, 0 0 102px #0fa, 0 0 151px #0fa;
 }
@@ -189,7 +192,7 @@ frame-preview > article-map [data-step].step-not-yet-visible {
 #hud #hud-grid#hud-grid section-controller button {
   display: inline-block;
   background-color: blue;
-  color: #fff;
+  color: white;
   padding: 10px;
   border-radius: 15px;
 }
@@ -221,9 +224,13 @@ frame-preview > article-map [data-step].step-not-yet-visible {
 #hud #hud-grid > frame-preview > article-map {
   scale: 0.3;
 }
-#hud #hud-thumbnails > frame-preview.draggable-target,
-#hud #hud-grid > frame-preview.draggable-target {
-  box-shadow: inset 20px 0px 0px 0px yellow;
+#hud #hud-thumbnails > frame-preview.dragging-target.dragging-before,
+#hud #hud-grid > frame-preview.dragging-target.dragging-before {
+  box-shadow: inset 20px 0px 5px 0px yellow;
+}
+#hud #hud-thumbnails > frame-preview.dragging-target.dragging-after,
+#hud #hud-grid > frame-preview.dragging-target.dragging-after {
+  box-shadow: inset -20px 0px 5px 0px yellow;
 }
 #hud #hud-thumbnails > frame-preview.ui-draggable-dragging,
 #hud #hud-grid > frame-preview.ui-draggable-dragging {
@@ -294,7 +301,7 @@ article-map {
 }
 article.debugged,
 article-map.debugged {
-  background-color: blue;
+  background-color: darkblue;
 }
 [data-step] {
   animation: fade-in 0.5s forwards;

@@ -40,7 +40,7 @@ Private attributes that are not documented in the README because the user should
 * video[data-autoplay-prevented]
 * [data-src-bytes] Stored raw bytes, see EXPORT_SRC_BYTES.
 * [data-src-replaced] See EXPORT_SRC.
-* <frame-preview> Contents is a preview of a frame.
+* <frame-preview> Contents is a preview of a frame. Attribute [data-ref] corresponds to the frame.index.
 * [data-templated] This element was inserted only temporarily throught a template (ex: footer in an article or a <head> vendor script). Should not be exported.
 * [data-preloaded] The frame has already been preloaded.
 * data("step-original") Temporarily change [data-step] value.

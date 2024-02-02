@@ -1,3 +1,7 @@
+@highlight: yellow;
+@control: blue;
+@soft-highlight: darkblue;
+
 body {
     background-color: black;
     color: white !important;
@@ -137,7 +141,7 @@ frame-preview {
     }
 }
 
-.dragover {
+.importable-target {
     >* {
         // do not blur the after effect
         filter: blur(10px);
@@ -148,8 +152,8 @@ frame-preview {
         content: 'Import here';
         display: block;
         position: absolute;
-        background-color: blue;
-        color: #fff;
+        background-color: @highlight;
+        color: black;
         margin: 15px;
         padding: 10px;
         border-radius: 15px;
@@ -164,11 +168,15 @@ frame-preview {
         position: fixed;
     }
 
-    #playback-icon {
+    #control-icons {
+        display: flex;
+        gap: 10px;
+        user-select: none;
+
         right: 3vw;
         top: 3vh;
 
-        &:hover {
+        > :hover {
             cursor: pointer;
             text-shadow: 0 0 7px #fff, 0 0 10px #fff, 0 0 21px #fff, 0 0 42px #0fa, 0 0 82px #0fa, 0 0 92px #0fa, 0 0 102px #0fa, 0 0 151px #0fa;
         }
@@ -196,7 +204,7 @@ frame-preview {
         }
 
         #hud-tag {
-            background-color: blue;
+            background-color: @control;
             font-size: 300%;
         }
     }
@@ -237,8 +245,8 @@ frame-preview {
 
                 button {
                     display: inline-block;
-                    background-color: blue;
-                    color: #fff;
+                    background-color: @control;
+                    color: white;
                     padding: 10px;
                     border-radius: 15px;
                 }
@@ -254,10 +262,10 @@ frame-preview {
             background-color: lightgray;
 
             &.current {
-                filter: drop-shadow(16px 16px 20px darkblue);
+                filter: drop-shadow(16px 16px 20px @soft-highlight);
                 color: white;
                 box-shadow: 0px 5px 3px 5px darkgray;
-                background-color: darkblue;
+                background-color: @soft-highlight;
             }
 
             .delete {
@@ -271,8 +279,14 @@ frame-preview {
                 scale: 0.3;
             }
 
-            &.draggable-target {
-                box-shadow: inset 20px 0px 0px 0px yellow;
+            &.dragging-target {
+                &.dragging-before {
+                    box-shadow: inset 20px 0px 5px 0px @highlight;
+                }
+
+                &.dragging-after {
+                    box-shadow: inset -20px 0px 5px 0px @highlight;
+                }
             }
 
             &.ui-draggable-dragging {
@@ -322,7 +336,7 @@ frame-preview {
                 }
 
                 &.active>span {
-                    background-color: yellow;
+                    background-color: @highlight;
                 }
             }
         }
@@ -361,7 +375,7 @@ article-map {
     margin-bottom: 100vh;
 
     &.debugged {
-        background-color: blue;
+        background-color: @soft-highlight;
     }
 }
 

@@ -145,8 +145,13 @@ class Playback {
                 slide_index += 1
             }
 
+            const old_index = frame.index
             frame.index = ++frame_index
             frame.slide_index = slide_index
+
+            // Prepare corresponding previews to an index change.
+            // We do not set the index directly because the values interefere.
+            $(`frame-preview[data-ref=${old_index}]`).data("ref-temp", frame.index)
 
             const positioning = prop("spread-frames", $main)
             switch (positioning) {
@@ -195,8 +200,19 @@ class Playback {
             frame.check_tag()
         })
 
-
         this.slide_count = slide_index + 1
+
+        // Set the new indices to corresponding previews.
+        $(`frame-preview`).each((_, el) => {
+            const $el = $(el)
+            const ref = $el.data("ref-temp")
+            if (ref === undefined) { // remove previews of removed frames.
+                $el.remove()
+            } else {
+                $el.attr("data-ref", ref)
+                $el.removeData("ref-temp")
+            }
+        })
     }
 
     /**

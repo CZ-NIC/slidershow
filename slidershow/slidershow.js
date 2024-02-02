@@ -130,6 +130,7 @@ function get_menu() {
         <div id="hud-properties"></div>
         <div id="hud-thumbnails"></div>
         <div id="hud-grid"></div>
+        <div id="control-icons"></div>
     </div>
 
     <menu>

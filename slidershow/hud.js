@@ -5,7 +5,7 @@ class Hud {
      * @param {Playback} playback
      */
     constructor(playback) {
-        this.playback = playback
+        const pl = this.playback = playback
         this.$hud_filename = $("#hud-filename")
         this.$hud_device = $("#hud-device")
         this.$hud_datetime = $("#hud-datetime")
@@ -16,26 +16,38 @@ class Hud {
         this.$hud_thumbnails = $("#hud-thumbnails").hide() // by default off
         this.$hud_grid = $("#hud-grid").hide() // by default off
         this.$hud_properties = $("#hud-properties").hide() // by default off
+        this.$control_icons = $("#control-icons")
+
 
         this.init_grid()
 
         // Playback icon shows the menu
-        this.playback_icon_interval = new Interval(() => this.$playback_icon.fadeOut(500, () => this.$playback_icon.html("☰")), 1000)
+        this.playback_icon_interval = new Interval(() => this.$control_icons.fadeOut(500, () => this.$playback_icon.html("☰")), 1000)
         this.$playback_icon = $("<div/>", { id: "playback-icon", html: "☰" })
-            .appendTo($hud)
-            .hide()
+            .appendTo(this.$control_icons)
             .on("click", () => this.$hud_menu.fadeToggle(500) && this.playback_icon("☰"))
+
+        this.$control_icons
+            .hide()
             .on("mouseenter", () => this.$playback_icon.html("☰") && this.playback_icon_interval.freeze()) // icon will not disappear on hover
             .on("mouseleave", () => this.playback_icon_interval.unfreeze())
         $(document).on("mousemove", () => this.playback_icon())
         this.$hud_menu.on("mousemove", "button", e => this.playback_icon(e.target.title)) // menu hover hint
+
+        // Next / prev icons
+        $("<div/>", { html: "◁" })
+            .appendTo(this.$control_icons)
+            .on("click", () => pl.goPrev())
+        $("<div/>", { html: "▷" })
+            .appendTo(this.$control_icons)
+            .on("click", () => pl.goNext())
     }
 
     playback_icon(html = null) {
         if (html) {
             this.$playback_icon.html(html)
         }
-        this.$playback_icon.stop(true).fadeIn(0)
+        this.$control_icons.stop(true).fadeIn(0)
         this.playback_icon_interval.start()
     }
 
@@ -44,7 +56,7 @@ class Hud {
         this.$hud_thumbnails.toggle()
         if (this.thumbnails_visible && this.playback.frame) {
             // when restoring session from the hash, frame is not ready yet
-            this.thumbnails(this.playback.frame)
+            this.thumbnails()
         }
         this.playback.session.store()
     }
@@ -53,7 +65,7 @@ class Hud {
         this.$hud_grid.toggle()
         if (this.grid_visible && this.playback.frame) {
             // when restoring session from the hash, frame is not ready yet
-            this.grid(this.playback.frame)
+            this.grid()
         }
         this.playback.session.store()
     }
@@ -62,7 +74,7 @@ class Hud {
         this.$hud_properties.toggle()
         if (this.properties_visible && this.playback.frame) {
             // when restoring session from the hash, frame is not ready yet
-            this.properties(this.playback.frame)
+            this.properties()
         }
         this.playback.session.store()
     }
@@ -85,28 +97,11 @@ class Hud {
             // grid section buttons
             .on("click", "section-controller button", e => { // order
                 const $section = $($(e.target.closest("section-controller")).data("section"))
+                /** @type {jQuery} Frames in the current section  */
                 const $frames = $section.children(FRAME_SELECTOR)
+                /** @type {jQuery} Current frame (does not have to be in the section) */
+                const $frame = pl.frame.$frame
                 const cc = pl.changes
-
-                /**
-                 * Order frames
-                 * @param {frames} callback
-                 * @callback frames
-                 * @param {Frame} frame1
-                 * @param {Frame} frame2
-                 *
-                 */
-                const order = callback => {
-                    const $orig_frames = $frames.map((_, e) => e)
-                    $frames.sort((a, b) => callback($(a).data("frame"), $(b).data("frame")))
-                    cc.undoable("Sort frames",
-                        () => $section.append($frames),
-                        () => $section.append($orig_frames),
-                        () => {
-                            pl.reset()
-                            pl.goToArticle(this.playback.frame.$frame)
-                        })
-                }
 
                 switch (e.target.dataset.role) {
                     case "name-desc":
@@ -121,19 +116,57 @@ class Hud {
                     case "date-asc":
                         order((frame1, frame2) => frame1.$actor?.data("datetime") < frame2.$actor?.data("datetime") ? 1 : -1)
                         break
+                    case "new-frame":
+                        pl.operation.insertNewFrame(rightPlace())
+                        break
+                    case "import":
+                        $("<input/>", { type: "file" }).change(function () {
+                            const frames = pl.menu.loadFiles([...this.files])
+                            pl.operation.importFrames(frames, rightPlace(), false)
+                            pl.hud.alert(`${this.files.length} media imported`)
+                        }).click()
+                        break
                     default:
                         this.alert("Unknown action")
                         break
+                }
+
+                /**
+                 *
+                 * @returns {jQuery} Current frame if in the section, otherwise the last frame of the current section.
+                 */
+                function rightPlace() {
+                    return $frames.is($frame) ? $frame : $frames.slice(-1)
+                }
+
+                /**
+                 * Order frames
+                 * @param {frames} callback
+                 * @callback frames
+                 * @param {Frame} frame1
+                 * @param {Frame} frame2
+                 *
+                 */
+                function order(callback) {
+                    const $orig_frames = $frames.map((_, e) => e)
+                    $frames.sort((a, b) => callback($(a).data("frame"), $(b).data("frame")))
+                    cc.undoable("Sort frames",
+                        () => $section.append($frames),
+                        () => $section.append($orig_frames),
+                        () => {
+                            pl.reset()
+                            pl.goToArticle(pl.frame.$frame)
+                        })
                 }
             })
     }
 
     /**
      * Thumbnail ribbon
-     * @param {Frame} frame
      */
-    thumbnails(frame) {
+    thumbnails() {
         const pl = this.playback
+        const frame = pl.frame
         const $container = this.$hud_thumbnails
 
         const THUMBNAIL_COUNT = 6
@@ -148,61 +181,59 @@ class Hud {
         $("frame-preview", $container).filter((_, el) => !frameIds.includes(Number(el.dataset.ref))).remove()
 
         // arrange thumbnails
-        this._index2frames(frameIds).forEach(frame => this.assure_thumbnail(frame, $container))
+        this._2frames(frameIds).forEach(frame => this.assureThumbnail(frame, $container))
 
         // film-strip should not take excessive height
         const scaleFactorX = $("frame-preview:first", $container).width() / pl.$current.width()
         $container.css({ height: scaleFactorX * 100 + "vh" })
 
         // highlight current frame preview
-        this.make_thumbnails_importable($container, frame.index, false) // prevent scrolling which scrolls main frame, not the thumbnails because there are only little of them
+        this.makeThumbnailsImportable($container, false) // prevent scrolling which scrolls main frame, not the thumbnails because there are only little of them
     }
 
     /**
      *
-     * @param {number[]|jQuery} indices of frames, or whole jQuery object, containing frames
+     * @param {number[]} indices of frames
      * @returns {Frame[]}
      */
-    _index2frames(indices) {
-        if (indices instanceof jQuery) {
-            return Array.from(indices).map(el => $(el).data("frame"))
-        }
+    _2frames(indices) {
         return indices.map(index => $(this.playback.$articles[index]).data("frame"))
     }
 
-    grid(frame) {
+    /**
+     * Reposition grid
+     * Grid is called every frame change. Reposition frames accordingly to the current ordering.
+     */
+    grid() {
+        let section
+        const pl = this.playback
         const $container = this.$hud_grid
-        if (!$("frame-preview", $container).length) {
-            // Grid is called every frame change. But as it is generated for every frame in the first run, no need to re-run.
-            // (Sections would be duplicated.)
-
-            const pl = this.playback
-            let last_section
-            for (const frame of this._index2frames(pl.$articles)) {
-                const section = frame.$frame.closest("main,section")?.[0]
-                if (last_section !== section) {
-                    last_section = section
-                    section_delimiter(section)
-                }
-
-                this.assure_thumbnail(frame, $container)
-            }
-        }
-        this.make_thumbnails_importable($container, frame.index)
+        $("section-controller", $container).remove()
+        Frame.frames(pl.$articles).map(frame => {
+            section = assureSection(section, frame.$frame.closest("main,section")?.[0])
+            this.assureThumbnail(frame, $container)
+        })
+        this.makeThumbnailsImportable($container)
 
         /**
-         * Insert new section to the grid
-         * @param {HTMLElement} section
+         * Insert new section to the grid if encountered
+         * @param {HTMLElement} lastSection
+         * @param {HTMLElement} currentSection
          */
-        function section_delimiter(section) {
-            $(`<section-controller>
+        function assureSection(lastSection, currentSection) {
+            if (lastSection !== currentSection) {
+                $(`<section-controller>
                             <button data-role='name-desc'>order by name ⇓</button>
                             <button data-role='name-asc'>order by name ⇑</button>
                             <button data-role='date-desc'>order by date ⇓</button>
                             <button data-role='date-asc'>order by date ⇑</button>
+                            <button data-role='import'>add media</button>
+                            <button data-role='new-frame'>add text</button>
                         </section-controller>`)
-                .appendTo($container)
-                .data("section", section)
+                    .appendTo($container)
+                    .data("section", currentSection)
+            }
+            return currentSection
         }
     }
 
@@ -211,7 +242,7 @@ class Hud {
      * @param {?Frame} frame
      * @param {jQuery} $container Ribbon or grid
      */
-    assure_thumbnail(frame, $container) {
+    assureThumbnail(frame, $container) {
         const pl = this.playback
         let $thumbnail = $(`[data-ref=${frame.index}]`, $container)
         if (!$thumbnail.length) { // this thumbnail does not exist yet
@@ -221,7 +252,7 @@ class Hud {
             frame.preload()
             frame.loaded.then(() => {
                 $thumbnail.html(frame.get_preview())
-                if (!$thumbnail.text()) {
+                if (!$thumbnail.text().trim()) {
                     // Strange bug. When having just a full-stretched image in the frame, vertical scrollbar appeared unless font-size or line-height were zero.
                     // When I copied full HTML, no scrollbar was visible, albeit I found no single difference in the DevTools.
                     $("> *", $thumbnail).css("font-size", "0")
@@ -237,7 +268,7 @@ class Hud {
                 $(":first", $thumbnail).css({ "scale": String(scaleFactorX) })
             })
         }
-        $container.append($thumbnail)
+        $thumbnail.appendTo($container)
     }
 
     /**
@@ -245,55 +276,50 @@ class Hud {
      * @param {*} $container
      * @param {*} currentIndex
      */
-    make_thumbnails_importable($container, currentIndex, scroll = true) {
+    makeThumbnailsImportable($container, scroll = true) {
         const pl = this.playback
         // highlight current
-        $("frame-preview", $container).removeClass("current").filter(`[data-ref=${currentIndex}]`).addClass("current")
+        if (pl.frame) {
+            $("frame-preview", $container).removeClass("current").filter(`[data-ref=${pl.frame.index}]`).addClass("current")
+        }
 
         // make importable and draggable
-        pl.menu.importable($("frame-preview", $container), (frames, target) =>
-            pl.changes.undoable("Import files to thumbnail ribbon",
-                () => $(pl.$articles[target.dataset.ref]).before(frames),
-                () => frames.forEach($frame => $frame.detach()),
-                () => {
-                    pl.reset()
-                    pl.goToFrame(pl.frame.index)
-                }
-            )
-        )
+        pl.menu.importable($("frame-preview", $container), (frames, target, before) =>
+            pl.operation.importFrames(frames, $(pl.$articles[target.dataset.ref]), before))
             .draggable({  // re-order thumbnails by dragging
-                snap: "frame-preview",
                 containment: "parent",
                 helper: "clone",
                 snapTolerance: 30,
                 scroll: scroll,
                 drag: (_, ui) => {
-                    const target = findClosestSnapPosition(ui.position.left, ui.position.top)[2]
-                    $(".draggable-target").removeClass("draggable-target")
-                    $(target).addClass("draggable-target")
+                    clean()
+                    const [target, before] = underlyingEl(ui)
+                    $(target).addClass(`dragging-target dragging-${before ? "before" : "after"}`)
                 },
                 stop: (_, ui) => {
-                    const target = findClosestSnapPosition(ui.position.left, ui.position.top)[2]
-                    // This can be used to re-order thumbnails,
-                    // however undoing does not work and reset will wipe all $container content.
-                    // $(target).before($(`[data-ref=${ui.helper.data("ref")}]`,$container))
-                    pl.operation.insertFrameBefore(ui.helper.data("ref"), target.dataset.ref)
+                    clean()
+                    const [target, before] = underlyingEl(ui)
+                    if (target) {
+                        // This can be used to re-order thumbnails,
+                        // however undoing does not work and reset will wipe all $container content.
+                        // $(target).before($(`[data-ref=${ui.helper.data("ref")}]`,$container))
+                        pl.operation.moveFrame(ui.helper.data("ref"), target.dataset.ref, before)
+                    }
                 }
             })
 
-        function findClosestSnapPosition(x0, y0) {
-            let [closestSnapPosition, closestDistance] = [null, Infinity]
-            const positions = $('frame-preview:not(.ui-draggable-dragging)', $container).toArray().map(el => {
-                const { left, top } = $(el).position()
-                return [left, top + $container.scrollTop(), el]
-            })
-            for (const [x, y, el] of positions) {
-                const distance = Math.sqrt((x - x0) ** 2 + (y - y0) ** 2)
-                if (distance < closestDistance) {
-                    [closestSnapPosition, closestDistance] = [[x, y, el], distance]
-                }
+        function underlyingEl(ui) {
+            const target = document.elementsFromPoint(ui.position.left, ui.position.top + $container.prop("offsetTop") - $container.scrollTop())
+                .find(el => el.tagName === "FRAME-PREVIEW")
+            if (!target) {
+                return [null, null]
             }
-            return closestSnapPosition
+            const before = ui.offset.left < target.offsetLeft + 10
+            return [target, before]
+        }
+
+        function clean() {
+            $(".dragging-target").removeClass("dragging-target dragging-before dragging-after")
         }
     }
 
@@ -328,13 +354,13 @@ class Hud {
 
         // Thumbnails
         if (this.thumbnails_visible) {
-            this.thumbnails(frame)
+            this.thumbnails()
         }
         if (this.grid_visible) {
-            this.grid(frame)
+            this.grid()
         }
         if (this.properties_visible) {
-            this.properties(frame)
+            this.properties()
         }
     }
 
@@ -374,8 +400,8 @@ class Hud {
 
     reset() {
         this.reset_thumbnails()
-        this.reset_grid()
         this.$hud_properties.html("")
+        // No need to reset the grid here as it is re-run on frame change.
     }
 
     reset_thumbnails() {
@@ -387,12 +413,12 @@ class Hud {
     }
 
     /**
-     * Thumbnail ribbon
-     * @param {Frame} frame
+     * Properties pane
     */
-    async properties(frame) {
+    async properties() {
         await this.fetch_help()
         const pp = new PropertyPanel(this)
+        const frame = this.playback.frame
         const $frame = frame.$frame
         const $actor = frame.$actor
         const $props = this.$hud_properties

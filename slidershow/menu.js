@@ -92,14 +92,13 @@ class Menu {
     }
 
     /**
-     *
+     * Insert frames to a new section of the document, sets defaults and show the menu controls
      * @param {File[]} items
      */
     appendFiles(items) {
         const $section = $("<section/>").appendTo($main)
         const $frames = this.loadFiles(items, $section)
 
-        // Insert frames to the new section of the document and show the controls
         $section.hide(0).append($frames).children().hide(0).parent().show(0)
         this.$start_wrapper.show()
         this.$start.focus()
@@ -135,35 +134,35 @@ class Menu {
     /**
      * Make the element importable = able to receive the files being dropped on.
      * @param {jQuery} $el
-     * @param {requestCallback} onDrop Called on successful drop.
+     * @param {onDropCallback} onDrop Called on successful drop.
      * @returns {jQuery}
-     * @callback requestCallback
+     * @callback onDropCallback
      * @param {jQuery[]} frames Frames not yet inserted into the DOM.
      * @param {HTMLElement} target Element being dropped on.
+     * @param {boolean} before Dragged before or after the element
      */
     importable($el, onDrop) {
         $el.on("drop", e => {
-            e.preventDefault()
-            e.stopPropagation()
-            $(e.currentTarget).removeClass("dragover")
+            const before = clean(e)
             const items = [...e.originalEvent.dataTransfer.items].filter(i => i.kind === "file").map(i => i.getAsFile())
             const frames = this.loadFiles(items)
-            if (frames) {
-                console.log(`Dropped ${items.length} files.`)
-                onDrop(frames, e.currentTarget) // we should insert them into DOM
+            if (frames.length) {
+                onDrop(frames, e.currentTarget, before) // we should insert them into DOM
             } else {
                 this.playback.hud.alert("Drop cancelled")
             }
-        }).on("dragover", e => {
-            e.preventDefault()
-            e.stopPropagation()
-            $(e.currentTarget).addClass("dragover")
-        }).on("dragleave", e => {
-            e.preventDefault()
-            e.stopPropagation()
-            $(e.currentTarget).removeClass("dragover")
+        }).on("dragover", e => $(e.currentTarget).addClass(`importable-target dragging-target dragging-${clean(e) ? "before" : "after"}`)
+        ).on("dragleave", e => {
+            clean(e)
         })
         return $el
+
+        function clean(e) {
+            e.preventDefault()
+            e.stopPropagation()
+            $(e.currentTarget).removeClass("importable-target dragging-target dragging-before dragging-after")
+            return e.offsetX < e.target.offsetWidth / 2
+        }
     }
 
     display_progress(max, $placement = null) {

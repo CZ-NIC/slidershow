@@ -83,21 +83,7 @@ class Operation {
                         pl.goToArticle($root)
                     })
             }],
-            ["Alt+n", "➕", "Insert new frame", () => {
-                const $root = pl.frame.$frame
-                const $frame = $("<article/>").html("<h1>Title</h1><ul><li>contents</li></ul>")
-
-                cc.undoable("Inserted new frame",
-                    () => {
-                        $frame.insertAfter($root)
-                        pl.reset()
-                        pl.goToArticle($frame)
-                    }, () => {
-                        $frame.remove()
-                        pl.reset()
-                        pl.goToArticle($root)
-                    })
-            }],
+            ["Alt+n", "➕", "Insert new frame", () => this.insertNewFrame()],
             ["Enter", "📑", "Insert new &lt;li&gt;", () => {
                 const $el = pl.getFocused()
                 if ($el) {
@@ -211,9 +197,9 @@ class Operation {
                     pl.operation.editing.toggle(pl.editing_mode)
                     pl.editing_mode ? pl.frame.make_editable() : pl.frame.unmake_editable()
                     pl.hud.reset_thumbnails()
-                    pl.hud.thumbnails(pl.frame)
+                    pl.hud.thumbnails()
                     pl.hud.reset_grid()
-                    pl.hud.grid(pl.frame)
+                    pl.hud.grid()
                     pl.hud.alert(`Editing mode ${pl.editing_mode ? "enabled, see F1 for shortcuts help" : "disabled."}`)
                     pl.session.store()
                 }],
@@ -241,28 +227,68 @@ class Operation {
 
     /**
      *
+     * @param {jQuery} $root Frame to place the new frame after. Otherwise, playback.frame will be used.
+     */
+    insertNewFrame($root) {
+        const pl = this.playback
+        $root ??= pl.frame.$frame
+        const $frame = $("<article/>").html("<h1>Title</h1><ul><li>contents</li></ul>")
+
+        pl.changes.undoable("Inserted new frame",
+            () => {
+                $frame.insertAfter($root)
+                pl.reset()
+                pl.goToArticle($frame)
+            }, () => {
+                $frame.remove()
+                pl.reset()
+                pl.goToArticle($root)
+            })
+    }
+
+    /**
+     *
      * @param {number} frameIndex Initial frame
      * @param {number} rootIndex Target frame
+     * @param {boolean} before Insert before or after the root frame
      * @returns
      */
-    insertFrameBefore(frameIndex, rootIndex) {
+    moveFrame(frameIndex, rootIndex, before) {
         if (frameIndex === rootIndex) {
             return
         }
         const pl = this.playback
         const cc = pl.changes
-        cc.undoable("Swap frame",
-            () => $(pl.$articles[frameIndex]).insertBefore(pl.$articles[rootIndex]),
+        cc.undoable("Move frame",
+            () => $(pl.$articles[frameIndex])[before ? "insertBefore" : "insertAfter"](pl.$articles[rootIndex]),
             () => {
                 if (frameIndex > rootIndex) {
-                    $(pl.$articles[rootIndex]).insertAfter(pl.$articles[frameIndex])
+                    $(pl.$articles[before ? rootIndex : Number(rootIndex) + 1]).insertAfter(pl.$articles[frameIndex])
                 } else {
-                    $(pl.$articles[rootIndex - 1]).insertBefore(pl.$articles[frameIndex])
+                    $(pl.$articles[before ? rootIndex - 1 : rootIndex]).insertBefore(pl.$articles[frameIndex])
                 }
             }, () => {
                 const currentFrame = pl.frame
                 pl.reset()
                 pl.goToFrame(currentFrame.index)
+            })
+    }
+
+    /**
+     *
+     * @param {jQuery[]} frames Frames not yet inserted into the DOM.
+     * @param {jQuery} $target Element to append the frames.
+     * @param {boolean} before Inserted before or after the element
+     * @returns
+     */
+    importFrames(frames, $target, before) {
+        const pl = this.playback
+        return pl.changes.undoable("Import files",
+            () => $target[before ? "before" : "after"](frames),
+            () => frames.forEach($frame => $frame.detach()),
+            () => {
+                pl.reset()
+                pl.goToFrame(pl.frame.index)
             })
     }
 }
