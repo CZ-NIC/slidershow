@@ -7,7 +7,7 @@ class Changes {
    * @param {Playback} playback
    */
   constructor(playback) {
-    this.playback = playback
+    this.hud = playback.hud
     /** @type {boolean} Use to check whereas the undo operation is running.
      *  While performing the undo operation, it is not possible to register a new one.
      *  This is to prevent a common situation when restoring the state will attempt
@@ -24,10 +24,9 @@ class Changes {
     */
     this.applied_changes = []
 
-    this.playback.hud.$hud_properties.on("click", "button.undo", () => this.undo())
-    this.$button = $("<button/>", { "text": "undo", "class": "undo", "title": "Ctrl+Alt+Z" }).prop("disabled", !this.changes.length)
-    this.playback.hud.$hud_properties.on("click", "button.redo", () => this.redo())
-    this.$button_redo = $("<button/>", { "text": "redo", "class": "redo", "title": "Ctrl+Alt+Shift+Z" }).prop("disabled", !this.applied_changes.length)
+    // will be set later
+    this.$buttonUndo = null
+    this.$buttonRedo = null
   }
 
 
@@ -61,8 +60,8 @@ class Changes {
     this.changes.push([fn_redo, fn_undo, val, prev_val, title, do_always])
 
     this.applied_changes.length = 0
-    this.$button_redo.prop("disabled", true)
-    this.$button.prop("disabled", false)
+    this.$buttonRedo.prop("disabled", true)
+    this.$buttonUndo.prop("disabled", false)
     $(window).on('beforeunload', () => true)
     if (run_now) {
       fn_redo(val)
@@ -97,21 +96,19 @@ class Changes {
     fn(value)
     do_always?.()
     if (title) {
-      this.playback.hud.alert((redo ? "Redo" : "Undo") + ": " + title)
+      this.hud.info((redo ? "Redo" : "Undo") + ": " + title)
     }
     this.performing = false
 
-    this.$button.prop("disabled", !this.changes.length)
+    this.$buttonUndo.prop("disabled", !this.changes.length)
     if (!this.changes.length) {
       this.unblock_unload()
     }
-    this.$button_redo.prop("disabled", !this.applied_changes.length)
+    this.$buttonRedo.prop("disabled", !this.applied_changes.length)
   }
 
-  get_button() {
-    return this.$button
-  }
-  get_button_redo() {
-    return this.$button_redo
+  setButtons($buttonUndo, $buttonRedo) {
+    this.$buttonUndo = $buttonUndo.prop("disabled", !this.changes.length)
+    this.$buttonRedo = $buttonRedo.prop("disabled", !this.applied_changes.length)
   }
 }

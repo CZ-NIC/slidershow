@@ -133,4 +133,22 @@ class Interval {
  */
 function arraysEqual(a, b) {
     return a.length === b.length && a.every((el, ix) => el === b[ix])
-  }
+}
+
+/**
+ * Format date
+ * @returns {string|null}
+ */
+function formatDateMs(ms) {
+    if (!ms) {
+        return null
+    }
+    const date = new Date(ms)
+
+    return date.getFullYear() + '-' +
+        ('0' + (date.getMonth() + 1)).slice(-2) + '-' +
+        ('0' + date.getDate()).slice(-2) + 'T' +
+        ('0' + date.getHours()).slice(-2) + '-' +
+        ('0' + date.getMinutes()).slice(-2) + '-' +
+        ('0' + date.getSeconds()).slice(-2);
+}

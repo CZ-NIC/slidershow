@@ -61,8 +61,9 @@ class Frame {
         // Apart from all the standard media loaded we await the signal from .preload method that all re-srced media are loaded.
         this.loaded = Promise.all([
             new Promise(r => this._loaded = r),
-            ...this.$frame.find("video, img")
-                .map((_, el) => el.complete || new Promise(r => $(el).one("load", r)))])
+            ...this.$frame.find("img").map((_, el) => el.complete || new Promise(r => $(el).one("load", r))),
+            ...this.$frame.find("video").map((_, el) => el.readyState >= 2 || new Promise(r => $(el).one("loadeddata", r)))
+        ])
     }
 
     register_parent(frame) {
@@ -287,7 +288,7 @@ class Frame {
                 const src = (await $el.data(READ_SRC)?.(true)) || $el.data("src")
                 if (src) { // there is a place to load src from
                     el.src = src
-                    return new Promise(r => el.onload = r)
+                    return el.tagName === "IMG" ? new Promise(r => el.onload = r) : new Promise(r => el.onloadeddata = r)
                 }
             }
             return null // src already set or no place to set the src from
@@ -431,6 +432,8 @@ class Frame {
 
     /**
      * The frame is at the viewport.
+     *
+     * XX It seems this might run twice (without calling .leave()) after calling playback.reset(), ex: moving another frames in the grid. Should be fixed?
      */
     enter() {
         const $frame = this.$frame
@@ -479,12 +482,22 @@ class Frame {
         $(EDITABLE_ELEMENTS, this.$frame)
             .attr("contenteditable", true)
         this.$frame
-            .on("focus", EDITABLE_ELEMENTS, () => [this.playback.operation.general.disable(), this.playback.operation.global_shortcuts.disable()])
-            .on("focusout", EDITABLE_ELEMENTS, () => [this.playback.operation.general.enable(), this.playback.operation.global_shortcuts.enable()])
+            .on("focus", EDITABLE_ELEMENTS, () => {
+                this.playback.hud.$stopEditing.prop("disabled", false)
+                this.playback.operation.general.disable()
+            })
+            .on("focusout", EDITABLE_ELEMENTS, () => {
+                this.playback.hud.$stopEditing.prop("disabled", true)
+                this.playback.operation.general.enable()
+            })
     }
 
     unmake_editable($container = null) {
         Frame.unmake_editable(this.$frame)
+        this.$frame
+            .off("focus", EDITABLE_ELEMENTS)
+            .off("focusout", EDITABLE_ELEMENTS)
+            .trigger("focusout")
     }
     /**
      * @param {jQuery} $container
@@ -494,10 +507,11 @@ class Frame {
     }
 
     video_enter(resolve) {
+        const hud = this.playback.hud
         const $actor = this.$actor
         $actor.focus() // Focus video controls
 
-        this.playback.hud.discreet_info(this.get_filename().split("#")[1])
+        hud.discreet_info(this.get_filename().split("#")[1])
 
         if ($actor.attr("data-autoplay-prevented")) {
             $actor.removeAttr("data-autoplay-prevented").attr("autoplay", "")
@@ -507,7 +521,7 @@ class Frame {
             // Video autoplay (when muted in chromium)
             if ($actor[0].readyState > 3) {
                 $actor[0].play().catch(e => {
-                    this.playback.hud.alert("Interact with the page before the autoplay works.")
+                    hud.info("Interact with the page before the autoplay works.")
                 })
             } else {
                 console.warn("Not ready for autoplay", $actor[0])
@@ -547,14 +561,17 @@ class Frame {
         // Video shortcuts
         const playback_change = (step) => {
             const r = $actor[0].playbackRate = Math.round(($actor[0].playbackRate + step) * 10) / 10
-            this.playback.hud.playback_icon(r + " ×")
+            hud.playback_icon(r + " ×")
         }
         this.shortcuts.push(
             wh.grab("NumpadAdd", "Faster video", () => playback_change(0.1)),
             wh.grab("NumpadSubtract", "Faster video", () => playback_change(-0.1)),
-            wh.grab("Alt+m", "Toggle muted", () => $actor[0].muted = !$actor[0].muted)
+            wh.grab("Alt+m", "Toggle muted", () => { $actor[0].muted = !$actor[0].muted })
         )
+        $("<div/>", { "html": this.shortcuts.map(s => s.getText()).join("<br>") }).prependTo(hud.$hud_filename)
 
+        // Video controls (arrows) must not interfere with the shortcuts
+        hud.$notVideoButtons.prop("disabled", true)
     }
 
     loop(loop) {
@@ -676,6 +693,7 @@ class Frame {
     /**
      * Opposite of this.enter()
      * Functionality should be duplicated finalize_frames (due to performance reasons).
+     *
      */
     leave() {
         this.$frame.find("video").each((_, el) => $(el).off("pause") && el.pause())
@@ -685,6 +703,7 @@ class Frame {
         if (this.$video_pause_listener) {
             this.$video_pause_listener.trigger("slidershow-leave")
             this.$video_pause_listener = null
+            this.playback.hud.$notVideoButtons.prop("disabled", false)
         }
 
         this.playback.hud_map?.hide()
@@ -912,13 +931,32 @@ class Frame {
         if (this.panorama_starter) { // remove panorama styling
             $clone.find("video, img").first().removeAttr("style")
         }
-        $clone.find("video").removeAttr("autoplay")
+
+        if (this.$actor.is("video")) {
+            $clone.addClass("video-thumbnail")
+        }
+        $clone.find("video").removeAttr("autoplay controls") // even if the main $actor in not video, disable all the videos
         $clone.find("[data-templated]").remove()
         $clone.find("[data-step]").show() // ignore frame steps
         if (suppress_step_animation) {
             Frame._clean_step($clone)
             $clone.addClass("prevent-animation-important")
         }
+
+        // Why we do not rather capture a video thumbnail?
+        // On local domain due to CORS, we cannot make a blob, just canvas. We cannot pass that tainted canvas to an aux window.
+        // When the video has not yet shown, the canvas stays blank with no exception thrown but as we cannot access the data,
+        // we cannot find out. (And canvas cannot have a CSS pseudoclass.)
+        //
+        // const video = this.$actor[0]
+        // const $canvas = $("<canvas/>", { width: "100%", height: "100%" })
+        // const canvas = $canvas[0]
+        // canvas.width = video.videoWidth
+        // canvas.height = video.videoHeight
+        // const context = canvas.getContext('2d')
+        // context.drawImage(video, 0, 0, video.videoWidth, video.videoHeight)
+        // return $("<article/>", { "class": "video-thumbnail" }).append($canvas)
+
         // Remove data-preloaded attribute for the case it is there
         return $clone.removeAttr("data-preloaded").prop("outerHTML")
     }
@@ -956,14 +994,14 @@ class Frame {
     }
 
     /**
-     * Base file name without the directory.
+     * Base file name without the directory. Or empty string when there is no media inside.
      * There might be base64 data in the real src, hence we prefer the data-src
      * @param {jQuery} $actor
      * @returns {String}
      */
     get_filename($actor = null) {
         $actor = $actor || this.$actor
-        return ($actor.data("src") || $actor.attr("src") || $("source", $actor).attr("src"))?.split("/").pop()
+        return ($actor.data("src") || $actor.attr("src") || $("source", $actor).attr("src"))?.split("/").pop() || ""
     }
 
     get_position() {
@@ -1019,7 +1057,7 @@ class Frame {
             }
 
             const dateTime = exif.DateTimeOriginal?.replace(/:/g, "-").replace(/ /g, "T")
-            if (dateTime) { attrs["data-dateTime"] = dateTime }
+            if (dateTime) { attrs["data-datetime"] = dateTime }
 
             // convert GPS
             const { GPSLatitude: _lat, GPSLongitude: _lon, GPSLatitudeRef: _latRef, GPSLongitudeRef: _lonRef } = exif

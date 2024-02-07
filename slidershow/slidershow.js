@@ -10,7 +10,7 @@ const MAP_ENABLE = !location.hash.includes("map-disabled")
 // style
 document.querySelector("html").style.display = "none" // so that body images are not shown before the style loads (short white blink appears instead)
 
-loadStyle(DIR + "../style.css").then(() => document.querySelector("html").removeAttribute("style"))
+loadStyle(DIR + "style.css").then(() => document.querySelector("html").removeAttribute("style"))
 
 loadjQuery(() => {
     // external and local scripts
@@ -27,7 +27,7 @@ loadjQuery(() => {
         },
         { src: "https://cdn.jsdelivr.net/npm/js-circle-progress@0.2.4/dist/jquery.circle-progress.min.js" },
         { src: "https://code.jquery.com/ui/1.13.1/jquery-ui.min.js" },
-        { src: "https://cdn.jsdelivr.net/gh/e3rd/WebHotkeys@0.9.1/WebHotkeys.js" },
+        { src: "https://cdn.jsdelivr.net/gh/e3rd/WebHotkeys@0.9.2/WebHotkeys.js?register" },
         { src: "https://cdn.jsdelivr.net/npm/exif-js" },
         { src: "https://cdn.jsdelivr.net/npm/showdown@2.1.0/dist/showdown.min.js" },
         MAP_ENABLE ? { src: "https://api.mapy.cz/loader.js" } : null,
@@ -52,7 +52,7 @@ loadjQuery(() => {
     const load_launch = () => {
         get_menu().appendTo("body")
         stop_videos()
-        $(document).ready(function () {
+        $(document).ready(() => {
             stop_videos()
             loadScript({ src: DIR + "launch.js" })
         })

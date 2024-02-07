@@ -96,8 +96,8 @@ class Menu {
      * @param {File[]} items
      */
     appendFiles(items) {
-        const $section = $("<section/>").appendTo($main)
-        const $frames = this.loadFiles(items, $section)
+        const $section = this.playback.operation.insertNewSection()
+        const $frames = this.loadFiles(items)
 
         $section.hide(0).append($frames).children().hide(0).parent().show(0)
         this.$start_wrapper.show()
@@ -109,21 +109,13 @@ class Menu {
 
     /**
      * @param {File[]} items
-     * @param {?jQuery} $container If set, the default options will be written inside as attributes.
      * @returns {jQuery[]} frames
      */
-    loadFiles(items, $container = null) {
+    loadFiles(items) {
         console.log("File items", items) // XX we might use item.size too
 
-        // Process options
-        const formData = new FormData($("#defaults")[0])
-        const path = formData.get("path") // data-path does not belong to <section>
-        formData.delete('path')
-        if ($container) {
-            [...formData].map(([key, val]) => $container.attr("data-" + key, val))
-        }
-
         // Prepare frames
+        const path = $("#defaults [name=path]").val()
         const ram_only = !Boolean(path)
         const spin = this.display_progress(items.length, this.$drop)
         return items.map(item =>
@@ -142,19 +134,20 @@ class Menu {
      * @param {boolean} before Dragged before or after the element
      */
     importable($el, onDrop) {
-        $el.on("drop", e => {
-            const before = clean(e)
-            const items = [...e.originalEvent.dataTransfer.items].filter(i => i.kind === "file").map(i => i.getAsFile())
-            const frames = this.loadFiles(items)
-            if (frames.length) {
-                onDrop(frames, e.currentTarget, before) // we should insert them into DOM
-            } else {
-                this.playback.hud.alert("Drop cancelled")
-            }
-        }).on("dragover", e => $(e.currentTarget).addClass(`importable-target dragging-target dragging-${clean(e) ? "before" : "after"}`)
-        ).on("dragleave", e => {
-            clean(e)
-        })
+        $el.off("drop dragover dragleave")
+            .on("drop", e => {
+                const before = clean(e)
+                const items = [...e.originalEvent.dataTransfer.items].filter(i => i.kind === "file").map(i => i.getAsFile())
+                const frames = this.loadFiles(items)
+                if (frames.length) {
+                    onDrop(frames, e.currentTarget, before) // we should insert them into DOM
+                } else {
+                    this.playback.hud.info("Drop cancelled")
+                }
+            }).on("dragover", e => $(e.currentTarget).addClass(`importable-target dragging-target dragging-${clean(e) ? "before" : "after"}`)
+            ).on("dragleave", e => {
+                clean(e)
+            })
         return $el
 
         function clean(e) {

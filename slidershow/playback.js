@@ -126,6 +126,11 @@ class Playback {
         this.hud.reset()
     }
 
+    resetAndGo() {
+        this.reset()
+        this.goToFrame(this.frame.index)
+    }
+
     positionFrames(x1 = null, x2 = null, x3 = null, x4 = null) {
         let slide_index = -1
         let frame_index = -1
@@ -145,13 +150,14 @@ class Playback {
                 slide_index += 1
             }
 
+            const $preview = this.hud.getThumbnail(frame)
             const old_index = frame.index
             frame.index = ++frame_index
             frame.slide_index = slide_index
 
             // Prepare corresponding previews to an index change.
             // We do not set the index directly because the values interefere.
-            $(`frame-preview[data-ref=${old_index}]`).data("ref-temp", frame.index)
+            $preview.data("ref-temp", frame.index)
 
             const positioning = prop("spread-frames", $main)
             switch (positioning) {
@@ -193,7 +199,7 @@ class Playback {
                     })
                     break;
                 default:
-                    this.hud.alert(`Unknown spread-frames: ${positioning}`)
+                    this.hud.info(`Unknown spread-frames: ${positioning}`)
             }
 
             // load tags from localStorage
@@ -219,26 +225,38 @@ class Playback {
      * Group frames according to the user tags across multiple <section> tags
      */
     group() {
-        this.$articles.each((_, el) => {
-            const $frame = $(el)
-            /** @type {Frame} */
-            const frame = $frame.data("frame")
+        /** @type {function[]} */
+        const redos = []
+        /** @type {jQuery[]} */
+        const added = []
+        this.changes.undoable("Group frames",
+            () => {
+                redos.length = 0
+                added.length = 0
+                this.$articles.each((_, el) => {
+                    const $frame = $(el)
+                    /** @type {Frame} */
+                    const frame = $frame.data("frame")
 
-            const tag = frame.$actor.attr("data-tag") || 0
-            // if(!tag) { // XX delete element without tag (not working)
-            //     console.log("214: delete", )
-            //     $frame.remove()
-            //     return
-            // }
+                    redos.push(this.operation.redoForMoving($frame))
 
-            let $section = $(`section[data-tag=${tag}]`)
-            if (!$section.length) {
-                $section = $("<section/>", { "data-tag": tag }).prependTo($main)
-            }
-            $frame.appendTo($section)
-        })
-        this.positionFrames()
-        this.goToFrame(this.$current.data("frame").index - 1) // keeps you on the same frame (woorks badly)
+                    const tag = frame.$actor.attr("data-tag") || 0
+                    let $section = $(`section[data-tag=${tag}]`)
+                    if (!$section.length) {
+                        $section = $("<section/>", { "data-tag": tag }).prependTo($main)
+                        added.push($section)
+                    }
+                    $frame.appendTo($section)
+                })
+                this.positionFrames()
+                this.goToFrame(this.$current.data("frame").index - 1) // keeps you on the same frame (woorks badly)
+            },
+            () => {
+                redos.reverse().map(f => f())
+                added.map(el => $(el).remove())
+            },
+            () => this.resetAndGo()
+        )
     }
 
     /**
@@ -315,10 +333,6 @@ class Playback {
         }
     }
 
-    notVideoFocus() {
-        return $(":focus").prop("tagName") !== "VIDEO"
-    }
-
     getSection() {
         return this.frame.$frame.closest("section, main")
     }
@@ -335,7 +349,7 @@ class Playback {
                 return this.goToFrame(frame.index)
             }
         }
-        this.hud.alert("Cannot find given slide number " + slide_number)
+        this.hud.info("Cannot find given slide number " + slide_number)
     }
 
     goToArticle($frame, moving = false) {
@@ -430,14 +444,14 @@ class Playback {
             const nearby = Frame.frames(this.$articles.slice(Math.max(0, index - PRELOAD_BACKWARD), index + PRELOAD_FORWARD))
             this.process_bg_tasks([
                 ...nearby.filter(f => f.$frame.not("[data-preloaded]").length).map(f => () => f.preload()),
-                ...Frame.frames($("[data-preloaded]")).map(f => nearby.includes(f) ? null : () => f.unload()).filter(Boolean)
+                ...Frame.frames(this.$articles.filter("[data-preloaded]")).map(f => nearby.includes(f) ? null : () => f.unload()).filter(Boolean)
             ])
         })
     }
 
     toggle_steps() {
         this.step_disabled = !this.step_disabled
-        this.hud.alert("Presentation steps were " + (this.step_disabled ? "disabled" : "enabled"))
+        this.hud.info("Presentation steps were " + (this.step_disabled ? "disabled" : "enabled"))
         if (this.step_disabled) {
             this.frame.clean_steps()
         }

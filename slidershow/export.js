@@ -91,7 +91,7 @@ class Export {
             const fileStream = await newHandle.createWritable()
             await fileStream.write(data)
             fileStream.close()
-            this.menu.playback.hud.alert("Saved")
+            this.menu.playback.hud.info("Saved")
         } else {
             this.download(data)
         }

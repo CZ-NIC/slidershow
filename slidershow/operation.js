@@ -10,12 +10,14 @@ class Operation {
         this.general = this.generalInit()
         this.tagging = this.taggingInit()
         this.editing = this.editingInit()
+
+        this.playback.hud.registerMenu()
     }
 
     _button(group_name) {
         const $group = $("<div/>", { "data-hotkey-group": group_name }).appendTo(this.playback.hud.$hud_menu)
-        return ([hotkey, symbol, hint, fn]) => [hotkey,
-            $("<button/>", { "title": hint, "data-hotkey": hotkey, "html": symbol })
+        return ([hotkey, symbol, hint, fn, role = null]) => [hotkey,
+            $("<button/>", { "title": hint, "data-hotkey": hotkey, "html": symbol, "data-role": role })
                 .click(fn)
                 .appendTo($group)[0]
         ]
@@ -128,21 +130,14 @@ class Operation {
                     pl.frame.delete()
                 }
             }],
-            ["Escape", "✔️", "Stop editing", () => $(":focus").blur()]
+            ["Escape", "✔️", "Stop editing", () => $(":focus").blur(), "stop-editing"]
         ].map(this._button("Editing"))).toggle(pl.editing_mode)
     }
 
     generalInit() {
         const pl = this.playback
         return wh.group("General", [
-            ["Space", "⏯", "Next", (e) => {
-                if (pl.notVideoFocus()) {
-                    return pl.goNext()
-                } else {
-                    pl.play_pause(false)
-                    return false
-                }
-            }],
+            ["Space", "⏯", "Next", () => pl.play_pause(!pl.moving), "not-video"],
             ["a", "⏯", "Play/Pause", () => { // XX undocumented, replace by the space
                 pl.play_pause(!pl.moving)
             }],
@@ -150,19 +145,19 @@ class Operation {
             ["Home", "⏮", "Go to the first", () => pl.goToFrame(0)],
             ["Alt+PageUp", "◀◀", "Prev section", () => pl.previousSection()],
             ["Shift+PageUp", "◀", "Prev frame", () => pl.previousFrame()],
-            ["p", "◁", "Prev step", () => pl.goPrev()],
-            ["PageUp", "◁", "Prev step", () => pl.goPrev()],
-            ["ArrowLeft", "◁", "Prev step", () => pl.notVideoFocus() && pl.goPrev()],
-            ["ArrowRight", "▷", "Next step", () => pl.notVideoFocus() && pl.goNext()],
-            ["PageDown", "▷", "Next step", () => pl.goNext()],
-            ["n", "▷", "Next step", () => pl.goNext()],
+            ["p", "◁", "Prev step", () => pl.goPrev(), "prev-step"],
+            ["PageUp", "◁", "Prev step", () => pl.goPrev(), "prev-step"],
+            ["ArrowLeft", "◁", "Prev step", () => pl.goPrev(), "prev-step not-video"],
+            ["ArrowRight", "▷", "Next step", () => pl.goNext(), "next-step not-video"],
+            ["PageDown", "▷", "Next step", () => pl.goNext(), "next-step"],
+            ["n", "▷", "Next step", () => pl.goNext(), "next-step"],
             ["Shift+PageDown", "▶", "Next frame", () => pl.nextFrame()],
             ["Alt+PageDown", "▶▶", "Next section", () => pl.nextSection()],
             ["End", "⏭", "Go to end", () => pl.goToFrame(pl.$articles.length - 1)],
 
-            ["m", "🗺", "Toggle hud map", () => pl.notVideoFocus() && pl.hud_map.toggle(true)],
+            ["m", "🗺", "Toggle hud map", () => pl.hud_map.toggle(true), "not-video"],
             ["f", "ℹ", "Toggle file info", () => $("#hud-fileinfo").toggle()],
-            ["g", "⇗", "Go to frame", () => {
+            ["Alt+g", "⇗", "Go to frame", () => {
                 new $.Zebra_Dialog(`You are now at ${pl.frame.slide_index + 1} / ${pl.slide_count}`, {
                     title: "Go to slide number",
                     type: "prompt",
@@ -184,30 +179,42 @@ class Operation {
                 $main.css({ "zoom": zoom == "1" ? "0.05" : "1" })
                 pl.debug = !pl.debug
             }],
-            ["Ctrl+Alt+z", "Undo change", () => pl.changes.undo()],
-            ["Ctrl+Alt+Shift+z", "Redo change", () => pl.changes.redo()],
             ...[
-                ["Alt+j", "&#127895;", "Thumbnails", () => pl.hud.toggle_thumbnails()],
-                ["Alt+g", "&#119584;", "Grid", () => pl.hud.toggle_grid()],
-                ["Ctrl+Alt+s", "&#128095;", "Steps", () => pl.toggle_steps()],
+                ["Ctrl+Alt+z", "⟲", "Undo change", () => pl.changes.undo(), "undo"],
+                ["Ctrl+Alt+Shift+z", "⟳", "Redo change", () => pl.changes.redo(), "redo"],
+                ["j", "&#127895;", "Thumbnails", () => pl.hud.toggle_thumbnails()],
+                ["g", "&#119584;", "Grid", () => pl.hud.toggle_grid()],
                 ["Alt+p", "&#127920;", "Properties", () => pl.hud.toggle_properties()],
+                ["Ctrl+Alt+s", "&#128095;", "Steps", () => pl.toggle_steps()],
                 ["Alt+e", "&#9998;", "Editing mode", () => {
                     pl.editing_mode = !pl.editing_mode
                     // when there will be interfering shortcuts like numbers, we have retag the previous shortcuts
                     pl.operation.editing.toggle(pl.editing_mode)
                     pl.editing_mode ? pl.frame.make_editable() : pl.frame.unmake_editable()
                     pl.hud.reset_thumbnails()
-                    pl.hud.thumbnails()
+                    if (pl.hud.thumbnails_visible) {
+                        pl.hud.thumbnails()
+                    }
                     pl.hud.reset_grid()
-                    pl.hud.grid()
-                    pl.hud.alert(`Editing mode ${pl.editing_mode ? "enabled, see F1 for shortcuts help" : "disabled."}`)
+                    if (pl.hud.grid_visible) {
+                        pl.hud.grid()
+                    }
+                    pl.hud.info(`Editing mode ${pl.editing_mode ? "enabled" : "disabled."}`)
                     pl.session.store()
                 }],
                 ["Alt+t", "&#128204;", "Tagging mode", () => {
                     pl.tagging_mode = !pl.tagging_mode
                     // when there will be interfering shortcuts like numbers, we have retag the previous shortcuts
                     pl.operation.tagging.toggle(pl.tagging_mode)
-                    pl.hud.alert(`Tagging mode ${pl.tagging_mode ? "enabled, see F1 for shortcuts help" : "disabled."}`)
+                    pl.hud.reset_thumbnails()
+                    if (pl.hud.thumbnails_visible) {
+                        pl.hud.thumbnails()
+                    }
+                    if (pl.hud.grid_visible) {
+                        pl.hud.reset_grid()
+                    }
+                    pl.hud.grid()
+                    pl.hud.info(`Tagging mode ${pl.tagging_mode ? "enabled" : "disabled."}`)
                     pl.session.store()
                 }]
             ].map(this._button("Switches"))
@@ -218,7 +225,7 @@ class Operation {
         const menu = this.playback.menu
         return wh.group("Global", [
             ["Escape", "☰", "Show menu", () => this.playback.hud.$playback_icon.click()],
-            ["Alt+m", "🧰", "Go to menu", () => !$(":focus").closest(".ZebraDialog").length && menu.stop_playback()], // disabled when in a dialog
+            ["Alt+m", "🧰", "Go to menu", () => menu.stop_playback()],
             ["Alt+w", "&#127916;", "Auxiliary window", () => menu.aux_window.open()],
             ['Ctrl+s', "&#128190;", "Export", () => menu.export.export_dialog()],
             ['F1', "&#9432;", "Help", () => menu.help()],
@@ -234,7 +241,7 @@ class Operation {
         $root ??= pl.frame.$frame
         const $frame = $("<article/>").html("<h1>Title</h1><ul><li>contents</li></ul>")
 
-        pl.changes.undoable("Inserted new frame",
+        pl.changes.undoable("Insert new frame",
             () => {
                 $frame.insertAfter($root)
                 pl.reset()
@@ -244,6 +251,22 @@ class Operation {
                 pl.reset()
                 pl.goToArticle($root)
             })
+    }
+
+    /**
+     * Appends a new section to the $main and write the default options as attributes.
+     * @returns {jQuery} Section
+     */
+    insertNewSection() {
+        const pl = this.playback
+        const formData = new FormData($("#defaults")[0])
+        formData.delete('path') // path does not belong to <section>
+        const $section = $("<section/>", Object.fromEntries(formData))
+        pl.changes.undoable("Insert new section",
+            () => $section.appendTo($main),
+            () => $section.remove(),
+            () => pl.resetAndGo()
+        )
     }
 
     /**
@@ -258,37 +281,46 @@ class Operation {
             return
         }
         const pl = this.playback
-        const cc = pl.changes
-        cc.undoable("Move frame",
-            () => $(pl.$articles[frameIndex])[before ? "insertBefore" : "insertAfter"](pl.$articles[rootIndex]),
-            () => {
-                if (frameIndex > rootIndex) {
-                    $(pl.$articles[before ? rootIndex : Number(rootIndex) + 1]).insertAfter(pl.$articles[frameIndex])
-                } else {
-                    $(pl.$articles[before ? rootIndex - 1 : rootIndex]).insertBefore(pl.$articles[frameIndex])
-                }
-            }, () => {
-                const currentFrame = pl.frame
-                pl.reset()
-                pl.goToFrame(currentFrame.index)
-            })
+        const $frame = $(pl.$articles[frameIndex])
+        pl.changes.undoable("Move frame",
+            () => $frame[before ? "insertBefore" : "insertAfter"](pl.$articles[rootIndex]),
+            this.redoForMoving($frame),
+            () => pl.resetAndGo()
+        )
+    }
+
+    putFrameIntoSection(frameIndex, section) {
+        const pl = this.playback
+        const $frame = $(pl.$articles[frameIndex])
+        pl.changes.undoable("Prepend to section",
+            () => $frame.prependTo(section),
+            this.redoForMoving($frame),
+            () => pl.resetAndGo())
+    }
+
+    /**
+     * @param {jQuery} $frame
+     * @returns {function} Call to position the $frame to the previous location.
+     */
+    redoForMoving($frame) {
+        return $frame.prev().length ?
+            (root => () => $frame.insertAfter(root))($frame.prev())
+            : (root => () => $frame.prependTo(root))($frame.parent())
     }
 
     /**
      *
      * @param {jQuery[]} frames Frames not yet inserted into the DOM.
      * @param {jQuery} $target Element to append the frames.
-     * @param {boolean} before Inserted before or after the element
+     * @param {boolean|string} before Boolean or "append". Inserted before or after the element or prepend to an element.
      * @returns
      */
     importFrames(frames, $target, before) {
         const pl = this.playback
         return pl.changes.undoable("Import files",
-            () => $target[before ? "before" : "after"](frames),
+            () => $target[before === "prepend" ? "prepend" : before ? "before" : "after"](frames),
             () => frames.forEach($frame => $frame.detach()),
-            () => {
-                pl.reset()
-                pl.goToFrame(pl.frame.index)
-            })
+            () => pl.resetAndGo()
+        )
     }
 }

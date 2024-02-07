@@ -1,6 +1,6 @@
 # SlideRshow – more than a slideshow
 
-[![Run now!](https://img.shields.io/badge/Run_now!-green.svg)](https://cz-nic.github.io/slidershow/examples/slidershow.html)
+[![Run now!](https://img.shields.io/badge/Run_now!-green.svg)](https://cz-nic.github.io/slidershow/slidershow.html)
 
 Have you ever wanted to show your friends media from holidays? How cubersome it was to mix photos and videos? Enough of frame transition? Dreaming about a fully customisable presentation experience? Presentation file size huge? This HTML based presenter will let you show your contents just the way you desire. Either launch it and drag the files in or fully define all the properties.
 
@@ -27,7 +27,7 @@ The application **runs in the browser** – see the SlideRshow **[right now](htt
 
 When in the application, drag and drop media files into the page and just start the playthrough. (Remember: Nothing is uploaded to the server. Check the code – there is no server.) Should a more detailed presentation be needed, just export the presentation HTML file with <kbd>Ctrl+E</kbd> and edit it at will.
 
-What can you acheive? See a variety of features in another example at [examples/tutorial.html](https://cz-nic.github.io/slidershow/examples/tutorial.html).
+What can you acheive? See a variety of features in another example at [extra/tutorial.html](https://cz-nic.github.io/slidershow/extra/tutorial.html).
 
 # Contents
 - [Prologue](#slidershow--more-than-a-slideshow)
@@ -63,6 +63,7 @@ What can you acheive? See a variety of features in another example at [examples/
       - [Panoramatic images](#panoramatic-images)
       - [Preload](#preload)
     + [`<video>`](#video)
+      - [`data-datetime`](#data-datetime)
       - [`data-playback-rate`](#data-playback-rate)
       - [`data-video`](#data-video)
     + [Text](#text)
@@ -323,7 +324,7 @@ How many seconds will it take to change an image zoom step. By default, it takes
 #### Exif info
 We try to fetch Exif data for images.
 * `data-device`: maker and model
-* `data-datetime`: picture time stamp
+* `data-datetime`: picture time stamp (or fallback to file modification time)
 * `data-gps`: point on the map (HUD map will be automatically displayed in the corner)
 
 However, this is a non-trivial task since the browser protects your photos privacy. This will work for images you drag and drop inside, images from the web (with the permitive CORS policy). Reading the Exif of your local images you just mention in the document will work only with the browser [CORS disabled](https://stackoverflow.com/questions/4819060/allow-google-chrome-to-use-xmlhttprequest-to-load-a-url-from-a-local-file) – do that only if you know what are you doing.
@@ -382,6 +383,9 @@ When having thousands of images, your browser may choke. Use `data-src` instead 
 * Due to the `<source>` URL, only portion between *8 s – 10 s* gets played.
 * The `<video>` tag benefits from standard attributes like `loop`, `muted`, `autoplay` and `controls` (so that controls are visible). In Chromium based browsers, only `muted` video respects `autoplay` so we recommend using `controls` too so that you may start the video with the <kbd>Space</kbd>.
 * When a new frame appears, first video gets focus. Whether `autoplay` is present, it starts playing. Keys like <kbd>Space</kbd>, <kbd>Left</kbd>, <kbd>Right</kbd> stop working for frame switching to avoid interfering with the video controls.
+
+#### `data-datetime`
+File modification time if available.
 
 #### `data-playback-rate`
 The speed of the video.

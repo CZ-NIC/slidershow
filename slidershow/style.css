@@ -105,6 +105,22 @@ frame-preview > article-map [data-step].step-not-yet-visible {
   border: 1px dotted red;
   animation-fill-mode: unset;
 }
+frame-preview > article.video-thumbnail:before,
+frame-preview > article-map.video-thumbnail:before {
+  content: '\1f3a5';
+  position: absolute;
+  width: 100%;
+  margin-top: 20%;
+  font-size: 300px;
+  text-shadow: 0 0 100px white;
+}
+frame-preview article-map:before {
+  content: '🗺';
+  position: absolute;
+  margin-top: 20%;
+  font-size: 300px;
+  text-shadow: 0 0 100px white;
+}
 .importable-target > * {
   filter: blur(10px);
 }
@@ -196,6 +212,10 @@ frame-preview > article-map [data-step].step-not-yet-visible {
   padding: 10px;
   border-radius: 15px;
 }
+#hud #hud-thumbnails#hud-grid section-controller.dragging-target,
+#hud #hud-grid#hud-grid section-controller.dragging-target {
+  box-shadow: inset 0px 0px 5px 0px yellow;
+}
 #hud #hud-thumbnails > frame-preview,
 #hud #hud-grid > frame-preview {
   text-align: center;
@@ -217,6 +237,15 @@ frame-preview > article-map [data-step].step-not-yet-visible {
   cursor: pointer;
   position: absolute;
   right: 0;
+}
+#hud #hud-thumbnails > frame-preview .tag,
+#hud #hud-grid > frame-preview .tag {
+  position: absolute;
+  left: 5px;
+  background-color: blue;
+  font-size: 300%;
+  color: white;
+  padding: 0 5px;
 }
 #hud #hud-thumbnails > frame-preview > article,
 #hud #hud-grid > frame-preview > article,

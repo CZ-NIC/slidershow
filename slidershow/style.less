@@ -1,10 +1,11 @@
 @highlight: yellow;
 @control: blue;
 @soft-highlight: darkblue;
+@base: white;
 
 body {
     background-color: black;
-    color: white !important;
+    color: @base !important;
     overflow-y: hidden;
     overflow-x: hidden;
     margin: 0;
@@ -138,6 +139,23 @@ frame-preview {
             // so that the opacity could be seen when animation ended on opacity:0
             animation-fill-mode: unset;
         }
+
+        &.video-thumbnail:before {
+            content: '\1f3a5';
+            position: absolute;
+            width: 100%;
+            margin-top: 20%;
+            font-size: 300px;
+            text-shadow: 0 0 100px @base;
+        }
+    }
+
+    article-map:before {
+        content: '🗺';
+        position: absolute;
+        margin-top: 20%;
+        font-size: 300px;
+        text-shadow: 0 0 100px @base;
     }
 }
 
@@ -250,6 +268,11 @@ frame-preview {
                     padding: 10px;
                     border-radius: 15px;
                 }
+
+                &.dragging-target {
+                    box-shadow: inset 0px 0px 5px 0px @highlight;
+                }
+
             }
         }
 
@@ -272,6 +295,15 @@ frame-preview {
                 cursor: pointer;
                 position: absolute;
                 right: 0;
+            }
+
+            .tag {
+                position: absolute;
+                left: 5px;
+                background-color: @control;
+                font-size: 300%;
+                color: @base;
+                padding: 0 5px;
             }
 
             >article,
