@@ -563,12 +563,18 @@ Tags `<header>` and `<footer>` used within a `<template>` are automatically inse
 
 ## Further styling
 
-The presentation being run in a simple HTML page, style customisation are really simple. Take a look at any running instance to the DevTools. For instance, to hide the frame counter, add a style tag to the `<head>`.
+The presentation being run in a simple HTML page, style customisation is really simple. Take a look at any running instance to the DevTools. For instance, to hide the frame counter, add a style tag to the `<head>`.
 
 ```html
 <style>
     #hud-counter {display:none}
 </style>
+```
+
+Or adjust the green template ([extra/green.css](https://cz-nic.github.io/slidershow/extra/green.css)) that is being used in the tutorial.
+
+```html
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/CZ-NIC/slidershow@latest/extra/green.css" />
 ```
 
 # License

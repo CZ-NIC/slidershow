@@ -111,8 +111,9 @@ class Frame {
 
     /**
      * Frame is going to be entered right now but is not visible yet.
+     * @param {?Frame} last_frame
      */
-    prepare() {
+    prepare(last_frame = null) {
         this.children.forEach(f => f.$frame.hide())
         if (this.parent) { // this is a child frame
             this.$frame.show(0) // it was hidden before
@@ -137,14 +138,21 @@ class Frame {
         check("header", "prependTo")
         check("footer", "appendTo")
 
-        if (!this.playback.step_disabled) {
-            this.steps_prepare()
-        }
+        this.loaded.then(() => {
+            if (!this.playback.step_disabled) {
+                this.steps_prepare(last_frame)
+            }
+        })
     }
 
-    steps_prepare() {
-        // Sort elements to be stepped through. Some of them might have `data-step=number` (which we honour),
-        // those with `data-step` are to be filled around.
+    /**
+     * Sort elements to be stepped through. Some of them might have `data-step=number` (which we honour),
+     * those with `data-step` are to be filled around.
+     *
+     * @param {?Frame} last_frame
+     */
+    steps_prepare(last_frame = null) {
+        // Prepare the elements eligible for being step through
         const $steppable = $("[data-step]", this.$frame)
             // [data-step-li] affects all <li>
             .add($("li", this.$frame)
@@ -159,24 +167,14 @@ class Frame {
                     if (!points?.length) {
                         return
                     }
-
-                    // what is the first zoom position we see
-                    // XX When multiple zoomed images at frame (or zooming steps along with classic data-step) are tested,
-                    // this will pose a problem. Because this.step_index points to the frame step,
-                    // not to the image animation step.
-                    const init_point = Array.from(points[this.step_index] || points.slice(-1))
-                    if (init_point) {
-                        // init point has no transition duration, it's straight there when we come to the frame
-                        init_point[3] = 0
-                        this.step_duration = this.zoom_set($el, ...init_point) ?? prop("step-duration", $el, null, "duration")
-                    }
-                    return $.map(points.slice(1), // the init point has already been zoomed into, slice it out
+                    return $.map(points.slice(1), // the init point will already be zoomed into, slice it out
                         (point, index) => $("<img-temp-animation-step/>")
                             // show the next or the previous animation step (we sliced the points due to the init point)
                             .data("callback", shown => this.zoom_set($el, ...shown ? point : points[index]))
                         [0])
                 }))
 
+        // Finalize [data-step]
         let index = 0
         let [last_step, pointer] = [null, null]
         this.steps = []
@@ -211,6 +209,15 @@ class Frame {
                     this.step_process($el, this.steps.length <= this.step_index, true)
                 }
             })
+
+        // Adjust initial step (either the first or the last)
+        if (!last_frame || last_frame.index < this.index) { // went forward to the frame (or direct entry)
+            this.step_index = 0
+            this.step_process($(this.steps.slice(0, 1).flat()), false)
+        } else { // went backwards to the frame
+            this.step_index = this.steps.length
+            this.step_process($(this.steps.slice(this.steps.length - 1).flat()), true)
+        }
     }
 
     map_prepare() {
@@ -220,6 +227,9 @@ class Frame {
         if (this.$frame.prop("tagName") === "ARTICLE-MAP") {
             map = this.playback.map
             map.adapt(this)
+            if (!MAP_ENABLE) {
+                this.playback.hud.info("Map disabled in the URL")
+            }
         } else {
             map = this.playback.hud_map
         }
@@ -474,7 +484,13 @@ class Frame {
         if (this.playback.editing_mode) {
             this.make_editable()
         }
+        return this.getDuration()
+    }
 
+    /**
+     * @returns {number} How long the last active step or whole frame should last
+     */
+    getDuration() {
         return this.step_duration ?? this.prop("duration")
     }
 
@@ -542,6 +558,9 @@ class Frame {
             // or an automatic action. So that we wait
             // an if it was a user-action, a play event will follow shortly,
             // with the mouse button up.
+            // Unfortunately, we cannot use actor.ended because we consider ended
+            // even if it paused due to HTMLMediaElement endtime (ex: `#t=10,20`).
+            // The actor.currentTime differs the endtime a little bit (like 20.12 s).
             next_interval = new Interval(() => {
                 next_interval.stop()
                 resolve()
@@ -559,7 +578,7 @@ class Frame {
             })
 
         // Video shortcuts
-        const playback_change = (step) => {
+        const playback_change = step => {
             const r = $actor[0].playbackRate = Math.round(($actor[0].playbackRate + step) * 10) / 10
             hud.playback_icon(r + " ×")
         }
@@ -630,9 +649,9 @@ class Frame {
     }
 
     /**
-     * Show or hide elements in the collection.
+     * Show or hide step.
      * Or adds them classes or zoom images.
-     * @param {jQuery<HTMLElement|Function>} $els
+     * @param {jQuery<HTMLElement|Function>} $els The collection of elements that represents the step.
      * @param {boolean} shown
      * @param {boolean} immediate Does not allow animation
      * @returns
@@ -647,9 +666,6 @@ class Frame {
         // step-duration is either 0 (if any of the elements sets it) or the max value or the frame default
         // Why checking length? Prevent `Math.max(empty) -> -Infinity`
         this.step_duration = durations.length ? durations.includes(0) ? 0 : Math.max(...durations) : null
-
-
-
 
         // we have only jQuery elements there
         $tags
@@ -692,13 +708,17 @@ class Frame {
 
     /**
      * Opposite of this.enter()
-     * Functionality should be duplicated finalize_frames (due to performance reasons).
+     * Functionality has to be duplicated in `finalize_frames()` due to performance reasons.
      *
      */
     leave() {
         this.$frame.find("video").each((_, el) => $(el).off("pause") && el.pause())
         this.shortcuts.forEach(s => s.disable())
         this.shortcuts.length = 0
+
+        if (document.activeElement.closest(FRAME_SELECTOR) === this.$frame[0]) {
+            document.activeElement.blur() // do not stay stuck on the video gauge (which prevents shortcuts)
+        }
 
         if (this.$video_pause_listener) {
             this.$video_pause_listener.trigger("slidershow-leave")
@@ -725,7 +745,7 @@ class Frame {
      */
     left() {
         this.loop_interval?.stop()
-        this.$actor.finish()
+        this.$actor.finish() // remove the panorama effect
         this.$frame.find("[data-templated]").remove()
         this.clean_steps()
         this.zoom_destroy()
@@ -793,20 +813,22 @@ class Frame {
                 "position": "absolute",
                 "left": 0
             })
-            this.panorama_starter = () => this.add_effect(resolve => {
-                $actor.animate({
-                    left: - trailing_width,
-                }, speed, () => {
-                    $actor.animate({
+            const quickEnd = () => this.$actor.finish()
+            this.panorama_starter = () => this.add_effect(resolve => $actor
+                .on("click", quickEnd)
+                .animate({
+                    left: -trailing_width,
+                }, speed, () => $actor
+                    .animate({
                         left: 0,
                         width: main_w,
                         top: (main_h / 2) - (small_height / 2) + "px"
                     }, 1000, () => {
-                        $actor.removeAttr("style")
+                        $actor
+                            .removeAttr("style")
+                            .off("click", quickEnd)
                         resolve()
-                    })
-                })
-            })
+                    })))
         }
     }
 
@@ -895,10 +917,13 @@ class Frame {
         })
     }
 
-    zoom_get($el) {
+    zoom_get($el, round = false) {
         const { currentLeft, currentTop, currentScale } = this.zoom_init($el).content
         const ratio = $el.data("wzoom_get_ratio")()
-        return [currentLeft / ratio / currentScale, currentTop / ratio / currentScale, currentScale]
+        const vals = [currentLeft / ratio / currentScale, currentTop / ratio / currentScale, currentScale]
+        if (round) {
+            return vals.map(n => Math.round(n * 10) / 10)
+        }
     }
 
     /**

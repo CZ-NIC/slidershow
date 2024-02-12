@@ -1,0 +1,70 @@
+/* Style for a SlideRshow presentation */
+
+:root {
+    --primary: #009338;
+    --visited: #c3c8c8;
+    --base: #ffffff;
+    --black: black;
+}
+
+#hud #control-icons {
+    /* make controls visible even on the white background */
+    background: rgba(0, 0, 0, 1);
+    border-radius: 5px;
+    padding: 3px;
+}
+
+article {
+    font-family: Blanco;
+    text-align: left;
+    color: var(--primary);
+    background-color: var(--base);
+    font-size: 35.5px;
+
+    h1 {
+        font-size: 200%;
+        margin: 50px;
+        text-align: center;
+    }
+
+    h2 {
+        font-size: 150%;
+    }
+
+    ul,
+    ol {
+        margin-left: 50px;
+    }
+
+    >p {
+        margin-left: 30px;
+    }
+
+    /*
+     Frame styles.
+    */
+
+    /* all frames wrapped in this will be centered by flex */
+    .centered-frames & {
+
+        display: flex;
+        justify-content: center;
+        align-items: center;
+
+    }
+
+    /* different frame styling*/
+    &.main {
+        text-align: center;
+        background-color: var(--primary);
+        color: var(--base);
+
+        a {
+            color: var(--base);
+
+            &:visited {
+                color: var(--visited);
+            }
+        }
+    }
+}

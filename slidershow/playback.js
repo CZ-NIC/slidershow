@@ -24,13 +24,13 @@ class Playback {
         this.hud_map = new MapWidget(fact("map-hud"), this).map_start()
 
         /**
-         * @type {Frame} Current frame
+         * @type {?Frame} Current frame
         */
         this.frame
         this.slide_count
         this.$articles
         /**
-         * @type {jQuery} Current frame DOM
+         * @type {?jQuery} Current frame DOM
          */
         this.$current
         this.index = 0
@@ -108,6 +108,9 @@ class Playback {
     play_pause(moving) {
         if (this.moving !== moving) {
             this.hud.playback_icon(moving ? "▶" : "&#9612;&#9612;")
+            if (moving) {
+                this.moving_timeout.start()
+            }
         }
         this.moving = moving
     }
@@ -128,7 +131,9 @@ class Playback {
 
     resetAndGo() {
         this.reset()
-        this.goToFrame(this.frame.index)
+        if (this.frame) {
+            this.goToFrame(this.frame.index)
+        }
     }
 
     positionFrames(x1 = null, x2 = null, x3 = null, x4 = null) {
@@ -281,7 +286,7 @@ class Playback {
     }
 
     /**
-     * Go to the next step in the frame on to the next frame.
+     * Go to the next step in the frame or to the next frame.
      */
     goNext() {
         if (this.frame.step(1)) {
@@ -411,7 +416,7 @@ class Playback {
         ], true)
 
         // start transition
-        frame.prepare()
+        frame.prepare(last_frame)
         this.play_pause(moving)
         this.doNotWaitAndGo()
 
@@ -450,6 +455,7 @@ class Playback {
     }
 
     toggle_steps() {
+        // XX Zoom out from a stepped picture when steps disabled.
         this.step_disabled = !this.step_disabled
         this.hud.info("Presentation steps were " + (this.step_disabled ? "disabled" : "enabled"))
         if (this.step_disabled) {

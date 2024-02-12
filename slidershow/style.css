@@ -1,6 +1,6 @@
 body {
   background-color: black;
-  color: white !important;
+  color: white;
   overflow-y: hidden;
   overflow-x: hidden;
   margin: 0;
@@ -141,6 +141,10 @@ frame-preview article-map:before {
 }
 #hud > * {
   position: fixed;
+}
+#hud .alwaysHidden {
+  position: fixed;
+  bottom: -100px;
 }
 #hud #control-icons {
   display: flex;

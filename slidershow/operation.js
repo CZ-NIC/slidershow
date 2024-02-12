@@ -137,44 +137,52 @@ class Operation {
     generalInit() {
         const pl = this.playback
         return wh.group("General", [
-            ["Space", "⏯", "Next", () => pl.play_pause(!pl.moving), "not-video"],
-            ["a", "⏯", "Play/Pause", () => { // XX undocumented, replace by the space
+            ["Ctrl+Space", "Play/Pause", () => { // undocumented
                 pl.play_pause(!pl.moving)
             }],
+            ...[
+                ["Home", "⏮", "Go to the first", () => pl.goToFrame(0)],
+                ["Alt+PageUp", "◀◀", "Prev section", () => pl.previousSection()],
+                ["Shift+PageUp", "◀", "Prev frame", () => pl.previousFrame()],
+                ["p", "◁", "Prev step", () => pl.goPrev(), "prev-step"],
+                ["PageUp", "◁", "Prev step", () => pl.goPrev(), "prev-step"],
+                ["ArrowLeft", "◁", "Prev step", () => pl.goPrev(), "prev-step not-video"],
+                ["Space", "⏯", "Next", () => {
+                    if (pl.frame.$actor.is(':animated')) { // skips the panorama
+                        pl.frame.$actor.finish()
+                    } else if (!pl.frame.getDuration()) { // the frame would stay indefinitely, go straight further
+                        pl.goNext()
+                    } else { // toggle play and pause
+                        pl.play_pause(!pl.moving)
+                    }
+                }, "not-video"],
+                ["ArrowRight", "▷", "Next step", () => pl.goNext(), "next-step not-video"],
+                ["PageDown", "▷", "Next step", () => pl.goNext(), "next-step"],
+                ["n", "▷", "Next step", () => pl.goNext(), "next-step"],
+                ["Shift+PageDown", "▶", "Next frame", () => pl.nextFrame()],
+                ["Alt+PageDown", "▶▶", "Next section", () => pl.nextSection()],
+                ["End", "⏭", "Go to end", () => pl.goToFrame(pl.$articles.length - 1)],
 
-            ["Home", "⏮", "Go to the first", () => pl.goToFrame(0)],
-            ["Alt+PageUp", "◀◀", "Prev section", () => pl.previousSection()],
-            ["Shift+PageUp", "◀", "Prev frame", () => pl.previousFrame()],
-            ["p", "◁", "Prev step", () => pl.goPrev(), "prev-step"],
-            ["PageUp", "◁", "Prev step", () => pl.goPrev(), "prev-step"],
-            ["ArrowLeft", "◁", "Prev step", () => pl.goPrev(), "prev-step not-video"],
-            ["ArrowRight", "▷", "Next step", () => pl.goNext(), "next-step not-video"],
-            ["PageDown", "▷", "Next step", () => pl.goNext(), "next-step"],
-            ["n", "▷", "Next step", () => pl.goNext(), "next-step"],
-            ["Shift+PageDown", "▶", "Next frame", () => pl.nextFrame()],
-            ["Alt+PageDown", "▶▶", "Next section", () => pl.nextSection()],
-            ["End", "⏭", "Go to end", () => pl.goToFrame(pl.$articles.length - 1)],
-
-            ["m", "🗺", "Toggle hud map", () => pl.hud_map.toggle(true), "not-video"],
-            ["f", "ℹ", "Toggle file info", () => $("#hud-fileinfo").toggle()],
-            ["Alt+g", "⇗", "Go to frame", () => {
-                new $.Zebra_Dialog(`You are now at ${pl.frame.slide_index + 1} / ${pl.slide_count}`, {
-                    title: "Go to slide number",
-                    type: "prompt",
-                    buttons: ["Cancel", {
-                        caption: "Ok",
-                        default_confirmation: true,
-                        callback: (_, slide_number) => pl.goToSlide(slide_number)
-                    }]
-                })
-            }]
-        ].map(this._button("General"))).disable()
+                ["m", "🗺", "Toggle hud map", () => pl.hud_map.toggle(true), "not-video"],
+                ["f", "ℹ", "Toggle file info", () => $("#hud-fileinfo").toggle()],
+                ["Alt+g", "⇗", "Go to frame", () => {
+                    new $.Zebra_Dialog(`You are now at ${pl.frame.slide_index + 1} / ${pl.slide_count}`, {
+                        title: "Go to slide number",
+                        type: "prompt",
+                        buttons: ["Cancel", {
+                            caption: "Ok",
+                            default_confirmation: true,
+                            callback: (_, slide_number) => pl.goToSlide(slide_number)
+                        }]
+                    })
+                }]
+            ].map(this._button("General"))]).disable()
     }
 
     switchesInit() {
         const pl = this.playback
         return wh.group("Switches", [
-            ["Ctrl+Alt+d", "Debug", () => {
+            ["Ctrl+Alt+d", "Debug", () => { // undocumented
                 const zoom = $main.css("zoom")
                 $main.css({ "zoom": zoom == "1" ? "0.05" : "1" })
                 pl.debug = !pl.debug
@@ -261,12 +269,13 @@ class Operation {
         const pl = this.playback
         const formData = new FormData($("#defaults")[0])
         formData.delete('path') // path does not belong to <section>
-        const $section = $("<section/>", Object.fromEntries(formData))
+        const $section = $("<section/>", Object.fromEntries(formData)).appendTo($main)
         pl.changes.undoable("Insert new section",
             () => $section.appendTo($main),
-            () => $section.remove(),
+            () => $section.detach(),
             () => pl.resetAndGo()
         )
+        return $section
     }
 
     /**

@@ -152,3 +152,23 @@ function formatDateMs(ms) {
         ('0' + date.getMinutes()).slice(-2) + '-' +
         ('0' + date.getSeconds()).slice(-2);
 }
+
+/**
+ * This works well however the video stop ~ 100 ms later than the endtime.
+ *
+ * HTMLMediaElement endtime to seconds
+ * https://developer.mozilla.org/en-US/docs/Web/Media/Audio_and_video_delivery#specifying_playback_range
+ * @example `#t=20` -> null, `#t=10,20` -> 20
+ * @returns {number|null} Seconds
+ **/
+// function getEndTimeFromURL(url) {
+//     url = new URL(url).hash
+//     if(url.startsWith("#t=") && url.includes(",")) {
+//         const endtime = url.split("=")[1].split(",").pop()
+//         if(endtime.includes(":")) { // #t=01:01:10 -> 3670 seconds
+//             return endtime.split(":").map((val, index) => parseFloat(val) * Math.pow(60, 2-index)).reduce((a, b) => a + b, 0)
+//         } else { // #t=20 -> 20 seconds
+//             return parseFloat(endtime)
+//         }
+//     }
+// }

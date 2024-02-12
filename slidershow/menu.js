@@ -33,7 +33,7 @@ class Menu {
             if (this.appendFiles(items)) {
                 $drop.text(`Dropped ${items.length} files.`)
             } else {
-                $drop.text('Drop cancelled')
+                $drop.text('Drop failed, try again')
             }
         }).on("dragover", ev => {
             $drop.text("Drop")
@@ -94,8 +94,12 @@ class Menu {
     /**
      * Insert frames to a new section of the document, sets defaults and show the menu controls
      * @param {File[]} items
+     * @returns {Boolean} Whether the items were successfully inserted.
      */
     appendFiles(items) {
+        if(!items.length) {
+            return false
+        }
         const $section = this.playback.operation.insertNewSection()
         const $frames = this.loadFiles(items)
 
@@ -142,7 +146,7 @@ class Menu {
                 if (frames.length) {
                     onDrop(frames, e.currentTarget, before) // we should insert them into DOM
                 } else {
-                    this.playback.hud.info("Drop cancelled")
+                    this.playback.hud.info("Drop failed, try again")
                 }
             }).on("dragover", e => $(e.currentTarget).addClass(`importable-target dragging-target dragging-${clean(e) ? "before" : "after"}`)
             ).on("dragleave", e => {

@@ -5,7 +5,7 @@
 
 body {
     background-color: black;
-    color: @base !important;
+    color: @base;
     overflow-y: hidden;
     overflow-x: hidden;
     margin: 0;
@@ -184,6 +184,11 @@ frame-preview {
 
     >* {
         position: fixed;
+    }
+
+    .alwaysHidden { // some controles
+        position: fixed;
+        bottom: -100px;
     }
 
     #control-icons {

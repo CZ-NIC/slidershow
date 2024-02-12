@@ -60,7 +60,7 @@ class Hud {
 
         function hideAlternatives(selector, title) {
             const attrs = $(`[data-role~='${selector}']`, $m).map((_, el) => $(el).attr("data-hotkey")).get().join(" | ")
-            $(`[data-role~='${selector}']`, $m).not(":first").insertAfter("body") // hide and not be be shown
+            $(`[data-role~='${selector}']`, $m).not(":first").addClass("alwaysHidden") // hide and not be be shown
             $(`[data-role~='${selector}']`, $m).attr("title", `${title} (${attrs})`)
         }
     }
@@ -193,11 +193,12 @@ class Hud {
 
         const THUMBNAIL_COUNT = 6
         // visible frames' indices
-        const frameIds = Array.from({ length: THUMBNAIL_COUNT }, (_, i) => {
-            const middle = Math.ceil(THUMBNAIL_COUNT / 2)
-            // keep same thumbnails number at the ribbon end
-            return i + (frame.index + middle >= pl.$articles.length ? pl.$articles.length - THUMBNAIL_COUNT : Math.max(0, frame.index - middle))
-        })
+        const middle = Math.ceil(THUMBNAIL_COUNT / 2)
+        const frameIds = Array.from({ length: THUMBNAIL_COUNT }, (_, i) =>
+            i + (frame.index + middle >= pl.$articles.length ?
+                pl.$articles.length - THUMBNAIL_COUNT  // keep same thumbnails number at the ribbon end
+                : Math.max(0, frame.index - middle)))
+            .filter(id => id >= 0)
 
         // remove old unused thumbnails
         $("frame-preview", $container).filter((_, el) => !frameIds.includes(Number(el.dataset.ref))).remove()
@@ -245,7 +246,7 @@ class Hud {
             const el = this.getThumbnail(pl.frame, $container).get(0)
             const rect = el.getBoundingClientRect()
             if (rect.top < 0 || rect.bottom > document.documentElement.clientHeight) {
-                el.scrollIntoView({"block": "center"})
+                el.scrollIntoView({ "block": "center" })
             }
         }, 1)
 
