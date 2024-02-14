@@ -111,9 +111,9 @@ class Frame {
 
     /**
      * Frame is going to be entered right now but is not visible yet.
-     * @param {?Frame} last_frame
+     * @param {?Frame} lastFrame
      */
-    prepare(last_frame = null) {
+    prepare(lastFrame = null) {
         this.children.forEach(f => f.$frame.hide())
         if (this.parent) { // this is a child frame
             this.$frame.show(0) // it was hidden before
@@ -127,7 +127,7 @@ class Frame {
         })
 
         // File name
-        this.playback.hud.fileinfo(this)
+        this.playback.hud.refresh(this, lastFrame)
 
         // Map
         this.map_prepare()
@@ -140,7 +140,7 @@ class Frame {
 
         this.loaded.then(() => {
             if (!this.playback.step_disabled) {
-                this.steps_prepare(last_frame)
+                this.steps_prepare(lastFrame)
             }
         })
     }
@@ -321,7 +321,8 @@ class Frame {
             // Article may begin with a HTML comment. I presume these must not be taken into markdown.
         }
 
-        Promise.all(loaded).then(() => this._loaded())
+        const current_loaded = this._loaded // Why storing it outside? Might be unloaded before finish.
+        Promise.all(loaded).then(() => current_loaded())
         return loaded
     }
 
@@ -332,7 +333,9 @@ class Frame {
     unload() {
         const $frame = this.$frame
         $frame.removeAttr("data-preloaded")
-        this.loaded = Promise.all([this.loaded, new Promise(r => this._loaded = r)])
+
+        // The frame is no more loaded
+        this.loaded = new Promise(r => this._loaded = r)
 
         // Remove src if data can be retrieved from the memory data(READ_SRC) or the attribute data-src
         $frame.find("img[data-src], video[data-src]").map((_, el) => Frame.unload_media($(el)))

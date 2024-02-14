@@ -382,11 +382,11 @@ class Playback {
 
         const next = this.$articles[index]
         const $current = this.$current = next ? $(next) : $last
-        const same_frame = $last[0] === $current[0]
+        const sameFrame = $last[0] === $current[0]
         /** @type {Frame} */
-        const last_frame = $last.data("frame")
-        if (!same_frame) {
-            last_frame.leave()
+        const lastFrame = $last.data("frame")
+        if (!sameFrame) {
+            lastFrame.leave()
         }
         if (!next) {  // we failed to go to the intended frame
             this.shake()
@@ -416,7 +416,7 @@ class Playback {
         ], true)
 
         // start transition
-        frame.prepare(last_frame)
+        frame.prepare(lastFrame)
         this.play_pause(moving)
         this.doNotWaitAndGo()
 
@@ -427,13 +427,13 @@ class Playback {
             $last.removeClass("debugged")
         }
 
-        const trans = same_frame || supress_transition ? $main.css(frame.get_position()) : this.transition($last, $current)
+        const trans = sameFrame || supress_transition ? $main.css(frame.get_position()) : this.transition($last, $current)
         const promise = this.promise = trans.promise()
         promise.then(() => {  // frame is at the viewport now
-            if (last_frame !== this.frame) {
+            if (lastFrame !== this.frame) {
                 // we cannot use `same_frame` here because this.frame might have changed meanwhile
                 // (the user might have gone back meanwhile)
-                last_frame.left()
+                lastFrame.left()
             }
             if (promise.aborted) { // another frame was raised meanwhile
                 return

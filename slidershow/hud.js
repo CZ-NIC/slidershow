@@ -226,8 +226,9 @@ class Hud {
     /**
      * Reposition grid
      * Grid is called every frame change. Reposition frames accordingly to the current ordering.
+     * @param {?Frame} lastFrame
      */
-    grid() {
+    grid(lastFrame) {
         let section
         const pl = this.playback
         const $container = this.$hud_grid
@@ -241,12 +242,16 @@ class Hud {
         })
         this.makeThumbnailsImportable($container)
 
-        // scroll to the thumbnail if not visible
+        // Scroll to the thumbnail if not visible
         setTimeout(() => { // why set timeout? Because the re-ordering DOM changes must flush first.
-            const el = this.getThumbnail(pl.frame, $container).get(0)
-            const rect = el.getBoundingClientRect()
-            if (rect.top < 0 || rect.bottom > document.documentElement.clientHeight) {
-                el.scrollIntoView({ "block": "center" })
+            // Scroll only when the frame changed.
+            // Ex: Hitting 'End' will scroll. But dragging unactive frames around would scroll you out from what you have just dragged.
+            if (pl.frame !== lastFrame) {
+                const el = this.getThumbnail(pl.frame, $container).get(0)
+                const rect = el.getBoundingClientRect()
+                if (rect.top < 0 || rect.bottom > document.documentElement.clientHeight) {
+                    el.scrollIntoView({ "block": "center" })
+                }
             }
         }, 1)
 
@@ -274,6 +279,8 @@ class Hud {
     }
 
     /**
+     * Note: When a frame gets unloaded immediately, we might receive no preview. This is the reason only
+     * a camera icon stays in a long playlist grid.
      *
      * @param {?Frame} frame
      * @param {jQuery} $container Ribbon or grid
@@ -384,8 +391,9 @@ class Hud {
     /**
      *
      * @param {Frame} frame
+     * @param {?Frame} lastFrame
      */
-    fileinfo(frame) {
+    refresh(frame, lastFrame = null) {
         const $actor = frame.$actor
         if (!$actor) {
             $actor = { data: () => null }
@@ -412,7 +420,7 @@ class Hud {
             this.thumbnails()
         }
         if (this.grid_visible) {
-            this.grid()
+            this.grid(lastFrame)
         }
         if (this.properties_visible) {
             this.properties()

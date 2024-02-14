@@ -233,7 +233,7 @@ class Operation {
         const menu = this.playback.menu
         return wh.group("Global", [
             ["Escape", "☰", "Show menu", () => this.playback.hud.$playback_icon.click()],
-            ["Alt+m", "🧰", "Go to menu", () => menu.stop_playback()],
+            ["Alt+m", "🧰", "Show splashscreen", () => menu.stop_playback()],
             ["Alt+w", "&#127916;", "Auxiliary window", () => menu.aux_window.open()],
             ['Ctrl+s', "&#128190;", "Export", () => menu.export.export_dialog()],
             ['F1', "&#9432;", "Help", () => menu.help()],

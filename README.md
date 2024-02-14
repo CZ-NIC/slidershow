@@ -94,7 +94,7 @@ The `<menu>` is displayed before the presentation starts, unless the `<main>` ha
 
 ## Thumbnails ribbon and grid
 
-While presenting, press <kbd>Alt+J</kbd> to display the thumbnail ribbon or <kbd>Alt+G</kbd> to see full grid. There, you can easily sort the frames. Either move them one by one or sort whole section (by EXIF date or file names). Import new images just by tragging them in.
+While presenting, press <kbd>Alt+J</kbd> to display the thumbnail ribbon or <kbd>Alt+G</kbd> to see full grid. There, you can easily sort the frames. Either move them one by one or sort whole section (by EXIF date or file names). Import new images just by dragging them in.
 
 ## Auxiliary window
 
