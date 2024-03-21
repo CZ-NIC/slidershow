@@ -39,7 +39,7 @@ Private attributes that are not documented in the README because the user should
     User might set either file name or full path.
     When exporting, we try to convert the file name to a full path if given by the user.
 * data("read-src") See READ_SRC.
-* video[data-autoplay-prevented]
+* video[data-autoplay-prevented]=1 Replaces native `autoplay` parameter.
 * [data-src-bytes] Stored raw bytes, see EXPORT_SRC_BYTES.
 * [data-src-replaced] See EXPORT_SRC.
 * <frame-preview> Contents is a preview of a frame. Attribute [data-ref] corresponds to the frame.index.
@@ -131,13 +131,13 @@ function main() {
  * Return closest prop, defined in the DOM.
  * (Zero aware, you can safely set `data-prop=0`.)
  * @param {string} property For "data-start" use just "start"
- * @param {jQuery} $el What element to check the prop of.
+ * @param {JQuery} $el What element to check the prop of.
  * @param {any} def Custom default value if not set in DOM or via defProperty. If null, the PROP_DEFAULT default value is used.
  * @param {string} defProperty Name of a property whose value should be used as a default.
  * @returns {*} Undefined if not set neither in the def param, nor in the PROP_DEFAULT.
  */
 function prop(property, $el, def = null, defProperty = null) {
-    const v = $el.closest(`[data-${property}]`).data(property)
+    const v = $el.closest(`[data-${property}]`).attr("data-" + property) // why not reading from .data? That value is cached.
     switch (v) {
         case "false": // <main data-start='false'> -> false
             return false

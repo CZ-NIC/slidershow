@@ -21,7 +21,7 @@ class FrameFactory {
      * @param {File} data
      * @param {bool} ram_only We will push the media contents to the RAM
      * @param {function} callback When an demanding action ends (like reading exif)
-     * @returns {jQuery}
+     * @returns {JQuery}
      */
     static img(filename, append = true, data = null, ram_only = false, callback = null) {
         // data-src preserve the performance for serveral thousand frames
@@ -48,7 +48,7 @@ class FrameFactory {
      * @param {bool} append to $main
      * @param {File} data
      * @param {bool} ram_only We will push the media contents to the RAM
-     * @returns {jQuery}
+     * @returns {JQuery}
      */
     static video(filename, append = true, data = null, ram_only = false) {
         const $el = $(`<video/>`, { "controls": true, "autoplay": true, "data-src": filename, "data-datetime": formatDateMs(data.lastModified) })

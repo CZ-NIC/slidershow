@@ -1,5 +1,16 @@
 # CHANGELOG
 
+## unreleased
+* video pause will not cause frame change
+* more intuitive auto-forward button
+* fix: video autoplay when going backwards
+
+## 0.9.2
+* GUI controls
+* grid
+* dragging import
+* tutorial
+
 ## 0.8.0
 * auxiliary window to track the presentation pace
 * thumbnail ribbon

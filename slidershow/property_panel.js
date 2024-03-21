@@ -12,7 +12,7 @@ class PropertyPanel {
     /**
      * Step-points GUI
      * @param {Frame} frame
-     * @param {jQuery} $input <input> for a [data-step-points] element
+     * @param {JQuery} $input <input> for a [data-step-points] element
      */
     gui_step_points(frame, $input) {
         const $wrap = $("<div />", { "class": "point-wrapper" }).hide().insertAfter($input)
@@ -101,7 +101,7 @@ class PropertyPanel {
      * Generate <input type=number> into the Properties panel.
      * Recursively generate such input for the ancestors (<section>) too.
      * @param {string} p Property name (ex: 'duration')
-     * @param {jQuery} $el $frame or its parents up to main (elements having properties)
+     * @param {JQuery} $el $frame or its parents up to main (elements having properties)
      * @param {string} name Tag name, prepended to the property <label>
      * @returns
      */
@@ -133,7 +133,7 @@ class PropertyPanel {
     /**
      * Generate <input> into the Properies panel.
      * @param {string} p Property name (ex: 'duration')
-     * @param {jQuery} $el $frame or its parent up to main (element having the property)
+     * @param {JQuery} $el $frame or its parent up to main (element having the property)
      * @param {string} name Tag name, prepended to the property <label>
      * @param {string} value Initial value.
      * @param {string} type <input> type, like "text"

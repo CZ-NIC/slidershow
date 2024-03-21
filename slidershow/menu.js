@@ -48,17 +48,6 @@ class Menu {
         const $file = $("#file").change(() => {
             this.appendFiles([...$file[0].files])
         })
-
-        // ShortcutsController.global(this)
-
-        // Load defaults from the main tag
-        $("input", "#defaults").each(function () {
-            const $el = $(this)
-            const def = $main.data($el.attr("name"))
-            if (def) {
-                $el.val(def)
-            }
-        })
     }
 
     start_playback() {
@@ -113,7 +102,7 @@ class Menu {
 
     /**
      * @param {File[]} items
-     * @returns {jQuery[]} frames
+     * @returns {JQuery[]} frames
      */
     loadFiles(items) {
         console.log("File items", items) // XX we might use item.size too
@@ -129,11 +118,11 @@ class Menu {
 
     /**
      * Make the element importable = able to receive the files being dropped on.
-     * @param {jQuery} $el
+     * @param {JQuery} $el
      * @param {onDropCallback} onDrop Called on successful drop.
-     * @returns {jQuery}
+     * @returns {JQuery}
      * @callback onDropCallback
-     * @param {jQuery[]} frames Frames not yet inserted into the DOM.
+     * @param {JQuery[]} frames Frames not yet inserted into the DOM.
      * @param {HTMLElement} target Element being dropped on.
      * @param {boolean} before Dragged before or after the element
      */

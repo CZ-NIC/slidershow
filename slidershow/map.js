@@ -21,7 +21,7 @@ class AnimationStep {
 class MapWidget {
     /**
      *
-     * @param {jQuery} $map
+     * @param {JQuery} $map
      * @param {Playback} playback
      */
     constructor($map, playback) {

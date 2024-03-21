@@ -30,7 +30,7 @@ class Playback {
         this.slide_count
         this.$articles
         /**
-         * @type {?jQuery} Current frame DOM
+         * @type {?JQuery} Current frame DOM
          */
         this.$current
         this.index = 0
@@ -103,11 +103,11 @@ class Playback {
 
     /**
      *
-     * @param {bool} moving
+     * @param {boolean} moving
      */
     play_pause(moving) {
         if (this.moving !== moving) {
-            this.hud.playback_icon(moving ? "▶" : "&#9612;&#9612;")
+            this.hud.playback_icon(moving ? (this.frame?.getDuration() ? "▶" : "") : "&#9612;&#9612;")
             if (moving) {
                 this.moving_timeout.start()
             }
@@ -232,7 +232,7 @@ class Playback {
     group() {
         /** @type {function[]} */
         const redos = []
-        /** @type {jQuery[]} */
+        /** @type {JQuery[]} */
         const added = []
         this.changes.undoable("Group frames",
             () => {
@@ -267,13 +267,16 @@ class Playback {
     /**
      *
      * @param {number} duration [ms] How long should we wait.
-     * @returns {Promise|undefined} If we are planning to go further, return Promise; else undefined.
+     * @returns {Promise} If we are planning to go further, return Promise
      */
-    waitAndGo(duration) {
+    async waitAndGo(duration) {
         if (this.moving && duration) {
-            return Promise.all(this.frame.effects).then(() => this.moving_timeout.start(duration * 1000))
+            await this.frame.loaded
+            await Promise.all(this.frame.effects)
+            return this.moving_timeout.start(duration * 1000)
         }
     }
+
     doNotWaitAndGo() {
         this.moving_timeout.stop()
         this.promise.aborted = true
@@ -512,7 +515,7 @@ class Playback {
     }
 
     /**
-     * @returns {jQuery|null}
+     * @returns {JQuery|null}
      */
     getFocused() {
         const $el = $(":focus", "main")

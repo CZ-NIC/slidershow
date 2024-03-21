@@ -39,7 +39,7 @@ class Export {
                 caption: "Another folder (tiny presentation size)", callback: () =>
                     new $.Zebra_Dialog("Where will the presentation find the media folder?", {
                         title: "The path to the media folder",
-                        default_value: $main.attr("data-path") || "./",
+                        default_value: $main.attr("data-path") || $("[name=path]", "#defaults").val() || "./",
                         type: "prompt",
                         buttons: ["Cancel", {
                             caption: "Ok",

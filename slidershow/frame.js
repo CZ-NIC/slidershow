@@ -4,15 +4,15 @@ class Frame {
      *
      * Frame lifecycle is as follows: preload / prepare / enter / leave / left (not guaranteed to run) / unload
      *
-     * @param {jQuery} $el
-     * @param {?Playback} playback
+     * @param {JQuery} $el
+     * @param {Playback} playback
      */
-    constructor($el, playback = null) {
+    constructor($el, playback) {
         this.$frame = $el
         /** @type Playback */
         this.playback = playback
         this.$video_pause_listener = null
-        /**  @type {?jQuery}         */
+        /**  @type {JQuery} Main media element of the frame. Might be empty if there is none, just text. */
         this.$actor = this.$frame.find("video, img").first()
         this.panorama_starter = null
         this.loop_interval = new Interval()
@@ -40,13 +40,13 @@ class Frame {
 
         this.shortcuts = []
 
-        /** @type {Promise[]} All the effects that should hold playback. */
+        /** @type {Promise[]} All the effects that should hold playback. Await this.loaded first.*/
         this.effects = []
 
         /** @type {?Promise} */
         this.video_finished = null
 
-        /** @type {Array<HtmlElement|Function>} Which elements are to be showed progressivelly.
+        /** @type {Array<HTMLElement|Function>} Which elements are to be showed progressivelly.
          * They are grouped by the same data-set: [ [data-step=2, 2], [4], [5,5,5], [12]]
          */
         this.steps = []
@@ -54,6 +54,8 @@ class Frame {
         this.step_index = 0
         /** @type {number|null} How long the last active step should last. */
         this.step_duration = null
+        /** Resolves loaded */
+        this._loaded = null
 
         /**
          * @type {Promise} Fulfilled on all media loaded.
@@ -100,7 +102,7 @@ class Frame {
      * Return closest prop, defined in the DOM.
      * (Zero aware, you can safely set `data-prop=0`.)
      * @param {string} property
-     * @param {jQuery|null} $actor What element to check the prop of. If null, frame is checked.
+     * @param {JQuery|null} $actor What element to check the prop of. If null, frame is checked.
      * @param {any} def Custom default value if not set in DOM (when PROP_DEFAULT default value is not desirable).
      * @returns
      */
@@ -281,7 +283,7 @@ class Frame {
      * * data("read-src"): If present, this is the method to re-read the dragged media from the disk.
      * * data-src: Optional attribute for <img>, <video>, holds the original file name.
      *
-     * @returns {Promise[]} Fulfilled when src loaded from the memory.
+     * @returns {Promise} Fulfilled when src loaded from the memory.
      */
     async preload() {
         const $frame = this.$frame
@@ -328,7 +330,11 @@ class Frame {
 
     /**
      * Opposite of this.preload()
-     * Functionality should be duplicated finalize_frames (due to performance reasons).
+     * Functionality should be partially duplicated finalize_frames (due to performance reasons).
+     * Somewhere the duplication has no sense, like putting video[data-autoplay-prevented]
+     *  which is removed in finalize_frames (export might not use slidershow and hence be rendered as an errant argument)
+     *  but here is added on the contrary.
+     *  (We do not want the video to autoplay when re-preloaded while going backwards in the presentation.)
      */
     unload() {
         const $frame = this.$frame
@@ -353,12 +359,15 @@ class Frame {
             URL.revokeObjectURL($el.attr("src")) // for the case this is a blob URL given by FrameFactory reader
             $el.removeAttr("src")
         }
+        if ($el.is("video") && $el.attr("autoplay")) {
+            $el.removeAttr("autoplay").attr("data-autoplay-prevented", 1)
+        }
     }
 
     /**
      * Remove auxiliary parameters when exporting.
-     * @param {jQuery} $contents Copy of body, containing all frames.
-     * @param {jQuery} $articles Original live articles = all frames.
+     * @param {JQuery} $contents Copy of body, containing all frames.
+     * @param {JQuery} $articles Original live articles = all frames.
      * @param {Boolean} keep_raw Store raw bytes if possible. If true a there are bytes in the memory,
      *  those are exported; we prefer raw bytes over the filename (the original will not be needed).
      *  False → filename always exported.
@@ -519,7 +528,7 @@ class Frame {
             .trigger("focusout")
     }
     /**
-     * @param {jQuery} $container
+     * @param {JQuery} $container
      */
     static unmake_editable($container) {
         $(EDITABLE_ELEMENTS, $container).removeAttr("contenteditable")
@@ -550,35 +559,27 @@ class Frame {
 
         }
         $actor[0].playbackRate = this.prop("playback-rate", $actor)
-        let next_interval = null
 
         // Pausing vs playback moving
         this.$video_pause_listener = $actor.on("pause", () => {
             // Normally, when a video ends, we want to move further.
             // However, when we click to the video progress gauge,
-            // just before rewinding, a pause event is generated.
-            // We cannot distinguish whether a pause is a user-action
-            // or an automatic action. So that we wait
-            // an if it was a user-action, a play event will follow shortly,
-            // with the mouse button up.
-            // Unfortunately, we cannot use actor.ended because we consider ended
-            // even if it paused due to HTMLMediaElement endtime (ex: `#t=10,20`).
-            // The actor.currentTime differs the endtime a little bit (like 20.12 s).
-            next_interval = new Interval(() => {
-                next_interval.stop()
+            // just before rewinding, a pause event is generated (yet before the mouse button up).
+            // We need to distinguish whether a pause is a user-action
+            // or an automatic action.
+            // Either we check actor.ended if the video is at its end
+            // or we consider it ended even if it paused due to HTMLMediaElement endtime (ex: `#t=10,20`).
+            // Note that the actor.currentTime differs the endtime a little bit (like 20.12 s).
+            const endTime = getEndTimeFromURL($actor[0].src)
+            if ($actor[0].ended || endTime
+                && ($actor[0].currentTime - endTime > 0) && ($actor[0].currentTime - endTime < 0.5)) {
                 resolve()
-            }, 300)
-        }).on("play", () => {
-            // the video continues, it has not ended, do not move further
-            next_interval?.stop()
+            }
+        }).on("click", () => {
+            this.playback.play_pause(false)
+        }).on("slidershow-leave", () => {
+            $actor.off("pause").off("play").off("click")
         })
-            .on("click", () => {
-                // the video was manually clicked upod, it has not ended, do not move further
-                next_interval?.stop()
-                this.playback.play_pause(false)
-            }).on("slidershow-leave", () => {
-                $actor.off("pause").off("play").off("click")
-            })
 
         // Video shortcuts
         const playback_change = step => {
@@ -587,7 +588,7 @@ class Frame {
         }
         this.shortcuts.push(
             wh.grab("NumpadAdd", "Faster video", () => playback_change(0.1)),
-            wh.grab("NumpadSubtract", "Faster video", () => playback_change(-0.1)),
+            wh.grab("NumpadSubtract", "Slower video", () => playback_change(-0.1)),
             wh.grab("Alt+m", "Toggle muted", () => { $actor[0].muted = !$actor[0].muted })
         )
         $("<div/>", { "html": this.shortcuts.map(s => s.getText()).join("<br>") }).prependTo(hud.$hud_filename)
@@ -619,8 +620,8 @@ class Frame {
 
     /**
      *
-     * @param {Number} step How many steps to go further.
-     * @returns {Boolean} Step was fullfilled. False if no step was to be done, frame is then complete.
+     * @param {number} step How many steps to go further.
+     * @returns {boolean} Step was fullfilled. False if no step was to be done, frame is then complete.
      */
     step(step = 1) {
         const new_step = Math.max(Math.min(this.step_index + step, this.steps.length), 0)
@@ -630,7 +631,7 @@ class Frame {
 
         this.step_process($changed, step > 0)
         this.step_index = new_step
-        return $changed.length  // some change happened
+        return Boolean($changed.length)  // some change happened
     }
 
     /*
@@ -654,7 +655,7 @@ class Frame {
     /**
      * Show or hide step.
      * Or adds them classes or zoom images.
-     * @param {jQuery<HTMLElement|Function>} $els The collection of elements that represents the step.
+     * @param {JQuery<HTMLElement|Function>} $els The collection of elements that represents the step.
      * @param {boolean} shown
      * @param {boolean} immediate Does not allow animation
      * @returns
@@ -719,7 +720,7 @@ class Frame {
         this.shortcuts.forEach(s => s.disable())
         this.shortcuts.length = 0
 
-        if (document.activeElement.closest(FRAME_SELECTOR) === this.$frame[0]) {
+        if (document.activeElement?.closest(FRAME_SELECTOR) === this.$frame[0]) {
             document.activeElement.blur() // do not stay stuck on the video gauge (which prevents shortcuts)
         }
 
@@ -756,7 +757,7 @@ class Frame {
 
     /**
      * Clean up step functionality data
-     * @param {jQuery} $el
+     * @param {JQuery} $el
      */
     static _clean_step($el) {
         $el
@@ -806,7 +807,8 @@ class Frame {
 
         if (w > main_w && w / h > this.prop("panorama-threshold", $actor)) {
             // the image is wider than the sceen (would been shrinked) and its proportion looks like a panoramatic
-            let speed = Math.min((trailing_width / 100), 5) * 1000 // 100 px / 1s, but max 5 sec
+            // 100 px / 1s, for wider panoramas 200 px / 1 s but max 15 sec
+            const speed = (trailing_width < 500 ? trailing_width / 100 : Math.min((trailing_width / 200), 15)) * 1000
 
             $actor.css({
                 width: "unset",
@@ -930,7 +932,7 @@ class Frame {
     }
 
     /**
-     * @param {jQuery} $el Zoomed element
+     * @param {JQuery} $el Zoomed element
      * @param {number} left
      * @param {number} top
      * @param {number} scale
@@ -1024,7 +1026,7 @@ class Frame {
     /**
      * Base file name without the directory. Or empty string when there is no media inside.
      * There might be base64 data in the real src, hence we prefer the data-src
-     * @param {jQuery} $actor
+     * @param {JQuery} $actor
      * @returns {String}
      */
     get_filename($actor = null) {
@@ -1121,8 +1123,8 @@ class Frame {
     }
 
     /**
-     *
-     * @returns {jQuery[]}
+     * @param {?Playback} playback
+     * @returns {JQuery} Collection of frames
      */
     static load_all(playback = null) {
         return $(FRAME_SELECTOR).each((_, el) => { // creates a frame if not existed before
@@ -1134,7 +1136,7 @@ class Frame {
 
     /**
      *
-     * @param {jQuery} $frames
+     * @param {JQuery} $frames
      * @returns {Frame[]}
      */
     static frames($frames) {

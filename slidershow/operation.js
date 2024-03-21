@@ -18,7 +18,7 @@ class Operation {
         const $group = $("<div/>", { "data-hotkey-group": group_name }).appendTo(this.playback.hud.$hud_menu)
         return ([hotkey, symbol, hint, fn, role = null]) => [hotkey,
             $("<button/>", { "title": hint, "data-hotkey": hotkey, "html": symbol, "data-role": role })
-                .click(fn)
+                .on("click", fn)
                 .appendTo($group)[0]
         ]
     }
@@ -156,6 +156,29 @@ class Operation {
                         pl.play_pause(!pl.moving)
                     }
                 }, "not-video"],
+                ["Shift+Alt+f", "⌚", "Set auto-forward", () => {
+                    const dur = $main.attr("data-duration")
+                    let text = "How many seconds to auto-forward?"
+                    if (dur !== undefined) {
+                        text += ` Current is ${dur} s.`
+                    }
+                    text += "<small><br>Note: this sets the `duration` property of the MAIN. Use properties panel (Alt+P) to configure sections etc.</small>"
+                    new $.Zebra_Dialog(text, {
+                        title: "Set auto-forward",
+                        type: "prompt",
+                        buttons: ["Cancel", {
+                            caption: "Ok",
+                            default_confirmation: true,
+                            callback: (_, seconds) => {
+                                // If playback was moving, no icon would be displayed.
+                                // If not, this icon will be replaced by pl.play_pause internally.
+                                pl.hud.playback_icon(`▶`)
+                                $main.attr("data-duration", parseFloat(seconds))
+                                pl.goNext()
+                            }
+                        }]
+                    })
+                }],
                 ["ArrowRight", "▷", "Next step", () => pl.goNext(), "next-step not-video"],
                 ["PageDown", "▷", "Next step", () => pl.goNext(), "next-step"],
                 ["n", "▷", "Next step", () => pl.goNext(), "next-step"],
@@ -242,7 +265,7 @@ class Operation {
 
     /**
      *
-     * @param {jQuery} $root Frame to place the new frame after. Otherwise, playback.frame will be used.
+     * @param {JQuery} $root Frame to place the new frame after. Otherwise, playback.frame will be used.
      */
     insertNewFrame($root) {
         const pl = this.playback
@@ -263,13 +286,16 @@ class Operation {
 
     /**
      * Appends a new section to the $main and write the default options as attributes.
-     * @returns {jQuery} Section
+     * @returns {JQuery} Section
      */
     insertNewSection() {
         const pl = this.playback
         const formData = new FormData($("#defaults")[0])
         formData.delete('path') // path does not belong to <section>
-        const $section = $("<section/>", Object.fromEntries(formData)).appendTo($main)
+        const $section = $("<section/>", Object.fromEntries(Array.from(formData)
+            .map(([key, value]) => [`data-${key}`, value])
+            .filter(([key, value]) => value !== '')))
+            .appendTo($main)
         pl.changes.undoable("Insert new section",
             () => $section.appendTo($main),
             () => $section.detach(),
@@ -308,7 +334,7 @@ class Operation {
     }
 
     /**
-     * @param {jQuery} $frame
+     * @param {JQuery} $frame
      * @returns {function} Call to position the $frame to the previous location.
      */
     redoForMoving($frame) {
@@ -319,8 +345,8 @@ class Operation {
 
     /**
      *
-     * @param {jQuery[]} frames Frames not yet inserted into the DOM.
-     * @param {jQuery} $target Element to append the frames.
+     * @param {JQuery[]} frames Frames not yet inserted into the DOM.
+     * @param {JQuery} $target Element to append the frames.
      * @param {boolean|string} before Boolean or "append". Inserted before or after the element or prepend to an element.
      * @returns
      */

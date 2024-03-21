@@ -7,16 +7,15 @@ class Interval {
      *  Auto-delaying/boosting depending on server lag.
      *  Faking intervals by timeouts.
      *
-     * @param {Function} fn If callback is set, the interval directly starts.
+     * @param {?function} fn If callback is set, the interval directly starts.
      * @param {number} delay
      * @param {boolean} blocking If true, the fn is an AJAX call. The fn will not be called again unless it calls `this.blocking = false` when AJAX is finished.
      *      You may want to include `.always(() => {this.blocking = false;})` after the AJAX call. (In 'this' should be instance of the Interval object.)
      *
      *      (Note that we preferred that.blocking setter over method unblock() because interval function
      *      can be called from other sources than this class (ex: at first run) and a non-existent method would pose a problem.)
-     * @returns {Interval}
      */
-    constructor(fn, delay, ajax_wait) {
+    constructor(fn = null, delay = 0, ajax_wait=null) {
         this.was_running = false
         this.freezed = false
         this._fn = fn
@@ -35,7 +34,7 @@ class Interval {
 
     /**
      *
-     * @param {Number} delay If set, replaces current delay.
+     * @param {?number} delay If set, replaces current delay.
      * @returns
      */
     start(delay = null) {
@@ -159,16 +158,17 @@ function formatDateMs(ms) {
  * HTMLMediaElement endtime to seconds
  * https://developer.mozilla.org/en-US/docs/Web/Media/Audio_and_video_delivery#specifying_playback_range
  * @example `#t=20` -> null, `#t=10,20` -> 20
- * @returns {number|null} Seconds
+ * @param {string} url
+ * @returns {number|NaN|undefined} Seconds
  **/
-// function getEndTimeFromURL(url) {
-//     url = new URL(url).hash
-//     if(url.startsWith("#t=") && url.includes(",")) {
-//         const endtime = url.split("=")[1].split(",").pop()
-//         if(endtime.includes(":")) { // #t=01:01:10 -> 3670 seconds
-//             return endtime.split(":").map((val, index) => parseFloat(val) * Math.pow(60, 2-index)).reduce((a, b) => a + b, 0)
-//         } else { // #t=20 -> 20 seconds
-//             return parseFloat(endtime)
-//         }
-//     }
-// }
+function getEndTimeFromURL(url) {
+    url = new URL(url).hash
+    if(url.startsWith("#t=") && url.includes(",")) {
+        const endtime = url.split("=")[1].split(",").pop()
+        if(endtime.includes(":")) { // #t=01:01:10 -> 3670 seconds
+            return endtime.split(":").map((val, index) => parseFloat(val) * Math.pow(60, 2-index)).reduce((a, b) => a + b, 0)
+        } else { // #t=20 -> 20 seconds
+            return parseFloat(endtime)
+        }
+    }
+}
