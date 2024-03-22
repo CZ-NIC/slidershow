@@ -27,7 +27,8 @@ class Menu {
         }
 
         // Drop new files
-        const $drop = this.$drop = $("#drop").on("drop", ev => {
+        const $drop = this.$drop = $("#drop")
+        this.$menu.on("drop", ev => {
             ev.preventDefault()
             const items = [...ev.originalEvent.dataTransfer.items].filter(i => i.kind === "file").map(i => i.getAsFile())
             if (this.appendFiles(items)) {
@@ -36,7 +37,7 @@ class Menu {
                 $drop.text('Drop failed, try again')
             }
         }).on("dragover", ev => {
-            $drop.text("Drop")
+            $drop.text("Drop anywhere")
             ev.preventDefault()
 
         }).on("dragleave", ev => {
@@ -133,6 +134,7 @@ class Menu {
                 const items = [...e.originalEvent.dataTransfer.items].filter(i => i.kind === "file").map(i => i.getAsFile())
                 const frames = this.loadFiles(items)
                 if (frames.length) {
+                    this.playback.hud.info("Imported: " + frames.length)
                     onDrop(frames, e.currentTarget, before) // we should insert them into DOM
                 } else {
                     this.playback.hud.info("Drop failed, try again")

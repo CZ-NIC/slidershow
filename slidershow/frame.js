@@ -12,9 +12,10 @@ class Frame {
      *
      * Why some of them run multiple times without calling .leave()?
      * After calling playback.reset(), ex: moving another frames in the grid.
-     * Or after window resize. To handle this, we use ._entered check.
+     * Or after window resize. Or after frame import. To handle this, we use ._entered check.
      * XX But if we identify what has to be restored after size change (textFit, new frame size?),
      * this might solve some future bugs.
+     * (After import, at least HUD refresh is needed so that is it seen in the thumbnails.)
      *
      * @param {JQuery} $el
      * @param {Playback} playback
@@ -148,10 +149,10 @@ class Frame {
         })
 
         // File name
-        if (!this._entered) {
-            // What would vanish when second refresh? Video shortcuts that were added.
-            this.playback.hud.refresh(this, lastFrame)
-        }
+        // XX We might come here twice. Sometimes, it's not good, sometimes, it is-
+        // What would vanish when second refresh? Video shortcuts that were added.
+        // But we need to refresh ex: thumbnails after frame import.
+        this.playback.hud.refresh(this, lastFrame)
 
         // Map
         this.map_prepare()

@@ -157,7 +157,7 @@ class MapWidget {
         this.$map.remove()
     }
     /**
-     *
+     * Move the map to a position and show it (if not blocked by the user action).
      * @param {Place[]} places
      * @param {*} animate
      * @param {*} geometry_show

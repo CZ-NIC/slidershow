@@ -173,7 +173,8 @@ frame-preview article-map:before {
   text-align: right;
 }
 #hud #hud-fileinfo #hud-gps {
-  display: none;
+  float: left;
+  cursor: pointer;
 }
 #hud #hud-fileinfo #hud-tag {
   background-color: blue;

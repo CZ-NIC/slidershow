@@ -123,7 +123,7 @@ function get_menu() {
             <div id="hud-filename"></div>
             <div id="hud-device"></div>
             <div id="hud-datetime"></div>
-            <div id="hud-gps"></div>
+            <span id="hud-gps"></span>
             <div id="hud-tag"></div>
             <div id="hud-counter"></div>
         </div>

@@ -41,6 +41,10 @@ class Hud {
         $("<div/>", { html: "▷" })
             .appendTo(this.$control_icons)
             .on("click", () => pl.goNext())
+
+        this.$hud_gps.on("click", () => {
+            pl.hud_map.toggle(true)
+        })
     }
 
     /**
@@ -395,14 +399,12 @@ class Hud {
      */
     refresh(frame, lastFrame = null) {
         const $actor = frame.$actor
-        if (!$actor) {
-            $actor = { data: () => null }
-        }
 
         this.$hud_filename.html(frame.get_filename($actor) || "?")
         this.$hud_device.text($actor.data("device") || "")
         this.$hud_datetime.text($actor.data("datetime") || "")
-        this.$hud_gps.text($actor.data("gps") || "")
+        // display the map button only if map was previously blocked by user
+        this.$hud_gps.html(this.playback.hud_map.blocked && $actor.data("gps") ? "🗺" : "")
         this.tag($actor.attr("data-tag"))
 
         // Counter

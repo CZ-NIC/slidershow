@@ -3,8 +3,11 @@
  */
 class Playback {
 
-    constructor(menu = null, aux_window = null) {
-        /** @type {Menu} */
+    /**
+     * @param {Menu} menu
+     * @param {AuxWindow} aux_window
+     */
+    constructor(menu, aux_window) {
         this.menu = menu
         this.aux_window = aux_window
         this.hud = new Hud(this)
