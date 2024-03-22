@@ -4,6 +4,7 @@
 * video pause will not cause frame change
 * more intuitive auto-forward button
 * fix: video autoplay when going backwards
+* video zoom
 
 ## 0.9.2
 * GUI controls

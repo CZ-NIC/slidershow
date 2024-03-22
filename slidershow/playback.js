@@ -83,6 +83,7 @@ class Playback {
         this.$current = this.$articles.first()
         this.session.restore(true)
         this.operation.general.enable()
+        this.operation.playthrough.enable()
         this.operation.switches.enable()
     }
 
@@ -94,6 +95,7 @@ class Playback {
         $hud.hide(0)
         this.hud_map.hide()
         this.operation.general.disable()
+        this.operation.playthrough.disable()
         this.operation.switches.disable()
     }
     destroy() {

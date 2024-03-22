@@ -2,7 +2,19 @@ const EDITABLE_ELEMENTS = "h1,h2,h3,h4,h5,h6,p,li"
 class Frame {
     /**
      *
-     * Frame lifecycle is as follows: preload / prepare / enter / leave / left (not guaranteed to run) / unload
+     * Frame lifecycle is as follows:
+     *  – preload
+     *  – prepare (might run multiple times)
+     *  – enter (might run multiple times)
+     *  – leave
+     *  – left (not guaranteed to run)
+     *  – unload
+     *
+     * Why some of them run multiple times without calling .leave()?
+     * After calling playback.reset(), ex: moving another frames in the grid.
+     * Or after window resize. To handle this, we use ._entered check.
+     * XX But if we identify what has to be restored after size change (textFit, new frame size?),
+     * this might solve some future bugs.
      *
      * @param {JQuery} $el
      * @param {Playback} playback
@@ -16,6 +28,7 @@ class Frame {
         this.$actor = this.$frame.find("video, img").first()
         this.panorama_starter = null
         this.loop_interval = new Interval()
+        this.zoom = new FrameZoom(this)
 
         /**
          * If set, this frame is a subframe.
@@ -54,6 +67,11 @@ class Frame {
         this.step_index = 0
         /** @type {number|null} How long the last active step should last. */
         this.step_duration = null
+        /** Check the lifecycle. The .enter passed but not yet .leave.
+         * It would be better to solve lifecycle issues (see the constructor comment,
+         * enter called twice) than using this var.
+         */
+        this._entered = false
         /** Resolves loaded */
         this._loaded = null
 
@@ -113,6 +131,7 @@ class Frame {
 
     /**
      * Frame is going to be entered right now but is not visible yet.
+     * (Might run multiple times before leave.)
      * @param {?Frame} lastFrame
      */
     prepare(lastFrame = null) {
@@ -129,7 +148,10 @@ class Frame {
         })
 
         // File name
-        this.playback.hud.refresh(this, lastFrame)
+        if (!this._entered) {
+            // What would vanish when second refresh? Video shortcuts that were added.
+            this.playback.hud.refresh(this, lastFrame)
+        }
 
         // Map
         this.map_prepare()
@@ -172,7 +194,7 @@ class Frame {
                     return $.map(points.slice(1), // the init point will already be zoomed into, slice it out
                         (point, index) => $("<img-temp-animation-step/>")
                             // show the next or the previous animation step (we sliced the points due to the init point)
-                            .data("callback", shown => this.zoom_set($el, ...shown ? point : points[index]))
+                            .data("callback", shown => this.zoom.set($el, ...shown ? point : points[index]))
                         [0])
                 }))
 
@@ -454,8 +476,7 @@ class Frame {
 
     /**
      * The frame is at the viewport.
-     *
-     * XX It seems this might run twice (without calling .leave()) after calling playback.reset(), ex: moving another frames in the grid. Should be fixed?
+     * (Might run multiple times before leave.)
      */
     enter() {
         const $frame = this.$frame
@@ -467,17 +488,20 @@ class Frame {
 
         // Image frame
         this.loaded.then(() => {
-            if ($actor.prop("tagName") === "IMG") {
+            const tag = $actor.prop("tagName")
+            if (tag === "IMG") {
                 Frame.exif($actor)
                 this.panorama_starter?.()
                 Promise.all(this.effects).then(() => {
-                    this.zoom_init(this.$actor)
+                    this.zoom.init(this.$actor)
 
                     const loop = this.prop("loop")
                     if (loop) {
                         this.loop(loop)
                     }
                 })
+            } else if (tag === "VIDEO") {
+                this.zoom.init($actor)
             }
         })
 
@@ -487,15 +511,19 @@ class Frame {
             textFit($frame)
         }
 
-        // Video frame
-        if ($actor.prop("tagName") === "VIDEO") {
-            this.video_finished = new Promise(r => this.video_enter(r))
-        }
+        if (!this._entered) {
+            // Video frame
+            if ($actor.prop("tagName") === "VIDEO") {
+                this.video_finished = new Promise(r => this.video_enter(r, $actor))
+            }
 
-        // Editing
-        if (this.playback.editing_mode) {
-            this.make_editable()
+            // Editing
+            if (this.playback.editing_mode) {
+                this.make_editable()
+            }
+
         }
+        this._entered = true
         return this.getDuration()
     }
 
@@ -513,10 +541,12 @@ class Frame {
             .on("focus", EDITABLE_ELEMENTS, () => {
                 this.playback.hud.$stopEditing.prop("disabled", false)
                 this.playback.operation.general.disable()
+                this.playback.operation.playthrough.disable()
             })
             .on("focusout", EDITABLE_ELEMENTS, () => {
                 this.playback.hud.$stopEditing.prop("disabled", true)
                 this.playback.operation.general.enable()
+                this.playback.operation.playthrough.enable()
             })
     }
 
@@ -534,10 +564,13 @@ class Frame {
         $(EDITABLE_ELEMENTS, $container).removeAttr("contenteditable")
     }
 
-    video_enter(resolve) {
+    /**
+     * @param {function} resolve Promise resolve function
+     * @param {JQuery<HTMLVideoElement>} $actor
+     */
+    video_enter(resolve, $actor) {
         const hud = this.playback.hud
-        const $actor = this.$actor
-        $actor.focus() // Focus video controls
+        $actor.trigger("focus") // Focus video controls
 
         hud.discreet_info(this.get_filename().split("#")[1])
 
@@ -586,6 +619,7 @@ class Frame {
             const r = $actor[0].playbackRate = Math.round(($actor[0].playbackRate + step) * 10) / 10
             hud.playback_icon(r + " ×")
         }
+
         this.shortcuts.push(
             wh.grab("NumpadAdd", "Faster video", () => playback_change(0.1)),
             wh.grab("NumpadSubtract", "Slower video", () => playback_change(-0.1)),
@@ -716,6 +750,7 @@ class Frame {
      *
      */
     leave() {
+        this._entered = false
         this.$frame.find("video").each((_, el) => $(el).off("pause") && el.pause())
         this.shortcuts.forEach(s => s.disable())
         this.shortcuts.length = 0
@@ -752,7 +787,7 @@ class Frame {
         this.$actor.finish() // remove the panorama effect
         this.$frame.find("[data-templated]").remove()
         this.clean_steps()
-        this.zoom_destroy()
+        this.zoom.destroy()
     }
 
     /**
@@ -845,113 +880,6 @@ class Frame {
         this.effects.push(new Promise(promise))
     }
 
-    zoom_init($el = null) {
-        if ($el.data("wzoom")) {
-            return $el.data("wzoom") // already initialized
-        }
-        const maxScale_default = 5
-        let last_scale = null
-        const wzoom = WZoom.create($el.get()[0], {
-            maxScale: maxScale_default,
-            minScale: 1,
-            speed: 1.5,
-            // We can wheel in for ever but keeping maxScale on leash.
-            // Because the click takes us to the current bed (and second click zooms out).
-            rescale: wzoom => { // the function seems to be called unintuitively with grab moving
-                const scale = wzoom.content.currentScale
-                wzoom.content.maxScale = Math.max(maxScale_default, scale + 3)
-                if (last_scale !== null) {
-                    // when created, it directly triggers rescale. Might cause a loop when triggered function
-                    // calls zoom_get (which calls zoom_init again)
-                    $el.trigger("wzoomed", [last_scale === scale])
-                }
-                last_scale = scale
-            },
-            dragScrollableOptions: {
-                onDrop: () => $el.trigger("wzoomed")
-            }
-        })
-        // Why correcting viewport? When having data-step-points and calling `zoom_set` from `prepare`,
-        // the frame is not at the viewport yet, thus the values are wrong. Such image seem to work
-        // but whenever manually zoomed, it vanishes out of the screen.
-        // Besides, we should center the image to a parent. However, we do not want to wrap it,
-        // this simulates the parent.
-        wzoom.viewport.originalLeft = $el.position().left
-        wzoom.viewport.originalTop = $el.position().top
-        const orig_ratio = $el.prop("naturalHeight") / $el.prop("naturalWidth")
-        const refresh_viewport = () => {
-            wzoom.viewport.originalWidth = $el.width()
-            wzoom.viewport.originalHeight = $el.height()
-            // Accessing $el.width seems to be a costly operation. When I did not cache the result, it made the image shake
-            // while dragging and setting the point property if and only if the DevTools were open.
-            // The space the <img> occupies in the DOM is bigger than the actual image size.
-            // Either the width is not fully stretched or the height.
-            // The ratio we need to count is then dependent on either dimension that corresponds with the actual image dimension,
-            // not the other suppressed.
-            const curr_ratio = $el.height() / $el.width()
-            const ratio = curr_ratio > orig_ratio ? $el.width() / $el.prop("naturalWidth") : $el.height() / $el.prop("naturalHeight")
-            $el.data("wzoom_get_ratio", () => ratio)
-        }
-        refresh_viewport()
-        $(window).on("resize.wzoom", refresh_viewport)
-
-        $el
-            .data("wzoom_resize_off", () => $(window).off("resize.wzoom", refresh_viewport))
-            // we have zoomed in, do not playback further
-            .off("click wheel")
-            .on("click wheel", () => this.playback.moving = false)
-            // zooming modifiable from the outside
-            .attr("data-wzoom", true)
-            .data("wzoom", wzoom)
-        return wzoom
-    }
-
-    // destruct zooming while leaving the frame
-    zoom_destroy() {
-        $("[data-wzoom]", this.$frame).each((_, el) => {
-            const $el = $(el)
-            // Maybe no more needed as this method got into .left().
-            // setTimeout(() => { // we have to timeout - wzoom bug, has to finish before it can be destroyed
-            $el.data("wzoom").destroy()
-            $el.data("wzoom_resize_off")()
-            $el
-                .data("wzoom", null)
-                .data("wzoom_get_ratio", null)
-                .data("wzoom_resize_off", null)
-                .attr("data-wzoom", null)
-        })
-    }
-
-    zoom_get($el, round = false) {
-        const { currentLeft, currentTop, currentScale } = this.zoom_init($el).content
-        const ratio = $el.data("wzoom_get_ratio")()
-        const vals = [currentLeft / ratio / currentScale, currentTop / ratio / currentScale, currentScale]
-        if (round) {
-            return vals.map(n => Math.round(n * 10) / 10)
-        }
-    }
-
-    /**
-     * @param {JQuery} $el Zoomed element
-     * @param {number} left
-     * @param {number} top
-     * @param {number} scale
-     * @param {number} transition_duration
-     * @param {number} duration
-     * @returns {number} After zoom step duration.
-    */
-    zoom_set($el, left = 0, top = 0, scale = 1, transition_duration = null, duration = null) {
-        const wzoom = this.zoom_init($el)
-        transition_duration ??= prop("step-transition-duration", $el, null, "transition-duration")
-        const ratio = $el.data("wzoom_get_ratio")()
-        const orig = wzoom.options.smoothTime
-        wzoom.options.smoothTime = transition_duration
-        wzoom.transform(top * ratio * scale, left * ratio * scale, scale)
-        wzoom.options.smoothTime = orig
-        this.add_effect(resolve => $el.on("transitionend", () => resolve()))
-        return duration ?? prop("step-duration", $el, null, "duration")
-    }
-
     /**
      * We do not guarantee the frame is preloaded.
      * @returns {string} HTML
@@ -1003,7 +931,7 @@ class Frame {
          *
          * @param {HTMLElement|Comment|Text} node First node to search.
          * @param {string} crossing Method
-         * @returns {?string}
+         * @returns {string|undefined}
          */
         function find_comment(node, crossing) {
             while (node) {
@@ -1026,7 +954,7 @@ class Frame {
     /**
      * Base file name without the directory. Or empty string when there is no media inside.
      * There might be base64 data in the real src, hence we prefer the data-src
-     * @param {JQuery} $actor
+     * @param {?JQuery} $actor
      * @returns {String}
      */
     get_filename($actor = null) {

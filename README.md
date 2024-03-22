@@ -11,6 +11,7 @@ What is SlideRshow and what advantages it has?
     * [Nomacs](https://nomacs.org/) – perfect but does not handle videos
     * [VLC](https://www.videolan.org/vlc/) – perfect but not stable with 100+ files in the playlist
     * Windows Photo Viewer – cannot set the presentation order
+    * none support video zoom (we do)
 * **organizer**
     * Simply tag photos as you browse them to be regrouped for a screening.
 * **presentation software**
@@ -331,7 +332,7 @@ However, this is a non-trivial task since the browser protects your photos priva
 
 #### Zoomable
 
-Zoomable on click/mouse wheel. Double click restores image original size.
+Zoomable on click/mouse wheel or a button from menu. You can zoom either an image or a video. Use <kbd>arrows</kbd> to crawl over the picture when zoomed. Even multiple arrows work at once. If you need the arrows to control the video playthrough, use <kbd>Ctrl+arrows</kbd> (works for both Firefox and Chrome).
 
 ##### `data-step-points`
 
@@ -543,22 +544,24 @@ You may nest an `<article>` beneath another one. Which causes the children to be
 
 ### Header and footer
 
-Tags `<header>` and `<footer>` used within a `<template>` are automatically inserted into frames that already contain such tags.
+Tags `<header>` and `<footer>` used within a `<template>` are automatically inserted into frames that does not yet contain such tags. (Put the `<template>` outside `<main>`.)
 
 ```html
 <template>
     <footer>This is the default footer</footer>
 </template>
 
-<article>
-    Here we get an automatic footer
-    <!-- Inserted: <footer>This is the default footer</footer> -->
-</article>
+<main>
+    <article>
+        Here we get an automatic footer
+        <!-- Inserted: <footer>This is the default footer</footer> -->
+    </article>
 
-<article>
-    No footer will be appended here
-    <footer></footer>
-</article>
+    <article>
+        No footer will be appended here
+        <footer></footer>
+    </article>
+</main>
 ```
 
 ## Further styling

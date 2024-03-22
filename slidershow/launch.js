@@ -130,14 +130,18 @@ function main() {
 /**
  * Return closest prop, defined in the DOM.
  * (Zero aware, you can safely set `data-prop=0`.)
- * @param {string} property For "data-start" use just "start"
+ * @param {string} property Ex: for "data-start" use just "start"
  * @param {JQuery} $el What element to check the prop of.
  * @param {any} def Custom default value if not set in DOM or via defProperty. If null, the PROP_DEFAULT default value is used.
- * @param {string} defProperty Name of a property whose value should be used as a default.
+ * @param {?string} defProperty Name of a property whose value should be used as a default.
  * @returns {*} Undefined if not set neither in the def param, nor in the PROP_DEFAULT.
  */
 function prop(property, $el, def = null, defProperty = null) {
-    const v = $el.closest(`[data-${property}]`).attr("data-" + property) // why not reading from .data? That value is cached.
+    // Why .removeDate? Because the DOM might have changed.
+    // User did it or we set up main.duration by the auto-forward button. And the .data value is cached.
+    // We do not read the attr because we need the conversion that happens when jQuery fetches data from attr.
+    // For ex: step-points which need to be converted to an array.
+    const v = $el.closest(`[data-${property}]`).removeData(property).data(property)
     switch (v) {
         case "false": // <main data-start='false'> -> false
             return false

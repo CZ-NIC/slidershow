@@ -34,7 +34,7 @@ class PropertyPanel {
 
         // new point button
         const $button = new_tag("+")
-            .on("click", () => new_point(frame.zoom_get($actor, true), true)
+            .on("click", () => new_point(frame.zoom.get($actor, true), true)
                 .trigger("click")
                 .appendTo($wrap.show()))
             .insertAfter($input)
@@ -57,13 +57,13 @@ class PropertyPanel {
                     $actor
                         .off("wzoomed")
                         .on("wzoomed", (_, minor_move) => {
-                            point.splice(0, 3, ...frame.zoom_get($actor, true))
+                            point.splice(0, 3, ...frame.zoom.get($actor, true))
                             $("span", this).html(JSON.stringify(point))
                             refresh_points(true) // passing minor_move would cause blur and hence point editing stop
                         })
 
                     // why timeout? This would prevent dblclick
-                    setTimeout(() => frame.zoom_set($actor, ...point), 0)
+                    setTimeout(() => frame.zoom.set($actor, ...point), 0)
                 })
                 .on("dblclick", function () { // remove given point
                     const index = points.indexOf(point)

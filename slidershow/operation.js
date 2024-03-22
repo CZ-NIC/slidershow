@@ -7,6 +7,7 @@ class Operation {
         this.playback = playback
         this.global_shortcuts = this.globalInit()
         this.switches = this.switchesInit()
+        this.playthrough = this.playthroughInit()
         this.general = this.generalInit()
         this.tagging = this.taggingInit()
         this.editing = this.editingInit()
@@ -14,6 +15,10 @@ class Operation {
         this.playback.hud.registerMenu()
     }
 
+    /**
+     * @param {string} group_name
+     * @returns {function} Will create the button and return values suitable for a Hotkey
+     */
     _button(group_name) {
         const $group = $("<div/>", { "data-hotkey-group": group_name }).appendTo(this.playback.hud.$hud_menu)
         return ([hotkey, symbol, hint, fn, role = null]) => [hotkey,
@@ -134,9 +139,9 @@ class Operation {
         ].map(this._button("Editing"))).toggle(pl.editing_mode)
     }
 
-    generalInit() {
+    playthroughInit() {
         const pl = this.playback
-        return wh.group("General", [
+        return wh.group("Playthrough", [
             ["Ctrl+Space", "Play/Pause", () => { // undocumented
                 pl.play_pause(!pl.moving)
             }],
@@ -185,9 +190,25 @@ class Operation {
                 ["Shift+PageDown", "▶", "Next frame", () => pl.nextFrame()],
                 ["Alt+PageDown", "▶▶", "Next section", () => pl.nextSection()],
                 ["End", "⏭", "Go to end", () => pl.goToFrame(pl.$articles.length - 1)],
+            ].map(this._button("Playthrough"))]).disable()
+    }
 
+    generalInit() {
+        const pl = this.playback
+        return wh.group("General", [
+            ...[
                 ["m", "🗺", "Toggle hud map", () => pl.hud_map.toggle(true), "not-video"],
-                ["f", "ℹ", "Toggle file info", () => $("#hud-fileinfo").toggle()],
+                ["i", "ℹ", "Toggle file info", () => $("#hud-fileinfo").toggle()],
+                ["z", "🔍", "Photo or video zoom", () => {
+                    const wzoom = pl.frame.$actor?.data("wzoom")
+                    if (wzoom) { // zoom several times, then unzoom
+                        if (wzoom.content.currentScale <= 8) {
+                            wzoom.maxZoomUp()
+                        } else {
+                            wzoom.maxZoomDown()
+                        }
+                    }
+                }],
                 ["Alt+g", "⇗", "Go to frame", () => {
                     new $.Zebra_Dialog(`You are now at ${pl.frame.slide_index + 1} / ${pl.slide_count}`, {
                         title: "Go to slide number",
