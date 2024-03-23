@@ -11,6 +11,7 @@ What is SlideRshow and what advantages it has?
     * [Nomacs](https://nomacs.org/) – perfect but does not handle videos
     * [VLC](https://www.videolan.org/vlc/) – perfect but not stable with 100+ files in the playlist
     * Windows Photo Viewer – cannot set the presentation order
+    * Google Photos viewer – instead of moving the video forward, the arrow jumps to the next image
     * none support video zoom (we do)
 * **organizer**
     * Simply tag photos as you browse them to be regrouped for a screening.
@@ -42,6 +43,7 @@ What can you acheive? See a variety of features in another example at [extra/tut
   * [Organizing](#organizing)
 - [Structure](#structure)
   * [Frame `<article>`](#frame-article)
+      - [`data-rotate`](#data-rotate)
       - [`data-duration`](#data-duration)
       - [`data-transition-duration`](#data-transition-duration)
       - [`data-spread-frames`](#data-spread-frames)
@@ -205,6 +207,10 @@ Any HTML content is accepted.
 
 A tag have following attributes:
 
+#### `data-rotate`
+
+**(number in degrees)** The content might easily be rotated. Use buttons in the menu to rotate live.
+
 #### `data-step`
 This element is not initially displayed but gradually appears as the user progresses through the presentation. If the value is not set, it will receive the next available unfilled number. If two elements share the same number, they will appear (or disappear) simultaneously. The numbers do not need to be assigned successively; you can skip values.
 
@@ -338,9 +344,9 @@ Zoomable on click/mouse wheel or a button from menu. You can zoom either an imag
 
 Array of points an image should pass. The first is the initial image position. Works for the image itself or any contained image.
 
-Point: `[left = 0, top = 0, scale = 1, transition_duration = data-step-transition-duration | data-transition-duration, duration = data-step-duration | data-duration ]`
+Point: `[left = 0, top = 0, scale = 1, transition_duration = data-step-transition-duration | data-transition-duration, duration = data-step-duration | data-duration, data-rotate ]`
 
-In this example, the image starts at `[100, 10, 2]`, then zooms out `[]`, then goes slowly (note the delay paramater) to `[150,10,3,3]`. Next, while using the default `transition_duration` (note the `null` -> becomes `1.5`), we set `duration` to 0.5 second for this step only `[200,10,4,null,.5]`.
+In this example, the image starts at `[100, 10, 2]`, then zooms out `[]`, then goes slowly (note the delay parameter) to `[150,10,3,3]`. Next, while using the default `transition_duration` (note the `null` -> becomes `1.5`), we set `duration` to 0.5 second for this step only `[200,10,4,null,.5]`.
 
 ```html
 <article data-transition-duration=1.5>
@@ -391,7 +397,7 @@ File modification time if available.
 #### `data-playback-rate`
 The speed of the video.
 
-Tip: Can be adjusted by <kbd>Numpad +/-</kbd> while presenting.
+Tip: Can be adjusted by <kbd>Numpad +/-</kbd> while presenting (see menu – <kbd>Esc</kbd>).
 ```html
 <article> <!-- fast video -->
     <video src="my_video.mp4#t=8,10" date-playback-rate="4"></video>

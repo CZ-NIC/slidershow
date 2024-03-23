@@ -164,10 +164,24 @@ class Frame {
         check("footer", "appendTo")
 
         this.loaded.then(() => {
+            this.refresh_actor()
             if (!this.playback.step_disabled) {
                 this.steps_prepare(lastFrame)
             }
         })
+    }
+
+    /**
+     * @param {boolean|string} propertyName
+     */
+    refresh_actor(propertyName = true) {
+        if (this.$actor) {
+            if (propertyName === true || propertyName === "rotate") {
+                const rotate = this.prop("rotate", this.$actor)
+                this.$actor.css("rotate", rotate + "deg")
+                this.$actor.trigger('actor.slidershow', { rotate: rotate })
+            }
+        }
     }
 
     /**
@@ -506,6 +520,9 @@ class Frame {
             }
         })
 
+        // Shortcuts for media
+        this.playback.operation.media.toggle($actor.length)
+
         // No HTML tag found, fit plain text to the screen size
         const fit = this.prop("fit")
         if (fit === true || fit === 1 || (fit === 'auto' && $frame.children().length === 0)) {
@@ -571,6 +588,7 @@ class Frame {
      */
     video_enter(resolve, $actor) {
         const hud = this.playback.hud
+        const video = $actor[0]
         $actor.trigger("focus") // Focus video controls
 
         hud.discreet_info(this.get_filename().split("#")[1])
@@ -581,21 +599,22 @@ class Frame {
 
         if ($actor.attr("autoplay")) {
             // Video autoplay (when muted in chromium)
-            if ($actor[0].readyState > 3) {
-                $actor[0].play().catch(e => {
+            if (video.readyState > 3) {
+                video.play().catch(e => {
                     hud.info("Interact with the page before the autoplay works.")
                 })
             } else {
-                console.warn("Not ready for autoplay", $actor[0])
+                console.warn("Not ready for autoplay", video)
                 // However, we might get rid of this warning for the case the video is being preloaded.
                 // In such case, it still has the autoplay attribute, which causes it to play.
             }
 
         }
-        $actor[0].playbackRate = this.prop("playback-rate", $actor)
+        video.playbackRate = this.prop("playback-rate", $actor)
 
         // Pausing vs playback moving
-        this.$video_pause_listener = $actor.on("pause", () => {
+        this.$video_pause_listener?.off(".slidershow-video")
+        this.$video_pause_listener = $actor.on("pause.slidershow-video", () => {
             // Normally, when a video ends, we want to move further.
             // However, when we click to the video progress gauge,
             // just before rewinding, a pause event is generated (yet before the mouse button up).
@@ -604,32 +623,31 @@ class Frame {
             // Either we check actor.ended if the video is at its end
             // or we consider it ended even if it paused due to HTMLMediaElement endtime (ex: `#t=10,20`).
             // Note that the actor.currentTime differs the endtime a little bit (like 20.12 s).
-            const endTime = getEndTimeFromURL($actor[0].src)
-            if ($actor[0].ended || endTime
-                && ($actor[0].currentTime - endTime > 0) && ($actor[0].currentTime - endTime < 0.5)) {
+            const endTime = getEndTimeFromURL(video.src)
+            if (video.ended || endTime
+                && (video.currentTime - endTime > 0) && (video.currentTime - endTime < 0.5)) {
                 resolve()
             }
-        }).on("click", () => {
+        }).on("click.slidershow-video", () => {
             this.playback.play_pause(false)
-        }).on("slidershow-leave", () => {
-            $actor.off("pause").off("play").off("click")
         })
 
-        // Video shortcuts
-        const playback_change = step => {
-            const r = $actor[0].playbackRate = Math.round(($actor[0].playbackRate + step) * 10) / 10
-            hud.playback_icon(r + " ×")
+        // Video points
+        const videoPoints = (this.prop("video-points", $actor) || []).map(p => new PointStep(null, p, null))
+        if (videoPoints.length) {
+            /** @type {PointStep} */
+            let videoPoint = videoPoints.shift()
+            $actor.on('timeupdate.slidershow-video', () => {
+                if (video.currentTime >= videoPoint?.startTime) {
+                    videoPoint.affect($actor, this.zoom)
+                    videoPoint = videoPoints.shift()
+                }
+            })
         }
 
-        this.shortcuts.push(
-            wh.grab("NumpadAdd", "Faster video", () => playback_change(0.1)),
-            wh.grab("NumpadSubtract", "Slower video", () => playback_change(-0.1)),
-            wh.grab("Alt+m", "Toggle muted", () => { $actor[0].muted = !$actor[0].muted })
-        )
-        $("<div/>", { "html": this.shortcuts.map(s => s.getText()).join("<br>") }).prependTo(hud.$hud_filename)
-
-        // Video controls (arrows) must not interfere with the shortcuts
-        hud.$notVideoButtons.prop("disabled", true)
+        // Shortcuts
+        hud.$notVideoButtons.prop("disabled", true)  // default video controls (arrows) must not interfere with the shortcuts
+        hud.$onlyVideoButtons.prop("disabled", false)
     }
 
     loop(loop) {
@@ -760,10 +778,10 @@ class Frame {
             document.activeElement.blur() // do not stay stuck on the video gauge (which prevents shortcuts)
         }
 
-        if (this.$video_pause_listener) {
-            this.$video_pause_listener.trigger("slidershow-leave")
+        if (this.$video_pause_listener?.off(".slidershow-video")) {
             this.$video_pause_listener = null
             this.playback.hud.$notVideoButtons.prop("disabled", false)
+            this.playback.hud.$onlyVideoButtons.prop("disabled", true)
         }
 
         this.playback.hud_map?.hide()

@@ -6,96 +6,8 @@ class PropertyPanel {
     constructor(hud) {
         this.hud = hud
         this.playback = hud.playback
+        this.points = PropertyPanelPoints
     }
-
-
-    /**
-     * Step-points GUI
-     * @param {Frame} frame
-     * @param {JQuery} $input <input> for a [data-step-points] element
-     */
-    gui_step_points(frame, $input) {
-        const $wrap = $("<div />", { "class": "point-wrapper" }).hide().insertAfter($input)
-        const $hud = this.hud.$hud_properties
-        const cc = this.playback.changes
-        const $actor = frame.$actor
-        const points = JSON.parse($input.val() || '[]')  // load set of points from the given <input>
-        if (points.length) {
-            $wrap.show().append(points.map(p => new_point(p)))
-        }
-        $input // refresh from either: user editing <input>, user did undo, not from us having edited <input>
-            .off("change.step-points undo-performed")
-            .on("change.step-points undo-performed", () => {
-                $wrap.remove()
-                $button.remove()
-                $actor.off("wzoomed")
-                this.gui_step_points(frame, $input)
-            })
-
-        // new point button
-        const $button = new_tag("+")
-            .on("click", () => new_point(frame.zoom.get($actor, true), true)
-                .trigger("click")
-                .appendTo($wrap.show()))
-            .insertAfter($input)
-
-        function new_point(point, push = false) {
-            if (push) {
-                points.push(point)
-                refresh_points()
-            }
-
-            const $point = new_tag(point, true)
-                .on("click", function () { // zoom to given point
-                    if ($(this).hasClass("active")) {
-                        refresh_points() // register the undoable action
-                        return blur()
-                    }
-                    $(".hud-point", $hud).removeClass("active")
-                    $(this).addClass("active")
-                    $(window).on("resize.wzoom-properties", blur)
-                    $actor
-                        .off("wzoomed")
-                        .on("wzoomed", (_, minor_move) => {
-                            point.splice(0, 3, ...frame.zoom.get($actor, true))
-                            $("span", this).html(JSON.stringify(point))
-                            refresh_points(true) // passing minor_move would cause blur and hence point editing stop
-                        })
-
-                    // why timeout? This would prevent dblclick
-                    setTimeout(() => frame.zoom.set($actor, ...point), 0)
-                })
-                .on("dblclick", function () { // remove given point
-                    const index = points.indexOf(point)
-                    points.splice(index, 1)
-                    $(this).fadeOut()
-                    refresh_points()
-                })
-            return $point
-
-            function refresh_points(minor_move = false) {
-                $input.val(points.length ? JSON.stringify(points) : "")
-                if (!minor_move) {
-                    // Why `change.$`? We want to ignore our `change.step-points`
-                    // that would create a loop and delete this very container.
-                    $input.trigger("change.$")
-                }
-            }
-
-            function blur() {
-                $(".hud-point", $hud).removeClass("active")
-                $(window).off("resize.wzoom-properties")
-                $actor.off("wzoomed")
-            }
-        }
-        function new_tag(html, stringify = false) {
-            return $("<div />", {
-                "html": "<span>" + (stringify ? JSON.stringify(html) : html) + "</span>",
-                "class": "hud-point"
-            })
-        }
-    }
-
 
     /**
      * Generate <input type=number> into the Properties panel.
@@ -199,6 +111,9 @@ class PropertyPanel {
                                 .data("previous", val)
                                 .trigger("undo-performed")
                                 .focus()
+
+                            // if the property affected the actor, refresh it
+                            pl.frame.refresh_actor(p)
                         }, value, previous)
                 })
         ).wrapAll($("<div/>")).parent()

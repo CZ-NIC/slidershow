@@ -22,8 +22,9 @@ loadjQuery(() => {
             referrerpolicy: "no-referrer"
         },
         {
+            // TODO waiting for my PR
             src: "https://cdn.jsdelivr.net/npm/vanilla-js-wheel-zoom@8.1.0/dist/wheel-zoom.min.js",
-            crossOrigin: "anonymous"
+            crossOrigin: "anonymous",
         },
         { src: "https://cdn.jsdelivr.net/npm/js-circle-progress@0.2.4/dist/jquery.circle-progress.min.js" },
         { src: "https://code.jquery.com/ui/1.13.1/jquery-ui.min.js" },
@@ -36,7 +37,7 @@ loadjQuery(() => {
 
     const vendor_styles = ["https://cdn.jsdelivr.net/npm/zebra_dialog@latest/dist/css/materialize/zebra_dialog.min.css"].map(f => loadStyle(f))
 
-    const local = ["static.js", "frame_factory.js", "frame.js", "frame_zoom.js", "place.js", "map.js", "hud.js", "export.js", "property_panel.js", "operation.js", "changes.js", "menu.js", "playback.js", "session.js", "aux_window.js"].filter(Boolean).map(f => loadScript({ src: DIR + f }))
+    const local = ["static.js", "frame_factory.js", "frame.js", "frame_zoom.js", "place.js", "map.js", "hud.js", "export.js", "property_panel.js", "propertyPanelPoints.js", "operation.js", "changes.js", "menu.js", "playback.js", "session.js", "aux_window.js"].filter(Boolean).map(f => loadScript({ src: DIR + f }))
 
     /**
      When there were 60 photos and 10 videos in a 230 MB presentation file, these were started before we could
@@ -120,10 +121,12 @@ function get_menu() {
     <div id="hud">
         <div id="hud-menu"></div>
         <div id="hud-fileinfo">
-            <div id="hud-filename"></div>
+            <div>
+                <span id="hud-filename"></span>
+                <span id="hud-gps"></span>
+            </div>
             <div id="hud-device"></div>
             <div id="hud-datetime"></div>
-            <span id="hud-gps"></span>
             <div id="hud-tag"></div>
             <div id="hud-counter"></div>
         </div>
@@ -152,8 +155,8 @@ function get_menu() {
 
             <form id="defaults">
                 Defaults
-                <br />Duration <input name="duration" value="0" size="4" placeholder="0"> s
-                <br />Transition <input name="transition-duration" value="0" size="4" placeholder="0"> s
+                <br />Duration <input name="duration" size="4" placeholder="0"> s
+                <br />Transition <input name="transition-duration" size="4" placeholder="0"> s
                 <br />Media folder path <input title="If not set, we put the media data inside the DOM (RAM consuming)" name="path" value="" placeholder="./">
             </form>
         </div>

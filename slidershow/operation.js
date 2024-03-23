@@ -11,6 +11,7 @@ class Operation {
         this.general = this.generalInit()
         this.tagging = this.taggingInit()
         this.editing = this.editingInit()
+        this.media = this.mediaInit()
 
         this.playback.hud.registerMenu()
     }
@@ -162,10 +163,14 @@ class Operation {
                     }
                 }, "not-video"],
                 ["Shift+Alt+f", "⌚", "Set auto-forward", () => {
-                    const dur = $main.attr("data-duration")
+                    const durMain = prop("duration", $main)
+                    const dur = pl.frame.getDuration()
                     let text = "How many seconds to auto-forward?"
-                    if (dur !== undefined) {
-                        text += ` Current is ${dur} s.`
+                    if (durMain !== undefined) {
+                        text += ` Current is ${durMain} s.`
+                    }
+                    if (dur && dur !== durMain) {
+                        text += ` But current frame inherits ${dur} s.`
                     }
                     text += "<small><br>Note: this sets the `duration` property of the MAIN. Use properties panel (Alt+P) to configure sections etc.</small>"
                     new $.Zebra_Dialog(text, {
@@ -199,16 +204,8 @@ class Operation {
             ...[
                 ["m", "🗺", "Toggle hud map", () => pl.hud_map.toggle(true), "not-video"],
                 ["i", "ℹ", "Toggle file info", () => $("#hud-fileinfo").toggle()],
-                ["z", "🔍", "Photo or video zoom", () => {
-                    const wzoom = pl.frame.$actor?.data("wzoom")
-                    if (wzoom) { // zoom several times, then unzoom
-                        if (wzoom.content.currentScale <= 8) {
-                            wzoom.maxZoomUp()
-                        } else {
-                            wzoom.maxZoomDown()
-                        }
-                    }
-                }],
+                ["z", "🔍", "Photo or video zoom (cycle)", () => zoom()],
+                ["Shift+z", "🔍", "Photo or video zoom (only up)", () => zoom(true), "magnify-little"],
                 ["Alt+g", "⇗", "Go to frame", () => {
                     new $.Zebra_Dialog(`You are now at ${pl.frame.slide_index + 1} / ${pl.slide_count}`, {
                         title: "Go to slide number",
@@ -221,6 +218,47 @@ class Operation {
                     })
                 }]
             ].map(this._button("General"))]).disable()
+
+        function zoom(little) {
+            const wzoom = pl.frame.$actor?.data("wzoom")
+            if (little) {
+                wzoom.zoomUp()
+            } else if (wzoom) { // zoom several times, then unzoom
+                if (wzoom.content.currentScale <= 8) {
+                    wzoom.maxZoomUp()
+                } else {
+                    wzoom.maxZoomDown()
+                }
+            }
+        }
+    }
+
+    mediaInit() {
+        const pl = this.playback
+        return wh.group("Media", [
+            ...[
+                ["NumpadAdd", "🐰", "Faster video", () => playback_change(0.1), "only-video"],
+                ["NumpadSubtract", "🐢", "Slower video", () => playback_change(-0.1), "only-video"],
+                ["Alt+m", "🔇", "Toggle muted", () => { act()[0].muted = !act()[0].muted }, "only-video"],
+                ["Shift+r", "⤿", "Rotate left", () => rotate(-5)],
+                ["Shift+Alt+r", "⤾", "Rotate right", () => rotate(5)],
+                ["r", "⊾", "Rotate right 90°", () => rotate(90)],
+            ].map(this._button("Media"))]).disable()
+
+        function act() {
+            return pl.frame.$actor
+        }
+
+        function playback_change(step) {
+            const r = act()[0].playbackRate = Math.round((act()[0].playbackRate + step) * 10) / 10
+            pl.hud.playback_icon(r + " ×")
+        }
+
+        function rotate(deg) {
+            const val = prop("rotate", act(), null, null, true) + deg
+            act().attr("data-rotate", val % 360)
+            pl.frame.refresh_actor("rotate")
+        }
     }
 
     switchesInit() {

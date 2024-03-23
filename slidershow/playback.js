@@ -27,15 +27,15 @@ class Playback {
         this.hud_map = new MapWidget(fact("map-hud"), this).map_start()
 
         /**
-         * @type {?Frame} Current frame
+         * @type {Frame} Current frame
         */
-        this.frame
+        this.frame = new Frame($(), this) // default dummy object
         this.slide_count
-        this.$articles
+        this.$articles = $()
         /**
-         * @type {?JQuery} Current frame DOM
+         * @type {JQuery} Current frame DOM
          */
-        this.$current
+        this.$current = this.frame.$frame  // default dummy object
         this.index = 0
 
         this.debug = false
@@ -448,6 +448,7 @@ class Playback {
             }
 
             // Enter the frame
+            // TODO tady !this.waitAndGo has no sense, as waitAndGo is a promise
             if (!this.waitAndGo(frame.enter()) && this.moving && frame.video_finished) { // always go to the next frame when video ends, ignoring data-duration
                 frame.video_finished.then(() => this.tryGoNext())
             }

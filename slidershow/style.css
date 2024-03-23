@@ -167,13 +167,15 @@ frame-preview article-map:before {
 #hud #hud-menu button {
   font-size: 100%;
 }
+#hud #hud-menu button[data-role="magnify-little"] {
+  text-shadow: 0 0 darkcyan;
+}
 #hud #hud-fileinfo {
   right: 3vw;
   bottom: 10vw;
   text-align: right;
 }
 #hud #hud-fileinfo #hud-gps {
-  float: left;
   cursor: pointer;
 }
 #hud #hud-fileinfo #hud-tag {

@@ -1,5 +1,7 @@
 class FrameZoom {
 
+    static DEFAULT_ZOOM = [0, 0, 1]
+
     /**
      * @param {Frame} frame
      */
@@ -47,12 +49,12 @@ class FrameZoom {
                 if (last_scale !== null) {
                     // when created, it directly triggers rescale. Might cause a loop when triggered function
                     // calls zoom_get (which calls zoom_init again)
-                    $el.trigger("wzoomed", [last_scale === scale])
+                    $el.trigger("zoom.slidershow", [last_scale === scale])
                 }
                 last_scale = scale
             },
             dragScrollableOptions: {
-                onDrop: () => $el.trigger("wzoomed")
+                onDrop: () => $el.trigger("zoom.slidershow")
             }
         })
         // Why correcting viewport? When having data-step-points and calling `zoom_set` from `prepare`,
@@ -62,7 +64,7 @@ class FrameZoom {
         // this simulates the parent.
         wzoom.viewport.originalLeft = $el.position().left
         wzoom.viewport.originalTop = $el.position().top
-        const orig_ratio = $el.prop("naturalHeight") / $el.prop("naturalWidth")
+        const orig_ratio = nat($el, "Height") / nat($el, "Width")
         const refresh_viewport = () => {
             wzoom.viewport.originalWidth = $el.width()
             wzoom.viewport.originalHeight = $el.height()
@@ -73,7 +75,7 @@ class FrameZoom {
             // The ratio we need to count is then dependent on either dimension that corresponds with the actual image dimension,
             // not the other suppressed.
             const curr_ratio = $el.height() / $el.width()
-            const ratio = curr_ratio > orig_ratio ? $el.width() / $el.prop("naturalWidth") : $el.height() / $el.prop("naturalHeight")
+            const ratio = curr_ratio > orig_ratio ? $el.width() / nat($el, "Width") : $el.height() / nat($el, "Height")
             $el.data("wzoom_get_ratio", () => ratio)
         }
         refresh_viewport()
@@ -94,7 +96,18 @@ class FrameZoom {
             const ev = "click.slidershow wheel.slidershow"
             $el.off(ev).on(ev, () => this.playback.moving = false)
         }
+
         return wzoom
+
+        function nat($el, prop) {
+            if ($el[0] instanceof HTMLImageElement) {
+                return $el.prop("natural" + prop)
+            } else if ($el[0] instanceof HTMLVideoElement) {
+                return $el.prop("video" + prop)
+            } else {
+                throw new Error("Slidershow> Unknown element type")
+            }
+        }
     }
 
     /**
@@ -131,6 +144,16 @@ class FrameZoom {
             if (guard(e)) {
                 pressed[e.key] = 1
                 const { currentScale: scale, currentLeft: left, currentTop: top } = wzoom.content
+                // goniometry keeps ArrowLeft horizontal even when rotated
+                // const angle = prop("rotate", this.frame.$actor, 0, null, true) * (Math.PI / 180) // deg → rad
+                // const cos = Math.cos(angle)
+                // const sin = Math.sin(angle)
+                // const vertic = pressed["ArrowUp"] * jump + pressed["ArrowDown"] * -jump
+                // const horiz = pressed["ArrowLeft"] * jump + pressed["ArrowRight"] * -jump
+                //         wzoom.transform(
+                //             top + cos * vertic + -sin * horiz,
+                //             left + cos * horiz + sin * vertic,
+                //             scale)
                 wzoom.transform(
                     top + (pressed["ArrowUp"] * jump) + (pressed["ArrowDown"] * -jump),
                     left + (pressed["ArrowLeft"] * jump) + (pressed["ArrowRight"] * -jump),
@@ -176,14 +199,12 @@ class FrameZoom {
 
     /**
      * @param {JQuery} $el
+     * @returns {[number, number, number]} x, y, zoom
      */
-    get($el, round = false) {
+    get($el) {
         const { currentLeft, currentTop, currentScale } = this.init($el).content
         const ratio = $el.data("wzoom_get_ratio")()
-        const vals = [currentLeft / ratio / currentScale, currentTop / ratio / currentScale, currentScale]
-        if (round) {
-            return vals.map(n => Math.round(n * 10) / 10)
-        }
+        return [currentLeft / ratio / currentScale, currentTop / ratio / currentScale, currentScale].map(n => Math.round(n * 10) / 10)
     }
 
     /**
@@ -193,9 +214,10 @@ class FrameZoom {
      * @param {number} scale
      * @param {?number} transition_duration
      * @param {?number} duration
+     * @param {?number} rotate
      * @returns {number} After zoom step duration.
     */
-    set($el, left = 0, top = 0, scale = 1, transition_duration = null, duration = null) {
+    set($el, left = 0, top = 0, scale = 1, transition_duration = null, duration = null, rotate = 0) {
         const wzoom = this.init($el)
         transition_duration ??= prop("step-transition-duration", $el, null, "transition-duration")
         const ratio = $el.data("wzoom_get_ratio")()
@@ -203,9 +225,16 @@ class FrameZoom {
         wzoom.options.smoothTime = transition_duration
         wzoom.transform(top * ratio * scale, left * ratio * scale, scale)
         wzoom.options.smoothTime = orig
-
+        this.frame.add_effect(r => $el.on("transitionend", () => r()))
         this.init_keys(wzoom)
-        this.frame.add_effect(resolve => $el.on("transitionend", () => resolve()))
+
+        // rotation
+        if (rotate || prop("rotate", $el, null, null, true) !== null) { // set new rotation or unset rotation
+            $el.attr("data-rotate", rotate)
+            this.frame.add_effect(r =>
+                $el.animate({ rotate: rotate + "deg" }, transition_duration * 1000,
+                    () => r()))
+        }
         return duration ?? prop("step-duration", $el, null, "duration")
     }
 

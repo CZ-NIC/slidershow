@@ -55,10 +55,11 @@
                 </article>
 
                 <article>
-                    Or you can set manually the points to zoom in on a photo.
+                    Or you can set manually the points to zoom in on a photo<span data-step>&nbsp;(including
+                        rotation)</span>.
                 </article>
                 <article>
-                    <img data-step-points="[[127,-82,5],[-133.99958289885296,263.7013555787278,5],[0,0,1],[-134,-60,5],[-106,-134,10],[-106,-134,15],[0,0,1],[-38,-216,5]]"
+                    <img data-step-points="[[127,-82,5],[-134,263.7,5],[0,0,1],[156.7,286.4,5,null,null,-180],[-134,-60,5],[-106,-134,10],[-106,-134,15, null, null, 100],[0,0,1],[-38,-216,5]]"
                         src="https://upload.wikimedia.org/wikipedia/commons/8/82/SevenWondersOfTheWorld.jpg" />
                 </article>
 
@@ -118,6 +119,15 @@
                 <article data-playback-rate="3"><video
                         src="https://upload.wikimedia.org/wikipedia/commons/a/aa/IberianIbexFight.webm"></video>
                 </article>
+
+
+                <!-- TODO -->
+                <!-- <article data-playback-rate="0.3" data-video-points='[[2,"rate:3","goto:5"],[7,"rate:0.1","goto:1", "mute"],[3,"point:[7,7,10]"]]'><video
+                        src="https://upload.wikimedia.org/wikipedia/commons/a/aa/IberianIbexFight.webm"></video>
+                </article> -->
+                <!-- TODO END -->
+
+
             </section>
         </div>
 
@@ -133,7 +143,8 @@
             <p>Remember the <kbd>Esc</kbd> menu? There are many things you can do...</p>
             <ul data-step-li data-step-duration="1">
                 <li>See the thumbnail ribbon (<kbd>j</kbd>)</li>
-                <li>See the thumbnail grid (<kbd>g</kbd>) <span data-step>(import or reorder frames by dragging around)</span></li>
+                <li>See the thumbnail grid (<kbd>g</kbd>) <span data-step>(import or reorder frames by dragging
+                        around)</span></li>
                 <li>Launch an auxiliary window to be displayed on a second monitor during the presentation
                     <span data-step>(so that you know what is the next frame)</span>
                 </li>

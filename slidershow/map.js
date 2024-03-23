@@ -67,7 +67,7 @@ class MapWidget {
         this.last_places = []
 
 
-        /** @type {?Function} @see this.display_graphics_stack */
+        /** @type {Function[]} @see this.display_graphics_stack */
         this._graphics_stack = []
         this._hold_graphics = false
 
@@ -76,6 +76,9 @@ class MapWidget {
 
         /** Display suppressed by the user */
         this.blocked = false
+
+        /** @type {?Function} postponed engage due to the blockage */
+        this.postponed = null
     }
 
     /**
@@ -148,6 +151,9 @@ class MapWidget {
     toggle(force = false) {
         this.$map.toggle()
         this.blocked = force && this.$map.is(":hidden")
+        if (force && !this.blocked && this.postponed) {
+            this.postponed()
+        }
     }
     hide() {
         this.$map.hide()
@@ -162,14 +168,36 @@ class MapWidget {
      * @param {*} animate
      * @param {*} geometry_show
      * @param {*} markers_show
+     * @param {*} geometry_clear
+     * @param {*} markers_clear
+     * @param {number | null} zoom
+     * @param {never[]} last_places
      */
     async engage(places, animate, geometry_show, geometry_criterion, markers_show, geometry_clear, markers_clear, zoom, last_places) {
         if (!MAP_ENABLE) {
             return
         }
+        this.postponed = () => this._engage(places, animate, geometry_show, geometry_criterion, markers_show, geometry_clear, markers_clear, zoom, last_places)
         if (!this.blocked) {
             this.$map.show(0)
+            this.postponed()
         }
+    }
+
+    /**
+     * Move the map to a position and show it (if not blocked by the user action).
+     * @param {Place[]} places
+     * @param {*} animate
+     * @param {*} geometry_show
+     * @param {*} geometry_criterion
+     * @param {*} markers_show
+     * @param {*} geometry_clear
+     * @param {*} markers_clear
+     * @param {number | null} zoom
+     * @param {never[]} last_places
+     */
+    async _engage(places, animate, geometry_show, geometry_criterion, markers_show, geometry_clear, markers_clear, zoom, last_places) {
+        this.postponed = null
         this.last_places = last_places || []
         this.geometry_clear = geometry_clear
         this.markers_clear = markers_clear
@@ -233,6 +261,12 @@ class MapWidget {
             if (zoom || computed_zoom) {
                 this.map.setZoom(zoom || computed_zoom)
             }
+
+            if (animate && !this.used && !zoom) { // as the center is being set right now, zoom this to a district level
+                // (If we directly animated without with no center previously set, we'd see Prague for a moment
+                // as this is the map vendor default. Which seemed weird for a different continent.)
+                this._animate_to(center.x, center.y, computed_zoom, 8, center)
+            }
         }
         this.used = true // first use done
     }
@@ -244,7 +278,7 @@ class MapWidget {
      * The solution is to draw the graphics either before the animation starts or when finished.
      * @param {?Function} fn Added to the graphics stack.
      */
-    graphics_stack(fn) {
+    graphics_stack(fn = null) {
         if (fn) {
             this._graphics_stack.push(fn)
         }
@@ -340,10 +374,10 @@ class MapWidget {
      * @param {Number} latitude
      * @param {?Number} computed_zoom Recommended final zoom.
      * @param {?Number} zoom_final If not set, it is based on a previous location.
+     * @param {Object} center Use this as center, not current map center.
      * @returns
      */
-    _animate_to(longitude, latitude, computed_zoom, zoom_final) {
-        // this.$map.show(0)
+    _animate_to(longitude, latitude, computed_zoom, zoom_final, center = null) {
         if (this.query_last?.join() === [longitude, latitude, zoom_final].join()) {
             return
         }
@@ -357,7 +391,7 @@ class MapWidget {
 
         this.changing.stop()
         this.animation = []
-        const [a, b] = [this.map.getCenter().x, this.map.getCenter().y]
+        const [a, b] = center ? [center.x, center.y] : [this.map.getCenter().x, this.map.getCenter().y]
         const [x, y] = [longitude, latitude]
 
         const current_zoom = this.map.getZoom()

@@ -52,10 +52,12 @@ Private attributes that are not documented in the README because the user should
 * <img-temp-animation-step> Tags that help distinguish image zoom step from the image step.
 * Img with wzoom:
 *   [data-wzoom] Wzoom active
-*   trigger("wzoomed") new position
+*   trigger("zoom.slidershow") new position
 *   data("wzoom_get_ratio") screen aware ratio
 *   data("wzoom_resize_off") event destructor
 *   $(window).on("resize.wzoom")
+* Actor event "actor.slidershow" – on ex: rotate change
+* Frame video event namespace .slidershow-video
 */
 
 // var variables that a hacky user might wish to change. Might become data-attributes in the future.
@@ -92,10 +94,20 @@ const PROP_DEFAULT = {
     "panorama-threshold": 2,
     "start": false,
     "spread-frames": "spiral",
-    "step-shown": false
+    "step-shown": false,
+    "rotate": 0
 }
 const PROP_NONSCALAR = {
-    "step-points": true
+    "step-points": true,
+    "video-points": true
+}
+
+// For the media, infer the property from the CSS, not from the DOM.
+const PROP_CALLBACKS = {
+    // We infer the rotation from a step.
+    // The user clicks rotate left, the actor has no data-rotate set
+    // but the step rotated it. We return deg.
+    "rotate": $el => parseFloat($el.css("rotate"))
 }
 
 main()
@@ -128,15 +140,27 @@ function main() {
 // Common functions
 
 /**
- * Return closest prop, defined in the DOM.
+ * Return closest prop, defined in the step or DOM.
+ * Ex: prop("rotate", img) -> checks current step, then img[data-rotate],
+ *  then article[data-rotate], then sections[data-rotate], then main[data-rotate]
  * (Zero aware, you can safely set `data-prop=0`.)
  * @param {string} property Ex: for "data-start" use just "start"
  * @param {JQuery} $el What element to check the prop of.
  * @param {any} def Custom default value if not set in DOM or via defProperty. If null, the PROP_DEFAULT default value is used.
  * @param {?string} defProperty Name of a property whose value should be used as a default.
- * @returns {*} Undefined if not set neither in the def param, nor in the PROP_DEFAULT.
+ * @param {boolean} css Check element CSS first before investigating DOM.
+ * @returns {undefined|boolean|number|string} Undefined if not set neither in the def param, nor in the PROP_DEFAULT.
  */
-function prop(property, $el, def = null, defProperty = null) {
+function prop(property, $el, def = null, defProperty = null, css = false) {
+    // First, we might have to check the CSS. This has sense for actors only.
+    // The CSS might have been altered by a step so that the value in the DOM
+    // is not relevant.
+    if (css) {
+        const val = PROP_CALLBACKS[property]?.($el)
+        if (val !== undefined) {
+            return val
+        }
+    }
     // Why .removeDate? Because the DOM might have changed.
     // User did it or we set up main.duration by the auto-forward button. And the .data value is cached.
     // We do not read the attr because we need the conversion that happens when jQuery fetches data from attr.
@@ -160,7 +184,7 @@ function prop(property, $el, def = null, defProperty = null) {
             if (numeric_only.test(v)) { // <main data-start='0'> -> Boolean(Number(0)) === false
                 return parseFloat(v)
             } else {
-                return v;
+                return v
             }
     }
 }

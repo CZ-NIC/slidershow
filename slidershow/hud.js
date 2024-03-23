@@ -58,6 +58,7 @@ class Hud {
 
         this.$stopEditing = $("[title='Stop editing (Escape)']", $m).prop("disabled", true)
         this.$notVideoButtons = $("[data-role~='not-video']")
+        this.$onlyVideoButtons = $("[data-role~='only-video']").prop("disabled", true)
 
         hideAlternatives("prev-step", "Prev step")
         hideAlternatives("next-step", "Next step")
@@ -404,7 +405,7 @@ class Hud {
         this.$hud_device.text($actor.data("device") || "")
         this.$hud_datetime.text($actor.data("datetime") || "")
         // display the map button only if map was previously blocked by user
-        this.$hud_gps.html(this.playback.hud_map.blocked && $actor.data("gps") ? "🗺" : "")
+        this.$hud_gps.html($actor.data("gps") ? "🗺" : "")
         this.tag($actor.attr("data-tag"))
 
         // Counter
@@ -497,19 +498,27 @@ class Hud {
 
         // element properties
         if ($actor.length) {
+            // handle media properties
+            $props.append(["rotate"].map(p => pp.input_ancestored(p, $actor)).flat())
+
             if ($actor.prop("tagName") === "IMG") {
-                // handle [data-property=step-points]
+                // step-points property
                 pp
                     .input_ancestored("step-points", $actor)
                     .appendTo($props)
-                    .find("input").map((_, el) => pp.gui_step_points(frame, $(el)))
+                    .find("input").map((_, el) => new pp.points(this.playback, el, false))
             } else if ($actor.prop("tagName") === "VIDEO") {
+                // playback-rate property
                 $props.append(["playback-rate"].map(p => pp.input_ancestored(p, $actor, "number")).flat())
 
-                const original = frame.get_filename($actor).split("#")[1]
-
-                $props.append(pp.input("video-cut", $actor, "", original, "text", "t=START[,STOP]", val => {
+                // video-cut property
+                // TODO missing from readme. Write about video-points interference.
+                const original = frame.get_filename($actor).split("#")[1]?.split("t=")[1]
+                $props.append(pp.input("video-cut", $actor, "", original, "text", "START[,STOP]", val => {
                     const src = $actor.attr("src")
+                    if (val) {
+                        val = "t=" + val // -> "t=START[,STOP]""
+                    }
                     if (src) {
                         $actor.attr("src", [src.split("#")[0], val].join("#"))
                     } else {
@@ -517,6 +526,15 @@ class Hud {
                     }
                 }))
 
+                // video-points property
+                // TODO readme, tutorial, functionality
+                // TODO pack input_ancestored to save space (hide inputs unless having value or clicked or something)
+                pp
+                    .input_ancestored("video-points", $actor)
+                    .appendTo($props)
+                    .find("input").map((_, el) => new pp.points(this.playback, el, true))
+
+                // video property
                 // The `video` attribute can be derived also from the real HTML attributes which is not here implemented to bear.
                 $props.append(pp.input_ancestored("video", $actor))
             }

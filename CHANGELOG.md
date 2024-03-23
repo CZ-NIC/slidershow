@@ -5,6 +5,8 @@
 * more intuitive auto-forward button
 * fix: video autoplay when going backwards
 * video zoom
+* rotation
+* spare map usage
 
 ## 0.9.2
 * GUI controls
