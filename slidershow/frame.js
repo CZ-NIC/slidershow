@@ -409,7 +409,7 @@ class Frame {
      *  those are exported; we prefer raw bytes over the filename (the original will not be needed).
      *  False → filename always exported.
      * @param {String} path Path where the presentation file will find the media folder.
-     * @param {Function} callback When frame done, call this to increase the progress bar.
+     * @param {?Function} callback When frame done, call this to increase the progress bar.
      */
     static async finalize_frames($contents, $articles, keep_raw = false, path = "", callback = null) {
         // batch execute operations otherwise done in methods like `unload` or `left`
@@ -568,7 +568,7 @@ class Frame {
             })
     }
 
-    unmake_editable($container = null) {
+    unmake_editable() {
         Frame.unmake_editable(this.$frame)
         this.$frame
             .off("focus", EDITABLE_ELEMENTS)
@@ -639,8 +639,14 @@ class Frame {
             let videoPoint = videoPoints.shift()
             $actor.on('timeupdate.slidershow-video', () => {
                 if (video.currentTime >= videoPoint?.startTime) {
-                    videoPoint.affect($actor, this.zoom)
-                    videoPoint = videoPoints.shift()
+                    if (!this.playback.hud.propertyPanel.points.beingEdited) {
+                        videoPoint.affect($actor, this.zoom)
+                        videoPoint = videoPoints.shift()
+                    }
+                }
+                if (this.playback.hud.propertyPanel.points.beingEdited) {
+                    // Why checking being edited? Due to performance reasons, we do not want to flood the trigger with no sense.
+                    $actor.trigger('actor.slidershow', {currentTime: video.currentTime})
                 }
             })
         }
@@ -785,6 +791,7 @@ class Frame {
         }
 
         this.playback.hud_map?.hide()
+        this.playback.hud.propertyPanel.points.save() // this is not duplicated in finalize_frames, I do not know how
         this.unmake_editable()
         return true
     }

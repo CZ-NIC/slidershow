@@ -58,7 +58,7 @@ class PropertyPanelPoints {
             .on("click", e => {
                 const pt = e.currentTarget
                 if ($(pt).hasClass("active")) {
-                    this.refresh_points() // register the undoable action
+                    this.refresh_points() // save
                     return this.blur()
                 }
                 $(".hud-point", this.$hud).removeClass("active")
@@ -71,7 +71,7 @@ class PropertyPanelPoints {
     }
 
     /**
-     * Stores variable points to the property $input.
+     * Stores variable points to the property $input (and register the undoable action).
      * @param {?HTMLElement} hud_point Element with the point representation.
      *  If set, it means the user just changed one of its parameters and we should reflect it.
      * @param {?PointStep} point
@@ -105,6 +105,20 @@ class PropertyPanelPoints {
             "html": "<span>" + (htmlOrPoint instanceof PointStep ? htmlOrPoint.toString() : htmlOrPoint) + "</span>",
             "class": "hud-point"
         })
+    }
+
+    /**
+     * Is the user editing a point?
+     */
+    static get beingEdited() {
+        return $(".hud-point.active").length
+    }
+
+    /**
+     * Save any ongoing changes.
+     */
+    static save() {
+        $(".hud-point.active").trigger("click")
     }
 }
 
@@ -225,8 +239,8 @@ class PointStep {
                 this.goto != null ? `goto:${this.goto}` : null,
                 this.rate != null ? `rate:${this.rate}` : null,
                 this.pause != null ? 'pause' : null,
-                this.mute != null ? 'mute' : null,
-                this.unmute != null ? 'unmute' : null,
+                this.mute ? 'mute' : null,
+                this.unmute ? 'unmute' : null,
                 this.position.length && !this._isDefault(this.position) ?
                     `point:${JSON.stringify(this.position)}` : null
             ].filter(Boolean)))
@@ -253,10 +267,18 @@ class PointStep {
             .on("actor.slidershow", (_, data) => {
                 if (data.rotate !== undefined) {
                     this.position[5] = data.rotate
-                    panel.refresh_points(pt, this)
                 }
+                if (data.muted !== undefined) {
+                    [this.mute, this.unmute] = [data.muted, !data.muted]
+                }
+                if (data.rate !== undefined) {
+                    this.rate = data.rate
+                }
+                if(data.currentTime) {
+                    this.startTime = data.currentTime
+                }
+                panel.refresh_points(pt, this)
             })
-        // TODO change on mute, rate etc
     }
 
 
@@ -285,6 +307,9 @@ class PointStep {
             }
             if (this.unmute) {
                 video.muted = false
+            }
+            if(this.pause) {
+                video.pause()
             }
         }
 

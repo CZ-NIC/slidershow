@@ -239,7 +239,9 @@ class Operation {
             ...[
                 ["NumpadAdd", "🐰", "Faster video", () => playback_change(0.1), "only-video"],
                 ["NumpadSubtract", "🐢", "Slower video", () => playback_change(-0.1), "only-video"],
-                ["Alt+m", "🔇", "Toggle muted", () => { act()[0].muted = !act()[0].muted }, "only-video"],
+                ["Alt+m", "🔇", "Toggle muted", () => {
+                    act().trigger('actor.slidershow', { muted: act()[0].muted = !act()[0].muted })
+                }, "only-video"],
                 ["Shift+r", "⤿", "Rotate left", () => rotate(-5)],
                 ["Shift+Alt+r", "⤾", "Rotate right", () => rotate(5)],
                 ["r", "⊾", "Rotate right 90°", () => rotate(90)],
@@ -252,6 +254,7 @@ class Operation {
         function playback_change(step) {
             const r = act()[0].playbackRate = Math.round((act()[0].playbackRate + step) * 10) / 10
             pl.hud.playback_icon(r + " ×")
+            act().trigger('actor.slidershow', { rate: r })
         }
 
         function rotate(deg) {

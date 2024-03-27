@@ -69,6 +69,7 @@ What can you acheive? See a variety of features in another example at [extra/tut
       - [`data-datetime`](#data-datetime)
       - [`data-playback-rate`](#data-playback-rate)
       - [`data-video`](#data-video)
+      - [`data-video-points`](#data-video-points)
     + [Text](#text)
   * [Map](#map)
     + [`<article-map>` frame](#article-map-frame)
@@ -426,6 +427,29 @@ Tip: Can be adjusted by <kbd>Numpad +/-</kbd> while presenting (see menu – <kb
     <video muted src="my_video.mp4"> <!-- becomes <video autoplay controls muted> --></video>
 </article>
 ```
+
+#### `data-video-cut`
+
+Browsers allow you to specify the [playback range](https://developer.mozilla.org/en-US/docs/Web/Media/Audio_and_video_delivery#specifying_playback_range) by `#t=[START],[STOP]` URL suffix. Should you wish to change the value dynamically, you may set it as video-cut.
+
+Ex: `<video src="myvideo.mp4#t=10></video>` will start playing at time 10 s.
+
+Use the property panel (<kbd>Alt+p</kbd>) to help you with.
+
+#### `data-video-points`
+
+Array of events that happen during video playthrough. The format is: `[startTime, rule, rule...]`.
+
+The first item is the `startTime` when other rules happen. Rules are following:
+
+* `goto:[time]` – Where to jump. Ex: `[10, "goto:50"]` means: At the time 10 s, jump to time 50 s.
+* `rate:[s]` – Ex: `[10, "rate:.5"]` means: At the time 10 s, slow down to half.
+* `mute` – Toggles to muted sound.
+* `unmute` – Unmutes sound.
+* `pause` – Video stops.
+* `point:[data-step-point]` – Zoom to a point. This is defined by a standard [data-step-point](#data-step-points). Ex: `[4, "goto:2.9", "point:[100,100,5]"]` means: At the time 4 s, jump back to time 2.9 s and zoom to a given point.
+
+Use the property panel (<kbd>Alt+p</kbd>) to help you with creating video points.
 
 ### Text
 

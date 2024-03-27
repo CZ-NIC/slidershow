@@ -45,6 +45,7 @@ class Hud {
         this.$hud_gps.on("click", () => {
             pl.hud_map.toggle(true)
         })
+        this.propertyPanel = new PropertyPanel(this)
     }
 
     /**
@@ -489,7 +490,7 @@ class Hud {
     */
     async properties() {
         await this.fetch_help()
-        const pp = new PropertyPanel(this)
+        const pp = this.propertyPanel
         const frame = this.playback.frame
         const $frame = frame.$frame
         const $actor = frame.$actor
@@ -512,7 +513,6 @@ class Hud {
                 $props.append(["playback-rate"].map(p => pp.input_ancestored(p, $actor, "number")).flat())
 
                 // video-cut property
-                // TODO missing from readme. Write about video-points interference.
                 const original = frame.get_filename($actor).split("#")[1]?.split("t=")[1]
                 $props.append(pp.input("video-cut", $actor, "", original, "text", "START[,STOP]", val => {
                     const src = $actor.attr("src")
@@ -527,7 +527,6 @@ class Hud {
                 }))
 
                 // video-points property
-                // TODO readme, tutorial, functionality
                 // TODO pack input_ancestored to save space (hide inputs unless having value or clicked or something)
                 pp
                     .input_ancestored("video-points", $actor)
