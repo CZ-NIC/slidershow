@@ -227,7 +227,7 @@ class PointStep {
      * @returns
      */
     _isDefault(point) {
-        return arraysEqual(point, FrameZoom.DEFAULT_ZOOM)
+        return point.length === 3 && FrameZoom.isDefault(point)
     }
 
     toString() {

@@ -610,5 +610,15 @@ Or adjust the green template ([extra/green.css](https://cz-nic.github.io/sliders
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/CZ-NIC/slidershow@latest/extra/green.css" />
 ```
 
+# Troubleshooting
+
+## Media not shown: [HEIF](https://caniuse.com/?search=heif), MOV...
+
+Some formats might not be supported in your browser. The is particullary unfortunate for the [JXL](https://caniuse.com/?search=jxl) format, which appears superiour. However is kept restrained by [Google who pushes WebP](https://www.reddit.com/r/programming/comments/1ajq7bj/google_is_once_again_accused_of_snubbing_the_jpeg/) instead.
+
+Another issue arises from the patent mess surrounding x265: [HEIF](https://caniuse.com/?search=heif), [HEVC](https://caniuse.com/?search=hevc). You might have luck with a less common browser that supports these formats.
+
+If you have encouter difficulties with MOV, specifying [the right codec](https://stackoverflow.com/questions/31380695/how-to-open-mov-format-video-in-html-video-tag) might help.
+
 # License
 GNU GPLv3.

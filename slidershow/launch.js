@@ -56,7 +56,9 @@ Private attributes that are not documented in the README because the user should
 *   data("wzoom_get_ratio") screen aware ratio
 *   data("wzoom_resize_off") event destructor
 *   $(window).on("resize.wzoom")
-* Actor event "actor.slidershow" – on ex: rotate change
+* Actor event "actor.slidershow" – on ex: rotate change.
+    If the event has a data- attribute associated, it happens in the frame.refresh_actor.
+    Otherwise, it gets emitted at the point of actor change (ex: video mute operation).
 * Frame video event namespace .slidershow-video
 */
 

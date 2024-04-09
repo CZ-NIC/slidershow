@@ -19,7 +19,8 @@ class Playback {
         /** @type {Interval} */
         this.moving_timeout = new Interval(() => {
             this.moving_timeout.stop()
-            Promise.all([this.frame.video_finished, this.map.finished, this.hud_map.finished]).then(() => this.tryGoNext())
+            const hudTimeouted = Promise.race([this.hud_map.finished, new Promise(r => setTimeout(() => r(), 5000))])
+            Promise.all([this.frame.video_finished, this.map.finished, hudTimeouted]).then(() => this.tryGoNext())
         }).stop()
 
         const fact = id => $("<div/>", { id: id }).prependTo("body")

@@ -203,8 +203,9 @@ class MapWidget {
         this.markers_clear = markers_clear
 
         // The internal map is redrawing and we want to be waited for.
-        this.finished = new Promise(resolve => {
+        this.finished = new Promise((resolve, reject) => {
             this._finished = resolve
+            setTimeout(reject, 5000, 'map timeout')
         }).then(() => {
             this._hold_graphics = false
             this.graphics_stack()

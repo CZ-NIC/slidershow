@@ -2,6 +2,12 @@
  * Append new frame programatically with the static methods.
  */
 class FrameFactory {
+    /**
+     *
+     * @param {string|JQuery} html
+     * @param {boolean} append
+     * @returns {JQuery}
+     */
     static html(html, append = true) {
         const $el = $("<article/>", { html: html })
         if (append) {
@@ -17,10 +23,10 @@ class FrameFactory {
     /**
      *
      * @param {string} filename
-     * @param {bool} append to $main
-     * @param {File} data
-     * @param {bool} ram_only We will push the media contents to the RAM
-     * @param {function} callback When an demanding action ends (like reading exif)
+     * @param {boolean} append to $main
+     * @param {?File} data
+     * @param {boolean} ram_only We will push the media contents to the RAM
+     * @param {?Function} callback When an demanding action ends (like reading exif)
      * @returns {JQuery}
      */
     static img(filename, append = true, data = null, ram_only = false, callback = null) {
@@ -45,9 +51,9 @@ class FrameFactory {
     /**
      *
      * @param {string} filename
-     * @param {bool} append to $main
-     * @param {File} data
-     * @param {bool} ram_only We will push the media contents to the RAM
+     * @param {boolean} append to $main
+     * @param {?File} data
+     * @param {boolean} ram_only We will push the media contents to the RAM
      * @returns {JQuery}
      */
     static video(filename, append = true, data = null, ram_only = false) {
@@ -77,25 +83,25 @@ class FrameFactory {
     /**
      *
      * @param {string} filename
-     * @param {bool} append to $main
+     * @param {boolean} append to $main
      * @param {File} data
-     * @param {bool} ram_only We will push the media contents to the RAM
+     * @param {boolean} ram_only We will push the media contents to the RAM
      * @param {function} callback When an demanding action ends (like reading exif)
-     * @returns {null|jQuery} Null if the file could not be included
+     * @returns {null|JQuery} Null if the file could not be included
      */
     static file(filename, append = true, data = null, ram_only = false, callback = null) {
-        const identifier = data?.type.split("/")[0] || filename.split('.').pop().toLowerCase() // either mime type or the suffix
+        let identifier = data?.type.split("/")[0] || filename.split('.').pop().toLowerCase() // either mime type or the suffix
+        if (["mp4", "mov", "avi", "vob", "ogv", "webm", "mts", "3gp", "mpg", "mpeg", "wmv", "hevc"].includes(identifier)) {
+            identifier = "video"
+        } else if (["jpg", "jpeg", "jxl", "png", "gif", "avif", "webp", "heic"].includes(identifier)) {
+            identifier = "image"
+        }
+
         switch (identifier) {
             case "video":
-            case "mp4":
                 callback()
                 return FrameFactory.video(filename, append, data, ram_only)
             case "image":
-            case "heif":
-            case "heic":
-            case "gif":
-            case "png":
-            case "jpg":
                 return FrameFactory.img(filename, append, data, ram_only, callback)
             default:
                 console.warn("Cannot identify", filename)

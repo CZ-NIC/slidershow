@@ -258,9 +258,10 @@ class Operation {
         }
 
         function rotate(deg) {
-            const val = prop("rotate", act(), null, null, true) + deg
+            const old = prop("rotate", act(), null, null, true)
+            const val = old + deg
             act().attr("data-rotate", val % 360)
-            pl.frame.refresh_actor("rotate")
+            pl.frame.refresh_actor("rotate", old)
         }
     }
 

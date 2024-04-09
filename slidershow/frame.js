@@ -173,12 +173,31 @@ class Frame {
 
     /**
      * @param {boolean|string} propertyName
+     * @param {*} oldVal If this is a user direct change, we might use the old value to compensate the change.
      */
-    refresh_actor(propertyName = true) {
-        if (this.$actor) {
+    refresh_actor(propertyName = true, oldVal = null) {
+        if (this.$actor.length) {
             if (propertyName === true || propertyName === "rotate") {
+                const old = this.zoom.get(this.$actor)
                 const rotate = this.prop("rotate", this.$actor)
-                this.$actor.css("rotate", rotate + "deg")
+                this.$actor.css("rotate", rotate + "deg") // sets immediately, preventing the animated set in the zoom
+                let transition_duration = null
+
+                if (oldVal !== null) {
+                    // An old value is needed to compensate the rotate change.
+                    // The image rotate by its center. However, we want visually stick to a place, i.g. a face.
+                    // Therefore, we edit the translation accordingly.
+                    // This does not look smooth while having a transition, there is a jumpy behaviour which is hard to suppress.
+                    transition_duration = 0 // as there is an old value, this is a user direct change, do not animate
+
+                    const angle = (rotate - oldVal) * (Math.PI / 180) // deg → rad
+                    const [cos, sin] = [Math.cos(angle), Math.sin(angle)]
+                    const [horiz, vertic] = [old[0], old[1]]
+                    old[0] = cos * horiz + -sin * vertic
+                    old[1] = cos * vertic + sin * horiz
+                }
+
+                this.zoom.set(this.$actor, ...old, transition_duration, null, rotate)
                 this.$actor.trigger('actor.slidershow', { rotate: rotate })
             }
         }
@@ -508,7 +527,7 @@ class Frame {
                 Frame.exif($actor)
                 this.panorama_starter?.()
                 Promise.all(this.effects).then(() => {
-                    this.zoom.init(this.$actor)
+                    this.zoom.init(this.$actor, true)
 
                     const loop = this.prop("loop")
                     if (loop) {
@@ -516,7 +535,7 @@ class Frame {
                     }
                 })
             } else if (tag === "VIDEO") {
-                this.zoom.init($actor)
+                this.zoom.init($actor, true)
             }
         })
 
@@ -646,7 +665,7 @@ class Frame {
                 }
                 if (this.playback.hud.propertyPanel.points.beingEdited) {
                     // Why checking being edited? Due to performance reasons, we do not want to flood the trigger with no sense.
-                    $actor.trigger('actor.slidershow', {currentTime: video.currentTime})
+                    $actor.trigger('actor.slidershow', { currentTime: video.currentTime })
                 }
             })
         }

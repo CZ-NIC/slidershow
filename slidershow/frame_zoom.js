@@ -14,16 +14,41 @@ class FrameZoom {
         this._keydown = null
         /** @type {?function} */
         this._keyup = null
+        this._allowKeys = false
+    }
+
+    /**
+     * Is this the default position, no scale.
+     * @param {[number, number, number]} point
+     * @returns {boolean}
+     */
+    static isDefault(point) {
+        return arraysEqual(point, FrameZoom.DEFAULT_ZOOM)
+    }
+
+    /**
+     * @param {JQuery<HTMLImageElement|HTMLMediaElement>} $el
+     * @param {boolean} makeEnabled Zoom may be used before frame enter (ex: step-points). But keys must be active only after frame enter.
+     * */
+    init($el, makeEnabled = false) {
+        const wzoom = $el.data("wzoom")
+        if (makeEnabled) {
+            this._allowKeys = true
+            if (wzoom) {
+                // it might be the image was already zoomed when we came to the frame
+                // now, we can register the arrows
+                this._adjustKeys(wzoom, wzoom.content.currentScale)
+            }
+        }
+        return wzoom || this._init($el) // do not re-initialize
     }
 
     /** @param {JQuery<HTMLImageElement|HTMLMediaElement>} $el */
-    init($el) {
-        if ($el.data("wzoom")) {
-            return $el.data("wzoom") // already initialized
-        }
+    _init($el) {
         const maxScale_default = 5
         let last_scale = null
         const image = $el.prop("tagName") === "IMG"
+        let positionCheck = [0, 0]
 
         const wzoom = WZoom.create($el.get()[0], {
             maxScale: maxScale_default,
@@ -38,12 +63,7 @@ class FrameZoom {
             // Because the click takes us to the current bed (and second click zooms out).
             rescale: wzoom => { // the function seems to be called unintuitively with grab moving
                 const scale = wzoom.content.currentScale
-                if (scale === 1) {
-                    this.destroy_keys()
-                } else {
-                    this.init_keys(wzoom)
-                }
-
+                this._adjustKeys(wzoom, scale)
 
                 wzoom.content.maxScale = Math.max(maxScale_default, scale + 3)
                 if (last_scale !== null) {
@@ -53,8 +73,19 @@ class FrameZoom {
                 }
                 last_scale = scale
             },
-            dragScrollableOptions: {
-                onDrop: () => $el.trigger("zoom.slidershow")
+            onGrab: e => positionCheck = [e.clientX, e.clientY],
+            onDrop: e => {
+                $el.trigger("zoom.slidershow")
+
+                // As I fail to stop event propagation, this has the result the video playing state toggles.
+                // The dragging end simple resolves as a click.
+                // To prevent this, we check the mouse state – little mouse move is considered as a dragging action only.
+                if (e.target instanceof HTMLVideoElement
+                    && Math.abs(e.clientX - positionCheck[0]) > 3
+                    && Math.abs(e.clientY - positionCheck[1]) > 3) {
+                    // Prevent toggling video state... by toggling it twice.
+                    e.target.paused ? e.target.play() : e.target.pause()
+                }
             }
         })
         // Why correcting viewport? When having data-step-points and calling `zoom_set` from `prepare`,
@@ -115,7 +146,7 @@ class FrameZoom {
      * @param {WZoom} wzoom
      */
     init_keys(wzoom) {
-        if (this.keys) {
+        if (this.keys || !this._allowKeys) {
             return
         }
         const jump = 50
@@ -171,6 +202,7 @@ class FrameZoom {
 
     // destruct zooming while leaving the frame
     destroy() {
+        this._allowKeys = false
         $("[data-wzoom]", this.frame.$frame).each((_, el) => {
             const $el = $(el)
             // Maybe no more needed as this method got into .left().
@@ -218,24 +250,41 @@ class FrameZoom {
      * @returns {number} After zoom step duration.
     */
     set($el, left = 0, top = 0, scale = 1, transition_duration = null, duration = null, rotate = 0) {
-        const wzoom = this.init($el)
-        transition_duration ??= prop("step-transition-duration", $el, null, "transition-duration")
-        const ratio = $el.data("wzoom_get_ratio")()
-        const orig = wzoom.options.smoothTime
-        wzoom.options.smoothTime = transition_duration
-        wzoom.transform(top * ratio * scale, left * ratio * scale, scale)
-        wzoom.options.smoothTime = orig
-        this.frame.add_effect(r => $el.on("transitionend", () => r()))
-        this.init_keys(wzoom)
+        if ($el.data("wzoom") || !FrameZoom.isDefault([left, top, scale])) { // Do not starting zoom just because of the default position.
+            // we will start zooming (and register keys) only if we zoom to something interesting, not the default position
+            const wzoom = this.init($el)
+            transition_duration ??= prop("step-transition-duration", $el, null, "transition-duration")
+            const ratio = $el.data("wzoom_get_ratio")()
+            const orig = wzoom.options.smoothTime
+            wzoom.options.smoothTime = transition_duration
+            wzoom.transform(top * ratio * scale, left * ratio * scale, scale)
+            wzoom.options.smoothTime = orig
+            this.frame.add_effect(r => $el.on("transitionend", () => r()))
+
+            // Register keys immediately, do not wait the transition to end so that the user does not end up on a different frame.
+            this._adjustKeys(wzoom, scale)
+        }
 
         // rotation
         if (rotate || prop("rotate", $el, null, null, true) !== null) { // set new rotation or unset rotation
             $el.attr("data-rotate", rotate)
             this.frame.add_effect(r =>
-                $el.animate({ rotate: rotate + "deg" }, transition_duration * 1000,
+                $el.animate({ rotate: rotate + "deg" }, transition_duration * 1000, "linear",
                     () => r()))
         }
         return duration ?? prop("step-duration", $el, null, "duration")
     }
 
+    /**
+     * Turn on or off the keys.
+     * @param {WZoom} wzoom
+     * @param {number} scale
+     */
+    _adjustKeys(wzoom, scale) {
+        if (scale === 1) {
+            this.destroy_keys()
+        } else {
+            this.init_keys(wzoom)
+        }
+    }
 }
