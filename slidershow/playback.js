@@ -387,7 +387,7 @@ class Playback {
 
         // Unload the frame
         // lose focus on anything on the past frame (but keep on HUD)
-        $(':focus', $last).blur()
+        $(':focus', $last).trigger("blur")
 
         const next = this.$articles[index]
         const $current = this.$current = next ? $(next) : $last

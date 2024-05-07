@@ -216,20 +216,25 @@ class Frame {
             .add($("li", this.$frame)
                 .filter((_, el) => this.prop("step-li", $(el))))
             // [data-step-points] affects all <img>
-            .add($("img", this.$frame)
-                .filter((_, el) => !$(el).closest("header, footer").length) // filter out images in header/footer
+            .add(this.getImagesWithStepPoints()
                 .map((_, el) => {
                     // generate multiple steps (dummy <img-temp-animation-step>) for points
                     const $el = $(el)
                     const points = this.prop("step-points", $(el))
-                    if (!points?.length) {
-                        return
+                    if (points.length === 1) {
+                        // There is an image with a single step.
+                        // Normally, the first step is already active. However, the author defined only a single one.
+                        // Let's assume they wanted just one frame state, not multiple steps.
+                        // When the user proceeds to the next step, they end up in a different frame.
+                        this.zoom.set($el, ...points[0])
+                        return []
+                    } else {
+                        return $.map(points.slice(1), // the init point will already be zoomed into (thanks to the data(callback)), slice it out
+                            (point, index) => $("<img-temp-animation-step/>")
+                                // show the next or the previous animation step (we sliced the points due to the init point)
+                                .data("callback", shown => this.zoom.set($el, ...shown ? point : points[index]))
+                            [0])
                     }
-                    return $.map(points.slice(1), // the init point will already be zoomed into, slice it out
-                        (point, index) => $("<img-temp-animation-step/>")
-                            // show the next or the previous animation step (we sliced the points due to the init point)
-                            .data("callback", shown => this.zoom.set($el, ...shown ? point : points[index]))
-                        [0])
                 }))
 
         // Finalize [data-step]
@@ -268,14 +273,22 @@ class Frame {
                 }
             })
 
-        // Adjust initial step (either the first or the last)
-        if (!last_frame || last_frame.index < this.index) { // went forward to the frame (or direct entry)
-            this.step_index = 0
-            this.step_process($(this.steps.slice(0, 1).flat()), false)
-        } else { // went backwards to the frame
-            this.step_index = this.steps.length
-            this.step_process($(this.steps.slice(this.steps.length - 1).flat()), true)
+        // Adjust initial step (either the first or the last).
+        if (last_frame && last_frame !== this) { // If the frame === last_frame, this might be just window resize and font size change
+            if (last_frame.index < this.index) { // went forward to the frame (or direct entry)
+                this.step_index = 0
+                this.step_process($(this.steps.slice(0, 1).flat()), false)
+            } else { // went backwards to the frame
+                this.step_index = this.steps.length
+                this.step_process($(this.steps.slice(this.steps.length - 1).flat()), true)
+            }
         }
+    }
+
+    getImagesWithStepPoints() {
+        return $("img", this.$frame)
+            .filter((_, el) => !$(el).closest("header, footer").length) // filter out images in header/footer
+            .filter((_, el) => this.prop("step-points", $(el))?.length) // only elements with (inherited) step-points
     }
 
     map_prepare() {
@@ -727,7 +740,9 @@ class Frame {
     clean_steps() {
         Frame._clean_step($("[data-step]", this.$frame))
         this.steps = []
-        // this.step_index = this.steps.length
+        // These images might have been zoomed by a step.
+        // Either when we suddenly jumped to another frame (without completing steps one by one) or when there is an image with a single step.
+        this.getImagesWithStepPoints().each((_, el) => this.zoom.set($(el), ...FrameZoom.DEFAULT_ZOOM))
     }
 
     /**
