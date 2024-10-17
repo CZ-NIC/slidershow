@@ -1,6 +1,6 @@
 # CHANGELOG
 
-## unreleased
+## 0.9.6 (2024-10-17)
 * video pause will not cause frame change
 * more intuitive auto-forward button
 * fix: video autoplay when going backwards

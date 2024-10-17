@@ -20,6 +20,7 @@ class AuxWindow {
         this.$current_frame = $("#current_frame")
         this.$notes = $("#notes")
         this.$next_frame = $("#next_frame")
+        this.$status_message = $("#status_message")
 
 
         const master = new BroadcastChannel(`slidershow=${channel_id}`)
@@ -62,6 +63,14 @@ class AuxWindow {
     }
 
     /**
+     * Sends a text from the main to the aux window.s
+     * @param {string} text
+     */
+    display_message(text) {
+        this.channel.postMessage({ "action": "display-message", "text": text })
+    }
+
+    /**
      * @param {Frame} frame
      */
     update_step(frame) {
@@ -86,8 +95,11 @@ class AuxWindow {
                 break
             case "get-last-state":
                 if (this.last_info) {
-                this.channel.postMessage(this.last_info)
+                    this.channel.postMessage(this.last_info)
                 }
+                break
+            case "display-message":
+                this.$status_message.html(e.text)
                 break
             case "pressed-key":
                 wh.simulate(e.key)
@@ -103,6 +115,7 @@ class AuxWindow {
             <div id="slide-wrapper">
                 <frame-preview id="current_frame">Start presenting to see current frame here.</frame-preview>
                 <div>
+                    <p id="status_message"></p>
                     <h3>Next slide</h3>
                     <frame-preview id="next_frame"></frame-preview>
                 </div>

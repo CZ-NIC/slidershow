@@ -274,7 +274,7 @@ class PointStep {
                 if (data.rate !== undefined) {
                     this.rate = data.rate
                 }
-                if(data.currentTime) {
+                if (data.currentTime) {
                     this.startTime = data.currentTime
                 }
                 panel.refresh_points(pt, this)
@@ -308,7 +308,7 @@ class PointStep {
             if (this.unmute) {
                 video.muted = false
             }
-            if(this.pause) {
+            if (this.pause) {
                 video.pause()
             }
         }

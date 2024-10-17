@@ -673,6 +673,7 @@ class Frame {
                 if (video.currentTime >= videoPoint?.startTime) {
                     if (!this.playback.hud.propertyPanel.points.beingEdited) {
                         videoPoint.affect($actor, this.zoom)
+                        this.playback.aux_window.display_message(`Video point: ${videoPoint}`)
                         videoPoint = videoPoints.shift()
                     }
                 }
