@@ -99,11 +99,14 @@ class Hud {
     }
 
     toggle_properties() {
+        let on = false
         this.$hud_properties.toggle()
         if (this.properties_visible && this.playback.frame) {
             // when restoring session from the hash, frame is not ready yet
+            on = true
             this.properties()
         }
+        this.playback.operation.properties.toggle(on)
         this.playback.session.store()
     }
     get thumbnails_visible() {

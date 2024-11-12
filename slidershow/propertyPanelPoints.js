@@ -87,6 +87,9 @@ class PropertyPanelPoints {
             // Why `change.$`? We want to ignore our `change.step-points`
             // that would create a loop and delete this very container.
             this.$input.trigger("change.$")
+            // do not let the focus to be stuck to the <input>
+            // (which is just technical and not very user friendly fallback)
+            this.$input.trigger("blur")
         }
     }
 

@@ -170,6 +170,9 @@ frame-preview article-map:before {
 #hud #hud-menu button[data-role="magnify-little"] {
   text-shadow: 0 0 darkcyan;
 }
+#hud #hud-menu button[data-role="crossed"] {
+  text-decoration: line-through;
+}
 #hud #hud-fileinfo {
   right: 3vw;
   bottom: 10vw;

@@ -12,6 +12,7 @@ class Operation {
         this.tagging = this.taggingInit()
         this.editing = this.editingInit()
         this.media = this.mediaInit()
+        this.properties = this.propertiesInit()
 
         this.playback.hud.registerMenu()
     }
@@ -205,7 +206,9 @@ class Operation {
                 ["m", "🗺", "Toggle hud map", () => pl.hud_map.toggle(true), "not-video"],
                 ["i", "ℹ", "Toggle file info", () => $("#hud-fileinfo").toggle()],
                 ["z", "🔍", "Photo or video zoom (cycle)", () => zoom()],
-                ["Shift+z", "🔍", "Photo or video zoom (only up)", () => zoom(true), "magnify-little"],
+                ["Shift+z", "🔍", "Photo or video little zoom in", () => zoom(true), "magnify-little"],
+                ["Shift+x", "🔎", "Photo or video little zoom out", () => zoom(-1), "magnify-little"],
+                ["Shift+Alt+z", "🔎", "Zoom out", () => zoom(false), "crossed"],
                 ["Alt+g", "⇗", "Go to frame", () => {
                     new $.Zebra_Dialog(`You are now at ${pl.frame.slide_index + 1} / ${pl.slide_count}`, {
                         title: "Go to slide number",
@@ -221,8 +224,12 @@ class Operation {
 
         function zoom(little) {
             const wzoom = pl.frame.$actor?.data("wzoom")
-            if (little) {
+            if (little === true) {
                 wzoom.zoomUp()
+            } else if (little === -1) {
+                wzoom.zoomDown()
+            } else if (little === false) {
+                wzoom.maxZoomDown()
             } else if (wzoom) { // zoom several times, then unzoom
                 if (wzoom.content.currentScale <= 8) {
                     wzoom.maxZoomUp()
@@ -262,6 +269,23 @@ class Operation {
             const val = old + deg
             act().attr("data-rotate", val % 360)
             pl.frame.refresh_actor("rotate", old)
+        }
+    }
+
+    propertiesInit() {
+        const pl = this.playback
+        return wh.group("Properties", [
+            ...[
+                // NOTE: If you change the frame with the property panel closed,
+                // the shortcut still triggers the button on the old frame
+                // causing the browser to go back and register unzoomed position as a data-point.
+                ["Alt+s", "📸", "Add step point", () =>
+                    $(".hud-point", pl.hud.$hud).eq(1).trigger("click")
+                ],
+            ].map(this._button("Properties"))]).disable()
+
+        function act() {
+            return pl.frame.$actor
         }
     }
 
