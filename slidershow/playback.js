@@ -79,6 +79,29 @@ class Playback {
                 }
             )
         })
+
+        // Mobile navigation
+        let touchstartX, touchendX
+        document.addEventListener('touchstart', function (event) {
+            touchstartX = event.changedTouches[0].screenX;
+        }, false);
+        document.addEventListener('touchend', function (event) {
+            touchendX = event.changedTouches[0].screenX;
+            handleGesture();
+        }, false);
+
+        const handleGesture = () => {
+            // Allow only if zoom is not active
+            if (!this.frame.zoom.keys && Math.abs(touchendX - touchstartX) > 150) {
+                if (touchendX < touchstartX) {
+                    this.goNext()
+                } else {
+                    this.goPrev()
+                }
+            }
+            touchstartX = 0
+        }
+
     }
 
     start() {

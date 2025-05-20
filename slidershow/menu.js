@@ -87,7 +87,7 @@ class Menu {
      * @returns {Boolean} Whether the items were successfully inserted.
      */
     appendFiles(items) {
-        if(!items.length) {
+        if (!items.length) {
             return false
         }
         const $section = this.playback.operation.insertNewSection()
