@@ -22,9 +22,8 @@ loadjQuery(() => {
             referrerpolicy: "no-referrer"
         },
         {
-            // TODO waiting for my PR
-            // src: "https://cdn.jsdelivr.net/npm/vanilla-js-wheel-zoom@8.1.0/dist/wheel-zoom.min.js",
-            src: "https://cdn.jsdelivr.net/gh/worka/vanilla-js-wheel-zoom@e3394d0/dist/wheel-zoom.min.js",
+            // src: "https://cdn.jsdelivr.net/npm/vanilla-js-wheel-zoom@9.0.4/dist/wheel-zoom.min.js",
+            src: "https://cdn.jsdelivr.net/gh/worka/vanilla-js-wheel-zoom@952d1add/dist/wheel-zoom.min.js",
             crossOrigin: "anonymous",
         },
         { src: "https://cdn.jsdelivr.net/npm/js-circle-progress@0.2.4/dist/jquery.circle-progress.min.js" },

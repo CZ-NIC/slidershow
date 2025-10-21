@@ -92,6 +92,7 @@ class AuxWindow {
                     .removeClass("current-step step-hidden step-not-yet-visible")
                     .filter((_, el) => $(el).data("step") > e.step).addClass("step-not-yet-visible")
                 this.$current_frame.find(`[data-step=${Number(e.step)}]`).addClass("current-step", true)
+                this.$status_message.html("")
                 break
             case "get-last-state":
                 if (this.last_info) {

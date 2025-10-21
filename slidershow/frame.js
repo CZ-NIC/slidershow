@@ -669,13 +669,21 @@ class Frame {
         if (videoPoints.length) {
             /** @type {PointStep} */
             let videoPoint = videoPoints.shift()
+            let videoPointOutput = false
             $actor.on('timeupdate.slidershow-video', () => {
-                if (video.currentTime >= videoPoint?.startTime) {
-                    if (!this.playback.hud.propertyPanel.points.beingEdited) {
+                if (!this.playback.hud.propertyPanel.points.beingEdited) {
+                    if (video.currentTime >= videoPoint?.startTime) {
                         videoPoint.affect($actor, this.zoom)
-                        this.playback.aux_window.display_message(`Video point: ${videoPoint}`)
+                        let msg = `Video point: ${videoPoint}`
                         videoPoint = videoPoints.shift()
+                        if (videoPoint) {
+                            msg += `→ ⌛ ${videoPoint}`
+                        }
+                        this.playback.aux_window.display_message(msg)
+                    } else if (!videoPointOutput) {
+                        this.playback.aux_window.display_message(`Video point: → ⌛ ${videoPoint}`)
                     }
+                    videoPointOutput = true
                 }
                 if (this.playback.hud.propertyPanel.points.beingEdited) {
                     // Why checking being edited? Due to performance reasons, we do not want to flood the trigger with no sense.
@@ -902,6 +910,10 @@ class Frame {
         $actor.removeAttr("style")
 
         if (w > main_w && w / h > this.prop("panorama-threshold", $actor)) {
+            if (this.getImagesWithStepPoints().length) {
+                console.debug("Panorama disabled due to step points")
+                return
+            }
             // the image is wider than the sceen (would been shrinked) and its proportion looks like a panoramatic
             // 100 px / 1s, for wider panoramas 200 px / 1 s but max 15 sec
             const speed = (trailing_width < 500 ? trailing_width / 100 : Math.min((trailing_width / 200), 15)) * 1000

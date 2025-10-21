@@ -57,7 +57,8 @@ class PropertyPanel {
         const pl = this.playback
         const original_frame = pl.frame.index
 
-        if (PROP_NONSCALAR[p]) {
+
+        if (value && PROP_NONSCALAR[p]) {
             value = JSON.stringify(value) // ex: step-points
         }
 

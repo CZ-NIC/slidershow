@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## 0.9.7 (2025-10-22)
+* feat: mobile swipe support
+* enh: shortcuts
+* fix: rotation
+
 ## 0.9.6 (2024-10-17)
 * video pause will not cause frame change
 * more intuitive auto-forward button
