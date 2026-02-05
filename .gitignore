@@ -1,2 +1,5 @@
 *.jpg
 *.mp4
+node_modules
+package.json
+package-lock.json

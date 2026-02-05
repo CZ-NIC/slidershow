@@ -31,6 +31,8 @@ When in the application, drag and drop media files into the page and just start 
 
 What can you acheive? See a variety of features in another example at [extra/tutorial.html](https://cz-nic.github.io/slidershow/extra/tutorial.html).
 
+Generate a presentation from the sheet with [slidershow-builder](https://github.com/CZ-NIC/slidershow-builder/).
+
 # Contents
 - [Prologue](#slidershow--more-than-a-slideshow)
 - [Usage](#usage)
@@ -325,7 +327,7 @@ How many seconds will a frame step last. By default, it takes [`data-duration`](
 
 #### `data-step-transition-duration`
 
-How many seconds will it take to change an image zoom step. By default, it takes [`data-transition-duration`](#data-transition-duration).
+How many seconds will it take to change to an image zoom step. By default, it takes [`data-transition-duration`](#data-transition-duration).
 
 ### `<img>`
 
@@ -347,7 +349,7 @@ Array of points an image should pass. The first is the initial image position. W
 
 Point: `[left = 0, top = 0, scale = 1, transition_duration = data-step-transition-duration | data-transition-duration, duration = data-step-duration | data-duration, data-rotate ]`
 
-In this example, the image starts at `[100, 10, 2]`, then zooms out `[]`, then goes slowly (note the delay parameter) to `[150,10,3,3]`. Next, while using the default `transition_duration` (note the `null` -> becomes `1.5`), we set `duration` to 0.5 second for this step only `[200,10,4,null,.5]`.
+In this example, the image starts at `[100, 10, 2]`, then zooms out `[]` (instantly, no delay), then goes slowly (note the delay parameter) to `[150,10,3,3]`. Next, while using the default `transition_duration` (note the `null` -> becomes `1.5`), we set `duration` to 0.5 second for this step only `[200,10,4,null,.5]`.
 
 ```html
 <article data-transition-duration=1.5>
@@ -483,8 +485,8 @@ These are map-related attributes which helps you to display the HUD/fullscreen m
         <article-map data-places="Pardubice"></article-map>
     </article-map>
     ```
-* `data-map-geometry-criterion=''`: empty or `fast`, `short`, `turist1`, `turist2`, `bike1`, `bike2`, `bike3`
-* `data-map-markers-show=true`: Show red marker of a point.
+* `data-map-geometry-criterion=''`: empty or `car_fast`, `car_fast_traffic`, `car_short`, `foot_fast`, `foot_hiking`, `bike_road`, `bike_mountain`,
+* `data-map-markers-show=false`: Show marker of a point.
 * `data-map-geometry-clear=true`: Clear all route and drawings before displaying.
 * `data-map-markers-clear=true`: Clear all point markers. (Or keep them visible all.)
 

@@ -1,5 +1,8 @@
 # CHANGELOG
 
+## 0.9.8 (2026-02-05)
+* update: new mapy.com API
+
 ## 0.9.7 (2025-10-22)
 * feat: mobile swipe support
 * enh: shortcuts

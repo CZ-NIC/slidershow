@@ -6,6 +6,8 @@
 //  As well as: <script src="https://cdn.jsdelivr.net/gh/CZ-NIC/slidershow@latest/slidershow/slidershow.js"></script>
 const DIR = document.querySelector("script[src$='slidershow.js']").getAttribute("src").replace(/\/slidershow.js$/, "") + "/";
 const MAP_ENABLE = !location.hash.includes("map-disabled")
+// NOTE fetch MAPY_TOKEN from URL/UI too
+const MAPY_TOKEN = "G2Tz6lgHdd2FpdZCwuU3yvbggGKSwcVkv8ptLos3Mn8" // demo token, get your own at https://developer.mapy.com/account/projects
 
 // style
 document.querySelector("html").style.display = "none" // so that body images are not shown before the style loads (short white blink appears instead)
@@ -31,11 +33,14 @@ loadjQuery(() => {
         { src: "https://cdn.jsdelivr.net/gh/e3rd/WebHotkeys@0.9.3/WebHotkeys.js?register" },
         { src: "https://cdn.jsdelivr.net/npm/exif-js" },
         { src: "https://cdn.jsdelivr.net/npm/showdown@2.1.0/dist/showdown.min.js" },
-        MAP_ENABLE ? { src: "https://api.mapy.cz/loader.js" } : null,
+        MAP_ENABLE ? { src: "https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" } : null,
         { src: "https://cdn.jsdelivr.net/npm/zebra_dialog@3.0.5/dist/zebra_dialog.min.js" }
     ].filter(Boolean).map(f => loadScript(f))
 
-    const vendor_styles = ["https://cdn.jsdelivr.net/npm/zebra_dialog@latest/dist/css/materialize/zebra_dialog.min.css"].map(f => loadStyle(f))
+    const vendor_styles = ["https://cdn.jsdelivr.net/npm/zebra_dialog@latest/dist/css/materialize/zebra_dialog.min.css",].map(f => loadStyle(f))
+    if (MAP_ENABLE) {
+        loadStyle("https://unpkg.com/leaflet@1.9.4/dist/leaflet.css")
+    }
 
     const local = ["static.js", "frame_factory.js", "frame.js", "frame_zoom.js", "place.js", "map.js", "hud.js", "export.js", "property_panel.js", "propertyPanelPoints.js", "operation.js", "changes.js", "menu.js", "playback.js", "session.js", "aux_window.js"].filter(Boolean).map(f => loadScript({ src: DIR + f }))
 
@@ -65,14 +70,7 @@ loadjQuery(() => {
     }
 
     // wait for all scripts to load
-    Promise.all(vendor.concat(local)).then(() => {
-        if (MAP_ENABLE) {
-            Loader.async = true
-            Loader.load(null, { suggest: true }, load_launch)
-        } else {
-            load_launch()
-        }
-    })
+    Promise.all(vendor.concat(local)).then(() => load_launch() )
 })
 
 function loadjQuery(callback) {

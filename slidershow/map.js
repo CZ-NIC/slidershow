@@ -1,34 +1,64 @@
 class AnimationStep {
     /**
-     * @param {number} longitude
      * @param {number} latitude
+     * @param {number} longitude
      * @param {number} zoom
      * @param {string} description
+     * @param {boolean} marker Show the marker
+     * @param {boolean} clearable If true, we might clean the layers
      */
-    constructor(longitude, latitude, zoom, description, marker = false) {
-        this.longitude = longitude
+    constructor(latitude, longitude, zoom, description, marker = false, clearable = false) {
         this.latitude = latitude
+        this.longitude = longitude
         this.zoom = Math.round(zoom)
         this.description = description
         this.marker = marker
+        this.clearable = clearable
     }
 
+    /**
+     * Return coordinates as plain object [lat, lon]
+     * @returns {L.LatLng}
+     */
     point() {
-        return SMap.Coords.fromWGS84(this.longitude, this.latitude)
+        return L.latLng(this.latitude, this.longitude)
     }
 }
 
 class MapWidget {
+    /**
+     * @type {L.Map}
+     */
+    map
+
+    /**
+     * Animation steps
+     * @type {AnimationStep[]}
+    */
+    animation
+
+    /**
+     * Final animation destination
+     * @type {?L.LatLng}
+    */
+    target_point
+
+    /**
+     * @type {L.LayerGroup}
+     */
+    geometry_layer
+    /**
+     * @type {L.LayerGroup}
+     */
+    marker_layer
+
+
     /**
      *
      * @param {JQuery} $map
      * @param {Playback} playback
      */
     constructor($map, playback) {
-        /**
-         * @type {SMap}
-         */
-        this.map = null
 
         this.$map = $map
         this.playback = playback
@@ -37,19 +67,6 @@ class MapWidget {
         this.query_last
         this.changing
 
-        /**
-         * Animation steps
-         * @type {AnimationStep[]}
-        */
-        this.animation
-
-        /**
-         * Final animation destination
-         * @type {number}
-         * @property {number} 0 - longitude
-         * @property {number} 1 - latitude
-        */
-        this.target_point
         this._animate_map_init()
 
 
@@ -63,6 +80,7 @@ class MapWidget {
 
         this.geometry_clear = null
         this.markers_clear = null
+        this.markers_show = null
         /** @type {Place[]} */
         this.last_places = []
 
@@ -89,31 +107,28 @@ class MapWidget {
         if (!MAP_ENABLE) {
             return this
         }
-        const center = SMap.Coords.fromWGS84(14.41790, 50.12655)
-        const map = this.map = new SMap(JAK.gel(this.$map[0]), center)
+        const center = L.latLng(50.12655, 14.41790)
+        const map = this.map = L.map(this.$map[0]).setView(center, 13)
 
-        this.default_layer = map.addDefaultLayer(SMap.DEF_BASE)
-        this.default_layer.enable()
-        // this.geography_layer = map.addDefaultLayer(SMap.DEF_GEOGRAPHY)
-        // console.log("69: this.default_layer", this.default_layer, this.geography_layer)
+        L.tileLayer(`https://api.mapy.com/v1/maptiles/basic/256/{z}/{x}/{y}?apikey=${MAPY_TOKEN}`, {
+            maxZoom: 18,
+            attribution: '© Seznam.cz, a.s.'
+        }).addTo(map)
 
-        map.addDefaultControls()
-
-        // marker layer
-        this.marker_layer = new SMap.Layer.Marker()
-        map.addLayer(this.marker_layer)
-        this.marker_layer.enable()
+        // marker layer (kompatibilní se starým kódem)
+        this.marker_layer = L.layerGroup().addTo(map)
 
         // geometry layer
-        this.geometry_layer = new SMap.Layer.Geometry()
-        map.addLayer(this.geometry_layer).enable()
+        this.geometry_layer = L.layerGroup().addTo(map)
+
+        map.on('moveend zoomend', () => {
+            if (!this.animation.length) {
+                this._finished()
+            }
+        })
+
         this.$map.hide(0)
 
-        // signals
-        // zoom-stop for data-map-animate: true
-        // map-unlock for data-map-animate: true without zooming
-        // center-stop for data-map-animate: false
-        map.getSignals().addListener(this, "map-unlock zoom-stop center-stop", e => !this.animation.length && this._finished())
         return this
     }
 
@@ -159,7 +174,7 @@ class MapWidget {
         this.$map.hide()
     }
     destroy() {
-        this.map.$destructor()
+        this.map.remove()
         this.$map.remove()
     }
     /**
@@ -201,6 +216,7 @@ class MapWidget {
         this.last_places = last_places || []
         this.geometry_clear = geometry_clear
         this.markers_clear = markers_clear
+        this.markers_show = markers_show
 
         // The internal map is redrawing and we want to be waited for.
         this.finished = new Promise((resolve, reject) => {
@@ -215,60 +231,51 @@ class MapWidget {
         await Promise.all(places.map(p => p.assure_coord()))
 
         if (!animate) { // animation will clear them just before its ending
-            if (this.geometry_clear) {
-                this.geometry_layer.removeAll()
-            }
-            if (this.markers_clear) {
-                this.marker_layer.removeAll()
-            }
+            if (this.geometry_clear) this.geometry_layer.clearLayers()
+            if (this.markers_clear) this.marker_layer.clearLayers()
         }
 
-        if (markers_show) {
-            places.forEach(place => {
-                // var card = new SMap.Card();
-                // card.getHeader().innerHTML = "<strong>Header</strong>";
-                // card.getBody().innerHTML = "Contents";
+        const routePromise = geometry_show ? this._route(geometry_show, places, geometry_criterion) : null
 
-                // const src = "img.jpg"
-                // const marker = new SMap.Marker(place.coord(), place.name, {
-                //     title: place.name,
-                //     url: $("<img/>", { "src": src }).css({ "width": "50px" }).get()[0]
-                // })
-                // marker.decorate(SMap.Marker.Feature.Card, card);
-                // this.marker_layer.addMarker(marker)
-                this.marker_layer.addMarker(new SMap.Marker(place.coord(), place.name))
-            })
-        }
         if (geometry_show) {
             // if we await, it takes longer but the geometry is more stable
             // however, we do not want the user to lag
             await Promise.race([this._route(geometry_show, places, geometry_criterion), new Promise(resolve => setTimeout(() => resolve(), ROUTE_TIMEOUT))])
         }
+        if (markers_show) {
+            places.forEach(place => {
+                this.marker_layer.addLayer(L.marker(place.coord()).bindPopup(place.name))
+            })
+        }
+
 
         const coords = places.map(p => p.coord())
-        let [center, computed_zoom] = this.map.computeCenterZoom(coords)
-        if (coords.length === 1) {
-            computed_zoom = this.map.computeCenterZoom([...coords, this.map.getCenter()])[1]
-        }
+        const center = coords.length === 1 ? coords[0] : this.map.getBounds().getCenter()
+
+        const computed_zoom = zoom || (coords.length === 1 ? 15 : this.map.getZoom())
 
         // Start panning the map
         if (animate && this.used) { // we can animate only if the map has been used -> has a center to animate from
-            this._animate_to(center.x, center.y, computed_zoom, zoom)
+            this._animate_to(center.lat, center.lng, computed_zoom, zoom, null)
         } else {
             this.animation.length = 0 // is we switch slides too fast and there is still an ongoing animation, ends it prematurely
 
             this._hold_graphics = true // when using this.map.setCenter, no graphics should be drawn unless finished
-            this.map.setCenter(center, true)
-            if (zoom || computed_zoom) {
-                this.map.setZoom(zoom || computed_zoom)
-            }
+            this.map.setView(center, zoom || computed_zoom, { animate: false })
 
             if (animate && !this.used && !zoom) { // as the center is being set right now, zoom this to a district level
                 // (If we directly animated without with no center previously set, we'd see Prague for a moment
                 // as this is the map vendor default. Which seemed weird for a different continent.)
-                this._animate_to(center.x, center.y, computed_zoom, 8, center)
+                this._animate_to(center.lat, center.lng, computed_zoom, 8, center)
             }
         }
+
+        if (routePromise) {
+            // if we await, it takes longer but the geometry is more stable
+            // however, we do not want the user to lag
+            this._waitWithMinMax(routePromise, 200, ROUTE_TIMEOUT, "route timeout")
+        }
+
         this.used = true // first use done
     }
 
@@ -278,6 +285,8 @@ class MapWidget {
      * Changing the center multiple times somewhat quickly causes the graphics drawn wrong for a moment.
      * The solution is to draw the graphics either before the animation starts or when finished.
      * @param {?Function} fn Added to the graphics stack.
+     *
+     * NOTE this function might not be needed now. (We migrated to Mapy REST API.)
      */
     graphics_stack(fn = null) {
         if (fn) {
@@ -302,21 +311,47 @@ class MapWidget {
         if (routing.length > 1) { // geometry_show === "line"
             if (line) {
                 this.graphics_stack(() =>
-                    this.geometry_layer.addGeometry(new SMap.Geometry(SMap.GEOMETRY_POLYLINE, null, points)))
+                    L.polyline(points).addTo(this.geometry_layer))
             }
             else { // geometry_show === "route"
-                return SMap.Route.route(points, {
-                    geometry: true,
-                    criterion: geometry_criterion
-                }).then((route) => {
-                    if (route._results.error) {
-                        console.warn("Cannot find route", route)
-                        return
+                try {
+                    const start = points[0]
+                    const end = points[points.length - 1]
+
+                    const url = new URL('https://api.mapy.com/v1/routing/route')
+                    url.searchParams.set('start', `${start.lng},${start.lat}`)
+                    url.searchParams.set('end', `${end.lng},${end.lat}`)
+                    if (geometry_criterion) {
+                        url.searchParams.set('routeType', geometry_criterion || 'car_fast')
                     }
-                    const route_coords = route.getResults().geometry
-                    this.graphics_stack(() =>
-                        this.geometry_layer.addGeometry(new SMap.Geometry(SMap.GEOMETRY_POLYLINE, null, route_coords)))
-                })
+                    url.searchParams.set('format', 'geojson')
+                    url.searchParams.set('apikey', MAPY_TOKEN)
+
+                    return fetch(url.toString())
+                        .then(async res => {
+                            const data = await res.json()
+                            if (!res.ok) {
+                                if (data?.detail?.length) {
+                                    this.playback.hud.info(`Routing API error<br>${data.detail[0].msg}`)
+                                }
+                                throw new Error("Routing API error")
+                            }
+                            return data
+                        })
+                        .then(data => {
+                            if (!data.geometry) {
+                                throw new Error("Routing API returned no geometry")
+                            }
+
+                            this.graphics_stack(() =>
+                                L.geoJSON(data.geometry, { style: { color: '#007bff', weight: 4 } })
+                                    .addTo(this.geometry_layer)
+                            )
+                        })
+
+                } catch (e) {
+                    console.error("Routing error", e)
+                }
             }
         }
     }
@@ -337,33 +372,37 @@ class MapWidget {
         this.animation = []
         this.target_point = null
         this.changing = new Interval(() => {
-            if (this.animation.length === 0) { // animation ends
+            const as = this.animation.shift()
+            if (!as) { // animation ends
                 this.changing.stop()
                 // check map broken
                 const r = x => Math.round(x * 10000)
-                if (r(this.target_point.x) !== r(this.map.getCenter().x) || r(this.target_point.y) !== r(this.map.getCenter().y)) {
+                if (!this.target_point || r(this.target_point.lat) !== r(this.map.getCenter().lat) || r(this.target_point.lng) !== r(this.map.getCenter().lng)) {
                     this.playback.hud.info("Map broken?", true)
                 }
                 return
             }
-            const as = this.animation.shift()
 
-            if (as.marker) {
+            if (as.clearable) {
                 // it looks better when the old marker vanishes in the last step of an animation
                 if (this.geometry_clear) {
-                    this.geometry_layer.removeAll()
-                }
-                if (this.markers_clear) {
-                    this.marker_layer.removeAll()
+                    this.geometry_layer.clearLayers()
                 }
 
-                this.marker_layer.addMarker(new SMap.Marker(as.point()))
+                if (this.markers_clear) {
+                    this.marker_layer.clearLayers()
+                }
+            }
+
+            if (as.marker) {
+                this.marker_layer.addLayer(L.marker(as.point()))
+
+                // NOTE rather check the map moves (as.point() is the current center and no as.zoom) than this
                 // we just add the final point marker, no moving, skip interval iteration
                 return this.changing.call_now()
             }
 
-            this.map.setCenterZoom(as.point(), as.zoom, true)
-
+            this.map.setView(as.point(), as.zoom, { animate: true })
         }, 700).stop()
 
     }
@@ -371,35 +410,44 @@ class MapWidget {
 
     /**
      *
-     * @param {Number} longitude
      * @param {Number} latitude
-     * @param {?Number} computed_zoom Recommended final zoom.
+     * @param {Number} longitude
+     * @param {Number} computed_zoom Recommended final zoom.
      * @param {?Number} zoom_final If not set, it is based on a previous location.
-     * @param {Object} center Use this as center, not current map center.
+     * @param {?L.LatLng} center Use this as center, not current map center.
      * @returns
      */
-    _animate_to(longitude, latitude, computed_zoom, zoom_final, center = null) {
-        if (this.query_last?.join() === [longitude, latitude, zoom_final].join()) {
+    _animate_to(latitude, longitude, computed_zoom, zoom_final, center = null) {
+        if (this.query_last?.join() === [latitude, longitude, zoom_final].join()) {
             return
         }
-        this.query_last = [longitude, latitude, zoom_final]
+        this.query_last = [latitude, longitude, zoom_final]
 
         // final point
-        const point = SMap.Coords.fromWGS84(longitude, latitude)
+        const point = L.latLng(latitude, longitude)
         if (!zoom_final) {
             zoom_final = computed_zoom
         }
 
         this.changing.stop()
         this.animation = []
-        const [a, b] = center ? [center.x, center.y] : [this.map.getCenter().x, this.map.getCenter().y]
-        const [x, y] = [longitude, latitude]
+        const [a, b] = center ? [center.lat, center.lng] : [this.map.getCenter().lat, this.map.getCenter().lng]
+        const [x, y] = [latitude, longitude]
 
-        const current_zoom = this.map.getZoom()
+        let current_zoom = this.map.getZoom()
         let zoom = Math.min(computed_zoom, current_zoom)
+
+
 
         // zoom out – if map moves only a little, do not zoom out, stay as close as possible
         let steps = Math.ceil((current_zoom - zoom) / 3)
+        if (steps <= 1) {
+            let recomm_zoom = this._computeIdealZoom([this.map.getCenter(), point], this.map)
+            if (zoom > recomm_zoom) {
+                zoom = recomm_zoom
+                steps = Math.ceil((current_zoom - zoom) / 3)
+            }
+        }
         for (let step = 1; step <= steps; step++) {
             this.animation.push(new AnimationStep(a, b, current_zoom - (current_zoom - zoom) / steps * step, "zoom out"))
         }
@@ -413,11 +461,9 @@ class MapWidget {
         for (let step = 1; step <= steps; step++) {
             const x_step = (x - a) / steps * step
             const y_step = (y - b) / steps * step
-            // console.log("260: x_step, y_step", x_step, y_step)
 
             if (Math.abs(x_step) < 0.0001 && Math.abs(y_step) < 0.0001) {
-                // console.log("standing", x_step, y_step)
-                break;
+                break
             }
 
             this.animation.push(new AnimationStep(a + x_step, b + y_step, zoom, "move"))
@@ -429,8 +475,70 @@ class MapWidget {
             this.animation.push(new AnimationStep(x, y, zoom + (zoom_final - zoom) / steps * step, "zoom in"))
         }
 
-        this.animation.push(new AnimationStep(x, y, zoom_final, "zoom final"))
+        this.animation.push(new AnimationStep(x, y, zoom_final, "zoom final", this.markers_show, true))
         this.changing.start()
     }
+
+
+    /**
+     * Compute an ideal Leaflet zoom for given points.
+     * @param {L.LatLng[]} points Array of Leaflet LatLng objects
+     * @param {L.Map} map The Leaflet map
+     * @returns {number} Recommended zoom level
+     */
+    _computeIdealZoom(points, map) {
+        if (!points.length) return map.getZoom() || 5
+        if (points.length === 1) return 15 // single place
+
+        const bounds = L.latLngBounds(points)
+        const maxDistance = bounds.getNorthEast().distanceTo(bounds.getSouthWest())
+
+        // quick guess
+        // - < 50 km → zoom 13–14 (town)
+        // - < 300 km → zoom 8–10 (state)
+        // - < 2000 km → zoom 5–7 (continent)
+        // - > 2000 km → zoom 2–3 (world)
+        let zoom
+        if (maxDistance < 50000) zoom = 14
+        else if (maxDistance < 300000) zoom = 9
+        else if (maxDistance < 2000000) zoom = 6
+        else zoom = 3
+
+        const idealZoom = map.getBoundsZoom(bounds, true)
+        return Math.min(zoom, idealZoom)
+    }
+
+    /**
+     * Wait for a promise with a minimum and maximum display time.
+     * @param {Promise} promise The main promise (e.g. route fetch)
+     * @param {number} minMs Minimum time to wait after promise resolves
+     * @param {number} maxMs Maximum total wait time
+     * @param {string} timeoutMsg
+     * @returns {Promise<any>} Resolves when either maxMs elapsed or promise+minMs finished
+     */
+    async _waitWithMinMax(promise, minMs = 200, maxMs = 5000, timeoutMsg = "") {
+        const start = performance.now()
+        let finished = false
+
+        const mainPromise = (async () => {
+            const result = await promise
+            finished = true
+            const elapsed = performance.now() - start
+            if (elapsed < minMs) {
+                await new Promise(r => setTimeout(r, minMs - elapsed))
+            }
+            return result
+        })()
+
+        const timeoutPromise = new Promise(resolve => setTimeout(() => {
+            if (!finished && timeoutMsg) {
+                console.warn(timeoutMsg)
+            }
+            resolve(null)
+        }, maxMs))
+
+        return Promise.race([mainPromise, timeoutPromise])
+    }
+
 
 }

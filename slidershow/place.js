@@ -1,9 +1,9 @@
 let MAP_USE_CACHE = true
 
 class Place {
-    static from_coordinates(longitude=null, latitude=null) {
+    static from_coordinates(longitude = null, latitude = null) {
         const p = new Place(null)
-        p.coordinates = {longitude: longitude, latitude: latitude}
+        p.coordinates = { lon: longitude, lat: latitude }
         return p
     }
 
@@ -11,7 +11,7 @@ class Place {
      *
      * @param {?String} name Place name. If null, consider using Place.from_coordinates factory instead.
      */
-    constructor(name=null) {
+    constructor(name = null) {
         this.name = name
         let cache = {}
 
@@ -34,21 +34,32 @@ class Place {
             return true
         }
 
-        return (new SMap.SuggestProvider()).get(this.name).then((addresses) => {
-            if (addresses.length < 1) {
-                console.warn("Coordinates error", this.name, addresses)
-                return
-            }
-            this.coordinates = addresses[0]
-            this.cache_self()
-        })
+        const query = encodeURIComponent(this.name)
+        const url = `https://api.mapy.com/v1/geocode?query=${query}&apikey=${MAPY_TOKEN}`
+
+        return fetch(url)
+            .then(res => res.json())
+            .then(data => {
+                if (!data || !data.items || data.items.length < 1) {
+                    console.warn("Coordinates error", this.name, data)
+                    return
+                }
+
+                this.coordinates = data.items[0].position
+                this.cache_self()
+            })
     }
 
+    /**
+     * Return coordinates as plain object [lat, lon]
+     * @returns {L.LatLng}
+     */
     coord() {
         if (!this.coordinates || !Object.keys(this.coordinates).length) {
             console.warn("Unknown coordinates of", this.name)
+            return L.latLng(0,0)
         }
-        return SMap.Coords.fromWGS84(this.coordinates.longitude, this.coordinates.latitude)
+        return L.latLng(this.coordinates.lat, this.coordinates.lon)
     }
 
     // XX route to another place

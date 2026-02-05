@@ -315,7 +315,7 @@ class Frame {
                 this.prop("map-animate", null, true),
                 this.prop("map-geometry-show", null, false),
                 this.prop("map-geometry-criterion", null, ""),
-                this.prop("map-markers-show", null, true),
+                this.prop("map-markers-show", null, false),
                 this.prop("map-geometry-clear", null, true),
                 this.prop("map-markers-clear", null, true),
                 this.prop("map-zoom"),
