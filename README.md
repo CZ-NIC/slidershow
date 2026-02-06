@@ -21,7 +21,7 @@ What is SlideRshow and what advantages it has?
 
 # Usage
 
-The application **runs in the browser** – see the SlideRshow **[right now](https://cz-nic.github.io/slidershow/examples/slidershow.html)**. Or download the repository and open the local file. Or add somewhere a tag and that is all!
+The application **runs in the browser** – see the SlideRshow **[right now](https://cz-nic.github.io/slidershow/slidershow.html)**. Or download the repository and open the local file. Or add somewhere a tag and that is all!
 
 ```html
 <script src="https://cdn.jsdelivr.net/gh/CZ-NIC/slidershow@latest/slidershow/slidershow.js"></script>
