@@ -4,6 +4,7 @@ class Frame {
      *
      * Frame lifecycle is as follows:
      *  – preload
+     *  – preblink
      *  – prepare (might run multiple times)
      *  – enter (might run multiple times)
      *  – leave
@@ -343,6 +344,22 @@ class Frame {
                 places.push(...names.split(",").map(name => new Place(name)))
             }
             return places
+        }
+    }
+
+    /**
+     * Prevent blinking.
+     * When going forward, a big image will blink, a black frame will appear for a moment before the image is loaded.
+     * To prevent this, we load the image to a hidden placeholder before the frame is entered so that the browser is forced to decompile it on schedule.
+     */
+    async preblink() {
+        if (this.$actor) {
+            const $placeholder = this.playback.$preblink_prevention
+            if ($placeholder.data('preblinking')) {
+                return
+            }
+            $placeholder.data('preblinking', true)
+            $placeholder.attr("src", this.$actor.attr("src"))
         }
     }
 

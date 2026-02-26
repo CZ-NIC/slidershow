@@ -15,14 +15,17 @@ class Interval {
      *      (Note that we preferred that.blocking setter over method unblock() because interval function
      *      can be called from other sources than this class (ex: at first run) and a non-existent method would pose a problem.)
      */
-    constructor(fn = null, delay = 0, ajax_wait=null) {
+    constructor(fn = null, delay = 0, ajax_wait = null) {
         this.was_running = false
         this.freezed = false
         this._fn = fn
         this.delay = this._delay = delay
-        this._delayed = () => {
+        this._delayed = async () => {
             this.time1 = +new Date()
-            this._fn.call(this)
+            if (!this._fn) {
+                throw new Error("Interval function is not set. Use .fn() method to set it.")
+            }
+            await this._fn.call(this)
             if (ajax_wait !== true && this.running) {
                 this.start()
             }
@@ -163,10 +166,10 @@ function formatDateMs(ms) {
  **/
 function getEndTimeFromURL(url) {
     url = new URL(url).hash
-    if(url.startsWith("#t=") && url.includes(",")) {
+    if (url.startsWith("#t=") && url.includes(",")) {
         const endtime = url.split("=")[1].split(",").pop()
-        if(endtime.includes(":")) { // #t=01:01:10 -> 3670 seconds
-            return endtime.split(":").map((val, index) => parseFloat(val) * Math.pow(60, 2-index)).reduce((a, b) => a + b, 0)
+        if (endtime.includes(":")) { // #t=01:01:10 -> 3670 seconds
+            return endtime.split(":").map((val, index) => parseFloat(val) * Math.pow(60, 2 - index)).reduce((a, b) => a + b, 0)
         } else { // #t=20 -> 20 seconds
             return parseFloat(endtime)
         }

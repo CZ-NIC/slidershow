@@ -33,6 +33,11 @@ class Playback {
         this.frame = new Frame($(), this) // default dummy object
         this.slide_count
         this.$articles = $()
+
+        this.$preblink_prevention = $("#preblink-prevention").off('load error').on('load error', () =>
+            this.$preblink_prevention.data('preblinking', false)
+        )
+
         /**
          * @type {JQuery} Current frame DOM
          */
@@ -481,8 +486,10 @@ class Playback {
             // Preload future frames and unload those preloaded frames which are far away.
             const nearby = Frame.frames(this.$articles.slice(Math.max(0, index - PRELOAD_BACKWARD), index + PRELOAD_FORWARD))
             this.process_bg_tasks([
+                () => new Promise(resolve => setTimeout(resolve, 100)), // since preblink is a costly operation, wait a moment. User might be holding forward arrow (100 photos / 7 secs, do not slow it down).
+                () => following?.preblink(),
                 ...nearby.filter(f => f.$frame.not("[data-preloaded]").length).map(f => () => f.preload()),
-                ...Frame.frames(this.$articles.filter("[data-preloaded]")).map(f => nearby.includes(f) ? null : () => f.unload()).filter(Boolean)
+                ...Frame.frames(this.$articles.filter("[data-preloaded]")).map(f => nearby.includes(f) ? null : () => f.unload()).filter(Boolean),
             ])
         })
     }
@@ -502,7 +509,9 @@ class Playback {
             this.bg_tasks.length = 0
         }
         this.bg_tasks.push(...tasks)
-        this.bg_worker.start()
+        if (!this.bg_worker.running) {
+            this.bg_worker.start()
+        }
     }
 
 

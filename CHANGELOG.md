@@ -1,5 +1,8 @@
 # CHANGELOG
 
+## 0.9.9 (2026-02-26)
+* enh: preblink protection
+
 ## 0.9.8 (2026-02-05)
 * update: new mapy.com API
 

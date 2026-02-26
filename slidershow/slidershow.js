@@ -115,6 +115,7 @@ function loadStyle(url) {
 
 function get_menu() {
     return $(`<div id="map-wrapper"></div>
+    <img id="preblink-prevention" />
 
     <div id="hud">
         <div id="hud-menu"></div>
