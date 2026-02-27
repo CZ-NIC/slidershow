@@ -353,13 +353,17 @@ class Frame {
      * To prevent this, we load the image to a hidden placeholder before the frame is entered so that the browser is forced to decompile it on schedule.
      */
     async preblink() {
-        if (this.$actor) {
+        if(this.playback.hud.grid_visible || this.playback.hud.thumbnails_visible) {
+            // Thumbnails already display the image, so no need to do it again.
+            this.playback.$preblink_prevention.hide()
+        }
+        else if (this.$actor) {
             const $placeholder = this.playback.$preblink_prevention
             if ($placeholder.data('preblinking')) {
                 return
             }
             $placeholder.data('preblinking', true)
-            $placeholder.attr("src", this.$actor.attr("src"))
+            $placeholder.attr("src", this.$actor.attr("src")).show()
         }
     }
 

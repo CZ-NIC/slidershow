@@ -237,54 +237,9 @@ class Hud {
      * Grid is called every frame change. Reposition frames accordingly to the current ordering.
      * @param {?Frame} lastFrame
      */
-    grid(lastFrame) {
-        let section
-        const pl = this.playback
-        const $container = this.$hud_grid
-        $("section-controller", $container).remove() // sections are not linked to any objects, we might recreate them every time
-        $(FRAME_SECTION_SELECTOR).map((_, frameOrSection) => {
-            if (frameOrSection.tagName === "SECTION") {
-                section = assureSection(section, frameOrSection)
-            } else {
-                this.assureThumbnail($(frameOrSection).data("frame"), $container)
-            }
-        })
-        this.makeThumbnailsImportable($container)
-
-        // Scroll to the thumbnail if not visible
-        setTimeout(() => { // why set timeout? Because the re-ordering DOM changes must flush first.
-            // Scroll only when the frame changed.
-            // Ex: Hitting 'End' will scroll. But dragging unactive frames around would scroll you out from what you have just dragged.
-            if (pl.frame !== lastFrame) {
-                const el = this.getThumbnail(pl.frame, $container).get(0)
-                const rect = el.getBoundingClientRect()
-                if (rect.top < 0 || rect.bottom > document.documentElement.clientHeight) {
-                    el.scrollIntoView({ "block": "center" })
-                }
-            }
-        }, 1)
-
-        /**
-         * Insert new section to the grid if encountered
-         * @param {HTMLElement} lastSection
-         * @param {HTMLElement} currentSection
-         */
-        function assureSection(lastSection, currentSection) {
-            if (lastSection !== currentSection) {
-                const aa = $(`<section-controller>
-                            <button data-role='name-desc'>order by name ⇓</button>
-                            <button data-role='name-asc'>order by name ⇑</button>
-                            <button data-role='date-desc'>order by date ⇓</button>
-                            <button data-role='date-asc'>order by date ⇑</button>
-                            <button data-role='import'>add media</button>
-                            <button data-role='new-frame'>add text</button>
-                            <button data-role='new-section'>add section</button>
-                        </section-controller>`)
-                    .appendTo($container)
-                    .data("section", currentSection)
-            }
-            return currentSection
-        }
+    grid(lastFrame = null) {
+        this.$hud_grid.empty()
+        new GridController(this.playback, this, this.$hud_grid).load(lastFrame)
     }
 
     /**
@@ -293,13 +248,15 @@ class Hud {
      *
      * @param {?Frame} frame
      * @param {JQuery} $container Ribbon or grid
+     * @param {boolean} prepend
      */
-    assureThumbnail(frame, $container) {
+    assureThumbnail(frame, $container, prepend = false) {
         const pl = this.playback
         let $thumbnail = this.getThumbnail(frame, $container)
         if (!$thumbnail.length) { // this thumbnail does not exist yet
             // go to frame
-            $thumbnail = $("<frame-preview/>", { html: "...", "data-ref": frame.index }).on("click", () => this.playback.goToFrame(frame.index))
+            $thumbnail = $("<frame-preview/>", { html: "...", "data-ref": frame.index })
+                .on("click", () => this.playback.goToFrame(frame.index))
 
             frame.preload()
             frame.loaded.then(() => {
@@ -325,7 +282,12 @@ class Hud {
                 $(":first", $thumbnail).css({ "scale": String(scaleFactorX) })
             })
         }
-        $thumbnail.appendTo($container)
+        if (prepend) {
+            $thumbnail.prependTo($container)
+        } else {
+            $thumbnail.appendTo($container)
+        }
+
     }
 
     /**

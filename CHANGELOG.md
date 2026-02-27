@@ -1,5 +1,8 @@
 # CHANGELOG
 
+## 1.0.0 (unreleased)
+* enh: grid dynamic loading
+
 ## 0.9.9 (2026-02-26)
 * enh: preblink protection
 

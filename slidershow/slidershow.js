@@ -6,8 +6,15 @@
 //  As well as: <script src="https://cdn.jsdelivr.net/gh/CZ-NIC/slidershow@latest/slidershow/slidershow.js"></script>
 const DIR = document.querySelector("script[src$='slidershow.js']").getAttribute("src").replace(/\/slidershow.js$/, "") + "/";
 const MAP_ENABLE = !location.hash.includes("map-disabled")
-// NOTE fetch MAPY_TOKEN from URL/UI too
-const MAPY_TOKEN = "G2Tz6lgHdd2FpdZCwuU3yvbggGKSwcVkv8ptLos3Mn8" // demo token, get your own at https://developer.mapy.com/account/projects
+
+// NOTE fetch these constants from URL/UI too
+// (Put them into session.js and hud/properites panel.)
+/** Mapy.com demo token, get your own at https://developer.mapy.com/account/projects */
+const MAPY_TOKEN = "G2Tz6lgHdd2FpdZCwuU3yvbggGKSwcVkv8ptLos3Mn8"
+/** Grid: Number of items preloaded around the current frame on both sides (snapped to row start) */
+const GRID_PRELOAD_RADIUS = 60
+/** Grid: Number of items loaded per scroll batch (snapped to row start) */
+const GRID_PAGE_SIZE = 30
 
 // style
 document.querySelector("html").style.display = "none" // so that body images are not shown before the style loads (short white blink appears instead)
@@ -24,7 +31,9 @@ loadjQuery(() => {
             referrerpolicy: "no-referrer"
         },
         {
-            // src: "https://cdn.jsdelivr.net/npm/vanilla-js-wheel-zoom@9.0.4/dist/wheel-zoom.min.js",
+            // src: "https://cdn.jsdelivr.net/npm/vanilla-js-wheel-zoom@9.1.4/dist/wheel-zoom.min.js",
+            // TODO main should be working
+            // src: "https://cdn.jsdelivr.net/gh/worka/vanilla-js-wheel-zoom/dist/wheel-zoom.min.js",
             src: "https://cdn.jsdelivr.net/gh/worka/vanilla-js-wheel-zoom@952d1add/dist/wheel-zoom.min.js",
             crossOrigin: "anonymous",
         },
@@ -42,7 +51,7 @@ loadjQuery(() => {
         loadStyle("https://unpkg.com/leaflet@1.9.4/dist/leaflet.css")
     }
 
-    const local = ["static.js", "frame_factory.js", "frame.js", "frame_zoom.js", "place.js", "map.js", "hud.js", "export.js", "property_panel.js", "propertyPanelPoints.js", "operation.js", "changes.js", "menu.js", "playback.js", "session.js", "aux_window.js"].filter(Boolean).map(f => loadScript({ src: DIR + f }))
+    const local = ["static.js", "frame_factory.js", "frame.js", "frame_zoom.js", "place.js", "map.js", "hud.js", "grid.js", "export.js", "property_panel.js", "propertyPanelPoints.js", "operation.js", "changes.js", "menu.js", "playback.js", "session.js", "aux_window.js"].filter(Boolean).map(f => loadScript({ src: DIR + f }))
 
     /**
      When there were 60 photos and 10 videos in a 230 MB presentation file, these were started before we could

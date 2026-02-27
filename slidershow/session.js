@@ -59,7 +59,7 @@ class Session {
                     break;
                 case "map-disabled":
                     // already handled at program start
-                    // XX undocumented feature: Append this to file name to disable maps `#&state=map-disabled`
+                    // NOTE undocumented feature: Append this to file name to disable maps `#&state=map-disabled`
                     break;
                 default:
                     console.warn("[slidershow] Unknown hash key:" + key)
