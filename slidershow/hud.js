@@ -15,6 +15,10 @@ class Hud {
         this.$hud_menu = $("#hud-menu")
         this.$hud_thumbnails = $("#hud-thumbnails").hide() // by default off
         this.$hud_grid = $("#hud-grid").hide() // by default off
+        /**
+         * @type {?GridController}
+         */
+        this.grid_c = null
         this.$hud_properties = $("#hud-properties").hide() // by default off
         this.$control_icons = $("#control-icons")
 
@@ -238,8 +242,12 @@ class Hud {
      * @param {?Frame} lastFrame
      */
     grid(lastFrame = null) {
-        this.$hud_grid.empty()
-        new GridController(this.playback, this, this.$hud_grid).load(lastFrame)
+        if (!this.grid_c) {
+            this.$hud_grid.empty()
+            this.grid_c = new GridController(this.playback, this, this.$hud_grid).load(lastFrame)
+        } else {
+            this.grid_c.focusFrame(lastFrame)
+        }
     }
 
     /**

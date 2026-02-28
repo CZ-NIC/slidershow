@@ -110,7 +110,9 @@ While presenting, you may appraise an auxiliary window on the second monitor tha
 
 Start tagging mode with <kbd>Alt+T</kbd>. Use Numpad to tag the images – think of a tag as a number that corresponds to one of your categories.. Then in the menu, hit <kbd>Alt+Shift+G</kbd> to group the images to the `<section>` according to tags. Export with <kbd>Ctrl+S</kbd>. Sorted & ready!
 
-<sub>Note that the tag is stored in the browser (local storage)[https://developer.mozilla.org/en-US/docs/Web/API/Window/localStorage] by the file name so that you do not lose the information at crash. In case you import another photo with the same name, it will inherit the tag from the clashing file.</sub>
+<sub>Note that the tag is stored in the browser (local storage)[https://developer.mozilla.org/en-US/docs/Web/API/Window/localStorage] by the file name so that you do not lose the information at a sudden crash. However, in case you import another photo with the same name, it will inherit the tag from the clashing file.</sub>
+
+<sub>Grouping images works that way: It iterates over all the frames and if they are not in the section, having the same tag, it will create such section. So at the first grouping, frames keep their former order in the new sections. The second time, they will get appended to the section's end.<br>You can easily re-order by date etc. in the grid view (key <kbd>G</kbd>).</sub>
 
 # Structure
 

@@ -1,7 +1,8 @@
 # CHANGELOG
 
 ## 1.0.0 (unreleased)
-* enh: grid dynamic loading
+* feat: grid dynamic loading
+* fix: exif correct date format
 
 ## 0.9.9 (2026-02-26)
 * enh: preblink protection

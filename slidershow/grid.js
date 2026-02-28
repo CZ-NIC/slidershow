@@ -40,6 +40,30 @@ class GridController {
         this.hud.makeThumbnailsImportable(this.$container)
         this._bindScroll()
         this._scrollToCurrentFrame(lastFrame)
+        return this
+    }
+
+    /**
+     *
+     * @param {?Frame} lastFrame
+     */
+    focusFrame(lastFrame = null) {
+        const currentPos = this._currentPos()
+
+        // Is this frame out of current range?
+        if (currentPos < this.loadedFrom || currentPos >= this.loadedUpTo) {
+            // Fetch through the missing direction
+            if (currentPos < this.loadedFrom) {
+                const from = this._snapToRowStart(Math.max(0, currentPos - this.preload_radius))
+                this._loadBatch(from, this.loadedFrom - from, true)
+            } else {
+                this._loadBatch(this.loadedUpTo, currentPos - this.loadedUpTo + this.preload_radius, false)
+            }
+            this._discardFarItems()
+        }
+
+        this.hud.makeThumbnailsImportable(this.$container)
+        this._scrollToCurrentFrame(lastFrame)
     }
 
     _currentPos() {

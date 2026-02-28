@@ -1108,7 +1108,7 @@ class Frame {
                 attrs["data-device"] = `${make} ${model}`
             }
 
-            const dateTime = exif.DateTimeOriginal?.replace(/:/g, "-").replace(/ /g, "T")
+            const dateTime = exif.DateTimeOriginal?.replace(/^(\d{4}):(\d{2}):(\d{2})/, '$1-$2-$3').replace(/ /g, "T")
             if (dateTime) { attrs["data-datetime"] = dateTime }
 
             // convert GPS
