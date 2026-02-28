@@ -143,7 +143,7 @@ class GridController {
     _assureSection(currentSection, prepend = false) {
         const name = $(currentSection).data("name")
         const $sc = $(`<section-controller>
-                        <span>Section${name ? " " + name : ""} (${currentSection.childNodes.length})</span>
+                        <span>Section${name ? " " + name : ""} (${currentSection.childElementCount})</span>
                         <div class="actions">
                             <span>order</span>
                             <button data-role='name-desc'>by name ⇓</button>
@@ -155,8 +155,12 @@ class GridController {
                             <button data-role='new-frame'>text</button>
                             <button data-role='new-section'>section</button>
                             <span>regroup</span>
-                            <button data-role='regroup-weeks'>by week</button>
-                            <button data-role='regroup-tags'>by tags</button>
+                            <button data-role='regroup' data-param='hours'>by hours</button>
+                            <button data-role='regroup' data-param='days'>by days</button>
+                            <button data-role='regroup' data-param='weeks'>by weeks</button>
+                            <button data-role='regroup' data-param='months'>by months</button>
+                            <button data-role='regroup' data-param='years'>by years</button>
+                            <button data-role='regroup' data-param='tags'>by tags</button>
                         </div>
                     </section-controller>`)
             .data("section", currentSection)

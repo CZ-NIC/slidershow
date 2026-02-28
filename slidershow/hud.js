@@ -160,11 +160,8 @@ class Hud {
                     case "new-section":
                         pl.operation.insertNewSection()
                         break
-                    case "regroup-tags":
-                        pl.regrouping.group("tags", $frames)
-                        break
-                    case "regroup-weeks":
-                        pl.regrouping.group("weeks", $frames)
+                    case "regroup":
+                        pl.regrouping.group(e.target.dataset.param, $frames)
                         break
                     case "import":
                         $("<input/>", { type: "file" }).change(function () {
@@ -358,6 +355,7 @@ class Hud {
                             pl.operation.moveFrame(index, target.dataset.ref, before)
                         }
                     }
+                    this.reset_grid()
                 }
             })
 
@@ -456,7 +454,7 @@ class Hud {
     reset() {
         this.reset_thumbnails()
         this.$hud_properties.html("")
-        // No need to reset the grid here as it is re-run on frame change.
+        this.reset_grid()
     }
 
     reset_thumbnails() {

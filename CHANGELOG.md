@@ -1,7 +1,7 @@
 # CHANGELOG
 
 ## 1.0.0 (unreleased)
-* feat: grid dynamic loading
+* feat: grid dynamic loading, powerful grouping, etc.
 * fix: exif correct date format
 
 ## 0.9.9 (2026-02-26)
