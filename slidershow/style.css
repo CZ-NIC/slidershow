@@ -5,11 +5,9 @@ body {
   overflow-x: hidden;
   margin: 0;
 }
-
 main {
   position: relative;
 }
-
 menu {
   display: flex;
   justify-content: center;
@@ -21,52 +19,42 @@ menu {
   height: 90%;
   font-size: 2vw;
 }
-
 menu div {
   text-align: center;
 }
-
 menu #start {
   width: 100px;
   height: 100px;
   font-size: 50px;
 }
-
 menu #drop {
   margin-top: 20px;
   font-weight: bold;
 }
-
 menu #defaults {
   margin-top: 30px;
   text-align: left;
   font-size: 1vw;
 }
-
 menu #progress {
   margin-top: 10px;
 }
-
 menu #progress .circle-progress-value {
   stroke-width: 6px;
   stroke: hsl(320, 80%, 60%);
   stroke-dasharray: 4 1;
 }
-
 menu #progress .circle-progress-circle {
   stroke-width: 6px;
   stroke: #eee;
 }
-
 menu #progress .circle-progress-text {
   font-weight: bold;
   fill: hsl(180, 80%, 47%);
 }
-
 #aux_window {
   display: flex;
 }
-
 #aux_window #slide-wrapper {
   text-align: center;
   display: flex;
@@ -74,16 +62,13 @@ menu #progress .circle-progress-text {
   max-height: 100vh;
   width: 50vw;
 }
-
-#aux_window #slide-wrapper>frame-preview {
+#aux_window #slide-wrapper > frame-preview {
   height: 60vh;
 }
-
-#aux_window #slide-wrapper>frame-preview>* {
+#aux_window #slide-wrapper > frame-preview > * {
   scale: 0.5;
 }
-
-#aux_window #slide-wrapper>frame-preview .current-step:before {
+#aux_window #slide-wrapper > frame-preview .current-step:before {
   content: '';
   position: absolute;
   margin-left: -60px;
@@ -94,41 +79,34 @@ menu #progress .circle-progress-text {
   border-radius: 50%;
   display: inline-block;
 }
-
-#aux_window #slide-wrapper> :nth-child(2) {
+#aux_window #slide-wrapper > :nth-child(2) {
   max-height: 30vh;
 }
-
-#aux_window #slide-wrapper> :nth-child(2) frame-preview>* {
+#aux_window #slide-wrapper > :nth-child(2) frame-preview > * {
   scale: 0.3;
 }
-
-#aux_window> :nth-child(2) {
+#aux_window > :nth-child(2) {
   width: 50vw;
   padding-top: 5px;
 }
-
-frame-preview>article,
-frame-preview>article-map {
+frame-preview > article,
+frame-preview > article-map {
   overflow: auto;
   display: block;
   transform-origin: 0 0;
 }
-
-frame-preview>article.prevent-animation-important *,
-frame-preview>article-map.prevent-animation-important * {
+frame-preview > article.prevent-animation-important *,
+frame-preview > article-map.prevent-animation-important * {
   animation: unset !important;
 }
-
-frame-preview>article [data-step].step-not-yet-visible,
-frame-preview>article-map [data-step].step-not-yet-visible {
+frame-preview > article [data-step].step-not-yet-visible,
+frame-preview > article-map [data-step].step-not-yet-visible {
   opacity: 0.5;
   border: 1px dotted red;
   animation-fill-mode: unset;
 }
-
-frame-preview>article.video-thumbnail:before,
-frame-preview>article-map.video-thumbnail:before {
+frame-preview > article.video-thumbnail:before,
+frame-preview > article-map.video-thumbnail:before {
   content: '\1f3a5';
   position: absolute;
   width: 100%;
@@ -136,7 +114,6 @@ frame-preview>article-map.video-thumbnail:before {
   font-size: 300px;
   text-shadow: 0 0 100px white;
 }
-
 frame-preview article-map:before {
   content: '🗺';
   position: absolute;
@@ -144,11 +121,9 @@ frame-preview article-map:before {
   font-size: 300px;
   text-shadow: 0 0 100px white;
 }
-
-.importable-target>* {
+.importable-target > * {
   filter: blur(10px);
 }
-
 .importable-target::after,
 .importable-target article::after {
   content: 'Import here';
@@ -160,21 +135,17 @@ frame-preview article-map:before {
   padding: 10px;
   border-radius: 15px;
 }
-
 #hud {
   position: fixed;
   z-index: 10;
 }
-
-#hud>* {
+#hud > * {
   position: fixed;
 }
-
 #hud .alwaysHidden {
   position: fixed;
   bottom: -100px;
 }
-
 #hud #control-icons {
   display: flex;
   gap: 10px;
@@ -182,12 +153,10 @@ frame-preview article-map:before {
   right: 3vw;
   top: 3vh;
 }
-
-#hud #control-icons> :hover {
+#hud #control-icons > :hover {
   cursor: pointer;
   text-shadow: 0 0 7px #fff, 0 0 10px #fff, 0 0 21px #fff, 0 0 42px #0fa, 0 0 82px #0fa, 0 0 92px #0fa, 0 0 102px #0fa, 0 0 151px #0fa;
 }
-
 #hud #hud-menu {
   display: none;
   right: 3vw;
@@ -195,47 +164,38 @@ frame-preview article-map:before {
   text-align: right;
   z-index: 1;
 }
-
 #hud #hud-menu button {
   font-size: 100%;
 }
-
 #hud #hud-menu button[data-role="magnify-little"] {
   text-shadow: 0 0 darkcyan;
 }
-
 #hud #hud-menu button[data-role="crossed"] {
   text-decoration: line-through;
 }
-
 #hud #hud-fileinfo {
   right: 3vw;
   bottom: 10vw;
   text-align: right;
 }
-
 #hud #hud-fileinfo #hud-gps {
   cursor: pointer;
 }
-
 #hud #hud-fileinfo #hud-tag {
   background-color: blue;
   font-size: 300%;
 }
-
 #hud #hud-thumbnails,
 #hud #hud-grid {
   display: flex;
   width: 100vw;
 }
-
 #hud #hud-thumbnails#hud-thumbnails,
 #hud #hud-grid#hud-thumbnails {
   height: 30vh;
   bottom: 0;
   gap: 1px;
 }
-
 #hud #hud-thumbnails#hud-grid,
 #hud #hud-grid#hud-grid {
   flex-wrap: wrap;
@@ -243,36 +203,45 @@ frame-preview article-map:before {
   height: 100vh;
   background: black;
 }
-
-#hud #hud-thumbnails#hud-grid>frame-preview,
-#hud #hud-grid#hud-grid>frame-preview {
+#hud #hud-thumbnails#hud-grid > frame-preview,
+#hud #hud-grid#hud-grid > frame-preview {
   width: 19vw;
   height: 19vh;
 }
-
 #hud #hud-thumbnails#hud-grid section-controller,
 #hud #hud-grid#hud-grid section-controller {
   margin: 10px;
   text-align: center;
   flex-basis: 100%;
 }
-
+#hud #hud-thumbnails#hud-grid section-controller span,
+#hud #hud-grid#hud-grid section-controller span,
 #hud #hud-thumbnails#hud-grid section-controller button,
 #hud #hud-grid#hud-grid section-controller button {
   display: inline-block;
   background-color: blue;
   color: white;
   padding: 10px;
+}
+#hud #hud-thumbnails#hud-grid section-controller button,
+#hud #hud-grid#hud-grid section-controller button {
   border-radius: 15px;
 }
-
 #hud #hud-thumbnails#hud-grid section-controller.dragging-target,
 #hud #hud-grid#hud-grid section-controller.dragging-target {
   box-shadow: inset 0px 0px 5px 0px yellow;
 }
-
-#hud #hud-thumbnails>frame-preview,
-#hud #hud-grid>frame-preview {
+#hud #hud-thumbnails#hud-grid section-controller .actions,
+#hud #hud-grid#hud-grid section-controller .actions {
+  display: none;
+}
+#hud #hud-thumbnails#hud-grid section-controller:hover .actions,
+#hud #hud-grid#hud-grid section-controller:hover .actions {
+  display: flex;
+  gap: 4px;
+}
+#hud #hud-thumbnails > frame-preview,
+#hud #hud-grid > frame-preview {
   text-align: center;
   position: relative;
   width: 30vw;
@@ -280,24 +249,21 @@ frame-preview article-map:before {
   color: black;
   background-color: lightgray;
 }
-
-#hud #hud-thumbnails>frame-preview.current,
-#hud #hud-grid>frame-preview.current {
+#hud #hud-thumbnails > frame-preview.current,
+#hud #hud-grid > frame-preview.current {
   filter: drop-shadow(16px 16px 20px darkblue);
   color: white;
   box-shadow: 0px 5px 3px 5px darkgray;
   background-color: darkblue;
 }
-
-#hud #hud-thumbnails>frame-preview .delete,
-#hud #hud-grid>frame-preview .delete {
+#hud #hud-thumbnails > frame-preview .delete,
+#hud #hud-grid > frame-preview .delete {
   cursor: pointer;
   position: absolute;
   right: 0;
 }
-
-#hud #hud-thumbnails>frame-preview .tag,
-#hud #hud-grid>frame-preview .tag {
+#hud #hud-thumbnails > frame-preview .tag,
+#hud #hud-grid > frame-preview .tag {
   position: absolute;
   left: 5px;
   background-color: blue;
@@ -305,33 +271,28 @@ frame-preview article-map:before {
   color: white;
   padding: 0 5px;
 }
-
-#hud #hud-thumbnails>frame-preview>article,
-#hud #hud-grid>frame-preview>article,
-#hud #hud-thumbnails>frame-preview>article-map,
-#hud #hud-grid>frame-preview>article-map {
+#hud #hud-thumbnails > frame-preview > article,
+#hud #hud-grid > frame-preview > article,
+#hud #hud-thumbnails > frame-preview > article-map,
+#hud #hud-grid > frame-preview > article-map {
   scale: 0.3;
 }
-
-#hud #hud-thumbnails>frame-preview.dragging-target.dragging-before,
-#hud #hud-grid>frame-preview.dragging-target.dragging-before {
+#hud #hud-thumbnails > frame-preview.dragging-target.dragging-before,
+#hud #hud-grid > frame-preview.dragging-target.dragging-before {
   box-shadow: inset 20px 0px 5px 0px yellow;
 }
-
-#hud #hud-thumbnails>frame-preview.dragging-target.dragging-after,
-#hud #hud-grid>frame-preview.dragging-target.dragging-after {
+#hud #hud-thumbnails > frame-preview.dragging-target.dragging-after,
+#hud #hud-grid > frame-preview.dragging-target.dragging-after {
   box-shadow: inset -20px 0px 5px 0px yellow;
 }
-
-#hud #hud-thumbnails>frame-preview.ui-draggable-dragging,
-#hud #hud-grid>frame-preview.ui-draggable-dragging {
+#hud #hud-thumbnails > frame-preview.ui-draggable-dragging,
+#hud #hud-grid > frame-preview.ui-draggable-dragging {
   scale: 0.75;
   width: unset;
   height: unset;
   box-shadow: unset;
   z-index: 10;
 }
-
 #hud #hud-properties {
   max-width: 20vw;
   max-height: 70vh;
@@ -342,21 +303,17 @@ frame-preview article-map:before {
   padding: 10px;
   overflow: auto;
 }
-
 #hud #hud-properties label {
   cursor: help;
 }
-
 #hud #hud-properties div .point-wrapper .hud-point {
   display: block;
   margin-bottom: 2px;
 }
-
 #hud #hud-properties div .hud-point {
   display: inline-block;
 }
-
-#hud #hud-properties div .hud-point>span {
+#hud #hud-properties div .hud-point > span {
   cursor: pointer;
   display: inline-block;
   background-color: lightyellow;
@@ -364,11 +321,9 @@ frame-preview article-map:before {
   border-radius: 5px;
   padding: 3px;
 }
-
-#hud #hud-properties div .hud-point.active>span {
+#hud #hud-properties div .hud-point.active > span {
   background-color: yellow;
 }
-
 #map-hud {
   position: fixed;
   height: 10vh;
@@ -379,17 +334,14 @@ frame-preview article-map:before {
   right: 5vw;
   z-index: 1;
 }
-
 #map-hud .hud {
   display: none;
 }
-
 #map {
   position: absolute;
   height: 100%;
   width: 100%;
 }
-
 article,
 article-map {
   display: none;
@@ -400,57 +352,46 @@ article-map {
   font-size: 10vw;
   margin-bottom: 100vh;
 }
-
 article.debugged,
 article-map.debugged {
   background-color: darkblue;
 }
-
 [data-step] {
   animation: fade-in 0.5s forwards;
 }
-
 [data-step].step-hidden {
   animation: fade-out 0.3s forwards;
 }
-
 [data-step][data-step-shown]:not([data-step-shown='0']):not([data-step-shown='false']) {
   animation: unset;
 }
-
 article img,
 article video {
   max-width: 100%;
   max-height: 100%;
 }
-
 article img:only-child,
 article video:only-child {
   width: 100%;
   height: 100%;
   object-fit: contain;
 }
-
 @keyframes fade-in {
   from {
     opacity: 0;
   }
-
   to {
     opacity: 1;
   }
 }
-
 @keyframes fade-out {
   from {
     opacity: 1;
   }
-
   to {
     opacity: 0;
   }
 }
-
 #preblink-prevention {
   position: fixed;
   /* must not be seen by user. But must be on the viewport, puttin top:100% would make FF not to preload it. */

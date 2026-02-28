@@ -157,6 +157,12 @@ class Hud {
                     case "new-section":
                         pl.operation.insertNewSection()
                         break
+                    case "regroup-tags":
+                        pl.regrouping.group("tags", $frames)
+                        break
+                    case "regroup-weeks":
+                        pl.regrouping.group("weeks", $frames)
+                        break
                     case "import":
                         $("<input/>", { type: "file" }).change(function () {
                             const frames = pl.menu.loadFiles([...this.files])
@@ -456,6 +462,10 @@ class Hud {
 
     reset_grid() {
         this.$hud_grid.html("")
+        this.grid_c = null
+        if (this.grid_visible) {
+            this.grid()
+        }
     }
 
     /**

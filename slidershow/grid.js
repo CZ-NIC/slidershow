@@ -141,15 +141,23 @@ class GridController {
      * @param {boolean} prepend
      */
     _assureSection(currentSection, prepend = false) {
+        const name = $(currentSection).data("name")
         const $sc = $(`<section-controller>
-                        <span>Section frames: ${currentSection.childNodes.length}</span>
-                        <button data-role='name-desc'>order by name ⇓</button>
-                        <button data-role='name-asc'>order by name ⇑</button>
-                        <button data-role='date-desc'>order by date ⇓</button>
-                        <button data-role='date-asc'>order by date ⇑</button>
-                        <button data-role='import'>add media</button>
-                        <button data-role='new-frame'>add text</button>
-                        <button data-role='new-section'>add section</button>
+                        <span>Section${name ? " " + name : ""} (${currentSection.childNodes.length})</span>
+                        <div class="actions">
+                            <span>order</span>
+                            <button data-role='name-desc'>by name ⇓</button>
+                            <button data-role='name-asc'>by name ⇑</button>
+                            <button data-role='date-desc'>by date ⇓</button>
+                            <button data-role='date-asc'>by date ⇑</button>
+                            <span>add</span>
+                            <button data-role='import'>media</button>
+                            <button data-role='new-frame'>text</button>
+                            <button data-role='new-section'>section</button>
+                            <span>regroup</span>
+                            <button data-role='regroup-weeks'>by week</button>
+                            <button data-role='regroup-tags'>by tags</button>
+                        </div>
                     </section-controller>`)
             .data("section", currentSection)
         prepend ? $sc.prependTo(this.$container) : $sc.appendTo(this.$container)

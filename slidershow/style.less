@@ -275,11 +275,15 @@ frame-preview {
                 text-align: center;
                 flex-basis: 100%;
 
+                span,
                 button {
                     display: inline-block;
                     background-color: @control;
                     color: white;
                     padding: 10px;
+                }
+
+                button {
                     border-radius: 15px;
                 }
 
@@ -287,6 +291,17 @@ frame-preview {
                     box-shadow: inset 0px 0px 5px 0px @highlight;
                 }
 
+                // hidable menu
+                .actions {
+                    display: none;
+                }
+
+                &:hover {
+                    .actions {
+                        display: flex;
+                        gap: 4px;
+                    }
+                }
             }
         }
 
@@ -486,4 +501,10 @@ article-map {
     to {
         opacity: 0;
     }
+}
+
+#preblink-prevention {
+    position: fixed;
+    /* must not be seen by user. But must be on the viewport, puttin top:100% would make FF not to preload it. */
+    top: 99.999%;
 }

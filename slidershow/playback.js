@@ -50,6 +50,7 @@ class Playback {
         this.step_disabled = false
 
         this.operation = new Operation(this)
+        this.regrouping = new RegroupingController(this)
         this.reset()
 
         /** Frames that are going to be pre/unloaded.
@@ -260,43 +261,6 @@ class Playback {
         })
     }
 
-    /**
-     * Group frames according to the user tags across multiple <section> tags
-     */
-    group() {
-        /** @type {function[]} */
-        const redos = []
-        /** @type {JQuery[]} */
-        const added = []
-        this.changes.undoable("Group frames",
-            () => {
-                redos.length = 0
-                added.length = 0
-                this.$articles.each((_, el) => {
-                    const $frame = $(el)
-                    /** @type {Frame} */
-                    const frame = $frame.data("frame")
-
-                    redos.push(this.operation.redoForMoving($frame))
-
-                    const tag = frame.$actor.attr("data-tag") || 0
-                    let $section = $(`section[data-tag=${tag}]`)
-                    if (!$section.length) {
-                        $section = $("<section/>", { "data-tag": tag }).prependTo($main)
-                        added.push($section)
-                    }
-                    $frame.appendTo($section)
-                })
-                this.positionFrames()
-                this.goToFrame(this.$current.data("frame").index - 1) // keeps you on the same frame (woorks badly)
-            },
-            () => {
-                redos.reverse().map(f => f())
-                added.map(el => $(el).remove())
-            },
-            () => this.resetAndGo()
-        )
-    }
 
     /**
      *

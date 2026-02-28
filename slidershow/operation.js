@@ -44,7 +44,7 @@ class Operation {
             ["Digit8", "Tag 8", () => pl.frame.set_tag(8)],
             ["Digit9", "Tag 9", () => pl.frame.set_tag(9)],
             ...[
-                ["Alt+Shift+g", "🔀", "Group frames according to their tag", () => pl.group()],
+                ["Alt+Shift+g", "🔀", "Group frames according to their tag", () => pl.regrouping.group()],
                 ["Numpad0", "⛔", "Tag 0", () => pl.frame.set_tag(null)],
                 ["Numpad1", "1", "Tag 1", () => pl.frame.set_tag(1)],
                 ["Numpad2", "2", "Tag 2", () => pl.frame.set_tag(2)],
@@ -314,9 +314,6 @@ class Operation {
                         pl.hud.thumbnails()
                     }
                     pl.hud.reset_grid()
-                    if (pl.hud.grid_visible) {
-                        pl.hud.grid()
-                    }
                     pl.hud.info(`Editing mode ${pl.editing_mode ? "enabled" : "disabled."}`)
                     pl.session.store()
                 }],
@@ -328,10 +325,7 @@ class Operation {
                     if (pl.hud.thumbnails_visible) {
                         pl.hud.thumbnails()
                     }
-                    if (pl.hud.grid_visible) {
-                        pl.hud.reset_grid()
-                    }
-                    pl.hud.grid()
+                    pl.hud.reset_grid()
                     pl.hud.info(`Tagging mode ${pl.tagging_mode ? "enabled" : "disabled."}`)
                     pl.session.store()
                 }]
