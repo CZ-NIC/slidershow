@@ -146,24 +146,37 @@ class GridController {
     _assureSection(currentSection, prepend = false) {
         const name = $(currentSection).data("name")
         const $sc = $(`<section-controller>
-                        <span>Section${name ? " " + name : ""} (${currentSection.childElementCount})</span>
-                        <div class="actions">
-                            <span>order</span>
-                            <button data-role='name-desc'>by name ⇓</button>
-                            <button data-role='name-asc'>by name ⇑</button>
-                            <button data-role='date-desc'>by date ⇓</button>
-                            <button data-role='date-asc'>by date ⇑</button>
-                            <span>add</span>
-                            <button data-role='import'>media</button>
-                            <button data-role='new-frame'>text</button>
-                            <button data-role='new-section'>section</button>
-                            <span>regroup</span>
-                            <button data-role='regroup' data-param='hours'>by hours</button>
-                            <button data-role='regroup' data-param='days'>by days</button>
-                            <button data-role='regroup' data-param='weeks'>by weeks</button>
-                            <button data-role='regroup' data-param='months'>by months</button>
-                            <button data-role='regroup' data-param='years'>by years</button>
-                            <button data-role='regroup' data-param='tags'>by tags</button>
+                        <span class="section-title">Section${name ? " " + name : ""} (${currentSection.childElementCount})</span>
+                        <div class="section-menus">
+                            <div class="section-menu">
+                                <span>order ▾</span>
+                                <div class="dropdown">
+                                    <button data-role='name-desc'>by name ⇓</button>
+                                    <button data-role='name-asc'>by name ⇑</button>
+                                    <button data-role='date-desc'>by date ⇓</button>
+                                    <button data-role='date-asc'>by date ⇑</button>
+                                </div>
+                            </div>
+                            <div class="section-menu">
+                                <span>add ▾</span>
+                                <div class="dropdown">
+                                    <button data-role='import'>media</button>
+                                    <button data-role='new-frame'>text</button>
+                                    <button data-role='new-section'>section</button>
+                                </div>
+                            </div>
+                            <div class="section-menu">
+                                <span>regroup ▾</span>
+                                <div class="dropdown">
+                                    <button data-role='regroup' data-param='hours'>by hours</button>
+                                    <button data-role='regroup' data-param='days'>by days</button>
+                                    <button data-role='regroup' data-param='weeks'>by weeks</button>
+                                    <button data-role='regroup' data-param='months'>by months</button>
+                                    <button data-role='regroup' data-param='years'>by years</button>
+                                    <button data-role='regroup' data-param='tags'>by tags</button>
+                                </div>
+                            </div>
+                            <!-- <button data-role='delete'>delete</button> -->
                         </div>
                     </section-controller>`)
             .data("section", currentSection)

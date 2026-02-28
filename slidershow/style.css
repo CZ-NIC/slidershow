@@ -211,35 +211,78 @@ frame-preview article-map:before {
 }
 #hud #hud-thumbnails#hud-grid section-controller,
 #hud #hud-grid#hud-grid section-controller {
+  display: flex;
+  align-items: center;
+  padding: 4px 8px;
   margin: 10px;
-  text-align: center;
   flex-basis: 100%;
-}
-#hud #hud-thumbnails#hud-grid section-controller span,
-#hud #hud-grid#hud-grid section-controller span,
-#hud #hud-thumbnails#hud-grid section-controller button,
-#hud #hud-grid#hud-grid section-controller button {
-  display: inline-block;
-  background-color: blue;
-  color: white;
-  padding: 10px;
-}
-#hud #hud-thumbnails#hud-grid section-controller button,
-#hud #hud-grid#hud-grid section-controller button {
-  border-radius: 15px;
 }
 #hud #hud-thumbnails#hud-grid section-controller.dragging-target,
 #hud #hud-grid#hud-grid section-controller.dragging-target {
   box-shadow: inset 0px 0px 5px 0px yellow;
 }
-#hud #hud-thumbnails#hud-grid section-controller .actions,
-#hud #hud-grid#hud-grid section-controller .actions {
-  display: none;
+#hud #hud-thumbnails#hud-grid section-controller .section-title,
+#hud #hud-grid#hud-grid section-controller .section-title {
+  flex: 1;
 }
-#hud #hud-thumbnails#hud-grid section-controller:hover .actions,
-#hud #hud-grid#hud-grid section-controller:hover .actions {
+#hud #hud-thumbnails#hud-grid section-controller .section-menus,
+#hud #hud-grid#hud-grid section-controller .section-menus {
   display: flex;
-  gap: 4px;
+  gap: 8px;
+  align-items: center;
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+#hud #hud-thumbnails#hud-grid section-controller:hover .section-menus,
+#hud #hud-grid#hud-grid section-controller:hover .section-menus {
+  opacity: 1;
+}
+#hud #hud-thumbnails#hud-grid section-controller .section-menu,
+#hud #hud-grid#hud-grid section-controller .section-menu {
+  position: relative;
+}
+#hud #hud-thumbnails#hud-grid section-controller .section-menu > span,
+#hud #hud-grid#hud-grid section-controller .section-menu > span {
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: 3px;
+}
+#hud #hud-thumbnails#hud-grid section-controller .section-menu > span:hover,
+#hud #hud-grid#hud-grid section-controller .section-menu > span:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+#hud #hud-thumbnails#hud-grid section-controller .section-menu .dropdown,
+#hud #hud-grid#hud-grid section-controller .section-menu .dropdown {
+  display: none;
+  position: absolute;
+  top: 100%;
+  right: 0;
+  background: #222;
+  border: 1px solid #444;
+  border-radius: 4px;
+  padding: 4px 0;
+  z-index: 100;
+  flex-direction: column;
+  min-width: 120px;
+}
+#hud #hud-thumbnails#hud-grid section-controller .section-menu .dropdown button,
+#hud #hud-grid#hud-grid section-controller .section-menu .dropdown button {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 4px 12px;
+  background: none;
+  border: none;
+  color: inherit;
+  cursor: pointer;
+}
+#hud #hud-thumbnails#hud-grid section-controller .section-menu .dropdown button:hover,
+#hud #hud-grid#hud-grid section-controller .section-menu .dropdown button:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+#hud #hud-thumbnails#hud-grid section-controller .section-menu:hover .dropdown,
+#hud #hud-grid#hud-grid section-controller .section-menu:hover .dropdown {
+  display: flex;
 }
 #hud #hud-thumbnails > frame-preview,
 #hud #hud-grid > frame-preview {

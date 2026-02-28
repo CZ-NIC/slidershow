@@ -163,6 +163,9 @@ class Hud {
                     case "regroup":
                         pl.regrouping.group(e.target.dataset.param, $frames)
                         break
+                    case "delete":
+                        // TODO
+                        break
                     case "import":
                         $("<input/>", { type: "file" }).change(function () {
                             const frames = pl.menu.loadFiles([...this.files])

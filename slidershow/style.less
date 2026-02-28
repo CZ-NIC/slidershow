@@ -264,43 +264,86 @@ frame-preview {
 
             --columns: 5;
 
-            > frame-preview {
-                width: calc(100vw / var(--columns)  );
-                height: calc(100vh / var(--columns) );
+            >frame-preview {
+                width: calc(100vw / var(--columns));
+                height: calc(100vh / var(--columns));
             }
 
             section-controller {
+                display: flex;
+                align-items: center;
+                padding: 4px 8px;
                 margin: 10px;
-                text-align: center;
-                flex-basis: 100%;
-
-                span,
-                button {
-                    display: inline-block;
-                    background-color: @control;
-                    color: white;
-                    padding: 10px;
-                }
-
-                button {
-                    border-radius: 15px;
-                }
 
                 &.dragging-target {
                     box-shadow: inset 0px 0px 5px 0px @highlight;
                 }
 
-                // hidable menu
-                .actions {
-                    display: none;
+                .section-title {
+                    flex: 1;
                 }
 
-                &:hover {
-                    .actions {
+                .section-menus {
+                    display: flex;
+                    gap: 8px;
+                    align-items: center;
+                    opacity: 0;
+                    transition: opacity 0.15s;
+                }
+
+                &:hover .section-menus {
+                    opacity: 1;
+                }
+
+                .section-menu {
+                    position: relative;
+
+                    >span {
+                        cursor: pointer;
+                        padding: 2px 6px;
+                        border-radius: 3px;
+
+                        &:hover {
+                            background: rgba(255, 255, 255, 0.1);
+                        }
+                    }
+
+                    .dropdown {
+                        display: none;
+                        position: absolute;
+                        top: 100%;
+                        right: 0;
+                        background: #222;
+                        border: 1px solid #444;
+                        border-radius: 4px;
+                        padding: 4px 0;
+                        z-index: 100;
+                        flex-direction: column;
+                        min-width: 120px;
+
+                        button {
+                            display: block;
+                            width: 100%;
+                            text-align: left;
+                            padding: 4px 12px;
+                            background: none;
+                            border: none;
+                            color: inherit;
+                            cursor: pointer;
+
+                            &:hover {
+                                background: rgba(255, 255, 255, 0.1);
+                            }
+                        }
+                    }
+
+                    &:hover .dropdown {
                         display: flex;
-                        gap: 4px;
                     }
                 }
+
+                flex-basis: 100%;
+
             }
         }
 
