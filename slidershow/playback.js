@@ -315,11 +315,24 @@ class Playback {
         }
     }
 
-    nextFrame() {
-        this.goToFrame(this.index + 1, true)
+    nextFrame(count = 1) {
+        let index = this.index + count
+        if (count > 1 && index >= this.$articles.length) {
+            // why letting out of range for count == 1?
+            // When in grid view, we must jump on the existing frame.
+            // When not, we try to get out of the range, so that we see 'swiping' effect that this frame does not exist.
+            // Setting the existing frame here would mean no action triggered when hitting LeftArrow being in the beginning.
+            index = this.$articles.length - 1
+        }
+        this.goToFrame(index, true)
     }
-    previousFrame() {
-        this.goToFrame(this.index - 1)
+    previousFrame(count = 1) {
+        let index = this.index - count
+        if (count > 1 && index < 0) {
+            // why letting out of range for count == 1? See nextFrame comment.
+            index = 0
+        }
+        this.goToFrame(index)
     }
 
     nextSection() {

@@ -13,6 +13,7 @@ class Operation {
         this.editing = this.editingInit()
         this.media = this.mediaInit()
         this.properties = this.propertiesInit()
+        this.grid = this.gridInit()
 
         this.playback.hud.registerMenu()
     }
@@ -287,6 +288,21 @@ class Operation {
         function act() {
             return pl.frame.$actor
         }
+    }
+
+    gridInit() {
+        const pl = this.playback
+        return wh.group("Grid", [
+            ...[
+                // NOTE these are not ideal. On section end, trailing frames misses.
+                // So going down by 5 would 'bend' because there were not enough frames.
+                ["ArrowUp", "△", "Go up", () => pl.previousFrame(pl.hud.grid_c.columns)],
+                ["ArrowDown", "▿", "Go down", () => pl.nextFrame(pl.hud.grid_c.columns)],
+                ["PageUp", "XX", "Page up", () => pl.previousFrame(pl.hud.grid_c.columns*5)],
+                ["PageDown", "XX", "Page down", () => pl.nextFrame(pl.hud.grid_c.columns*5)],
+            ].map(this._button("Grid"))]).disable()
+
+            // pl.hud.toggle_grid()
     }
 
     switchesInit() {

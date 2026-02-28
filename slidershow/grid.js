@@ -15,7 +15,7 @@ class GridController {
 
         const COLUMNS = 5
 
-        this.COLUMNS = COLUMNS
+        this.columns = COLUMNS
         this.preload_radius = Math.ceil(GRID_PRELOAD_RADIUS / COLUMNS) * COLUMNS
         this.page_size = Math.ceil(GRID_PAGE_SIZE / COLUMNS) * COLUMNS
 
@@ -83,7 +83,7 @@ class GridController {
                 colMap[i] = null
             } else {
                 colMap[i] = col
-                col = (col + 1) % this.COLUMNS
+                col = (col + 1) % this.columns
             }
         })
         return colMap

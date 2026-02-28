@@ -94,11 +94,14 @@ class Hud {
     }
 
     toggle_grid() {
+        let on = false
         this.$hud_grid.toggle()
         if (this.grid_visible && this.playback.frame) {
             // when restoring session from the hash, frame is not ready yet
+            on = true
             this.grid()
         }
+        this.playback.operation.grid.toggle(on)
         this.playback.session.store()
     }
 
