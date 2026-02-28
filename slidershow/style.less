@@ -260,14 +260,13 @@ frame-preview {
             flex-wrap: wrap;
             overflow: auto;
             height: 100vh;
-            // background-color: rgba(255, 255, 255, 0.4);
             background: black;
 
-            // bottom: 0;
-            // top: 0;
-            >frame-preview {
-                width: 19vw;
-                height: 19vh;
+            --columns: 5;
+
+            > frame-preview {
+                width: calc(100vw / var(--columns)  );
+                height: calc(100vh / var(--columns) );
             }
 
             section-controller {

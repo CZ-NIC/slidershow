@@ -202,11 +202,12 @@ frame-preview article-map:before {
   overflow: auto;
   height: 100vh;
   background: black;
+  --columns: 5;
 }
 #hud #hud-thumbnails#hud-grid > frame-preview,
 #hud #hud-grid#hud-grid > frame-preview {
-  width: 19vw;
-  height: 19vh;
+  width: calc(100vw / var(--columns));
+  height: calc(100vh / var(--columns));
 }
 #hud #hud-thumbnails#hud-grid section-controller,
 #hud #hud-grid#hud-grid section-controller {

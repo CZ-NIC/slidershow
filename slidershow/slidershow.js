@@ -15,6 +15,8 @@ const MAPY_TOKEN = "G2Tz6lgHdd2FpdZCwuU3yvbggGKSwcVkv8ptLos3Mn8"
 const GRID_PRELOAD_RADIUS = 60
 /** Grid: Number of items loaded per scroll batch (snapped to row start) */
 const GRID_PAGE_SIZE = 30
+/** Number of columns */
+var GRID_COLUMNS = 5
 
 // style
 document.querySelector("html").style.display = "none" // so that body images are not shown before the style loads (short white blink appears instead)

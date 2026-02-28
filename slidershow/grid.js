@@ -12,16 +12,19 @@ class GridController {
         this.hud = hud
         this.$container = $container
         this.$framesSections = $(FRAME_SECTION_SELECTOR)
-
-        const COLUMNS = 5
-
-        this.columns = COLUMNS
-        this.preload_radius = Math.ceil(GRID_PRELOAD_RADIUS / COLUMNS) * COLUMNS
-        this.page_size = Math.ceil(GRID_PAGE_SIZE / COLUMNS) * COLUMNS
+        this.columns = GRID_COLUMNS
+        this.preload_radius = Math.ceil(GRID_PRELOAD_RADIUS / GRID_COLUMNS) * GRID_COLUMNS
+        this.page_size = Math.ceil(GRID_PAGE_SIZE / GRID_COLUMNS) * GRID_COLUMNS
 
         this.loadedFrom = 0
         this.loadedUpTo = 0
         this.colMap = this._buildColMap()
+    }
+
+    changeColumnsCount(step = 1) {
+        GRID_COLUMNS += step
+        this.$container.css("--columns", GRID_COLUMNS)
+        this.hud.reset_grid()
     }
 
     /**
