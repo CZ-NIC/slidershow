@@ -63,7 +63,7 @@ class Export {
         // reduce parameters
         $contents.removeAttr("style")
         $contents.find("*").removeAttr("style")
-        $contents.find("> #map, > #map-hud, > #map-wrapper, > #hud, > menu, > .ZebraDialog, > .ZebraDialogBackdrop").remove()
+        $contents.find("> #map, > #map-hud, > #map-wrapper, > #hud, > #preblink-prevention, > menu, > .ZebraDialog, > .ZebraDialogBackdrop").remove()
         await Frame.finalize_frames($contents, this.playback.$articles, compact_file, path, this.menu.display_progress(this.playback.$articles.length))
 
         const html = $contents.prop("innerHTML").replaceAll(EXPORT_SRC, "src")

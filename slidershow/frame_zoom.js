@@ -271,6 +271,20 @@ class FrameZoom {
             this.frame.add_effect(r =>
                 $el.animate({ rotate: rotate + "deg" }, transition_duration * 1000, "linear",
                     () => r()))
+            if(rotate === prop("rotate", $el.parent(), null, null, false)) {
+                // We are not able to distinguish, whether the rotation is set to 0 or undefined. We assume it is undefined.
+                // The good side:
+                // 1. Import images and export
+                // 2. Check the HTML, they have no data-rotate attribute.
+                // 3. If they had, opening the exported file and rotating their section
+                // 4. Would have no effect. As their superfluous data-rotate=0 would prevail.
+                //
+                // The bad side:
+                // 1. We set image rotation to 0
+                // 2. We set its section rotation to 90
+                // 3. The image should not be affected but it is.
+                $el.removeAttr("data-rotate")
+            }
         }
         return duration ?? prop("step-duration", $el, null, "duration")
     }
