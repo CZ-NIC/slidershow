@@ -156,9 +156,8 @@ class Playback {
      *
      */
     reset() {
-        const last_index = this.frame?.index || Infinity
         this.$articles = Frame.load_all(this).show()
-        this.$current = $(this.$articles.get(last_index) ?? this.$articles.first())
+        this.$current = this.frame?.$frame ?? this.$articles.first()
         Frame.videoInit(this.$articles)
         this.positionFrames()
         this.hud.reset()
@@ -430,7 +429,7 @@ class Playback {
         ], true)
 
         // start transition
-        frame.prepare(lastFrame)
+        frame.prepare(sameFrame ? null : lastFrame)
         this.play_pause(moving)
         this.doNotWaitAndGo()
 

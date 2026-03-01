@@ -296,12 +296,12 @@ class Operation {
             ...[
                 // NOTE these are not ideal. On section end, trailing frames misses.
                 // So going down by 5 would 'bend' because there were not enough frames.
-                ["ArrowUp", "△", "Go up", () => pl.previousFrame(pl.hud.grid_c.columns)],
-                ["ArrowDown", "▽", "Go down", () => pl.nextFrame(pl.hud.grid_c.columns)],
-                ["PageUp", "⮅", "Page up", () => pl.previousFrame(pl.hud.grid_c.columns * 5)],
-                ["PageDown", "⮇", "Page down", () => pl.nextFrame(pl.hud.grid_c.columns * 5)],
-                ["NumpadAdd", "+", "More thumbnails on a row", () => pl.hud.grid_c.changeColumnsCount(1)],
-                ["NumpadSubtract", "-", "Less thumbnails on a row", () => pl.hud.grid_c.changeColumnsCount(-1)],
+                ["ArrowUp", "△", "Go up", () => pl.previousFrame(pl.hud.grid.columns)],
+                ["ArrowDown", "▽", "Go down", () => pl.nextFrame(pl.hud.grid.columns)],
+                ["PageUp", "⮅", "Page up", () => pl.previousFrame(pl.hud.grid.columns * 5)],
+                ["PageDown", "⮇", "Page down", () => pl.nextFrame(pl.hud.grid.columns * 5)],
+                ["NumpadAdd", "+", "More thumbnails on a row", () => pl.hud.grid.changeColumnsCount(1)],
+                ["NumpadSubtract", "-", "Less thumbnails on a row", () => pl.hud.grid.changeColumnsCount(-1)],
 
             ].map(this._button("Grid"))]).disable()
 
@@ -330,7 +330,7 @@ class Operation {
                     pl.editing_mode ? pl.frame.make_editable() : pl.frame.unmake_editable()
                     pl.hud.reset_thumbnails()
                     if (pl.hud.thumbnails_visible) {
-                        pl.hud.thumbnails()
+                        pl.hud.display_thumbnails()
                     }
                     pl.hud.reset_grid()
                     pl.hud.info(`Editing mode ${pl.editing_mode ? "enabled" : "disabled."}`)
@@ -342,7 +342,7 @@ class Operation {
                     pl.operation.tagging.toggle(pl.tagging_mode)
                     pl.hud.reset_thumbnails()
                     if (pl.hud.thumbnails_visible) {
-                        pl.hud.thumbnails()
+                        pl.hud.display_thumbnails()
                     }
                     pl.hud.reset_grid()
                     pl.hud.info(`Tagging mode ${pl.tagging_mode ? "enabled" : "disabled."}`)

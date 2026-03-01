@@ -134,7 +134,7 @@ class Frame {
     /**
      * Frame is going to be entered right now but is not visible yet.
      * (Might run multiple times before leave.)
-     * @param {?Frame} lastFrame
+     * @param {?Frame} lastFrame The frame we are coming from. (If not set, it means eg. window/font size change.) It's never set to this frame.
      */
     prepare(lastFrame = null) {
         this.children.forEach(f => f.$frame.hide())
@@ -153,7 +153,7 @@ class Frame {
         // XX We might come here twice. Sometimes, it's not good, sometimes, it is-
         // What would vanish when second refresh? Video shortcuts that were added.
         // But we need to refresh ex: thumbnails after frame import.
-        this.playback.hud.refresh(this, lastFrame)
+        this.playback.hud.refresh(this, Boolean(lastFrame))
 
         // Map
         this.map_prepare()
@@ -275,7 +275,8 @@ class Frame {
             })
 
         // Adjust initial step (either the first or the last).
-        if (last_frame && last_frame !== this) { // If the frame === last_frame, this might be just window resize and font size change
+        if (last_frame) {
+            // last_frame might not be set. Eg. when no frame change happened on window resize or font size change
             if (last_frame.index < this.index) { // went forward to the frame (or direct entry)
                 this.step_index = 0
                 this.step_process($(this.steps.slice(0, 1).flat()), false)
@@ -353,7 +354,7 @@ class Frame {
      * To prevent this, we load the image to a hidden placeholder before the frame is entered so that the browser is forced to decompile it on schedule.
      */
     async preblink() {
-        if(this.playback.hud.grid_visible || this.playback.hud.thumbnails_visible) {
+        if (this.playback.hud.grid_visible || this.playback.hud.thumbnails_visible) {
             // Thumbnails already display the image, so no need to do it again.
             this.playback.$preblink_prevention.hide()
         }

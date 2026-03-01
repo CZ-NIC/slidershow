@@ -29,9 +29,9 @@ class GridController {
 
     /**
      * Initial load around current frame, bind scroll handler
-     * @param {?Frame} lastFrame
+     * @param {boolean} scrollToCurrent
      */
-    load(lastFrame = null) {
+    load(scrollToCurrent = false) {
         const currentPos = this._currentPos()
         const startFrom = this._snapToRowStart(Math.max(0, currentPos - this.preload_radius))
         const startTo = Math.min(this.$framesSections.length, currentPos + this.preload_radius)
@@ -42,15 +42,19 @@ class GridController {
 
         this.hud.makeThumbnailsImportable(this.$container)
         this._bindScroll()
-        this._scrollToCurrentFrame(lastFrame)
+
+        if (scrollToCurrent) {
+            this._scrollToCurrentFrame()
+        }
         return this
     }
 
     /**
      *
-     * @param {?Frame} lastFrame
+     * @param {boolean} scrollToCurrent
+     * Make sure the frame is loaded within thumbnails.
      */
-    focusFrame(lastFrame = null) {
+    focusFrame(scrollToCurrent = false) {
         const currentPos = this._currentPos()
 
         // Is this frame out of current range?
@@ -66,7 +70,9 @@ class GridController {
         }
 
         this.hud.makeThumbnailsImportable(this.$container)
-        this._scrollToCurrentFrame(lastFrame)
+        if (scrollToCurrent) {
+            this._scrollToCurrentFrame()
+        }
     }
 
     _currentPos() {
@@ -206,21 +212,63 @@ class GridController {
 
     /**
      * Scroll to the thumbnail if not visible
-     * @param {?Frame} lastFrame
      */
-    _scrollToCurrentFrame(lastFrame) {
+    _scrollToCurrentFrame() {
         // why set timeout? Because the re-ordering DOM changes must flush first.
         // Scroll only when the frame changed.
         // Ex: Hitting 'End' will scroll. But dragging unactive frames around would scroll you out from what you have just dragged.
         setTimeout(() => {
-            if (this.pl.frame !== lastFrame) {
-                const el = this.hud.getThumbnail(this.pl.frame, this.$container).get(0)
-                if (!el) return
-                const rect = el.getBoundingClientRect()
-                if (rect.top < 0 || rect.bottom > document.documentElement.clientHeight) {
-                    el.scrollIntoView({ block: "center" })
-                }
+            const el = this.hud.getThumbnail(this.pl.frame, this.$container).get(0)
+            if (!el) return
+            const rect = el.getBoundingClientRect()
+            if (rect.top < 0 || rect.bottom > document.documentElement.clientHeight) {
+                el.scrollIntoView({ block: "center" })
             }
         }, 1)
+    }
+
+    getScrollAnchor() {
+        const container = this.$container[0]
+        let best = null
+
+        this.$container.children("frame-preview").each((_, el) => {
+            if (el.offsetTop >= container.scrollTop) {
+                best = {
+                    frameIndex: Number(el.dataset.ref),
+                    offsetY: el.offsetTop - container.scrollTop
+                }
+                return false
+            }
+        })
+
+        return best
+    }
+
+    scrollToAnchor(anchor) {
+            if (!anchor) return
+            const { frameIndex, offsetY } = anchor
+
+            const pos = this.$framesSections.index(
+                this.$framesSections.filter((_, el) =>
+                    el.tagName !== "SECTION" && $(el).data("frame")?.index === frameIndex
+                )[0]
+            )
+            if (pos === -1) return
+
+            if (pos < this.loadedFrom || pos >= this.loadedUpTo) {
+                this.$container.empty()
+                this.$framesSections = $(FRAME_SECTION_SELECTOR)
+                this.colMap = this._buildColMap()
+                const startFrom = this._snapToRowStart(Math.max(0, pos - this.preload_radius))
+                const startTo = Math.min(this.$framesSections.length, pos + this.preload_radius)
+                this.$framesSections.slice(startFrom, startTo).each((_, frameOrSection) => this._addToGrid(frameOrSection))
+                this.loadedFrom = startFrom
+                this.loadedUpTo = startTo
+                this.hud.makeThumbnailsImportable(this.$container)
+            }
+
+            const $thumb = this.hud.getThumbnail({ index: frameIndex }, this.$container)
+            if (!$thumb.length) return
+            this.$container[0].scrollTop = $thumb[0].offsetTop - offsetY
     }
 }

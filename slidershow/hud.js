@@ -18,7 +18,7 @@ class Hud {
         /**
          * @type {?GridController}
          */
-        this.grid_c = null
+        this.grid = null
         this.$hud_properties = $("#hud-properties").hide() // by default off
         this.$control_icons = $("#control-icons")
 
@@ -88,7 +88,7 @@ class Hud {
         this.$hud_thumbnails.toggle()
         if (this.thumbnails_visible && this.playback.frame) {
             // when restoring session from the hash, frame is not ready yet
-            this.thumbnails()
+            this.display_thumbnails()
         }
         this.playback.session.store()
     }
@@ -99,7 +99,7 @@ class Hud {
         if (this.grid_visible && this.playback.frame) {
             // when restoring session from the hash, frame is not ready yet
             on = true
-            this.grid()
+            this.display_grid(true)
         }
         this.playback.operation.grid.toggle(on)
         this.playback.session.store()
@@ -208,7 +208,7 @@ class Hud {
     /**
      * Thumbnail ribbon
      */
-    thumbnails() {
+    display_thumbnails() {
         const pl = this.playback
         const frame = pl.frame
         const $container = this.$hud_thumbnails
@@ -248,14 +248,14 @@ class Hud {
     /**
      * Reposition grid
      * Grid is called every frame change. Reposition frames accordingly to the current ordering.
-     * @param {?Frame} lastFrame
+     * @param {boolean} scrollToCurrent
      */
-    grid(lastFrame = null) {
-        if (!this.grid_c) {
+    display_grid(scrollToCurrent = false) {
+        if (!this.grid) {
             this.$hud_grid.empty()
-            this.grid_c = new GridController(this.playback, this, this.$hud_grid).load(lastFrame)
+            this.grid = new GridController(this.playback, this, this.$hud_grid).load(scrollToCurrent)
         } else {
-            this.grid_c.focusFrame(lastFrame)
+            this.grid.focusFrame(scrollToCurrent)
         }
     }
 
@@ -358,7 +358,6 @@ class Hud {
                             pl.section_controller.moveFrame(index, target.dataset.ref, before)
                         }
                     }
-                    this.reset_grid()
                 }
             })
 
@@ -380,9 +379,9 @@ class Hud {
     /**
      *
      * @param {Frame} frame
-     * @param {?Frame} lastFrame
+     * @param {boolean} scrollToCurrent
      */
-    refresh(frame, lastFrame = null) {
+    refresh(frame, scrollToCurrent = false) {
         const $actor = frame.$actor
 
         this.$hud_filename.html(frame.get_filename($actor) || "?")
@@ -404,10 +403,10 @@ class Hud {
 
         // Thumbnails
         if (this.thumbnails_visible) {
-            this.thumbnails()
+            this.display_thumbnails()
         }
         if (this.grid_visible) {
-            this.grid(lastFrame)
+            this.display_grid(scrollToCurrent)
         }
         if (this.properties_visible) {
             this.properties()
@@ -465,10 +464,15 @@ class Hud {
     }
 
     reset_grid() {
+        const pos = this.grid ? this.grid.getScrollAnchor() : null
+
         this.$hud_grid.html("")
-        this.grid_c = null
+        this.grid = null
         if (this.grid_visible) {
-            this.grid()
+            this.display_grid()
+            if (pos) {
+                this.grid.scrollToAnchor(pos)
+            }
         }
     }
 
