@@ -50,7 +50,7 @@ class Playback {
         this.step_disabled = false
 
         this.operation = new Operation(this)
-        this.regrouping = new RegroupingController(this)
+        this.section_controller = new SectionController(this)
         this.reset()
 
         /** Frames that are going to be pre/unloaded.

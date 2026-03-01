@@ -90,7 +90,7 @@ class Menu {
         if (!items.length) {
             return false
         }
-        const $section = this.playback.operation.insertNewSection()
+        const $section = this.playback.section_controller.insertNewSection()
         const $frames = this.loadFiles(items)
 
         $section.hide(0).append($frames).children().hide(0).parent().show(0)

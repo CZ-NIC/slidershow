@@ -144,9 +144,8 @@ class GridController {
      * @param {boolean} prepend
      */
     _assureSection(currentSection, prepend = false) {
-        const name = $(currentSection).data("name")
         const $sc = $(`<section-controller>
-                        <span class="section-title">Section${name ? " " + name : ""} (${currentSection.childElementCount})</span>
+                        <span class="section-title">Section ${this.pl.section_controller.getSectionName($(currentSection))}</span>
                         <div class="section-menus">
                             <div class="section-menu">
                                 <span>order ▾</span>
@@ -176,7 +175,7 @@ class GridController {
                                     <button data-role='regroup' data-param='tags'>by tags</button>
                                 </div>
                             </div>
-                            <!-- <button data-role='delete'>delete</button> -->
+                            <button data-role='delete'>delete</button>
                         </div>
                     </section-controller>`)
             .data("section", currentSection)

@@ -45,7 +45,7 @@ class Operation {
             ["Digit8", "Tag 8", () => pl.frame.set_tag(8)],
             ["Digit9", "Tag 9", () => pl.frame.set_tag(9)],
             ...[
-                ["Alt+Shift+g", "🔀", "Group frames according to their tag", () => pl.regrouping.group()],
+                ["Alt+Shift+g", "🔀", "Group frames according to their tag", () => pl.section_controller.group()],
                 ["Numpad0", "⛔", "Tag 0", () => pl.frame.set_tag(null)],
                 ["Numpad1", "1", "Tag 1", () => pl.frame.set_tag(1)],
                 ["Numpad2", "2", "Tag 2", () => pl.frame.set_tag(2)],
@@ -93,7 +93,7 @@ class Operation {
                         pl.goToArticle($root)
                     })
             }],
-            ["Alt+n", "➕", "Insert new frame", () => this.insertNewFrame()],
+            ["Alt+n", "➕", "Insert new frame", () => pl.section_controller.insertNewFrame()],
             ["Enter", "📑", "Insert new &lt;li&gt;", () => {
                 const $el = pl.getFocused()
                 if ($el) {
@@ -361,101 +361,5 @@ class Operation {
             ['Ctrl+s', "&#128190;", "Export", () => menu.export.export_dialog()],
             ['F1', "&#9432;", "Help", () => menu.help()],
         ].map(this._button("Global")))
-    }
-
-    /**
-     *
-     * @param {JQuery} $root Frame to place the new frame after. Otherwise, playback.frame will be used.
-     */
-    insertNewFrame($root) {
-        const pl = this.playback
-        $root ??= pl.frame.$frame
-        const $frame = $("<article/>").html("<h1>Title</h1><ul><li>contents</li></ul>")
-
-        pl.changes.undoable("Insert new frame",
-            () => {
-                $frame.insertAfter($root)
-                pl.reset()
-                pl.goToArticle($frame)
-            }, () => {
-                $frame.remove()
-                pl.reset()
-                pl.goToArticle($root)
-            })
-    }
-
-    /**
-     * Appends a new section to the $main and write the default options as attributes.
-     * @returns {JQuery} Section
-     */
-    insertNewSection() {
-        const pl = this.playback
-        const formData = new FormData($("#defaults")[0])
-        formData.delete('path') // path does not belong to <section>
-        const $section = $("<section/>", Object.fromEntries(Array.from(formData)
-            .map(([key, value]) => [`data-${key}`, value])
-            .filter(([key, value]) => value !== '')))
-            .appendTo($main)
-        pl.changes.undoable("Insert new section",
-            () => $section.appendTo($main),
-            () => $section.detach(),
-            () => pl.resetAndGo()
-        )
-        return $section
-    }
-
-    /**
-     *
-     * @param {number} frameIndex Initial frame
-     * @param {number} rootIndex Target frame
-     * @param {boolean} before Insert before or after the root frame
-     * @returns
-     */
-    moveFrame(frameIndex, rootIndex, before) {
-        if (frameIndex === rootIndex) {
-            return
-        }
-        const pl = this.playback
-        const $frame = $(pl.$articles[frameIndex])
-        pl.changes.undoable("Move frame",
-            () => $frame[before ? "insertBefore" : "insertAfter"](pl.$articles[rootIndex]),
-            this.redoForMoving($frame),
-            () => pl.resetAndGo()
-        )
-    }
-
-    putFrameIntoSection(frameIndex, section) {
-        const pl = this.playback
-        const $frame = $(pl.$articles[frameIndex])
-        pl.changes.undoable("Prepend to section",
-            () => $frame.prependTo(section),
-            this.redoForMoving($frame),
-            () => pl.resetAndGo())
-    }
-
-    /**
-     * @param {JQuery} $frame
-     * @returns {function} Call to position the $frame to the previous location.
-     */
-    redoForMoving($frame) {
-        return $frame.prev().length ?
-            (root => () => $frame.insertAfter(root))($frame.prev())
-            : (root => () => $frame.prependTo(root))($frame.parent())
-    }
-
-    /**
-     *
-     * @param {JQuery[]} frames Frames not yet inserted into the DOM.
-     * @param {JQuery} $target Element to append the frames.
-     * @param {boolean|string} before Boolean or "append". Inserted before or after the element or prepend to an element.
-     * @returns
-     */
-    importFrames(frames, $target, before) {
-        const pl = this.playback
-        return pl.changes.undoable("Import files",
-            () => $target[before === "prepend" ? "prepend" : before ? "before" : "after"](frames),
-            () => frames.forEach($frame => $frame.detach()),
-            () => pl.resetAndGo()
-        )
     }
 }

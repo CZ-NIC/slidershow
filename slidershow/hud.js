@@ -155,21 +155,21 @@ class Hud {
                         order((frame1, frame2) => frame1.$actor?.data("datetime") < frame2.$actor?.data("datetime") ? 1 : -1)
                         break
                     case "new-frame":
-                        pl.operation.insertNewFrame(rightPlace())
+                        pl.section_controller.insertNewFrame(rightPlace())
                         break
                     case "new-section":
-                        pl.operation.insertNewSection()
+                        pl.section_controller.insertNewSection()
                         break
                     case "regroup":
-                        pl.regrouping.group(e.target.dataset.param, $frames)
+                        pl.section_controller.group(e.target.dataset.param, $frames)
                         break
                     case "delete":
-                        // TODO
+                        pl.section_controller.deleteSection($section)
                         break
                     case "import":
                         $("<input/>", { type: "file" }).change(function () {
                             const frames = pl.menu.loadFiles([...this.files])
-                            pl.operation.importFrames(frames, rightPlace(), false)
+                            pl.section_controller.importFrames(frames, rightPlace(), false)
                             pl.hud.info(`${this.files.length} media imported`)
                         }).click()
                         break
@@ -332,9 +332,9 @@ class Hud {
         // make importable and draggable
         pl.menu.importable($("frame-preview, section-controller", $container), (frames, target, before) => {
             if (target.tagName === "SECTION-CONTROLLER") {
-                pl.operation.importFrames(frames, $($(target).data("section")), "prepend")
+                pl.section_controller.importFrames(frames, $($(target).data("section")), "prepend")
             } else {
-                pl.operation.importFrames(frames, $(pl.$articles[target.dataset.ref]), before)
+                pl.section_controller.importFrames(frames, $(pl.$articles[target.dataset.ref]), before)
             }
         })
             .draggable({  // re-order thumbnails by dragging
@@ -353,9 +353,9 @@ class Hud {
                     if (target) {
                         const index = ui.helper.data("ref")
                         if (target.tagName === "SECTION-CONTROLLER") {
-                            pl.operation.putFrameIntoSection(index, $(target).data("section"))
+                            pl.section_controller.putFrameIntoSection(index, $(target).data("section"))
                         } else {
-                            pl.operation.moveFrame(index, target.dataset.ref, before)
+                            pl.section_controller.moveFrame(index, target.dataset.ref, before)
                         }
                     }
                     this.reset_grid()
