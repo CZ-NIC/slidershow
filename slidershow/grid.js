@@ -137,11 +137,29 @@ class GridController {
      * @param {HTMLElement} frameOrSection
      */
     _addToGrid(frameOrSection, prepend = false) {
-        if (frameOrSection.tagName === "SECTION") {
+        if (frameOrSection.tagName === "MAIN") {
+            this._assureMain(frameOrSection, prepend)
+        } else if (frameOrSection.tagName === "SECTION") {
             this._assureSection(frameOrSection, prepend)
         } else {
             this.hud.assureThumbnail($(frameOrSection).data("frame"), this.$container, prepend)
         }
+    }
+
+    /**
+     * Insert control ribbon for the main element to the grid
+     * @param {HTMLElement} main
+     * @param {boolean} prepend
+     */
+    _assureMain(main, prepend = false) {
+        const $mc = $(`<section-controller data-role="main">
+                    <span class="section-title">Presentation ${this.pl.section_controller.getSubsectionCount($(main))}</span>
+                    <div class="section-menus">
+                        <button data-role='flatten-subsections'>flatten subsections</button>
+                    </div>
+                </section-controller>`)
+            .data("section", main)
+        prepend ? $mc.prependTo(this.$container) : $mc.appendTo(this.$container)
     }
 
     /**
@@ -245,30 +263,30 @@ class GridController {
     }
 
     scrollToAnchor(anchor) {
-            if (!anchor) return
-            const { frameIndex, offsetY } = anchor
+        if (!anchor) return
+        const { frameIndex, offsetY } = anchor
 
-            const pos = this.$framesSections.index(
-                this.$framesSections.filter((_, el) =>
-                    el.tagName !== "SECTION" && $(el).data("frame")?.index === frameIndex
-                )[0]
-            )
-            if (pos === -1) return
+        const pos = this.$framesSections.index(
+            this.$framesSections.filter((_, el) =>
+                el.tagName !== "SECTION" && $(el).data("frame")?.index === frameIndex
+            )[0]
+        )
+        if (pos === -1) return
 
-            if (pos < this.loadedFrom || pos >= this.loadedUpTo) {
-                this.$container.empty()
-                this.$framesSections = $(FRAME_SECTION_SELECTOR)
-                this.colMap = this._buildColMap()
-                const startFrom = this._snapToRowStart(Math.max(0, pos - this.preload_radius))
-                const startTo = Math.min(this.$framesSections.length, pos + this.preload_radius)
-                this.$framesSections.slice(startFrom, startTo).each((_, frameOrSection) => this._addToGrid(frameOrSection))
-                this.loadedFrom = startFrom
-                this.loadedUpTo = startTo
-                this.hud.makeThumbnailsImportable(this.$container)
-            }
+        if (pos < this.loadedFrom || pos >= this.loadedUpTo) {
+            this.$container.empty()
+            this.$framesSections = $(FRAME_SECTION_SELECTOR)
+            this.colMap = this._buildColMap()
+            const startFrom = this._snapToRowStart(Math.max(0, pos - this.preload_radius))
+            const startTo = Math.min(this.$framesSections.length, pos + this.preload_radius)
+            this.$framesSections.slice(startFrom, startTo).each((_, frameOrSection) => this._addToGrid(frameOrSection))
+            this.loadedFrom = startFrom
+            this.loadedUpTo = startTo
+            this.hud.makeThumbnailsImportable(this.$container)
+        }
 
-            const $thumb = this.hud.getThumbnail({ index: frameIndex }, this.$container)
-            if (!$thumb.length) return
-            this.$container[0].scrollTop = $thumb[0].offsetTop - offsetY
+        const $thumb = this.hud.getThumbnail({ index: frameIndex }, this.$container)
+        if (!$thumb.length) return
+        this.$container[0].scrollTop = $thumb[0].offsetTop - offsetY
     }
 }

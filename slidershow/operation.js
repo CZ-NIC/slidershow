@@ -304,8 +304,6 @@ class Operation {
                 ["NumpadSubtract", "-", "Less thumbnails on a row", () => pl.hud.grid.changeColumnsCount(-1)],
 
             ].map(this._button("Grid"))]).disable()
-
-        // pl.hud.toggle_grid()
     }
 
     switchesInit() {

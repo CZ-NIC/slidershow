@@ -6,7 +6,7 @@ const $main = $("body > main").length ? $("body > main") : $("<main/>").appendTo
 const $hud = $("#hud")
 const FRAME_SELECTOR = "main article,main article-map"
 const FRAME_TAGS = "article, article-map" // Can be used only in the <main> context. Because sometimes FRAME_SELECTOR is too strict.
-const FRAME_SECTION_SELECTOR = FRAME_SELECTOR + ",main section"
+const FRAME_SECTION_SELECTOR = FRAME_SELECTOR + ",main,main section"
 
 /** To fetch docs */
 const DOCS_URI = "https://cdn.jsdelivr.net/gh/CZ-NIC/slidershow@main/README.md"

@@ -166,6 +166,9 @@ class Hud {
                     case "delete":
                         pl.section_controller.deleteSection($section)
                         break
+                    case "flatten-subsections":
+                        pl.section_controller.flattenSubsections($section)
+                        break
                     case "import":
                         $("<input/>", { type: "file" }).change(function () {
                             const frames = pl.menu.loadFiles([...this.files])

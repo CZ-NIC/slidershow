@@ -114,10 +114,10 @@ class Playback {
         this.$articles.show()
         $hud.show(0)
         this.$current = this.$articles.first()
-        this.session.restore(true)
         this.operation.general.enable()
         this.operation.playthrough.enable()
         this.operation.switches.enable()
+        this.session.restore(true)
     }
 
     stop() {

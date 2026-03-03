@@ -12,6 +12,10 @@ class SectionController {
         return `${name ? name + " " : ""}(${$section.children().length})`
     }
 
+    getSubsectionCount($section) {
+           return `(${$section.children("section").length})`
+    }
+
     /**
      *
      * @param {?JQuery} $root Frame to place the new frame after. Otherwise, playback.frame will be used.
@@ -129,6 +133,42 @@ class SectionController {
                         : pl.frame)
                         .index)
             })
+    }
+
+    flattenSubsections($main) {
+        const pl = this.playback
+        const $subsections = $main.children("section")
+
+        if(!$subsections.length) {
+            pl.hud.info("No subsections to flatten")
+            return
+        }
+
+
+        // Remember the original section position and contents
+        const snapshots = $subsections.map((_, section) => {
+            const $section = $(section)
+            const $prev = $section.prev()
+            const sectionReinsert = $prev.length ? [$prev, "after"] : [$section.parent(), "prepend"]
+            const $children = $section.children()
+            return { $section, sectionReinsert, $children }
+        }).get()
+
+        pl.changes.undoable("Flatten subsections " + pl.section_controller.getSubsectionCount($main),
+            () => {
+                snapshots.forEach(({ $section, $children }) => {
+                    $section.before($children)  // move contents before the section
+                    $section.detach()           // remove empty section
+                })
+            },
+            () => {
+                snapshots.forEach(({ $section, sectionReinsert, $children }) => {
+                    sectionReinsert[0][sectionReinsert[1]]($section)  // restore section
+                    $section.append($children)                         // restore its contents
+                })
+            },
+            () => pl.reset()
+        )
     }
 
     /**
