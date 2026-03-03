@@ -78,7 +78,7 @@ class GridController {
     _currentPos() {
         return this.$framesSections.index(
             this.$framesSections.filter((_, el) =>
-                el.tagName !== "SECTION" && $(el).data("frame")?.index === this.pl.index
+                !["SECTION", "MAIN"].includes(el.tagName) && $(el).data("frame")?.index === this.pl.index
             )[0]
         )
     }
@@ -87,7 +87,7 @@ class GridController {
         const colMap = []
         let col = 0
         this.$framesSections.each((i, el) => {
-            if (el.tagName === "SECTION") {
+            if (["SECTION", "MAIN"].includes(el.tagName)) {
                 col = 0
                 colMap[i] = null
             } else {
@@ -275,7 +275,7 @@ class GridController {
 
         const pos = this.$framesSections.index(
             this.$framesSections.filter((_, el) =>
-                el.tagName !== "SECTION" && $(el).data("frame")?.index === frameIndex
+                !["SECTION", "MAIN"].includes(el.tagName) && $(el).data("frame")?.index === frameIndex
             )[0]
         )
         if (pos === -1) return
@@ -295,5 +295,52 @@ class GridController {
         const $thumb = this.hud.getThumbnail({ index: frameIndex }, this.$container)
         if (!$thumb.length) return
         this.$container[0].scrollTop = $thumb[0].offsetTop - offsetY
+    }
+
+    /**
+     * Returns the frame index after moving by one page up/down.
+     * @param {number} direction 1 = down, -1 = up
+     * @returns {number}
+     */
+    getFrameIndexInNextPage(direction) {
+        const containerHeight = this.$container[0].clientHeight
+        const thumbHeight = this.hud.getThumbnail(this.pl.frame, this.$container)[0]?.offsetHeight
+        if (!thumbHeight) return this.pl.index
+
+        const rowsPerPage = Math.max(1, Math.floor(containerHeight / thumbHeight) - 1)
+
+        return this.getFrameIndexInNextRow(rowsPerPage * direction)
+    }
+
+    /**
+     * Returns the frame index of the thumbnail that is visually rows above/below the given frame index.
+     * @param {number} rows Positive for down, negative for up
+     */
+    getFrameIndexInNextRow(rows) {
+        const pos = this._currentPos()
+        if (pos === -1) return null
+
+        const currentCol = this.colMap[pos]
+        const direction = rows > 0 ? 1 : -1
+        let i = pos + direction
+        let crossedRows = 0
+
+        while (i >= 0 && i < this.colMap.length) {
+            const col = this.colMap[i]
+
+            if (col === null) {
+                crossedRows++
+            } else {
+                if (direction > 0 && col < this.colMap[i - 1]) crossedRows++
+                if (direction < 0 && col > this.colMap[i + 1]) crossedRows++
+
+                if (crossedRows >= Math.abs(rows) && col === currentCol) {
+                    return $(this.$framesSections[i]).data("frame")?.index ?? null
+                }
+            }
+
+            i += direction
+        }
+        return direction > 0 ? this.pl.$articles.length - 1 : 0
     }
 }

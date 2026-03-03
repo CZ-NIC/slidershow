@@ -277,13 +277,13 @@ class Operation {
         const pl = this.playback
         return wh.group("Properties", [
             ...[
-                // NOTE: If you change the frame with the property panel closed,
-                // the shortcut still triggers the button on the old frame
-                // causing the browser to go back and register unzoomed position as a data-point.
-                ["Alt+s", "📸", "Add step point", () =>
-                    $(".hud-point", pl.hud.$hud).eq(1).trigger("click")
-                ],
-            ].map(this._button("Properties"))]).disable()
+                    // NOTE: If you change the frame with the property panel closed,
+                    // the shortcut still triggers the button on the old frame
+                    // causing the browser to go back and register unzoomed position as a data-point.
+                    ["Alt+s", "📸", "Add step point", () =>
+                        $(".hud-point", pl.hud.$hud).eq(1).trigger("click")
+                    ],
+                ].map(this._button("Properties"))]).disable()
 
         function act() {
             return pl.frame.$actor
@@ -294,12 +294,17 @@ class Operation {
         const pl = this.playback
         return wh.group("Grid", [
             ...[
-                // NOTE these are not ideal. On section end, trailing frames misses.
-                // So going down by 5 would 'bend' because there were not enough frames.
-                ["ArrowUp", "△", "Go up", () => pl.previousFrame(pl.hud.grid.columns)],
-                ["ArrowDown", "▽", "Go down", () => pl.nextFrame(pl.hud.grid.columns)],
-                ["PageUp", "⮅", "Page up", () => pl.previousFrame(pl.hud.grid.columns * 5)],
-                ["PageDown", "⮇", "Page down", () => pl.nextFrame(pl.hud.grid.columns * 5)],
+                // NOTE we may implement selections. In that case, these shortcuts should be hidden or moved to a command palette. Too much of them!
+                // ["Shift+ArrowRight", "select right", "Add right frame to selection", () => pl.section_controller.moveFrame(pl.index, pl.index+1, false)],
+                ["Ctrl+ArrowUp", "△⇵", "Move up", () => pl.section_controller.moveFrame(pl.index, pl.hud.grid.getFrameIndexInNextRow(-1), true)],
+                ["Ctrl+ArrowDown", "▽⇵", "Move down", () => pl.section_controller.moveFrame(pl.index, pl.hud.grid.getFrameIndexInNextRow(1), false)],
+                ["Ctrl+ArrowLeft", "◁⇵", "Move left", () => pl.section_controller.moveFrame(pl.index, pl.index-1, true)],
+                ["Ctrl+ArrowRight", "▷⇵", "Move right", () => pl.section_controller.moveFrame(pl.index, pl.index+1, false)],
+
+                ["ArrowUp", "△", "Go up", () => pl.goToFrame(pl.hud.grid.getFrameIndexInNextRow(-1))],
+                ["ArrowDown", "▽", "Go down", () => pl.goToFrame(pl.hud.grid.getFrameIndexInNextRow(1))],
+                ["PageUp", "⮅", "Page up", () => pl.goToFrame(pl.hud.grid.getFrameIndexInNextPage(-1))],
+                ["PageDown", "⮇", "Page down", () => pl.goToFrame(pl.hud.grid.getFrameIndexInNextPage(1))],
                 ["NumpadAdd", "+", "More thumbnails on a row", () => pl.hud.grid.changeColumnsCount(1)],
                 ["NumpadSubtract", "-", "Less thumbnails on a row", () => pl.hud.grid.changeColumnsCount(-1)],
 
