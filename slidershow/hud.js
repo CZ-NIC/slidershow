@@ -157,9 +157,6 @@ class Hud {
                     case "new-frame":
                         pl.section_controller.insertNewFrame(rightPlace())
                         break
-                    case "new-section":
-                        pl.section_controller.insertNewSection()
-                        break
                     case "regroup":
                         pl.section_controller.group(e.target.dataset.param, $frames)
                         break
@@ -168,6 +165,9 @@ class Hud {
                         break
                     case "flatten-subsections":
                         pl.section_controller.flattenSubsections($section)
+                        break
+                    case "add-subsection":
+                        pl.section_controller.insertNewSection($section, e.target.dataset.param === "before")
                         break
                     case "import":
                         $("<input/>", { type: "file" }).change(function () {
@@ -335,7 +335,7 @@ class Hud {
         // make importable and draggable
         pl.menu.importable($("frame-preview, section-controller", $container), (frames, target, before) => {
             if (target.tagName === "SECTION-CONTROLLER") {
-                pl.section_controller.importFrames(frames, $($(target).data("section")), "prepend")
+                pl.section_controller.importFrames(frames, $($(target).data("section")), before ? "prepend" : before)
             } else {
                 pl.section_controller.importFrames(frames, $(pl.$articles[target.dataset.ref]), before)
             }

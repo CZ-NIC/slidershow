@@ -155,6 +155,13 @@ class GridController {
         const $mc = $(`<section-controller data-role="main">
                     <span class="section-title">Presentation ${this.pl.section_controller.getSubsectionCount($(main))}</span>
                     <div class="section-menus">
+                        <div class="section-menu">
+                            <span>add subsection ▾</span>
+                            <div class="dropdown">
+                                <button data-role='add-subsection' data-param='before'>to the begginning</button>
+                                <button data-role='add-subsection' data-param='after'>to the end</button>
+                            </div>
+                        </div>
                         <button data-role='flatten-subsections'>flatten subsections</button>
                     </div>
                 </section-controller>`)
@@ -185,7 +192,7 @@ class GridController {
                                 <div class="dropdown">
                                     <button data-role='import'>media</button>
                                     <button data-role='new-frame'>text</button>
-                                    <button data-role='new-section'>section</button>
+                                    <!-- subsection? -->
                                 </div>
                             </div>
                             <div class="section-menu">

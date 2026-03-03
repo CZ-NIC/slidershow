@@ -90,7 +90,7 @@ class Menu {
         if (!items.length) {
             return false
         }
-        const $section = this.playback.section_controller.insertNewSection()
+        const $section = this.playback.section_controller.insertNewSection($main)
         const $frames = this.loadFiles(items)
 
         $section.hide(0).append($frames).children().hide(0).parent().show(0)
@@ -128,6 +128,7 @@ class Menu {
      * @param {boolean} before Dragged before or after the element
      */
     importable($el, onDrop) {
+        let lastEvent = null
         $el.off("drop dragover dragleave")
             .on("drop", e => {
                 const before = clean(e)
@@ -139,17 +140,24 @@ class Menu {
                 } else {
                     this.playback.hud.info("Drop failed, try again")
                 }
-            }).on("dragover", e => $(e.currentTarget).addClass(`importable-target dragging-target dragging-${clean(e) ? "before" : "after"}`)
-            ).on("dragleave", e => {
-                clean(e)
             })
+            .on("dragover", e => {
+                if (lastEvent && lastEvent.currentTarget !== e.currentTarget) {
+                    // since dragleave is not guaranteed to run (FF 146),
+                    // "Import here" labels were left hanging on a quick mouse move
+                    clean(lastEvent)
+                }
+                lastEvent = e
+                $(e.currentTarget).addClass(`importable-target dragging-target dragging-${clean(e) ? "before" : "after"}`)
+            }
+            )
         return $el
 
         function clean(e) {
             e.preventDefault()
-            e.stopPropagation()
             $(e.currentTarget).removeClass("importable-target dragging-target dragging-before dragging-after")
-            return e.offsetX < e.target.offsetWidth / 2
+            const rect = e.currentTarget.getBoundingClientRect()
+            return e.clientX < rect.left + rect.width / 2
         }
     }
 

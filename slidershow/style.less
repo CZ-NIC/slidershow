@@ -159,24 +159,7 @@ frame-preview {
     }
 }
 
-.importable-target {
-    >* {
-        // do not blur the after effect
-        filter: blur(10px);
-    }
 
-    &::after,
-    article::after {
-        content: 'Import here';
-        display: block;
-        position: absolute;
-        background-color: @highlight;
-        color: black;
-        margin: 15px;
-        padding: 10px;
-        border-radius: 15px;
-    }
-}
 
 #hud {
     position: fixed; // note that when position:fixed does not work when moving body
@@ -257,6 +240,7 @@ frame-preview {
 
         &#hud-grid {
             // thumbnail grid
+            display: flex;
             flex-wrap: wrap;
             overflow: auto;
             height: 100vh;
@@ -264,9 +248,60 @@ frame-preview {
 
             --columns: 5;
 
+            .importable-target {
+                position: relative;
+                outline: 2px dashed fade(@highlight, 60%);
+                outline-offset: -2px;
+                transition: outline-color 0.15s;
+
+                &::after {
+                    content: '⤓ Import here';
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    position: absolute;
+                    inset: 0;
+                    font-size: 0.75rem;
+                    font-weight: 600;
+                    letter-spacing: 0.08em;
+                    text-transform: uppercase;
+                    color: @highlight;
+                    pointer-events: none;
+                }
+
+                &.dragging-before::after {
+                    inset: 0 50% 0 0;
+                    border-right: 2px dashed fade(@highlight, 40%);
+                }
+
+                &.dragging-after::after {
+                    inset: 0 0 0 50%;
+                    border-left: 2px dashed fade(@highlight, 40%);
+                }
+            }
+
             >frame-preview {
-                width: calc(100vw / var(--columns));
+                display: block;
+                width: calc(100% / var(--columns));
                 height: calc(100vh / var(--columns));
+
+                &.importable-target {
+                    >* {
+                        filter: blur(6px) brightness(0.6);
+                        transition: filter 1s;
+                        pointer-events: none;
+                    }
+
+                    &.dragging-before::after {
+                        content: '⤓ Insert before';
+                    }
+
+                    &.dragging-after::after {
+                        content: '⤓ Insert after';
+                    }
+                }
+
+
             }
 
             section-controller {
@@ -281,6 +316,14 @@ frame-preview {
 
                 .section-title {
                     flex: 1;
+                }
+
+                &::after {
+                    content: '▾';
+                }
+
+                &:hover::after {
+                    opacity: 0;
                 }
 
                 .section-menus {
@@ -344,6 +387,16 @@ frame-preview {
 
                 flex-basis: 100%;
 
+                &.importable-target {
+                    &.dragging-before::after {
+                        content: 'Prepend to section';
+                    }
+
+                    &.dragging-after::after {
+                        content: 'Append to section';
+                    }
+                }
+
             }
         }
 
@@ -356,10 +409,9 @@ frame-preview {
             background-color: lightgray;
 
             &.current {
-                filter: drop-shadow(16px 16px 20px @soft-highlight);
-                color: white;
-                box-shadow: 0px 5px 3px 5px darkgray;
-                background-color: @soft-highlight;
+                outline: 2px solid black;
+                background-color: @highlight;
+                z-index: 1;
             }
 
             .delete {

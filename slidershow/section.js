@@ -13,7 +13,7 @@ class SectionController {
     }
 
     getSubsectionCount($section) {
-           return `(${$section.children("section").length})`
+        return `(${$section.children("section").length})`
     }
 
     /**
@@ -39,9 +39,11 @@ class SectionController {
 
     /**
      * Appends a new section to the $main and write the default options as attributes.
+     * @param {JQuery<HTMLElement>} $supersection
+     * @param {boolean} prepend
      * @returns {JQuery} Section
      */
-    insertNewSection() {
+    insertNewSection($supersection, prepend = false) {
         const pl = this.playback
         const formData = new FormData($("#defaults")[0])
         formData.delete('path') // path does not belong to <section>
@@ -50,7 +52,7 @@ class SectionController {
             .filter(([key, value]) => value !== '')))
             .appendTo($main)
         pl.changes.undoable("Insert new section",
-            () => $section.appendTo($main),
+            () => prepend ? $section.prependTo($supersection) : $section.appendTo($supersection),
             () => $section.detach(),
             () => pl.resetAndGo()
         )
@@ -101,12 +103,12 @@ class SectionController {
      *
      * @param {JQuery[]} frames Frames not yet inserted into the DOM.
      * @param {JQuery} $target Element to append the frames.
-     * @param {boolean|string} before Boolean or "append". Inserted before or after the element or prepend to an element.
+     * @param {boolean|string} before Boolean or "prepend". Inserted before or after the element or prepend to an element.
      * @returns
      */
     importFrames(frames, $target, before) {
         const pl = this.playback
-        return pl.changes.undoable("Import files",
+        return pl.changes.undoable(`Import files (${frames.length})`,
             () => $target[before === "prepend" ? "prepend" : before ? "before" : "after"](frames),
             () => frames.forEach($frame => $frame.detach()),
             () => pl.resetAndGo()
@@ -139,7 +141,7 @@ class SectionController {
         const pl = this.playback
         const $subsections = $main.children("section")
 
-        if(!$subsections.length) {
+        if (!$subsections.length) {
             pl.hud.info("No subsections to flatten")
             return
         }

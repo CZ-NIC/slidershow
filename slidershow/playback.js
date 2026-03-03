@@ -165,7 +165,7 @@ class Playback {
 
     resetAndGo() {
         this.reset()
-        if (this.frame) {
+        if (this.frame?.index) { // the default dummy frame has no index
             this.goToFrame(this.frame.index)
         }
     }
