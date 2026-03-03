@@ -60,6 +60,8 @@ class MapWidget {
      */
     constructor($map, playback) {
 
+        /** Save API calls */
+        this._started = false
         this.$map = $map
         this.playback = playback
 
@@ -99,6 +101,12 @@ class MapWidget {
         this.postponed = null
     }
 
+    _ensureStarted() {
+        if (!this._started) {
+            this.map_start()
+        }
+    }
+
     /**
      *
      * @returns MapWidget
@@ -107,6 +115,9 @@ class MapWidget {
         if (!MAP_ENABLE) {
             return this
         }
+        this._started = true
+        this.$map.show(0)
+
         const center = L.latLng(50.12655, 14.41790)
         const map = this.map = L.map(this.$map[0]).setView(center, 13)
 
@@ -126,9 +137,6 @@ class MapWidget {
                 this._finished()
             }
         })
-
-        this.$map.hide(0)
-
         return this
     }
 
@@ -139,6 +147,7 @@ class MapWidget {
      * @param {Frame|null} frame Frame or null (fixed, non interactive position)
      */
     adapt(frame = null) {
+        this._ensureStarted()
 
         let $frame
         if (frame) {
@@ -153,7 +162,6 @@ class MapWidget {
             }
         }
 
-
         if ($frame) {
             this.$map.prependTo($frame)
 
@@ -164,6 +172,7 @@ class MapWidget {
     }
 
     toggle(force = false) {
+        this._ensureStarted()
         this.$map.toggle()
         this.blocked = force && this.$map.is(":hidden")
         if (force && !this.blocked && this.postponed) {
@@ -192,6 +201,7 @@ class MapWidget {
         if (!MAP_ENABLE) {
             return
         }
+        this._ensureStarted()
         this.postponed = () => this._engage(places, animate, geometry_show, geometry_criterion, markers_show, geometry_clear, markers_clear, zoom, last_places)
         if (!this.blocked) {
             this.$map.show(0)
@@ -224,7 +234,7 @@ class MapWidget {
             setTimeout(reject, 5000, 'map timeout')
         }).then(() => {
             this._hold_graphics = false
-            this.graphics_stack()
+            this._add_to_graphics_stack()
         })
 
         // resolve the places
@@ -288,7 +298,7 @@ class MapWidget {
      *
      * NOTE this function might not be needed now. (We migrated to Mapy REST API.)
      */
-    graphics_stack(fn = null) {
+    _add_to_graphics_stack(fn = null) {
         if (fn) {
             this._graphics_stack.push(fn)
         }
@@ -310,7 +320,7 @@ class MapWidget {
 
         if (routing.length > 1) { // geometry_show === "line"
             if (line) {
-                this.graphics_stack(() =>
+                this._add_to_graphics_stack(() =>
                     L.polyline(points).addTo(this.geometry_layer))
             }
             else { // geometry_show === "route"
@@ -343,7 +353,7 @@ class MapWidget {
                                 throw new Error("Routing API returned no geometry")
                             }
 
-                            this.graphics_stack(() =>
+                            this._add_to_graphics_stack(() =>
                                 L.geoJSON(data.geometry, { style: { color: '#007bff', weight: 4 } })
                                     .addTo(this.geometry_layer)
                             )

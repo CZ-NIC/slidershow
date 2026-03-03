@@ -98,23 +98,23 @@ class Frame {
      */
     effect(effect) {
         return
-        const TRANS_DURATION = this.prop("transition-duration") * 1000
-        const $el = this.$frame
-        const winHeight = $(window).height() + "px"
-        switch (effect) {
-            case "go-up":
-                return $el.animate({ top: `-${$el.height()}px` }, TRANS_DURATION,
-                    () => $el.hide(0).css("top", "0px"))
-            case "go-down":
-                return $el.animate({ top: winHeight }, TRANS_DURATION,
-                    () => $el.hide(0).css("top", "0px"))
-            case "arrive-from-bottom":
-                return $el.css("top", winHeight).show(0).animate({ top: "0px" }, TRANS_DURATION)
-            case "arrive-from-top":
-                return $el.css("top", `-${$el.height()}px`).show(0).animate({ top: "0px" }, TRANS_DURATION)
-            default:
-                console.error("Unknown effect: " + effect)
-        }
+        // const TRANS_DURATION = this.prop("transition-duration") * 1000
+        // const $el = this.$frame
+        // const winHeight = $(window).height() + "px"
+        // switch (effect) {
+        //     case "go-up":
+        //         return $el.animate({ top: `-${$el.height()}px` }, TRANS_DURATION,
+        //             () => $el.hide(0).css("top", "0px"))
+        //     case "go-down":
+        //         return $el.animate({ top: winHeight }, TRANS_DURATION,
+        //             () => $el.hide(0).css("top", "0px"))
+        //     case "arrive-from-bottom":
+        //         return $el.css("top", winHeight).show(0).animate({ top: "0px" }, TRANS_DURATION)
+        //     case "arrive-from-top":
+        //         return $el.css("top", `-${$el.height()}px`).show(0).animate({ top: "0px" }, TRANS_DURATION)
+        //     default:
+        //         console.error("Unknown effect: " + effect)
+        // }
     }
 
 
@@ -299,10 +299,11 @@ class Frame {
         // which map to use?
         if (this.$frame.prop("tagName") === "ARTICLE-MAP") {
             map = this.playback.map
-            map.adapt(this)
             if (!MAP_ENABLE) {
                 this.playback.hud.info("Map disabled in the URL")
+                return
             }
+            map.adapt(this)
         } else {
             map = this.playback.hud_map
         }

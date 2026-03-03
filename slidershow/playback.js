@@ -24,8 +24,8 @@ class Playback {
         }).stop()
 
         const fact = id => $("<div/>", { id: id }).prependTo("body")
-        this.map = new MapWidget(fact("map"), this).map_start()
-        this.hud_map = new MapWidget(fact("map-hud"), this).map_start()
+        this.map = new MapWidget(fact("map"), this)
+        this.hud_map = new MapWidget(fact("map-hud"), this)
 
         /**
          * @type {Frame} Current frame
@@ -107,7 +107,6 @@ class Playback {
             }
             touchstartX = 0
         }
-
     }
 
     start() {

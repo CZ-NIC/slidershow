@@ -91,14 +91,6 @@ function loadjQuery(callback) {
     // Allow using $ in the body without the need of load blocks.
     document.write('<script data-templated=1 src="https://code.jquery.com/jquery-3.7.1.min.js" integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo=" crossorigin="anonymous"></script>')
     document.querySelector("script[data-templated]").addEventListener("load", () => callback())
-    return
-    const el = document.createElement("script")
-    el.src = "https://code.jquery.com/jquery-3.6.4.min.js"
-    el.integrity = "sha256-oP6HI9z1XaZNBrJURtCoUT5SUnxFr8s3BzRl+cbzUq8="
-    el.crossOrigin = "anonymous"
-    el.setAttribute('data-templated', '1')
-    el.addEventListener("load", () => callback())
-    document.head.appendChild(el)
 }
 
 function loadScript(attrs) {
