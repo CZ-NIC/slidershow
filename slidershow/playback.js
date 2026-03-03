@@ -452,9 +452,12 @@ class Playback {
             }
 
             // Enter the frame
-            // TODO tady !this.waitAndGo has no sense, as waitAndGo is a promise
-            if (!this.waitAndGo(frame.enter()) && this.moving && frame.video_finished) { // always go to the next frame when video ends, ignoring data-duration
+            const duration = frame.enter()
+            if (!duration && this.moving && frame.video_finished) {
+                // even if data-duration=0, when a video plays, always go to the next frame
                 frame.video_finished.then(() => this.tryGoNext())
+            } else { // go to the next frame after duration passes
+                this.waitAndGo(duration)
             }
 
             // Work finished, now to the background tasks.

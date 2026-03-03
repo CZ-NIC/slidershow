@@ -521,7 +521,7 @@ class Hud {
                 }))
 
                 // video-points property
-                // TODO pack input_ancestored to save space (hide inputs unless having value or clicked or something)
+                // NOTE pack input_ancestored to save space (hide inputs unless having value or clicked or something)
                 pp
                     .input_ancestored("video-points", $actor)
                     .appendTo($props)

@@ -33,10 +33,7 @@ loadjQuery(() => {
             referrerpolicy: "no-referrer"
         },
         {
-            // src: "https://cdn.jsdelivr.net/npm/vanilla-js-wheel-zoom@9.1.4/dist/wheel-zoom.min.js",
-            // TODO main should be working
-            // src: "https://cdn.jsdelivr.net/gh/worka/vanilla-js-wheel-zoom/dist/wheel-zoom.min.js",
-            src: "https://cdn.jsdelivr.net/gh/worka/vanilla-js-wheel-zoom@952d1add/dist/wheel-zoom.min.js",
+            src: "https://cdn.jsdelivr.net/gh/worka/vanilla-js-wheel-zoom@9.1.0/dist/wheel-zoom.min.js",
             crossOrigin: "anonymous",
         },
         { src: "https://cdn.jsdelivr.net/npm/js-circle-progress@0.2.4/dist/jquery.circle-progress.min.js" },
