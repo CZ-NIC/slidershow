@@ -575,6 +575,12 @@ article-map {
     // pointer-events: none;
     // z-index: 1;
     // color: black;
+
+    #map {
+        // Fullscreen map (in tutorial) would prevent grid be seen.
+        // I don't get it but this helps.
+        z-index: 1;
+    }
 }
 
 @keyframes fade-in {

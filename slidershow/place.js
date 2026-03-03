@@ -13,17 +13,26 @@ class Place {
      */
     constructor(name = null) {
         this.name = name
+        this.coordinates = {}
+
+        if (!MAP_USE_CACHE || !this.name) return
+
+        const itemName = "PLACE: " + this.name
         let cache = {}
 
-        if (MAP_USE_CACHE && this.name) {
-            try {
-                cache = JSON.parse(localStorage.getItem("PLACE: " + this.name)) || {}
-            } catch (e) {
-                console.warn("Something wrong with the map cache", e)
-            }
+        try {
+            cache = JSON.parse(localStorage.getItem(itemName)) || {}
+        } catch (e) {
+            console.warn("Something wrong with the map cache", e)
         }
 
-        this.coordinates = cache.coordinates || {}
+        const { lon, lat } = cache.coordinates ?? {}
+        if (lon && lat) {
+            this.coordinates = cache.coordinates
+        } else {
+            console.warn("Cache error for", this.name, cache)
+            localStorage.removeItem(itemName)
+        }
     }
 
     /**
@@ -57,7 +66,7 @@ class Place {
     coord() {
         if (!this.coordinates || !Object.keys(this.coordinates).length) {
             console.warn("Unknown coordinates of", this.name)
-            return L.latLng(0,0)
+            return L.latLng(0, 0)
         }
         return L.latLng(this.coordinates.lat, this.coordinates.lon)
     }

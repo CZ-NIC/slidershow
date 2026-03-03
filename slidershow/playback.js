@@ -384,19 +384,32 @@ class Playback {
      * @param {Boolean} supress_transition Block animation to the frame
      */
     goToFrame(index, moving = false, supress_transition = false) {
-        console.log("Frame", index)
-
         const $last = this.$current
+        const next = this.$articles[index]
+        const $current = next ? $(next) : $last
+        const sameFrame = $last[0] === $current[0]
+        /** @type {Frame} */
+        const lastFrame = $last.data("frame")
+
+        /** @type {Frame} */
+        const frame = this.frame = $current.data("frame")
+        this.index = frame.index
+
+        // Change location hash
+        this.session.store()
+
+        if(this.hud.grid_visible) {
+            console.log("Frame under grid", index)
+            this.hud.refresh(this.frame, Boolean(lastFrame))
+            return
+        }
+        console.log("Frame", index)
 
         // Unload the frame
         // lose focus on anything on the past frame (but keep on HUD)
         $(':focus', $last).trigger("blur")
 
-        const next = this.$articles[index]
-        const $current = this.$current = next ? $(next) : $last
-        const sameFrame = $last[0] === $current[0]
-        /** @type {Frame} */
-        const lastFrame = $last.data("frame")
+        this.$current = $current
         if (!sameFrame) {
             lastFrame.leave()
         }
@@ -406,12 +419,7 @@ class Playback {
             return
         }
 
-        /** @type {Frame} */
-        const frame = this.frame = $current.data("frame")
-        this.index = frame.index
 
-        // Change location hash
-        this.session.store()
 
         /** @type {Frame|undefined} */
         const following = $(this.$articles[index + 1]).data("frame")

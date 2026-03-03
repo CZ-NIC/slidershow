@@ -100,6 +100,9 @@ class Hud {
             // when restoring session from the hash, frame is not ready yet
             on = true
             this.display_grid(true)
+        } else {
+            // even that the frame was focused, it was not yet prepared and entered
+            this.playback.goToFrame(this.playback.frame.index, false, true)
         }
         this.playback.operation.grid.toggle(on)
         this.playback.session.store()

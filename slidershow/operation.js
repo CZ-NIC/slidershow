@@ -294,6 +294,8 @@ class Operation {
         const pl = this.playback
         return wh.group("Grid", [
             ...[
+                ["Enter", "✓", "Enter the frame (hides the grid)", () => this.playback.hud.toggle_grid()],
+
                 // NOTE we may implement selections. In that case, these shortcuts should be hidden or moved to a command palette. Too much of them!
                 // ["Shift+ArrowRight", "select right", "Add right frame to selection", () => pl.section_controller.moveFrame(pl.index, pl.index+1, false)],
                 ["Ctrl+ArrowUp", "△⇵", "Move up", () => pl.section_controller.moveFrame(pl.index, pl.hud.grid.getFrameIndexInNextRow(-1), true)],
