@@ -277,13 +277,13 @@ class Operation {
         const pl = this.playback
         return wh.group("Properties", [
             ...[
-                    // NOTE: If you change the frame with the property panel closed,
-                    // the shortcut still triggers the button on the old frame
-                    // causing the browser to go back and register unzoomed position as a data-point.
-                    ["Alt+s", "📸", "Add step point", () =>
-                        $(".hud-point", pl.hud.$hud).eq(1).trigger("click")
-                    ],
-                ].map(this._button("Properties"))]).disable()
+                // NOTE: If you change the frame with the property panel closed,
+                // the shortcut still triggers the button on the old frame
+                // causing the browser to go back and register unzoomed position as a data-point.
+                ["Alt+s", "📸", "Add step point", () =>
+                    $(".hud-point", pl.hud.$hud).eq(1).trigger("click")
+                ],
+            ].map(this._button("Properties"))]).disable()
 
         function act() {
             return pl.frame.$actor
@@ -298,11 +298,14 @@ class Operation {
                 // ["Shift+ArrowRight", "select right", "Add right frame to selection", () => pl.section_controller.moveFrame(pl.index, pl.index+1, false)],
                 ["Ctrl+ArrowUp", "△⇵", "Move up", () => pl.section_controller.moveFrame(pl.index, pl.hud.grid.getFrameIndexInNextRow(-1), true)],
                 ["Ctrl+ArrowDown", "▽⇵", "Move down", () => pl.section_controller.moveFrame(pl.index, pl.hud.grid.getFrameIndexInNextRow(1), false)],
-                ["Ctrl+ArrowLeft", "◁⇵", "Move left", () => pl.section_controller.moveFrame(pl.index, pl.index-1, true)],
-                ["Ctrl+ArrowRight", "▷⇵", "Move right", () => pl.section_controller.moveFrame(pl.index, pl.index+1, false)],
+                ["Ctrl+ArrowLeft", "◁⇵", "Move left", () => pl.section_controller.moveFrame(pl.index, pl.index - 1, true)],
+                ["Ctrl+ArrowRight", "▷⇵", "Move right", () => pl.section_controller.moveFrame(pl.index, pl.index + 1, false)],
 
                 ["ArrowUp", "△", "Go up", () => pl.goToFrame(pl.hud.grid.getFrameIndexInNextRow(-1))],
                 ["ArrowDown", "▽", "Go down", () => pl.goToFrame(pl.hud.grid.getFrameIndexInNextRow(1))],
+                ["ArrowLeft", "◁", "Go left", () => pl.previousFrame()], // normally, left arrow triggers next step but this would block the grid, we need next frame
+                ["ArrowRight", "▷", "Go right", () => pl.nextFrame()],
+
                 ["PageUp", "⮅", "Page up", () => pl.goToFrame(pl.hud.grid.getFrameIndexInNextPage(-1))],
                 ["PageDown", "⮇", "Page down", () => pl.goToFrame(pl.hud.grid.getFrameIndexInNextPage(1))],
                 ["NumpadAdd", "+", "More thumbnails on a row", () => pl.hud.grid.changeColumnsCount(1)],

@@ -297,7 +297,12 @@ class FrameZoom {
     _adjustKeys(wzoom, scale) {
         if (scale === 1) {
             this.destroy_keys()
-        } else {
+        } else if(!this.playback.hud.grid_visible){
+            // When grid is visible, do not init keys.
+            // As arrows keys interfere with the grid navigation.
+            // This would mean, when the user hides the grid and the first step is zommed, the keys would not be registered.
+            // Instead of moving right on the zommed image, right arrow triggers next step.
+            // But this is a minor issue and we can live with it.
             this.init_keys(wzoom)
         }
     }
