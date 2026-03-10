@@ -189,12 +189,19 @@ frame-preview {
         }
     }
 
-    #hud-menu {
-        display: none; // hidden by default
+    #hud-righttop-wrapper {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-end;
+
         right: 3vw;
         top: 6vh;
         text-align: right;
         z-index: 1; // placed over the thumbnails grid
+    }
+
+    #hud-menu {
+        display: none; // hidden by default
 
         button {
             font-size: 100%;
@@ -412,6 +419,29 @@ frame-preview {
                 outline: 2px solid black;
                 background-color: @highlight;
                 z-index: 1;
+
+                &::before,
+                &::after {
+                    content: '';
+                    position: absolute;
+                    width: 50px;
+                    height: 50px;
+                    border-color: black;
+                    border-style: solid;
+                    z-index: 10;
+                }
+
+                &::before {
+                    top: -4px;
+                    right: -4px;
+                    border-width: 6px 6px 0 0;
+                }
+
+                &::after {
+                    bottom: -4px;
+                    left: -4px;
+                    border-width: 0 0 6px 6px;
+                }
             }
 
             .delete {
@@ -493,6 +523,67 @@ frame-preview {
                 &.active>span {
                     background-color: @highlight;
                 }
+            }
+        }
+    }
+
+    #command-palette {
+        width: 280px;
+        right: 3vw;
+        margin: 5px 0;
+        display: none; // hidden by default
+
+        input {
+            width: 100%;
+            box-sizing: border-box;
+            padding: 6px 10px;
+            background: #1a1a1a;
+            border: 1px solid #444;
+            border-radius: 4px;
+            color: white;
+            font-size: 0.85em;
+            outline: none;
+
+            &:focus {
+                border-color: #888;
+            }
+
+            &:not(:focus)+.palette-results {
+                display: none;
+            }
+        }
+
+        .palette-results {
+            list-style: none;
+            margin: 4px 0 0;
+            padding: 0;
+            background: #1a1a1a;
+            border: 1px solid #444;
+            border-radius: 4px;
+            max-height: 300px;
+            overflow-y: auto;
+
+            li {
+                padding: 6px 10px;
+                cursor: pointer;
+                font-size: 0.85em;
+
+                &:hover,
+                &.active {
+                    background: #333;
+                }
+
+                mark {
+                    background: none;
+                    color: yellow;
+                    font-weight: bold;
+                }
+            }
+
+            .hint {
+                color: #666;
+                font-size: 0.9em;
+                white-space: nowrap;
             }
         }
     }

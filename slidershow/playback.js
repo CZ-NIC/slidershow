@@ -38,21 +38,6 @@ class Playback {
             this.$preblink_prevention.data('preblinking', false)
         )
 
-        /**
-         * @type {JQuery} Current frame DOM
-         */
-        this.$current = this.frame.$frame  // default dummy object
-        this.index = 0
-
-        this.debug = false
-        this.tagging_mode = false
-        this.editing_mode = false
-        this.step_disabled = false
-
-        this.operation = new Operation(this)
-        this.section_controller = new SectionController(this)
-        this.reset()
-
         /** Frames that are going to be pre/unloaded.
          * @type {Function[]}
         */
@@ -68,9 +53,21 @@ class Playback {
             }
         }, 1)
 
-        // Restore preferences
-        /** @type {Session} */
-        this.session = new Session(this)
+        /**
+         * @type {JQuery} Current frame DOM
+         */
+        this.$current = this.frame.$frame  // default dummy object
+        this.index = 0
+
+        this.debug = false
+        this.tagging_mode = false
+        this.editing_mode = false
+        this.step_disabled = false
+
+        this.operation = new Operation(this)
+        this.section_controller = new SectionController(this)
+        this.reset()
+        this.session = new Session(this)  // Restore preferences
 
 
         // Importable

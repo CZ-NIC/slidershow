@@ -143,12 +143,17 @@ frame-preview article-map:before {
   cursor: pointer;
   text-shadow: 0 0 7px #fff, 0 0 10px #fff, 0 0 21px #fff, 0 0 42px #0fa, 0 0 82px #0fa, 0 0 92px #0fa, 0 0 102px #0fa, 0 0 151px #0fa;
 }
-#hud #hud-menu {
-  display: none;
+#hud #hud-righttop-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
   right: 3vw;
   top: 6vh;
   text-align: right;
   z-index: 1;
+}
+#hud #hud-menu {
+  display: none;
 }
 #hud #hud-menu button {
   font-size: 100%;
@@ -349,6 +354,30 @@ frame-preview article-map:before {
   background-color: yellow;
   z-index: 1;
 }
+#hud #hud-thumbnails > frame-preview.current::before,
+#hud #hud-grid > frame-preview.current::before,
+#hud #hud-thumbnails > frame-preview.current::after,
+#hud #hud-grid > frame-preview.current::after {
+  content: '';
+  position: absolute;
+  width: 50px;
+  height: 50px;
+  border-color: black;
+  border-style: solid;
+  z-index: 10;
+}
+#hud #hud-thumbnails > frame-preview.current::before,
+#hud #hud-grid > frame-preview.current::before {
+  top: -4px;
+  right: -4px;
+  border-width: 6px 6px 0 0;
+}
+#hud #hud-thumbnails > frame-preview.current::after,
+#hud #hud-grid > frame-preview.current::after {
+  bottom: -4px;
+  left: -4px;
+  border-width: 0 0 6px 6px;
+}
 #hud #hud-thumbnails > frame-preview .delete,
 #hud #hud-grid > frame-preview .delete {
   cursor: pointer;
@@ -416,6 +445,58 @@ frame-preview article-map:before {
 }
 #hud #hud-properties div .hud-point.active > span {
   background-color: yellow;
+}
+#hud #command-palette {
+  width: 280px;
+  right: 3vw;
+  margin: 5px 0;
+  display: none;
+}
+#hud #command-palette input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 6px 10px;
+  background: #1a1a1a;
+  border: 1px solid #444;
+  border-radius: 4px;
+  color: white;
+  font-size: 0.85em;
+  outline: none;
+}
+#hud #command-palette input:focus {
+  border-color: #888;
+}
+#hud #command-palette input:not(:focus) + .palette-results {
+  display: none;
+}
+#hud #command-palette .palette-results {
+  list-style: none;
+  margin: 4px 0 0;
+  padding: 0;
+  background: #1a1a1a;
+  border: 1px solid #444;
+  border-radius: 4px;
+  max-height: 300px;
+  overflow-y: auto;
+}
+#hud #command-palette .palette-results li {
+  padding: 6px 10px;
+  cursor: pointer;
+  font-size: 0.85em;
+}
+#hud #command-palette .palette-results li:hover,
+#hud #command-palette .palette-results li.active {
+  background: #333;
+}
+#hud #command-palette .palette-results li mark {
+  background: none;
+  color: yellow;
+  font-weight: bold;
+}
+#hud #command-palette .palette-results .hint {
+  color: #666;
+  font-size: 0.9em;
+  white-space: nowrap;
 }
 #map-hud {
   position: fixed;

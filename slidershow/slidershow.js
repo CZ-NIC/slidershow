@@ -50,7 +50,7 @@ loadjQuery(() => {
         loadStyle("https://unpkg.com/leaflet@1.9.4/dist/leaflet.css")
     }
 
-    const local = ["static.js", "frame_factory.js", "frame.js", "frame_zoom.js", "place.js", "map.js", "hud.js", "grid.js", "export.js", "property_panel.js", "propertyPanelPoints.js", "operation.js", "section.js", "changes.js", "start.js", "playback.js", "session.js", "aux_window.js"].filter(Boolean).map(f => loadScript({ src: DIR + f }))
+    const local = ["static.js", "frame_factory.js", "frame.js", "frame_zoom.js", "place.js", "map.js", "hud.js", "grid.js", "palette.js", "export.js", "property_panel.js", "propertyPanelPoints.js", "operation.js", "section.js", "changes.js", "start.js", "playback.js", "session.js", "aux_window.js"].filter(Boolean).map(f => loadScript({ src: DIR + f }))
 
     /**
      When there were 60 photos and 10 videos in a 230 MB presentation file, these were started before we could
@@ -118,7 +118,13 @@ function get_menu() {
     <img id="preblink-prevention" />
 
     <div id="hud">
-        <div id="hud-menu"></div>
+        <div id="hud-righttop-wrapper">
+            <div id="command-palette">
+                <input type="text" placeholder="Type '/' to search commands…" autocomplete="off" spellcheck="false" />
+                <ul class="palette-results"></ul>
+            </div>
+            <div id="hud-menu"></div>
+        </div>
         <div id="hud-fileinfo">
             <div>
                 <span id="hud-filename"></span>

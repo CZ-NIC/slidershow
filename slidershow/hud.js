@@ -13,12 +13,10 @@ class Hud {
         this.$hud_tag = $("#hud-tag")
         this.$hud_counter = $("#hud-counter")
         this.$hud_menu = $("#hud-menu")
+        this.$command_palette = $("#command-palette")
         this.$hud_thumbnails = $("#hud-thumbnails").hide() // by default off
         this.$hud_grid = $("#hud-grid").hide() // by default off
-        /**
-         * @type {?GridController}
-         */
-        this.grid = null
+        this.grid = new GridController(this.playback, this, this.$hud_grid)
         this.$hud_properties = $("#hud-properties").hide() // by default off
         this.$control_icons = $("#control-icons")
 
@@ -29,7 +27,10 @@ class Hud {
         this.playback_icon_interval = new Interval(() => this.$control_icons.fadeOut(500, () => this.$playback_icon.html("☰")), 1000)
         this.$playback_icon = $("<div/>", { id: "playback-icon", html: "☰" })
             .appendTo(this.$control_icons)
-            .on("click", () => this.$hud_menu.fadeToggle(500) && this.playback_icon("☰"))
+            .on("click", () => {
+                this.toggleMenu()
+                this.playback_icon("☰")
+            })
 
         this.$control_icons
             .hide()
@@ -50,6 +51,7 @@ class Hud {
             pl.hud_map.toggle(true)
         })
         this.propertyPanel = new PropertyPanel(this)
+        this.palette = new CommandPalette(this)
     }
 
     /**
@@ -81,6 +83,19 @@ class Hud {
         }
         this.$control_icons.stop(true).fadeIn(0)
         this.playback_icon_interval.start()
+    }
+
+    toggleMenu() {
+        const menuVisible = this.$hud_menu.is(":visible")
+        const paletteVisible = this.palette.$wrapper.is(":visible")
+
+        if (menuVisible || paletteVisible) {
+            this.$hud_menu.fadeOut(500)
+            this.palette.$wrapper.fadeOut(500)
+        } else {
+            this.$hud_menu.fadeIn(500)
+            this.palette.$wrapper.fadeIn(500)
+        }
     }
 
 
@@ -131,84 +146,11 @@ class Hud {
 
     /** Grid setup */
     init_grid() {
-        const pl = this.playback
         this.$hud_grid
             // grid disappears on double click
             .on("dblclick", "frame-preview", () => this.toggle_grid())
             // grid section buttons
-            .on("click", "section-controller button", e => { // order
-                const $section = $($(e.target.closest("section-controller")).data("section"))
-                /** @type {JQuery} Frames in the current section  */
-                const $frames = $section.children(FRAME_SELECTOR)
-                /** @type {JQuery} Current frame (does not have to be in the section) */
-                const $frame = pl.frame.$frame
-                const cc = pl.changes
-
-                switch (e.target.dataset.role) {
-                    case "name-desc":
-                        order((frame1, frame2) => frame2.get_filename().localeCompare(frame1.get_filename()))
-                        break
-                    case "name-asc":
-                        order((frame1, frame2) => frame1.get_filename().localeCompare(frame2.get_filename()))
-                        break
-                    case "date-desc":
-                        order((frame1, frame2) => frame2.$actor?.data("datetime") < frame1.$actor?.data("datetime") ? 1 : -1)
-                        break
-                    case "date-asc":
-                        order((frame1, frame2) => frame1.$actor?.data("datetime") < frame2.$actor?.data("datetime") ? 1 : -1)
-                        break
-                    case "new-frame":
-                        pl.section_controller.insertNewFrame(rightPlace())
-                        break
-                    case "regroup":
-                        pl.section_controller.group(e.target.dataset.param, $frames)
-                        break
-                    case "delete":
-                        pl.section_controller.deleteSection($section)
-                        break
-                    case "flatten-subsections":
-                        pl.section_controller.flattenSubsections($section)
-                        break
-                    case "add-subsection":
-                        pl.section_controller.insertNewSection($section, e.target.dataset.param === "before")
-                        break
-                    case "import":
-                        $("<input/>", { type: "file" }).change(function () {
-                            const frames = pl.menu.loadFiles([...this.files])
-                            pl.section_controller.importFrames(frames, rightPlace(), false)
-                            pl.hud.info(`${this.files.length} media imported`)
-                        }).click()
-                        break
-                    default:
-                        this.info("Unknown action")
-                        break
-                }
-
-                /**
-                 *
-                 * @returns {JQuery} Current frame if in the section, otherwise the last frame of the current section.
-                 */
-                function rightPlace() {
-                    return $frames.is($frame) ? $frame : $frames.slice(-1)
-                }
-
-                /**
-                 * Order frames
-                 * @param {frames} callback
-                 * @callback frames
-                 * @param {Frame} frame1
-                 * @param {Frame} frame2
-                 *
-                 */
-                function order(callback) {
-                    const $orig_frames = $frames.map((_, e) => e)
-                    $frames.sort((a, b) => callback($(a).data("frame"), $(b).data("frame")))
-                    cc.undoable("Sort frames",
-                        () => $section.append($frames),
-                        () => $section.append($orig_frames),
-                        () => pl.resetAndGo())
-                }
-            })
+            .on("click", "section-controller button", e => this.grid.sectionMenuAction($($(e.target.closest("section-controller")).data("section")), e.target.dataset.role, e.target.dataset.param))
     }
 
     /**
@@ -257,9 +199,9 @@ class Hud {
      * @param {boolean} scrollToCurrent
      */
     display_grid(scrollToCurrent = false) {
-        if (!this.grid) {
+        if (!this.grid.isDisplayed) {
             this.$hud_grid.empty()
-            this.grid = new GridController(this.playback, this, this.$hud_grid).load(scrollToCurrent)
+            this.grid.load(scrollToCurrent)
         } else {
             this.grid.focusFrame(scrollToCurrent)
         }
@@ -470,10 +412,10 @@ class Hud {
     }
 
     reset_grid() {
-        const pos = this.grid ? this.grid.getScrollAnchor() : null
+        const pos = this.grid.isDisplayed ? this.grid.getScrollAnchor() : null
 
+        this.grid.isDisplayed = false
         this.$hud_grid.html("")
-        this.grid = null
         if (this.grid_visible) {
             this.display_grid()
             if (pos) {

@@ -11,14 +11,16 @@ class GridController {
         this.pl = playback
         this.hud = hud
         this.$container = $container
-        this.$framesSections = $(FRAME_SECTION_SELECTOR)
-        this.columns = GRID_COLUMNS
-        this.preload_radius = Math.ceil(GRID_PRELOAD_RADIUS / GRID_COLUMNS) * GRID_COLUMNS
-        this.page_size = Math.ceil(GRID_PAGE_SIZE / GRID_COLUMNS) * GRID_COLUMNS
+
+        this.$framesSections = $()
+        this.columns = 0
+        this.preload_radius = 0
+        this.page_size = 0
 
         this.loadedFrom = 0
         this.loadedUpTo = 0
-        this.colMap = this._buildColMap()
+        this.colMap = []
+        this.isDisplayed = false
     }
 
     changeColumnsCount(step = 1) {
@@ -30,8 +32,13 @@ class GridController {
     /**
      * Initial load around current frame, bind scroll handler
      * @param {boolean} scrollToCurrent
-     */
+    */
     load(scrollToCurrent = false) {
+        this.$framesSections = $(FRAME_SECTION_SELECTOR)
+        this.columns = GRID_COLUMNS
+        this.preload_radius = Math.ceil(GRID_PRELOAD_RADIUS / GRID_COLUMNS) * GRID_COLUMNS
+        this.page_size = Math.ceil(GRID_PAGE_SIZE / GRID_COLUMNS) * GRID_COLUMNS
+        this.colMap = this._buildColMap()
         const currentPos = this._currentPos()
         const startFrom = this._snapToRowStart(Math.max(0, currentPos - this.preload_radius))
         const startTo = Math.min(this.$framesSections.length, currentPos + this.preload_radius)
@@ -46,6 +53,7 @@ class GridController {
         if (scrollToCurrent) {
             this._scrollToCurrentFrame()
         }
+        this.isDisplayed = true
         return this
     }
 
@@ -74,6 +82,182 @@ class GridController {
             this._scrollToCurrentFrame()
         }
     }
+
+    sectionMenuAction($section, role, param) {
+        const pl = this.pl
+        /** @type {JQuery} Frames in the current section  */
+        const $frames = $section.children(FRAME_SELECTOR)
+        /** @type {JQuery} Current frame (does not have to be in the section) */
+        const $frame = pl.frame.$frame
+        const cc = pl.changes
+
+        switch (role) {
+            case "name-desc":
+                order((frame1, frame2) => frame2.get_filename().localeCompare(frame1.get_filename()))
+                break
+            case "name-asc":
+                order((frame1, frame2) => frame1.get_filename().localeCompare(frame2.get_filename()))
+                break
+            case "date-desc":
+                order((frame1, frame2) => frame2.$actor?.data("datetime") < frame1.$actor?.data("datetime") ? 1 : -1)
+                break
+            case "date-asc":
+                order((frame1, frame2) => frame1.$actor?.data("datetime") < frame2.$actor?.data("datetime") ? 1 : -1)
+                break
+            case "new-frame":
+                pl.section_controller.insertNewFrame(rightPlace())
+                break
+            case "regroup":
+                pl.section_controller.group(param, $frames)
+                break
+            case "delete":
+                pl.section_controller.deleteSection($section)
+                break
+            case "flatten-subsections":
+                pl.section_controller.flattenSubsections($section)
+                break
+            case "add-subsection":
+                pl.section_controller.insertNewSection($section, param === "before")
+                break
+            case "import":
+                $("<input/>", { type: "file" }).change(function () {
+                    const frames = pl.menu.loadFiles([...this.files])
+                    pl.section_controller.importFrames(frames, rightPlace(), false)
+                    pl.hud.info(`${this.files.length} media imported`)
+                }).trigger("click")
+                break
+            default:
+                this.info("Unknown action")
+                break
+        }
+
+        /**
+         *
+         * @returns {JQuery} Current frame if in the section, otherwise the last frame of the current section.
+         */
+        function rightPlace() {
+            return $frames.is($frame) ? $frame : $frames.slice(-1)
+        }
+
+        /**
+         * Order frames
+         * @param {frames} callback
+         * @callback frames
+         * @param {Frame} frame1
+         * @param {Frame} frame2
+         *
+         */
+        function order(callback) {
+            const $orig_frames = $frames.map((_, e) => e)
+            $frames.sort((a, b) => callback($(a).data("frame"), $(b).data("frame")))
+
+            cc.undoable("Sort frames",
+                () => $section.append($frames),
+                () => $section.append($orig_frames),
+                () => pl.resetAndGo())
+        }
+    }
+
+    /**
+     * Parse menu templates that are appended to <section-controller> tags.
+     * And make commands from them.
+     *
+     * @returns {[hint: string, callback: Function, group_name: string][]}
+     */
+    getHotkeys() {
+        const commands = []
+
+        for (const [template, register, navtext] of [
+            [
+                this._sectionMenuTemplate,
+                /**
+                 * @param {HTMLElement} button
+                 */
+                (button) => () => {
+                    const section = this.hud.playback.frame.$frame.closest("section")
+                    if (!section.length) { // we do not support ex. ordering frames directly in main
+                        this.hud.info("The frame is not in any section")
+                        return
+                    }
+                    this.sectionMenuAction(section, button.dataset.role, button.dataset.param)
+                },
+                "section"
+            ], [
+                this._menuOfMainTemplate,
+                /**
+                 * @param {HTMLElement} button
+                 */
+                (button) => () => this.sectionMenuAction($main, button.dataset.role, button.dataset.param),
+                "presentation"
+            ]
+        ]) {
+
+            const $sc = $(template)
+
+            const addCmd = (text, button) => commands.push([
+                text,
+                register(button),
+                () => this.hud.grid_visible,
+                navtext
+            ])
+
+            $sc.find(".section-menu").each((_, menu) => {
+                const group = $(menu).find("span").first().text().replace(" ▾", "").trim()
+                $(menu).find("button").each((_, btn) => addCmd(`${group} ${$(btn).text()}`, btn))
+            })
+
+            $sc.find("> button").each((_, btn) => {
+
+                return addCmd($(btn).text(), btn)
+            }
+
+            )
+        }
+        return commands
+    }
+
+
+    _menuOfMainTemplate = `<div class="section-menus">
+                        <div class="section-menu">
+                            <span>add subsection ▾</span>
+                            <div class="dropdown">
+                                <button data-role='add-subsection' data-param='before'>to the begginning</button>
+                                <button data-role='add-subsection' data-param='after'>to the end</button>
+                            </div>
+                        </div>
+                        <button data-role='flatten-subsections'>flatten subsections</button>
+                    </div>`
+
+    _sectionMenuTemplate = `<div class="section-menus">
+                        <div class="section-menu">
+                                <span>order ▾</span>
+                                <div class="dropdown">
+                                    <button data-role='name-desc'>by name ⇓</button>
+                                    <button data-role='name-asc'>by name ⇑</button>
+                                    <button data-role='date-desc'>by date ⇓</button>
+                                    <button data-role='date-asc'>by date ⇑</button>
+                                </div>
+                            </div>
+                            <div class="section-menu">
+                                <span>add ▾</span>
+                                <div class="dropdown">
+                                    <button data-role='import'>media</button>
+                                    <button data-role='new-frame'>text</button>
+                                    <!-- subsection? -->
+                                </div>
+                            </div>
+                            <div class="section-menu">
+                                <span>regroup ▾</span>
+                                <div class="dropdown">
+                                    <button data-role='regroup' data-param='hours'>by hours</button>
+                                    <button data-role='regroup' data-param='days'>by days</button>
+                                    <button data-role='regroup' data-param='weeks'>by weeks</button>
+                                    <button data-role='regroup' data-param='months'>by months</button>
+                                    <button data-role='regroup' data-param='years'>by years</button>
+                                    <button data-role='regroup' data-param='tags'>by tags</button>
+                                </div>
+                            </div>
+                            <button data-role='delete'>delete</button></div>`
 
     _currentPos() {
         return this.$framesSections.index(
@@ -154,16 +338,7 @@ class GridController {
     _assureMain(main, prepend = false) {
         const $mc = $(`<section-controller data-role="main">
                     <span class="section-title">Presentation ${this.pl.section_controller.getSubsectionCount($(main))}</span>
-                    <div class="section-menus">
-                        <div class="section-menu">
-                            <span>add subsection ▾</span>
-                            <div class="dropdown">
-                                <button data-role='add-subsection' data-param='before'>to the begginning</button>
-                                <button data-role='add-subsection' data-param='after'>to the end</button>
-                            </div>
-                        </div>
-                        <button data-role='flatten-subsections'>flatten subsections</button>
-                    </div>
+                    ${this._menuOfMainTemplate}
                 </section-controller>`)
             .data("section", main)
         prepend ? $mc.prependTo(this.$container) : $mc.appendTo(this.$container)
@@ -177,37 +352,7 @@ class GridController {
     _assureSection(currentSection, prepend = false) {
         const $sc = $(`<section-controller>
                         <span class="section-title">Section ${this.pl.section_controller.getSectionName($(currentSection))}</span>
-                        <div class="section-menus">
-                            <div class="section-menu">
-                                <span>order ▾</span>
-                                <div class="dropdown">
-                                    <button data-role='name-desc'>by name ⇓</button>
-                                    <button data-role='name-asc'>by name ⇑</button>
-                                    <button data-role='date-desc'>by date ⇓</button>
-                                    <button data-role='date-asc'>by date ⇑</button>
-                                </div>
-                            </div>
-                            <div class="section-menu">
-                                <span>add ▾</span>
-                                <div class="dropdown">
-                                    <button data-role='import'>media</button>
-                                    <button data-role='new-frame'>text</button>
-                                    <!-- subsection? -->
-                                </div>
-                            </div>
-                            <div class="section-menu">
-                                <span>regroup ▾</span>
-                                <div class="dropdown">
-                                    <button data-role='regroup' data-param='hours'>by hours</button>
-                                    <button data-role='regroup' data-param='days'>by days</button>
-                                    <button data-role='regroup' data-param='weeks'>by weeks</button>
-                                    <button data-role='regroup' data-param='months'>by months</button>
-                                    <button data-role='regroup' data-param='years'>by years</button>
-                                    <button data-role='regroup' data-param='tags'>by tags</button>
-                                </div>
-                            </div>
-                            <button data-role='delete'>delete</button>
-                        </div>
+                        ${this._sectionMenuTemplate}
                     </section-controller>`)
             .data("section", currentSection)
         prepend ? $sc.prependTo(this.$container) : $sc.appendTo(this.$container)

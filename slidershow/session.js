@@ -1,6 +1,6 @@
 class Session {
+    /** @param {Playback} playback */
     constructor(playback) {
-        /** @type {Playback} */
         this.playback = playback
     }
 

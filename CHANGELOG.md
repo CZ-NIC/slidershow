@@ -2,6 +2,7 @@
 
 ## 1.0.0 (unreleased)
 * feat: grid dynamic loading, powerful grouping, etc.
+* feat: command palette
 * fix: exif correct date format
 * enh (map): lazy loading
 
