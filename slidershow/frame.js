@@ -446,7 +446,9 @@ class Frame {
             }
             await full_loaded // the swap itself is an instant cache hit, no second network request
             $el.attr("src", src).removeAttr("data-thumb-shown")
-            return
+            // Wait for the visible element too – `loaded` must not resolve while it still displays the thumbnail
+            // (Chrome keeps el.complete false for a moment even on a cache hit, which made Frame.exif bail out).
+            return new Promise(r => el.onload = r)
         }
 
         el.src = src
@@ -1206,6 +1208,12 @@ class Frame {
             callback?.()
             return
         }
+        const el = $el.get()[0]
+        if (!data && el instanceof HTMLImageElement && !el.complete) {
+            // EXIF.getData silently ignores an <img> that has not finished loading
+            el.addEventListener("load", () => Frame.exif($el, data, callback), { once: true })
+            return
+        }
         const process = (exif) => {
             const attrs = {}
 
@@ -1235,7 +1243,7 @@ class Frame {
         }
 
         // raises uncatcheable log when CORS encoutered
-        EXIF.getData(data || $el.get()[0], function () {
+        EXIF.getData(data || el, function () {
             process(EXIF.getAllTags(this))
         })
     }
