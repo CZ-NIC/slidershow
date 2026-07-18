@@ -29,8 +29,17 @@ class Session {
 
     restore_state(state) {
         const pl = this.playback
-        state.split("=")[1].split(",").forEach(key => {
+        state.split("=")[1].split(",").forEach(entry => {
+            // A key may carry a value: `duration:5`. Plain flags have no `:`.
+            const [key, value] = entry.split(":")
             switch (key) {
+                case "duration":
+                    // Auto-forward from the hash. Overrides the authored default by
+                    // setting `data-duration` on <main>, where prop() ends its walk.
+                    if (!isNaN(parseFloat(value))) {
+                        $main.attr("data-duration", parseFloat(value))
+                    }
+                    break;
                 case "editing":
                     pl.editing_mode = true
                     pl.operation.editing.enable()
@@ -72,6 +81,7 @@ class Session {
     store() {
         const index = this.playback.index + 1
 
+        const duration = $main.attr("data-duration")
         const state = [
             this.playback.editing_mode ? "editing" : "",
             this.playback.tagging_mode ? "tagging" : "",
@@ -80,6 +90,7 @@ class Session {
             this.playback.hud.$hud_grid.is(":visible") ? "grid" : "",
             this.playback.hud.$hud_properties.is(":visible") ? "properties" : "",
             !MAP_ENABLE ? "map-disabled" : "",
+            duration !== undefined ? `duration:${duration}` : "",
         ].filter(Boolean).join(",")
 
         // update the hash without triggering hashchange event
