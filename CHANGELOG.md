@@ -1,6 +1,7 @@
 # CHANGELOG
 
 ## 1.0.0 (unreleased)
+* feat: `data-thumb` thumbnail preview – shows a lightweight preview while the full-quality file downloads, grid/ribbon uses it exclusively
 * feat: grid dynamic loading, powerful grouping, etc.
 * feat: command palette
 * fix: exif correct date format

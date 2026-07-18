@@ -227,34 +227,41 @@ class Hud {
             // go to frame
             $thumbnail = $("<frame-preview/>", { html: "...", "data-ref": frame.index })
 
-            setTimeout(() => {
+            setTimeout(async () => {
                 // Element might been removed meanwhile, do not bother to preload.
                 // We might ex. keep PageDown hit while scrolling down grid. That way, we scroll 1000 frames / 5 sec, without setTimeout like 400 frames.
                 if (!$thumbnail[0].isConnected) return
 
-                frame.preload()
-                frame.loaded.then(() => {
-                    $thumbnail.html(frame.get_preview())
-                    if (!$thumbnail.text().trim()) {
-                        // Strange bug. When having just a full-stretched image in the frame, vertical scrollbar appeared unless font-size or line-height were zero.
-                        // When I copied full HTML, no scrollbar was visible, albeit I found no single difference in the DevTools.
-                        $("> *", $thumbnail).css("font-size", "0")
-                    }
+                // When a data-thumb is configured, use it instead of the full-quality file – the grid may
+                // show hundreds of previews at once and should never force-download large originals.
+                let html = await frame.get_preview_thumb()
+                if (html === null) {
+                    frame.preload()
+                    await frame.loaded
+                    html = frame.get_preview()
+                }
+                if (!$thumbnail[0].isConnected) return // could have been removed while awaiting
 
-                    // delete frame
-                    if (pl.editing_mode) {
-                        $thumbnail.append($("<span/>", { html: "&#10006;", class: "delete", title: "Delete frame" }).on("click", () => frame.delete()))
-                    }
+                $thumbnail.html(html)
+                if (!$thumbnail.text().trim()) {
+                    // Strange bug. When having just a full-stretched image in the frame, vertical scrollbar appeared unless font-size or line-height were zero.
+                    // When I copied full HTML, no scrollbar was visible, albeit I found no single difference in the DevTools.
+                    $("> *", $thumbnail).css("font-size", "0")
+                }
 
-                    // tag visible
-                    if (pl.tagging_mode) {
-                        $thumbnail.append($("<span/>", { html: frame.$actor.attr("data-tag"), class: "tag", title: "Tag that helps you organize" }))
-                    }
+                // delete frame
+                if (pl.editing_mode) {
+                    $thumbnail.append($("<span/>", { html: "&#10006;", class: "delete", title: "Delete frame" }).on("click", () => frame.delete()))
+                }
 
-                    // Scale – use the proportions of the full screen but shrink to max thumbnail width
-                    const scaleFactorX = $thumbnail.width() / pl.$current.width()
-                    $(":first", $thumbnail).css({ "scale": String(scaleFactorX) })
-                })
+                // tag visible
+                if (pl.tagging_mode) {
+                    $thumbnail.append($("<span/>", { html: frame.$actor.attr("data-tag"), class: "tag", title: "Tag that helps you organize" }))
+                }
+
+                // Scale – use the proportions of the full screen but shrink to max thumbnail width
+                const scaleFactorX = $thumbnail.width() / pl.$current.width()
+                $(":first", $thumbnail).css({ "scale": String(scaleFactorX) })
             }, 1)
         }
         if (prepend) {

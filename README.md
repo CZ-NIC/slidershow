@@ -67,6 +67,7 @@ Generate a presentation from the sheet with [slidershow-builder](https://github.
         * [`data-step-points`](#data-step-points)
       - [Panoramatic images](#panoramatic-images)
       - [Preload](#preload)
+      - [Thumbnail preview (`data-thumb`)](#thumbnail-preview-data-thumb)
     + [`<video>`](#video)
       - [`data-datetime`](#data-datetime)
       - [`data-playback-rate`](#data-playback-rate)
@@ -381,6 +382,27 @@ When having thousands of images, your browser may choke. Use `data-src` instead 
 ```html
 <img data-src="flower.jpg" /> <!-- becomes <img src="flower.jpg"> when needed -->
 ```
+
+#### Thumbnail preview (`data-thumb`)
+
+If your originals are large (multi-MB photos over a slow connection), let SlideRshow show a small preview first and swap in the full file only once it has fully downloaded. Set `data-thumb` on `<main>` (or a `<section>`, or a single `<img>`/`<video>`) to a template resolved against that element's `data-src`:
+
+* `{dir}` – directory of the original (`photos/2024/`)
+* `{file}` – full original file name (`flower.jpg`)
+* `{name}` – file name without extension (`flower`)
+* `{ext}` – original extension (`jpg`)
+
+```html
+<main data-thumb="thumbs/{name}.webp"> <!-- same folder tree, different name/extension -->
+```
+
+You only prepare the thumbnails yourself (ex: with `ffmpeg`/`imagemagick`) – SlideRshow never generates them. If a thumbnail is missing or fails to load for a particular file, that file is silently loaded the usual way, no error is shown. A `data-thumb` without any `{}` placeholder is used verbatim, so you may also override it on a single element for an irregular file:
+
+```html
+<img data-src="photos/oddball.jpg" data-thumb="thumbs/oddball-special.jpg" />
+```
+
+The grid/ribbon overview (<kbd>Alt+G</kbd>/<kbd>Alt+J</kbd>) uses the thumbnail exclusively and never downloads the full file just to show a preview.
 
 ### `<video>`
 

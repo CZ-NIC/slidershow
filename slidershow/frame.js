@@ -374,6 +374,7 @@ class Frame {
      *
      * * data("read-src"): If present, this is the method to re-read the dragged media from the disk.
      * * data-src: Optional attribute for <img>, <video>, holds the original file name.
+     * * data-thumb: Optional inherited template for a lightweight preview, shown while data-src downloads. See Frame.get_thumb_src.
      *
      * @returns {Promise} Fulfilled when src loaded from the memory.
      */
@@ -386,16 +387,12 @@ class Frame {
         $frame.attr("data-preloaded", 1) // prevent another preload
 
         // Process media
-        const loaded = $frame.find("img[data-src], video[data-src]").map(async (_, el) => {
+        const loaded = $frame.find("img[data-src], video[data-src]").map((_, el) => {
             const $el = $(el)
-            if (!$el.attr("src")) { // src is not set yet
-                const src = (await $el.data(READ_SRC)?.(true)) || $el.data("src")
-                if (src) { // there is a place to load src from
-                    el.src = src
-                    return el.tagName === "IMG" ? new Promise(r => el.onload = r) : new Promise(r => el.onloadeddata = r)
-                }
+            if ($el.attr("src") && !$el.attr("data-thumb-shown")) { // src already fully set, nothing to do
+                return null
             }
-            return null // src already set or no place to set the src from
+            return Frame._load_media($el, el)
         }).get().filter(Boolean)
 
         // Process markdown
@@ -418,6 +415,80 @@ class Frame {
         const current_loaded = this._loaded // Why storing it outside? Might be unloaded before finish.
         Promise.all(loaded).then(() => current_loaded())
         return loaded
+    }
+
+    /**
+     * Load a single <img>/<video> `src`, showing the inherited `data-thumb` preview first (if it resolves
+     * to a working URL) so the frame is not blank while the full-quality file downloads.
+     * @param {JQuery} $el
+     * @param {HTMLImageElement|HTMLVideoElement} el
+     * @returns {Promise}
+     */
+    static async _load_media($el, el) {
+        const src = (await $el.data(READ_SRC)?.(true)) || $el.data("src")
+        if (!src) { // no place to set the src from
+            return null
+        }
+
+        const thumb = !$el.attr("src") && Frame.get_thumb_src($el)
+        if (thumb && el.tagName === "VIDEO") {
+            // <video poster> is swapped out by the browser itself once the real frame is ready, no manual handling needed.
+            Frame.probe_image(thumb).then(ok => ok && $el.attr("poster", thumb))
+        } else if (thumb) {
+            // Start the full-quality fetch right away (a hidden Image, so it does not interrupt the visible
+            // thumbnail) – it must not wait for the thumbnail probe, or every frame would load that much slower.
+            const preloader = new Image()
+            preloader.src = src
+            const full_loaded = new Promise(r => preloader.onload = r)
+
+            if (await Frame.probe_image(thumb)) {
+                $el.attr("src", thumb).attr("data-thumb-shown", 1)
+            }
+            await full_loaded // the swap itself is an instant cache hit, no second network request
+            $el.attr("src", src).removeAttr("data-thumb-shown")
+            return
+        }
+
+        el.src = src
+        return el.tagName === "IMG" ? new Promise(r => el.onload = r) : new Promise(r => el.onloadeddata = r)
+    }
+
+    /**
+     * Resolve the thumbnail URL for a media element from the inherited `data-thumb` template.
+     * Placeholders (derived from the element's data-src): {dir} {file} {name} {ext}.
+     * A template without placeholders (ex: set directly on one <img data-thumb="...">) is used verbatim,
+     * which lets a single attribute act both as a presentation-wide convention and a per-file override.
+     * @param {JQuery} $el
+     * @returns {?string}
+     */
+    static get_thumb_src($el) {
+        const template = prop("thumb", $el, "")
+        const src = $el.data("src")
+        if (!template || !src) {
+            return null
+        }
+        const slash = src.lastIndexOf("/")
+        const dir = slash >= 0 ? src.slice(0, slash + 1) : ""
+        const file = slash >= 0 ? src.slice(slash + 1) : src
+        const dot = file.lastIndexOf(".")
+        const name = dot >= 0 ? file.slice(0, dot) : file
+        const ext = dot >= 0 ? file.slice(dot + 1) : ""
+        const tokens = { "{dir}": dir, "{file}": file, "{name}": name, "{ext}": ext }
+        return template.replace(/{dir}|{file}|{name}|{ext}/g, m => tokens[m])
+    }
+
+    /**
+     * @param {string} src
+     * @returns {Promise<boolean>} True when the image loads successfully.
+     *  Relies on native <img> load/error events (not fetch/XHR), so it works the same over file:// and http(s)://.
+     */
+    static probe_image(src) {
+        return new Promise(resolve => {
+            const img = new Image()
+            img.onload = () => resolve(true)
+            img.onerror = () => resolve(false)
+            img.src = src
+        })
     }
 
     /**
@@ -447,7 +518,11 @@ class Frame {
 
     /** If there is a place the `[src]` can be re-read, delete it. */
     static unload_media($el, $el_original = null) {
-        if (($el_original || $el).data(READ_SRC) || $el.data("src") && $el.data("src") === $el.attr("src")) {
+        if ($el.attr("data-thumb-shown")) {
+            // The full-quality file never finished loading; drop the thumbnail too so a future preload() starts over
+            // instead of finding a (thumbnail) `src` already present and skipping the load.
+            $el.removeAttr("src data-thumb-shown")
+        } else if (($el_original || $el).data(READ_SRC) || $el.data("src") && $el.data("src") === $el.attr("src")) {
             URL.revokeObjectURL($el.attr("src")) // for the case this is a blob URL given by FrameFactory reader
             $el.removeAttr("src")
         }
@@ -1012,6 +1087,36 @@ class Frame {
         // return $("<article/>", { "class": "video-thumbnail" }).append($canvas)
 
         // Remove data-preloaded attribute for the case it is there
+        return $clone.removeAttr("data-preloaded").prop("outerHTML")
+    }
+
+    /**
+     * Lightweight grid/ribbon preview built from the `data-thumb` image alone – it never triggers
+     * (or waits for) a full-quality preload, so browsing thousands of large photos in the grid stays cheap.
+     * @returns {Promise<?string>} HTML, or null when there is no usable thumbnail (caller should fall back to preload() + get_preview()).
+     */
+    async get_preview_thumb() {
+        if (!this.$actor.length) {
+            return null
+        }
+        const thumb = Frame.get_thumb_src(this.$actor)
+        if (!thumb || !(await Frame.probe_image(thumb))) {
+            return null
+        }
+
+        const $clone = this.$frame.clone().removeAttr("style")
+        $clone.find("[data-templated]").remove()
+        $clone.find("[data-step]").show() // ignore frame steps
+        Frame._clean_step($clone)
+        $clone.addClass("prevent-animation-important")
+
+        const $actor = $clone.find("video, img").first()
+        if ($actor.is("video")) {
+            $clone.addClass("video-thumbnail")
+            $("<img/>", { src: thumb, class: $actor.attr("class") }).replaceAll($actor)
+        } else {
+            $actor.removeAttr("data-src").attr("src", thumb)
+        }
         return $clone.removeAttr("data-preloaded").prop("outerHTML")
     }
 

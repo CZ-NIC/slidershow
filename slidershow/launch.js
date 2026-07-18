@@ -45,6 +45,7 @@ Private attributes that are not documented in the README because the user should
 * <frame-preview> Contents is a preview of a frame. Attribute [data-ref] corresponds to the frame.index.
 * [data-templated] This element was inserted only temporarily throught a template (ex: footer in an article or a <head> vendor script). Should not be exported.
 * [data-preloaded] The frame has already been preloaded.
+* img[data-thumb-shown] The full-quality src is still loading in the background; src currently holds the data-thumb preview.
 * data("step-original") Temporarily change [data-step] value.
 * .step-shown Frame step index has greater value so we see this element.
 * .step-hidden Frame step index has lower value so we do not see this element.
@@ -97,7 +98,8 @@ const PROP_DEFAULT = {
     "start": false,
     "spread-frames": "spiral",
     "step-shown": false,
-    "rotate": 0
+    "rotate": 0,
+    "thumb": ""
 }
 const PROP_NONSCALAR = {
     "step-points": true,

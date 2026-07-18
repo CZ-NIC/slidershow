@@ -8,6 +8,10 @@ body {
 main {
   position: relative;
 }
+main [data-thumb-shown] {
+  filter: blur(12px);
+  transition: filter 0.3s;
+}
 menu {
   display: flex;
   justify-content: center;
