@@ -84,18 +84,105 @@ class Playback {
         })
 
         // Mobile navigation
-        let touchstartX, touchendX
-        document.addEventListener('touchstart', function (event) {
-            touchstartX = event.changedTouches[0].screenX;
-        }, false);
-        document.addEventListener('touchend', function (event) {
-            touchendX = event.changedTouches[0].screenX;
-            handleGesture();
-        }, false);
+        const SWIPE_THRESHOLD = 150
+        const DRAG_COMPLETION_RATIO = 0.3
+        const SNAP_DURATION = 150
+        /** @type {Object|null} Live-drag state while dragMode === "live", else null */
+        let drag = null
+        let touchstartX = 0, touchendX = 0, dragMode = "threshold"
+
+        document.addEventListener('touchstart', event => {
+            // Ignore gestures starting over the HUD (menu, panels, grid, palette, ...)
+            if ($(event.target).closest('#hud').length || event.touches.length > 1 || this.frame.zoom.keys) {
+                dragMode = null
+                return
+            }
+            $main.stop()
+            touchstartX = event.touches[0].clientX
+            const diagonal = prop("spread-frames", $main) === "diagonal" && this.frame.prop("transition") !== "fade"
+            if (!diagonal) {
+                dragMode = "threshold"
+                return
+            }
+            dragMode = "live"
+            const startY = event.touches[0].clientY
+            const original = this.frame.get_position()
+            const nextFrame = $(this.$articles[this.index + 1]).data("frame")
+            const prevFrame = $(this.$articles[this.index - 1]).data("frame")
+            drag = {
+                startX: touchstartX,
+                startY,
+                originalTop: parseFloat(original.top),
+                originalLeft: parseFloat(original.left),
+                nextPosition: nextFrame?.get_position(),
+                prevPosition: prevFrame?.get_position(),
+                horizontal: false,
+                progress: 0,
+                direction: 0,
+            }
+        }, false)
+
+        document.addEventListener('touchmove', event => {
+            if (dragMode !== "live" || !drag) {
+                return
+            }
+            if (event.touches.length > 1) {
+                // pinch appeared mid-drag, abort
+                $main.animate({ top: `${drag.originalTop}px`, left: `${drag.originalLeft}px` }, SNAP_DURATION)
+                dragMode = null
+                drag = null
+                return
+            }
+            const deltaX = event.touches[0].clientX - drag.startX
+            const deltaY = event.touches[0].clientY - drag.startY
+            if (!drag.horizontal) {
+                if (Math.abs(deltaX) < 10 || Math.abs(deltaX) < Math.abs(deltaY)) {
+                    return
+                }
+                drag.horizontal = true
+            }
+            event.preventDefault()
+
+            drag.direction = deltaX < 0 ? 1 : -1
+            const target = drag.direction === 1 ? drag.nextPosition : drag.prevPosition
+            if (!target) {
+                // no frame in that direction, resist further dragging
+                drag.progress = 0
+                return
+            }
+            drag.progress = Math.min(Math.abs(deltaX) / window.innerWidth, 1)
+            $main.css({
+                top: `${drag.originalTop + (parseFloat(target.top) - drag.originalTop) * drag.progress}px`,
+                left: `${drag.originalLeft + (parseFloat(target.left) - drag.originalLeft) * drag.progress}px`,
+            })
+        }, { passive: false })
+
+        document.addEventListener('touchend', event => {
+            if (dragMode === "threshold") {
+                touchendX = event.changedTouches[0].clientX
+                handleGesture()
+                return
+            }
+            if (dragMode !== "live" || !drag) {
+                return
+            }
+            const target = drag.direction === 1 ? drag.nextPosition : drag.prevPosition
+            if (target && drag.progress > DRAG_COMPLETION_RATIO) {
+                const indexBefore = this.index
+                drag.direction === 1 ? this.goNext() : this.goPrev()
+                if (this.index === indexBefore) {
+                    // an in-frame step consumed the gesture instead of changing frame; $main was left mid-drag
+                    $main.animate(this.frame.get_position(), SNAP_DURATION)
+                }
+            } else {
+                $main.animate({ top: `${drag.originalTop}px`, left: `${drag.originalLeft}px` }, SNAP_DURATION)
+            }
+            dragMode = null
+            drag = null
+        }, false)
 
         const handleGesture = () => {
-            // Allow only if zoom is not active
-            if (!this.frame.zoom.keys && Math.abs(touchendX - touchstartX) > 150) {
+            if (Math.abs(touchendX - touchstartX) > SWIPE_THRESHOLD) {
                 if (touchendX < touchstartX) {
                     this.goNext()
                 } else {

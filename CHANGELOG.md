@@ -6,6 +6,7 @@
 * fix: exif correct date format
 * enh (map): lazy loading
 * enh (zoom): faster wheel, slower touchpad
+* enh (mobile): swipe follows the finger in diagonal layout, ignores gestures started over the HUD, bigger tap targets on touch devices
 
 ## 0.9.9 (2026-02-26)
 * enh: preblink protection

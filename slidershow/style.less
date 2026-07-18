@@ -189,6 +189,26 @@ frame-preview {
         }
     }
 
+    @media (pointer: coarse) {
+        #control-icons {
+            gap: 16px;
+            font-size: 200%;
+
+            > * {
+                min-width: 44px;
+                min-height: 44px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+            }
+        }
+
+        #hud-menu button {
+            padding: 8px 16px;
+            font-size: 130%;
+        }
+    }
+
     #hud-righttop-wrapper {
         display: flex;
         flex-direction: column;
