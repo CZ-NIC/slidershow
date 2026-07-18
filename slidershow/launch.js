@@ -77,6 +77,12 @@ var PREFER_SRC_EXPORT = false
 var PRELOAD_FORWARD = 50
 /** How many frames should be preloaded for the case the user goes back in the playback. */
 var PRELOAD_BACKWARD = 20
+/** Max concurrent full-quality media downloads (the expensive ones). They are the flood risk on a real server,
+    so they are throttled and served in order of distance from the current frame. */
+var ORIGINAL_CONCURRENCY = 4
+/** Max concurrent thumbnail (`data-thumb`) loads. Cheap, so a generous limit – kept only to avoid the browser's
+    per-host connection pool filling up with previews and stalling the current frame's original. */
+var THUMB_CONCURRENCY = 8
 
 // Main launch and export to the dev console
 /** @type {Playback} */

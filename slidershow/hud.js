@@ -34,6 +34,10 @@ class Hud {
                 this.playback_icon("☰")
             })
 
+        // Loading spinner, revealed while the current frame's full-quality media is still downloading.
+        this.$hud_loading = $("<div/>", { id: "hud-loading" }).appendTo("#hud")
+        this._loading_timer = undefined
+
         this.$control_icons
             .hide()
             .on("mouseenter", () => this.$playback_icon.html("☰") && this.playback_icon_interval.freeze()) // icon will not disappear on hover
@@ -376,6 +380,23 @@ class Hud {
         if (this.properties_visible) {
             this.properties()
         }
+    }
+
+    /**
+     * Reveal a loading spinner while `frame`'s full-quality media is still downloading, hide it once loaded.
+     * A short delay first avoids a flash on frames that are already cached.
+     * @param {Frame} frame
+     */
+    loading(frame) {
+        clearTimeout(this._loading_timer)
+        this.$hud_loading.removeClass("active")
+        this._loading_timer = setTimeout(() => this.$hud_loading.addClass("active"), 150)
+        frame.loaded.then(() => {
+            if (this.playback.frame === frame) { // ignore if the user has navigated away meanwhile
+                clearTimeout(this._loading_timer)
+                this.$hud_loading.removeClass("active")
+            }
+        })
     }
 
     tag(tag = "") {

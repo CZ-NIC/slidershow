@@ -392,7 +392,7 @@ class Frame {
             if ($el.attr("src") && !$el.attr("data-thumb-shown")) { // src already fully set, nothing to do
                 return null
             }
-            return Frame._load_media($el, el)
+            return Frame._load_media($el, el, this)
         }).get().filter(Boolean)
 
         // Process markdown
@@ -420,39 +420,98 @@ class Frame {
     /**
      * Load a single <img>/<video> `src`, showing the inherited `data-thumb` preview first (if it resolves
      * to a working URL) so the frame is not blank while the full-quality file downloads.
+     *
+     * The expensive full-quality fetches are throttled through `playback.original_loader` and the cheap thumbnails
+     * through `playback.thumb_loader`, both ordered by the frame's distance from the current one. The current frame
+     * (distance 0) bypasses the limiters entirely, so its request never waits behind a neighbour's preload –
+     * not in our queue, and not in the browser's per-host connection pool either.
      * @param {JQuery} $el
      * @param {HTMLImageElement|HTMLVideoElement} el
+     * @param {?Frame} frame The owning frame, used to resolve the concurrency limiters and the current distance.
      * @returns {Promise}
      */
-    static async _load_media($el, el) {
+    static async _load_media($el, el, frame = null) {
         const src = (await $el.data(READ_SRC)?.(true)) || $el.data("src")
         if (!src) { // no place to set the src from
             return null
         }
 
-        const thumb = !$el.attr("src") && Frame.get_thumb_src($el)
-        if (thumb && el.tagName === "VIDEO") {
-            // <video poster> is swapped out by the browser itself once the real frame is ready, no manual handling needed.
-            Frame.probe_image(thumb).then(ok => ok && $el.attr("poster", thumb))
-        } else if (thumb) {
-            // Start the full-quality fetch right away (a hidden Image, so it does not interrupt the visible
-            // thumbnail) – it must not wait for the thumbnail probe, or every frame would load that much slower.
-            const preloader = new Image()
-            preloader.src = src
-            const full_loaded = new Promise(r => preloader.onload = r)
+        const playback = frame?.playback
+        const distance = () => (playback && frame ? Math.abs(frame.index - playback.index) : 0)
+        // The current frame (distance 0) loads immediately; everything else queues on the given limiter.
+        const gate = sem => (sem && distance() > 0 ? sem.acquire(distance) : Promise.resolve(() => { }))
 
-            if (await Frame.probe_image(thumb)) {
-                $el.attr("src", thumb).attr("data-thumb-shown", 1)
-            }
-            await full_loaded // the swap itself is an instant cache hit, no second network request
-            $el.attr("src", src).removeAttr("data-thumb-shown")
-            // Wait for the visible element too – `loaded` must not resolve while it still displays the thumbnail
-            // (Chrome keeps el.complete false for a moment even on a cache hit, which made Frame.exif bail out).
-            return new Promise(r => el.onload = r)
+        const isImg = el.tagName === "IMG"
+        const thumb = !$el.attr("src") && Frame.get_thumb_src($el)
+
+        if (thumb && isImg) {
+            // The cheap thumbnail (generous limiter) and the expensive full-quality file (stricter limiter) load
+            // independently, so the full fetch of the current frame – whose slot is free – never waits for the
+            // thumbnail probe. `full_shown` guards the rare case the full file wins the race (ex: already cached),
+            // so the thumbnail is not painted over the sharper image.
+            let full_shown = false
+
+            const thumb_task = (async () => {
+                const release = await gate(playback?.thumb_loader)
+                try {
+                    if (await Frame.probe_image(thumb) && !full_shown) {
+                        $el.attr("src", thumb).attr("data-thumb-shown", 1)
+                    }
+                } finally {
+                    release()
+                }
+            })()
+
+            const full_task = (async () => {
+                const release = await gate(playback?.original_loader)
+                try {
+                    const ok = await new Promise(r => { // a hidden Image, so the visible thumbnail is not interrupted
+                        const preloader = new Image()
+                        preloader.onload = () => r(true)
+                        preloader.onerror = () => r(false)
+                        preloader.src = src
+                    })
+                    if (ok) {
+                        full_shown = true
+                        $el.attr("src", src).removeAttr("data-thumb-shown") // instant cache hit, no second request
+                        // Wait for the visible element too – `loaded` must not resolve while it still displays the thumbnail
+                        // (Chrome keeps el.complete false for a moment even on a cache hit, which made Frame.exif bail out).
+                        await new Promise(r => { el.onload = r; el.onerror = r })
+                    }
+                } finally {
+                    release()
+                }
+            })()
+
+            await Promise.all([thumb_task, full_task])
+            return
         }
 
-        el.src = src
-        return el.tagName === "IMG" ? new Promise(r => el.onload = r) : new Promise(r => el.onloadeddata = r)
+        if (thumb) { // VIDEO: <video poster> is swapped out by the browser itself once the real frame is ready.
+            gate(playback?.thumb_loader).then(async release => {
+                if (await Frame.probe_image(thumb)) {
+                    $el.attr("poster", thumb)
+                }
+                release()
+            })
+        }
+
+        // Full file (a video, or an image without a thumbnail template), throttled by the stricter limiter.
+        const release = await gate(playback?.original_loader)
+        try {
+            el.src = src
+            await new Promise(r => {
+                if (isImg) {
+                    el.onload = r
+                    el.onerror = r
+                } else {
+                    el.onloadeddata = r
+                    el.onerror = r
+                }
+            })
+        } finally {
+            release()
+        }
     }
 
     /**

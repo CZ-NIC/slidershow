@@ -127,6 +127,55 @@ class Interval {
 }
 
 /**
+ * Concurrency limiter. Caps the number of tasks running at once and, when a slot frees, serves the
+ * waiter with the lowest `priority()` value first. Priority is evaluated lazily at scheduling time,
+ * so when the situation changes (ex: the user navigates, changing every frame's distance) the now-closest
+ * waiter is served next – no need to re-queue anything.
+ */
+class Semaphore {
+    /** @param {number} limit Max number of concurrent holders. */
+    constructor(limit) {
+        this.limit = limit
+        this.active = 0
+        /** @type {{priority: function(): number, resolve: function}[]} */
+        this.queue = []
+    }
+
+    /**
+     * @param {function(): number} priority Lower value = served sooner. Re-evaluated each time a slot frees.
+     * @returns {Promise<function>} Resolves with a `release()` callback once a slot is acquired. Call it when done.
+     */
+    acquire(priority = () => 0) {
+        return new Promise(resolve => {
+            this.queue.push({ priority, resolve })
+            this.#pump()
+        })
+    }
+
+    #pump() {
+        while (this.active < this.limit && this.queue.length) {
+            let best = 0
+            for (let i = 1; i < this.queue.length; i++) {
+                if (this.queue[i].priority() < this.queue[best].priority()) {
+                    best = i
+                }
+            }
+            const { resolve } = this.queue.splice(best, 1)[0]
+            this.active++
+            let released = false
+            resolve(() => {
+                if (released) {
+                    return
+                }
+                released = true
+                this.active--
+                this.#pump()
+            })
+        }
+    }
+}
+
+/**
  * Are elements of the arrays equal?
  * https://stackoverflow.com/a/39967517/2036148
  * @param {Array} a

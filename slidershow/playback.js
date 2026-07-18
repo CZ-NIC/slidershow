@@ -43,6 +43,12 @@ class Playback {
         */
         this.bg_tasks = []
 
+        /** @type {Semaphore} Throttles full-quality media downloads and serves them nearest-frame-first,
+         * so a real server is not flooded and the current frame's original is never stuck behind neighbours. */
+        this.original_loader = new Semaphore(ORIGINAL_CONCURRENCY)
+        /** @type {Semaphore} Throttles the cheap `data-thumb` previews (generous limit). */
+        this.thumb_loader = new Semaphore(THUMB_CONCURRENCY)
+
         /** Preloading tasks background worker */
         this.bg_worker = new Interval(async () => {
             const task = this.bg_tasks.shift()
@@ -518,6 +524,9 @@ class Playback {
             () => following?.preload(),
             () => this.aux_window.info(frame, following)  // send the new info to the aux-window
         ], true)
+
+        // Give visible feedback while the full-quality media downloads (esp. noticeable on a slow real server).
+        this.hud.loading(frame)
 
         // start transition
         frame.prepare(sameFrame ? null : lastFrame)

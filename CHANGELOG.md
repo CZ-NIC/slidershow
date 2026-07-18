@@ -3,6 +3,8 @@
 ## 1.0.0 (unreleased)
 * feat: auto-forward settable from the hash (`#1&state=duration:5`), round-trips with the auto-forward button
 * feat: `data-thumb` thumbnail preview – shows a lightweight preview while the full-quality file downloads, grid/ribbon uses it exclusively
+* enh: HUD loading spinner while the current frame's full-quality media downloads
+* enh: preloading throttled & prioritized – current frame's original loads first, thumbnails stay cheap, neighbour originals download a few at a time in order of distance (no longer floods a real server)
 * feat: grid dynamic loading, powerful grouping, etc.
 * feat: command palette
 * fix: exif correct date format
