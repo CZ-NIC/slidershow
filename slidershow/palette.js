@@ -202,6 +202,11 @@ class CommandPalette {
             // So that activating "Go right" will hide command palette but when focusing again,
             // the user gets "Go right" option pre-selected.
             this.$input.val('').trigger("blur")
+            // Palette can be opened standalone (hotkey) without the hud menu.
+            // In that case, hide its wrapper too, otherwise it stays hanging on screen.
+            if (!this.hud.$hud_menu.is(":visible")) {
+                this.$wrapper.fadeOut(500)
+            }
         }
     }
 }

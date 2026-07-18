@@ -224,6 +224,44 @@ class SectionController {
     }
 
     /**
+     * Sort sections inside <main> alphabetically by their data-name attribute
+     */
+    sortSections(order = "asc") {
+        const pl = this.playback
+
+        let originalOrder
+        pl.changes.undoable(`Sort sections alphabetically`,
+            () => {
+                // Save original order for undo
+                originalOrder = $main.children("section").map((_, el) => el).get()
+
+                // Sort sections alphabetically by data-name
+                const $sections = $main.children("section")
+                const sorted = $sections.get().sort((a, b) => {
+                    const nameA = ($(a).attr("data-name") || "").toLowerCase()
+                    const nameB = ($(b).attr("data-name") || "").toLowerCase()
+                    return order === "asc"
+                        ? nameA.localeCompare(nameB)
+                        : nameB.localeCompare(nameA)
+                })
+
+                // Re-append in sorted order (preserving articles inside)
+                sorted.forEach(section => $main.append(section))
+            },
+            () => {
+                // Undo: restore original order
+                originalOrder.forEach(section => $main.append(section))
+
+            },
+            () => {
+                pl.positionFrames()
+                pl.goToFrame(pl.$current.data("frame").index - 1)
+                pl.resetAndGo()
+            }
+        )
+    }
+
+    /**
      * @param {Date} date
      */
     _toWeekFormat(date) {

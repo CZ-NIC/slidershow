@@ -45,6 +45,8 @@ class FrameZoom {
 
     /** @param {JQuery<HTMLImageElement|HTMLMediaElement>} $el */
     _init($el) {
+        const WHEEL_SPEED = 1.5
+        const TOUCHPAD_SPEED = 1.05
         const maxScale_default = 5
         let last_scale = null
         const image = $el.prop("tagName") === "IMG"
@@ -58,7 +60,7 @@ class FrameZoom {
             // <video> uses click for start/stop
             zoomOnClick: image,
             zoomOnDblClick: false,
-            speed: 1.5,
+            speed: WHEEL_SPEED,
             // We can wheel in for ever but keeping maxScale on leash.
             // Because the click takes us to the current bed (and second click zooms out).
             rescale: wzoom => { // the function seems to be called unintuitively with grab moving
@@ -113,6 +115,12 @@ class FrameZoom {
         $(window).on("resize.wzoom", refresh_viewport)
 
         $el
+            .off("wheel").on("wheel", event => {
+                // Touchpad is faster than mouse wheel.
+                // Let mouse wheel zoom with smaller granularity.
+                const isTouchpad = event.originalEvent.deltaMode === 0 && !Number.isInteger(event.originalEvent.deltaY)
+                wzoom.options.speed = isTouchpad ? TOUCHPAD_SPEED : WHEEL_SPEED
+            })
             .data("wzoom_resize_off", () => $(window).off("resize.wzoom", refresh_viewport))
             // zooming modifiable from the outside
             .attr("data-wzoom", true)
@@ -271,7 +279,7 @@ class FrameZoom {
             this.frame.add_effect(r =>
                 $el.animate({ rotate: rotate + "deg" }, transition_duration * 1000, "linear",
                     () => r()))
-            if(rotate === prop("rotate", $el.parent(), null, null, false)) {
+            if (rotate === prop("rotate", $el.parent(), null, null, false)) {
                 // We are not able to distinguish, whether the rotation is set to 0 or undefined. We assume it is undefined.
                 // The good side:
                 // 1. Import images and export

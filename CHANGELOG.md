@@ -5,6 +5,7 @@
 * feat: command palette
 * fix: exif correct date format
 * enh (map): lazy loading
+* enh (zoom): faster wheel, slower touchpad
 
 ## 0.9.9 (2026-02-26)
 * enh: preblink protection

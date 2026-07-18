@@ -17,8 +17,13 @@ class GridController {
         this.preload_radius = 0
         this.page_size = 0
 
+        /** First displayed index from this.$framesSections */
         this.loadedFrom = 0
+        /** Last displayed index from this.$framesSections */
         this.loadedUpTo = 0
+        /** Index from this.$framesSections -> which column it should be placed in.
+         * (Having in mind variable thumbnail-column count and sections.)
+         */
         this.colMap = []
         this.isDisplayed = false
     }
@@ -38,14 +43,16 @@ class GridController {
         this.columns = GRID_COLUMNS
         this.preload_radius = Math.ceil(GRID_PRELOAD_RADIUS / GRID_COLUMNS) * GRID_COLUMNS
         this.page_size = Math.ceil(GRID_PAGE_SIZE / GRID_COLUMNS) * GRID_COLUMNS
+        if (this.page_size > this.preload_radius) {
+            console.log("Warning, grid page size", this.page_size, "is bigger than preload radius", this.preload_radius)
+        }
         this.colMap = this._buildColMap()
+
         const currentPos = this._currentPos()
         const startFrom = this._snapToRowStart(Math.max(0, currentPos - this.preload_radius))
         const startTo = Math.min(this.$framesSections.length, currentPos + this.preload_radius)
 
-        this.$framesSections.slice(startFrom, startTo).each((_, frameOrSection) => this._addToGrid(frameOrSection))
-        this.loadedFrom = startFrom
-        this.loadedUpTo = startTo
+        this._loadBatch(startFrom, startTo - startFrom, false)
 
         this.hud.makeThumbnailsImportable(this.$container)
         this._bindScroll()
@@ -58,26 +65,36 @@ class GridController {
     }
 
     /**
+     * Make sure the frame-section at `pos` is loaded within thumbnails: extends the loaded
+     * range in the missing direction and discards items that fell out of range.
+     * @param {number} pos Index into this.$framesSections
+     */
+    _ensureLoaded(pos) {
+        // Is this position out of the current range?
+        if (pos < this.loadedFrom || pos >= this.loadedUpTo) {
+            // Fetch through the missing direction
+            if (pos < this.loadedFrom) {
+                const from = this._snapToRowStart(Math.max(0, pos - this.preload_radius))
+                const count = Math.min(pos + this.preload_radius, this.loadedFrom) - from
+                this._loadBatch(from, count, true)
+            } else {
+                const from = this._snapToRowStart(Math.max(this.loadedUpTo, pos - this.preload_radius))
+                const count = (pos + this.preload_radius) - from
+                this._loadBatch(from, count, false)
+            }
+            this._discardFarItems(pos)
+        }
+
+        this.hud.makeThumbnailsImportable(this.$container)
+    }
+
+    /**
      *
      * @param {boolean} scrollToCurrent
      * Make sure the frame is loaded within thumbnails.
      */
     focusFrame(scrollToCurrent = false) {
-        const currentPos = this._currentPos()
-
-        // Is this frame out of current range?
-        if (currentPos < this.loadedFrom || currentPos >= this.loadedUpTo) {
-            // Fetch through the missing direction
-            if (currentPos < this.loadedFrom) {
-                const from = this._snapToRowStart(Math.max(0, currentPos - this.preload_radius))
-                this._loadBatch(from, this.loadedFrom - from, true)
-            } else {
-                this._loadBatch(this.loadedUpTo, currentPos - this.loadedUpTo + this.preload_radius, false)
-            }
-            this._discardFarItems()
-        }
-
-        this.hud.makeThumbnailsImportable(this.$container)
+        this._ensureLoaded(this._currentPos())
         if (scrollToCurrent) {
             this._scrollToCurrentFrame()
         }
@@ -112,6 +129,9 @@ class GridController {
                 break
             case "delete":
                 pl.section_controller.deleteSection($section)
+                break
+            case "sort-sections":
+                pl.section_controller.sortSections(param)
                 break
             case "flatten-subsections":
                 pl.section_controller.flattenSubsections($section)
@@ -225,6 +245,13 @@ class GridController {
                                 <button data-role='add-subsection' data-param='after'>to the end</button>
                             </div>
                         </div>
+                        <div class="section-menu">
+                            <span>sort ▾</span>
+                            <div class="dropdown">
+                                <button data-role='sort-sections' data-param='desc'>by name ⇓</button>
+                                <button data-role='sort-sections' data-param='asc'>by name ⇑</button>
+                            </div>
+                        </div>
                         <button data-role='flatten-subsections'>flatten subsections</button>
                     </div>`
 
@@ -259,13 +286,12 @@ class GridController {
                             </div>
                             <button data-role='delete'>delete</button></div>`
 
+    /** <frame-preview> index in this.$framesSections
+    */
     _currentPos() {
-        return this.$framesSections.index(
-            this.$framesSections.filter((_, el) =>
-                !["SECTION", "MAIN"].includes(el.tagName) && $(el).data("frame")?.index === this.pl.index
-            )[0]
-        )
+        return this.$framesSections.index(this.pl.frame.$frame)
     }
+
 
     _buildColMap() {
         const colMap = []
@@ -287,47 +313,76 @@ class GridController {
         return pos
     }
 
+    /**
+     * Adds the range to the grid.
+     * @param {Number} from
+     * @param {Number} to
+     * @param {Boolean} prepend
+     */
+    _loadRange(from, to, prepend = false) {
+
+        const slice = this.$framesSections.slice(from, to).toArray()
+        if (prepend) slice.reverse()
+        slice.forEach((frameOrSection, i) => {
+            const index = prepend ? to - 1 - i : from + i
+            this._addToGrid(frameOrSection, prepend, index)
+        })
+    }
+
+
+    /**
+     * This is a low-end method, pay attention we do not sanitize indices to mitigate duplicates etc.
+     * @param {Number} from
+     * @param {Number} count
+     * @param {Boolean} prepend
+     */
     _loadBatch(from, count, prepend = false) {
         const snappedFrom = this._snapToRowStart(from)
         const snappedTo = snappedFrom + count
 
-        const slice = this.$framesSections.slice(snappedFrom, snappedTo).toArray()
-        if (prepend) slice.reverse()
-        slice.forEach(frameOrSection => this._addToGrid(frameOrSection, prepend))
+        this._loadRange(snappedFrom, snappedTo, prepend)
 
         if (prepend) {
             this.loadedFrom = snappedFrom
         } else {
+            this.loadedFrom = Math.max(this.loadedFrom, snappedFrom)
             this.loadedUpTo = snappedTo
         }
     }
 
-    _discardFarItems() {
-        const discard = (_, frameOrSection) => {
-            if (frameOrSection.tagName === "SECTION") {
-                this.$container.children("section-controller").filter((_, el) =>
-                    $(el).data("section") === frameOrSection
-                ).remove()
-            } else {
-                const idx = $(frameOrSection).data("frame")?.index
-                this.$container.children(`[data-ref="${idx}"]`).remove()
+
+    _discardFarItems(center) {
+        const preload_limit = this.preload_radius * 5
+        const newFrom = this._snapToRowStart(center - preload_limit)
+        const newTo = center + preload_limit
+
+        const discarded = []
+        this.$container.children().each((_, el) => {
+            const pos = $(el).data("fsIndex")
+            if (pos < newFrom || pos >= newTo) {
+                discarded.push(pos)
+                $(el).remove()
             }
-        }
-        this.$framesSections.slice(0, this.loadedFrom).each(discard)
-        this.$framesSections.slice(this.loadedUpTo).each(discard)
+        })
+
+        const ch = this.$container.children()
+        this.loadedFrom = ch.first().data("fsIndex")
+        this.loadedUpTo = ch.last().data("fsIndex")
     }
 
     /**
      * @param {HTMLElement} frameOrSection
      */
-    _addToGrid(frameOrSection, prepend = false) {
+    _addToGrid(frameOrSection, prepend = false, fsIndex = null) {
+        let el
         if (frameOrSection.tagName === "MAIN") {
-            this._assureMain(frameOrSection, prepend)
+            el = this._assureMain(frameOrSection, prepend)
         } else if (frameOrSection.tagName === "SECTION") {
-            this._assureSection(frameOrSection, prepend)
+            el = this._assureSection(frameOrSection, prepend)
         } else {
-            this.hud.assureThumbnail($(frameOrSection).data("frame"), this.$container, prepend)
+            el = this.hud.assureThumbnail($(frameOrSection).data("frame"), this.$container, prepend)
         }
+        el.data("fsIndex", fsIndex)
     }
 
     /**
@@ -341,7 +396,7 @@ class GridController {
                     ${this._menuOfMainTemplate}
                 </section-controller>`)
             .data("section", main)
-        prepend ? $mc.prependTo(this.$container) : $mc.appendTo(this.$container)
+        return prepend ? $mc.prependTo(this.$container) : $mc.appendTo(this.$container)
     }
 
     /**
@@ -355,7 +410,7 @@ class GridController {
                         ${this._sectionMenuTemplate}
                     </section-controller>`)
             .data("section", currentSection)
-        prepend ? $sc.prependTo(this.$container) : $sc.appendTo(this.$container)
+        return prepend ? $sc.prependTo(this.$container) : $sc.appendTo(this.$container)
     }
 
     _bindScroll() {
@@ -367,15 +422,18 @@ class GridController {
             if (atBottom && this.loadedUpTo < this.$framesSections.length) {
                 this._loadBatch(this.loadedUpTo, this.page_size, false)
                 this.hud.makeThumbnailsImportable(this.$container)
-                this._discardFarItems()
-            }
-
-            if (atTop && this.loadedFrom > 0) {
+            } else if (atTop && this.loadedFrom > 0) {
                 const scrollBefore = el.scrollHeight
                 this._loadBatch(Math.max(0, this.loadedFrom - this.page_size), this.page_size, true)
-                this.hud.makeThumbnailsImportable(this.$container)
+                this.hud.makeThumbnailsImportable(this.$container) // duplicated row?
                 el.scrollTop += el.scrollHeight - scrollBefore
-                this._discardFarItems()
+            } else {
+                return
+            }
+
+            const pos = this.getScrollAnchor()
+            if (pos) {
+                this._discardFarItems(pos.frameSectionIndex)
             }
         })
     }
@@ -405,7 +463,8 @@ class GridController {
             if (el.offsetTop >= container.scrollTop) {
                 best = {
                     frameIndex: Number(el.dataset.ref),
-                    offsetY: el.offsetTop - container.scrollTop
+                    offsetY: el.offsetTop - container.scrollTop,
+                    frameSectionIndex: $(el).data("fsIndex")
                 }
                 return false
             }
@@ -414,31 +473,21 @@ class GridController {
         return best
     }
 
+    /**
+     * Restore a scroll position previously captured by getScrollAnchor, e.g. after the grid
+     * was fully reset (such as when the column count changes).
+     * @param {{frameIndex: number, offsetY: number, frameSectionIndex: number}} anchor
+     */
     scrollToAnchor(anchor) {
         if (!anchor) return
-        const { frameIndex, offsetY } = anchor
+        const { frameIndex, offsetY, frameSectionIndex: pos } = anchor
+        if (pos == null || pos === -1) return
 
-        const pos = this.$framesSections.index(
-            this.$framesSections.filter((_, el) =>
-                !["SECTION", "MAIN"].includes(el.tagName) && $(el).data("frame")?.index === frameIndex
-            )[0]
-        )
-        if (pos === -1) return
-
-        if (pos < this.loadedFrom || pos >= this.loadedUpTo) {
-            this.$container.empty()
-            this.$framesSections = $(FRAME_SECTION_SELECTOR)
-            this.colMap = this._buildColMap()
-            const startFrom = this._snapToRowStart(Math.max(0, pos - this.preload_radius))
-            const startTo = Math.min(this.$framesSections.length, pos + this.preload_radius)
-            this.$framesSections.slice(startFrom, startTo).each((_, frameOrSection) => this._addToGrid(frameOrSection))
-            this.loadedFrom = startFrom
-            this.loadedUpTo = startTo
-            this.hud.makeThumbnailsImportable(this.$container)
-        }
+        this._ensureLoaded(pos)
 
         const $thumb = this.hud.getThumbnail({ index: frameIndex }, this.$container)
         if (!$thumb.length) return
+
         this.$container[0].scrollTop = $thumb[0].offsetTop - offsetY
     }
 

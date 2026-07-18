@@ -396,7 +396,7 @@ class Playback {
         this.session.store()
 
         if(this.hud.grid_visible) {
-            console.log("Frame under grid", index)
+            console.log("Grid", index)
             this.hud.refresh(this.frame, Boolean(lastFrame))
             return
         }

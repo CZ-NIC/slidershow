@@ -21,6 +21,8 @@ class Hud {
         this.$control_icons = $("#control-icons")
 
         this.previewCache = new Map()
+        this.propertyPanel = new PropertyPanel(this)
+        this.palette = new CommandPalette(this)
         this.init_grid()
 
         // Playback icon shows the menu
@@ -47,11 +49,14 @@ class Hud {
             .appendTo(this.$control_icons)
             .on("click", () => pl.goNext())
 
+        // Events
         this.$hud_gps.on("click", () => {
             pl.hud_map.toggle(true)
         })
-        this.propertyPanel = new PropertyPanel(this)
-        this.palette = new CommandPalette(this)
+        this.$hud_thumbnails.add(this.$hud_grid).on("click", "frame-preview", e => {
+            const ref = Number(e.currentTarget.dataset.ref)
+            this.playback.goToFrame(ref)
+        })
     }
 
     /**
@@ -221,38 +226,43 @@ class Hud {
         if (!$thumbnail.length) { // this thumbnail does not exist yet
             // go to frame
             $thumbnail = $("<frame-preview/>", { html: "...", "data-ref": frame.index })
-                .on("click", () => this.playback.goToFrame(frame.index))
 
-            frame.preload()
-            frame.loaded.then(() => {
-                $thumbnail.html(frame.get_preview())
-                if (!$thumbnail.text().trim()) {
-                    // Strange bug. When having just a full-stretched image in the frame, vertical scrollbar appeared unless font-size or line-height were zero.
-                    // When I copied full HTML, no scrollbar was visible, albeit I found no single difference in the DevTools.
-                    $("> *", $thumbnail).css("font-size", "0")
-                }
+            setTimeout(() => {
+                // Element might been removed meanwhile, do not bother to preload.
+                // We might ex. keep PageDown hit while scrolling down grid. That way, we scroll 1000 frames / 5 sec, without setTimeout like 400 frames.
+                if (!$thumbnail[0].isConnected) return
 
-                // delete frame
-                if (pl.editing_mode) {
-                    $thumbnail.append($("<span/>", { html: "&#10006;", class: "delete", title: "Delete frame" }).on("click", () => frame.delete()))
-                }
+                frame.preload()
+                frame.loaded.then(() => {
+                    $thumbnail.html(frame.get_preview())
+                    if (!$thumbnail.text().trim()) {
+                        // Strange bug. When having just a full-stretched image in the frame, vertical scrollbar appeared unless font-size or line-height were zero.
+                        // When I copied full HTML, no scrollbar was visible, albeit I found no single difference in the DevTools.
+                        $("> *", $thumbnail).css("font-size", "0")
+                    }
 
-                // tag visible
-                if (pl.tagging_mode) {
-                    $thumbnail.append($("<span/>", { html: frame.$actor.attr("data-tag"), class: "tag", title: "Tag that helps you organize" }))
-                }
+                    // delete frame
+                    if (pl.editing_mode) {
+                        $thumbnail.append($("<span/>", { html: "&#10006;", class: "delete", title: "Delete frame" }).on("click", () => frame.delete()))
+                    }
 
-                // Scale – use the proportions of the full screen but shrink to max thumbnail width
-                const scaleFactorX = $thumbnail.width() / pl.$current.width()
-                $(":first", $thumbnail).css({ "scale": String(scaleFactorX) })
-            })
+                    // tag visible
+                    if (pl.tagging_mode) {
+                        $thumbnail.append($("<span/>", { html: frame.$actor.attr("data-tag"), class: "tag", title: "Tag that helps you organize" }))
+                    }
+
+                    // Scale – use the proportions of the full screen but shrink to max thumbnail width
+                    const scaleFactorX = $thumbnail.width() / pl.$current.width()
+                    $(":first", $thumbnail).css({ "scale": String(scaleFactorX) })
+                })
+            }, 1)
         }
         if (prepend) {
             $thumbnail.prependTo($container)
         } else {
             $thumbnail.appendTo($container)
         }
-
+        return $thumbnail
     }
 
     /**
