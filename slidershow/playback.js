@@ -245,6 +245,7 @@ class Playback {
      *
      */
     reset() {
+        Frame.mediaConvert()
         this.$articles = Frame.load_all(this).show()
         this.$current = this.frame?.$frame ?? this.$articles.first()
         Frame.videoInit(this.$articles)

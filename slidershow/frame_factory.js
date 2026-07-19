@@ -91,9 +91,9 @@ class FrameFactory {
      */
     static file(filename, append = true, data = null, ram_only = false, callback = null) {
         let identifier = data?.type.split("/")[0] || filename.split('.').pop().toLowerCase() // either mime type or the suffix
-        if (["mp4", "mov", "avi", "vob", "ogv", "webm", "mts", "3gp", "mpg", "mpeg", "wmv", "hevc"].includes(identifier)) {
+        if (VIDEO_EXTENSIONS.includes(identifier)) {
             identifier = "video"
-        } else if (["jpg", "jpeg", "jxl", "png", "gif", "avif", "webp", "heic"].includes(identifier)) {
+        } else if (IMAGE_EXTENSIONS.includes(identifier)) {
             identifier = "image"
         }
 

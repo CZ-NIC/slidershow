@@ -659,6 +659,19 @@ class Frame {
     }
 
     /**
+     * A generator may not know the file type of a medium. An `<article data-src>` (no `<img>`/`<video>` inside)
+     * gets an `<img data-src>` or `<video data-src>` child created by the file extension.
+     * Must run before the Frame objects are created – Frame stores its $actor at construction.
+     */
+    static mediaConvert() {
+        $main.find(FRAME_TAGS).filter("[data-src]:not(:has(img,video))").each((_, el) => {
+            const ext = el.getAttribute("data-src").split(/[?#]/)[0].split(".").pop().toLowerCase()
+            $("<" + (VIDEO_EXTENSIONS.includes(ext) ? "video" : "img") + "/>", { "data-src": el.getAttribute("data-src") }).prependTo(el)
+            el.removeAttribute("data-src")
+        })
+    }
+
+    /**
      * Inherit attributes from the ancestors
      */
     static videoInit($articles) {

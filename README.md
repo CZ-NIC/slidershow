@@ -383,6 +383,13 @@ When having thousands of images, your browser may choke. Use `data-src` instead 
 <img data-src="flower.jpg" /> <!-- becomes <img src="flower.jpg"> when needed -->
 ```
 
+A generator may not even know the file type. Put `data-src` directly on an empty `<article>` and the right element is created from the file extension.
+
+```html
+<article data-src="flower.jpg"></article> <!-- becomes <article><img data-src="flower.jpg"></article> -->
+<article data-src="clip.mp4"></article> <!-- becomes <article><video data-src="clip.mp4"></article> -->
+```
+
 #### Thumbnail preview (`data-thumb`)
 
 If your originals are large (multi-MB photos over a slow connection), let SlideRshow show a small preview first and swap in the full file only once it has fully downloaded. Set `data-thumb` on `<main>` (or a `<section>`, or a single `<img>`/`<video>`) to a template resolved against that element's `data-src`:

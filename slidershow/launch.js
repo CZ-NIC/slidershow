@@ -7,6 +7,8 @@ const $hud = $("#hud")
 const FRAME_SELECTOR = "main article,main article-map"
 const FRAME_TAGS = "article, article-map" // Can be used only in the <main> context. Because sometimes FRAME_SELECTOR is too strict.
 const FRAME_SECTION_SELECTOR = FRAME_SELECTOR + ",main,main section"
+const VIDEO_EXTENSIONS = ["mp4", "mov", "avi", "vob", "ogv", "webm", "mts", "3gp", "mpg", "mpeg", "wmv", "hevc"]
+const IMAGE_EXTENSIONS = ["jpg", "jpeg", "jxl", "png", "gif", "avif", "webp", "heic"]
 
 /** To fetch docs */
 const DOCS_URI = "https://cdn.jsdelivr.net/gh/CZ-NIC/slidershow@main/README.md"
