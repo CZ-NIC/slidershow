@@ -27,6 +27,9 @@ class Hud {
         // and jQuery's fadeIn always forces *some* visible display.
         this.$hud_hideable = playback.isMobileMode ? this.$mobile_nav : this.$control_icons
 
+        /** @type {Array<{time: string, text: string}>} Bounded history of info()/ok() notifications. */
+        this.info_history = []
+
         this.previewCache = new Map()
         this.propertyPanel = new PropertyPanel(this)
         this.palette = new CommandPalette(this)
@@ -483,9 +486,10 @@ class Hud {
      */
     info(text, soft = false) {
         console.warn(text)
+        this._pushHistory(text)
         if (!soft) {
             new $.Zebra_Dialog(text, {
-                auto_close: 2000,
+                auto_close: Math.max(2000, 40 * text.length),
                 buttons: false,
                 modal: false,
                 position: ["right - " + (this.properties_visible ? Math.round(this.$hud_properties.width()) + 10 + 20 : 20), "top + 20"]
@@ -499,7 +503,28 @@ class Hud {
      * @param {string} text
      */
     ok(title, text) {
+        this._pushHistory(text)
         new $.Zebra_Dialog(text, { type: "information", title: title })
+    }
+
+    /**
+     * @param {string} text
+     */
+    _pushHistory(text) {
+        this.info_history.push({ time: new Date().toLocaleTimeString(), text })
+        if (this.info_history.length > 50) {
+            this.info_history.shift()
+        }
+    }
+
+    /**
+     * Show past info()/ok() notifications, newest first (they are easy to miss – auto-closing toasts).
+     */
+    show_notification_history() {
+        const items = this.info_history.length
+            ? this.info_history.slice().reverse().map(h => `<div>${h.time} — ${h.text}</div>`).join("")
+            : "Žádné notifikace."
+        new $.Zebra_Dialog(items, { type: "information", title: "Historie notifikací" })
     }
 
     /**

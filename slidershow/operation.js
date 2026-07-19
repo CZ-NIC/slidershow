@@ -325,6 +325,9 @@ class Operation {
                     $main.attr("data-rotate", (old + 90) % 360)
                     pl.frame.refresh_actor("rotate")
                 }, "mobile"],
+            ],
+            [
+                ["Historie notifikací", () => pl.hud.show_notification_history(), () => true, "Notification history"],
             ]).disable()
 
         function zoom(little) {
