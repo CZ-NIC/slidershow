@@ -41,6 +41,7 @@ class GridController {
     load(scrollToCurrent = false) {
         this.$framesSections = $(FRAME_SECTION_SELECTOR)
         this.columns = GRID_COLUMNS
+        this.$container.css("--columns", GRID_COLUMNS) // keep the CSS var in sync (esp. on the very first load)
         this.preload_radius = Math.ceil(GRID_PRELOAD_RADIUS / GRID_COLUMNS) * GRID_COLUMNS
         this.page_size = Math.ceil(GRID_PAGE_SIZE / GRID_COLUMNS) * GRID_COLUMNS
         if (this.page_size > this.preload_radius) {
@@ -392,7 +393,7 @@ class GridController {
      */
     _assureMain(main, prepend = false) {
         const $mc = $(`<section-controller data-role="main">
-                    <span class="section-title">Presentation ${this.pl.section_controller.getSubsectionCount($(main))}</span>
+                    <span class="section-title">Presentation ${this.pl.section_controller.getSectionName($(main))}</span>
                     ${this._menuOfMainTemplate}
                 </section-controller>`)
             .data("section", main)

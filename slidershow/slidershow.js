@@ -15,8 +15,8 @@ const MAPY_TOKEN = "G2Tz6lgHdd2FpdZCwuU3yvbggGKSwcVkv8ptLos3Mn8"
 const GRID_PRELOAD_RADIUS = 60
 /** Grid: Number of items loaded per scroll batch (snapped to row start) */
 const GRID_PAGE_SIZE = 30
-/** Number of columns */
-var GRID_COLUMNS = 5
+/** Number of columns – fewer, bigger tiles on touch devices are easier to hit with a finger */
+var GRID_COLUMNS = matchMedia("(pointer: coarse)").matches ? 3 : 5
 
 // style
 document.querySelector("html").style.display = "none" // so that body images are not shown before the style loads (short white blink appears instead)
@@ -76,6 +76,14 @@ loadjQuery(() => {
     if (!$("meta[charset]", "head").length) {
         $("head").append("<meta charset='utf-8'>")
     }
+    // without this, mobile browsers render the layout at desktop width and scale it down,
+    // shrinking the whole UI (HUD, menu, buttons) far below a usable size.
+    // Native pinch-zoom of the whole page is disabled (maximum-scale/user-scalable) because it would let the
+    // user zoom out past the current frame and see the huge off-screen canvas the other frames are laid out on;
+    // zooming into a photo is still possible through its own zoom widget.
+    if (!$("meta[name=viewport]", "head").length) {
+        $("head").append("<meta name='viewport' content='width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover'>")
+    }
 
     // wait for all scripts to load
     Promise.all(vendor.concat(local)).then(() => load_launch() )
@@ -96,7 +104,11 @@ function loadjQuery(callback) {
 function loadScript(attrs) {
     return new Promise((resolve, reject) => {
         const script = document.createElement('script')
-        Object.entries(attrs).forEach(([k, v]) => script[k] = v)
+        // Without this, an uncaught error anywhere in a script loaded from a different origin (ex: the app's
+        // own files served off jsdelivr) is reported to window.onerror as an opaque "Script error." with no
+        // message/file/line – all the CDN hosts used here (jsdelivr, cdnjs, code.jquery.com, unpkg) send the
+        // CORS headers needed for the browser to disclose the real error once the tag is marked crossorigin.
+        Object.entries({ crossOrigin: "anonymous", ...attrs }).forEach(([k, v]) => script[k] = v)
         script.onload = resolve
         script.onerror = reject
         script.setAttribute('data-templated', '1')
@@ -142,6 +154,12 @@ function get_menu() {
         <div id="hud-thumbnails"></div>
         <div id="hud-grid"></div>
         <div id="control-icons"></div>
+        <div id="mobile-nav">
+            <button data-role="prev" title="Previous">&#9665;</button>
+            <button data-role="grid" title="Grid overview">&#9638;</button>
+            <button data-role="menu" title="Menu">&#9776;</button>
+            <button data-role="next" title="Next">&#9655;</button>
+        </div>
     </div>
 
     <menu>

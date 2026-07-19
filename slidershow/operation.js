@@ -209,7 +209,7 @@ class Operation {
                     } else { // toggle play and pause
                         pl.play_pause(!pl.moving)
                     }
-                }, "not-video"],
+                }, "not-video mobile"],
                 ["Shift+Alt+f", "⌚", "Set auto-forward", () => {
                     const durMain = prop("duration", $main)
                     const dur = pl.frame.getDuration()
@@ -250,8 +250,8 @@ class Operation {
         const pl = this.playback
         return this._group("General", null,
             [
-                ["m", "🗺", "Toggle hud map", () => pl.hud_map.toggle(true), "not-video"],
-                ["i", "ℹ", "Toggle file info", () => $("#hud-fileinfo").toggle()],
+                ["m", "🗺", "Toggle hud map", () => pl.hud_map.toggle(true), "not-video mobile"],
+                ["i", "ℹ", "Toggle file info", () => $("#hud-fileinfo").toggle(), "mobile"],
                 ["z", "🔍", "Photo or video zoom (cycle)", () => zoom()],
                 ["Shift+z", "🔍", "Photo or video little zoom in", () => zoom(true), "magnify-little"],
                 ["Shift+x", "🔎", "Photo or video little zoom out", () => zoom(-1), "magnify-little"],
@@ -266,7 +266,16 @@ class Operation {
                             callback: (_, slide_number) => pl.goToSlide(slide_number)
                         }]
                     })
-                }]
+                }],
+                // Sets the same `data-rotate` property the Properties panel would set on <main> – every
+                // frame's actor inherits it (prop() cascade) and rotates itself the same way "Rotate right
+                // 90°" rotates a single photo, zoom-compensated. Refresh the current one right away; frames
+                // navigated to afterwards pick it up on their own via Frame.prepare() → refresh_actor().
+                ["Alt+r", "🔄", "Rotate whole view 90°", () => {
+                    const old = Number($main.attr("data-rotate")) || 0
+                    $main.attr("data-rotate", (old + 90) % 360)
+                    pl.frame.refresh_actor("rotate")
+                }, "mobile"],
             ]).disable()
 
         function zoom(little) {

@@ -68,7 +68,9 @@ class Playback {
         this.debug = false
         this.tagging_mode = false
         this.editing_mode = false
-        this.step_disabled = false
+        // On mobile the authored pan/zoom "flyover" (data-step-points) is disabled by default – just the plain
+        // full-screen photo, swipeable/pinch-zoomable, no automatic camera movement.
+        this.step_disabled = this.isMobileMode
 
         this.operation = new Operation(this)
         this.section_controller = new SectionController(this)
@@ -99,14 +101,18 @@ class Playback {
 
         document.addEventListener('touchstart', event => {
             // Ignore gestures starting over the HUD (menu, panels, grid, palette, ...)
-            if ($(event.target).closest('#hud').length || event.touches.length > 1 || this.frame.zoom.keys) {
+            if ($(event.target).closest('#hud, menu').length || event.touches.length > 1 || this.frame.zoom.keys) {
                 dragMode = null
                 return
             }
             $main.stop()
             touchstartX = event.touches[0].clientX
-            const diagonal = prop("spread-frames", $main) === "diagonal" && this.frame.prop("transition") !== "fade"
-            if (!diagonal) {
+            // Live-drag (the frame following the finger) turned out flaky on mobile – neighbours could end
+            // up desynced/overlapping mid-gesture. On mobile a swipe now always just acts like tapping the
+            // prev/next button once past SWIPE_THRESHOLD (see handleGesture) – only the desktop-authored
+            // diagonal layout still gets the finger-following drag.
+            const livedrag = !this.isMobileMode && prop("spread-frames", $main) === "diagonal" && this.frame.prop("transition") !== "fade"
+            if (!livedrag) {
                 dragMode = "threshold"
                 return
             }
@@ -115,6 +121,11 @@ class Playback {
             const original = this.frame.get_position()
             const nextFrame = $(this.$articles[this.index + 1]).data("frame")
             const prevFrame = $(this.$articles[this.index - 1]).data("frame")
+            // A dragged-in neighbour is visible mid-gesture well before it becomes "current" (that only
+            // happens on touchend, via goNext/goPrev) – without this it would flash in its unrotated state
+            // for the whole drag and only snap to rotated once Frame.prepare() finally runs on arrival.
+            nextFrame?.refresh_actor("rotate")
+            prevFrame?.refresh_actor("rotate")
             drag = {
                 startX: touchstartX,
                 startY,
@@ -129,6 +140,14 @@ class Playback {
         }, false)
 
         document.addEventListener('touchmove', event => {
+            if (dragMode === "threshold") {
+                // No finger-following drag here – just a visual hint of which way a release would go.
+                const deltaX = event.touches[0].clientX - touchstartX
+                this.hud.swipeHint(Math.abs(deltaX) > 20 ? (deltaX < 0 ? "next" : "prev") : null)
+                // Whether the photo itself pans while not zoomed in is handled in frame_zoom.js's `onMove`
+                // (stopping WZoom's own drag-scroll here via the event turned out unreliable).
+                return
+            }
             if (dragMode !== "live" || !drag) {
                 return
             }
@@ -165,6 +184,7 @@ class Playback {
 
         document.addEventListener('touchend', event => {
             if (dragMode === "threshold") {
+                this.hud.swipeHint(null)
                 touchendX = event.changedTouches[0].clientX
                 handleGesture()
                 return
@@ -173,7 +193,17 @@ class Playback {
                 return
             }
             const target = drag.direction === 1 ? drag.nextPosition : drag.prevPosition
-            if (target && drag.progress > DRAG_COMPLETION_RATIO) {
+            if (target && drag.progress > DRAG_COMPLETION_RATIO && this.isMobileMode) {
+                // Finish the slide smoothly instead of teleporting the rest of the way (goToFrame's own
+                // positioning is intentionally instant on mobile – see isMobileMode). By the time the
+                // logical frame change runs, $main is already sitting at `target`, so it's a no-op visually.
+                // `direction` is captured now – by the time this animate's callback fires, `drag` below has
+                // already been reset to null (that reset can't wait for the animation without blocking the
+                // next gesture), so reading `drag.direction` there would throw on a null `drag`.
+                const direction = drag.direction
+                $main.stop(true).animate(target, SNAP_DURATION, () =>
+                    direction === 1 ? this.goNext() : this.goPrev())
+            } else if (target && drag.progress > DRAG_COMPLETION_RATIO) {
                 const indexBefore = this.index
                 drag.direction === 1 ? this.goNext() : this.goPrev()
                 if (this.index === indexBefore) {
@@ -197,6 +227,11 @@ class Playback {
             }
             touchstartX = 0
         }
+    }
+
+    /** On a coarse-pointer (touch) device we drop the spiral fly-through for a simple photo-strip feel. */
+    get isMobileMode() {
+        return matchMedia("(pointer: coarse)").matches
     }
 
     start() {
@@ -288,7 +323,7 @@ class Playback {
             // We do not set the index directly because the values interefere.
             $preview.data("ref-temp", frame.index)
 
-            const positioning = prop("spread-frames", $main)
+            const positioning = this.isMobileMode ? "ribbon" : prop("spread-frames", $main)
             switch (positioning) {
                 case "spiral":
                 case true:
@@ -326,6 +361,10 @@ class Playback {
                         top: frame.prop("y", null, slide_index) * 100 + "vh",
                         left: frame.prop("x", null, slide_index) * 100 + "vw",
                     })
+                    break;
+                case "ribbon":
+                    // Mobile: a plain horizontal photo-strip, one frame after another – no diagonal offset.
+                    $el.css({ top: "0vh", left: slide_index * 100 + "vw" })
                     break;
                 default:
                     this.hud.info(`Unknown spread-frames: ${positioning}`)
@@ -541,7 +580,7 @@ class Playback {
             $last.removeClass("debugged")
         }
 
-        const trans = sameFrame || supress_transition ? $main.css(frame.get_position()) : this.transition($last, $current)
+        const trans = sameFrame || supress_transition || this.isMobileMode ? $main.css(frame.get_position()) : this.transition($last, $current)
         const promise = this.promise = trans.promise()
         promise.then(() => {  // frame is at the viewport now
             if (lastFrame !== this.frame) {

@@ -76,6 +76,17 @@ class FrameZoom {
                 last_scale = scale
             },
             onGrab: e => positionCheck = [e.clientX, e.clientY],
+            // WZoom's own drag-to-pan (dragScrollable) engages regardless of zoom level; there's no
+            // supported way to disable it only while at 1x (and stopping the event from ever reaching it
+            // didn't pan out either – see the propagation comment in onDrop below). Instead, undo whatever
+            // pan it just applied when not actually zoomed in, synchronously before the browser paints –
+            // the net effect is the photo never visibly moves, while a real swipe gesture (tracked
+            // separately in playback.js) still navigates.
+            onMove: () => {
+                if (wzoom.content.currentScale <= wzoom.content.minScale) {
+                    wzoom.transform(0, 0, wzoom.content.currentScale)
+                }
+            },
             onDrop: e => {
                 $el.trigger("zoom.slidershow")
 

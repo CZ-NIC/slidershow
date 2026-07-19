@@ -26,7 +26,10 @@ class Menu {
         // Shortcuts available only in menu, not in playback
         this.shortcuts = [] // none right now
 
-        if (prop("start", $main)) {
+        // The splash screen is laid out for a wide desktop window (three side-by-side columns) and is
+        // useless clutter on a phone when there is already a presentation to show – skip straight to it.
+        // (With no frames yet, the append-files panel is the only thing to do, so the splash stays.)
+        if (prop("start", $main) || (pl.isMobileMode && $(FRAME_SELECTOR).length)) {
             this.start_playback()
         }
 

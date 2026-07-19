@@ -251,24 +251,81 @@ frame-preview {
         }
     }
 
-    @media (pointer: coarse) {
-        #control-icons {
-            gap: 16px;
-            font-size: 200%;
+    #mobile-nav {
+        display: none;
+    }
 
-            > * {
-                min-width: 44px;
-                min-height: 44px;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-            }
+    @media (pointer: coarse) {
+        /* replaced by the bigger, thumb-reachable #mobile-nav bar at the bottom */
+        #control-icons {
+            display: none;
         }
 
         #hud-menu button {
             padding: 8px 16px;
             font-size: 130%;
         }
+
+        /* Most of the presenter/editor toolbar (save, undo, tagging, keyboard-shortcuts help, …) is
+           meaningless on a phone with no keyboard – show only the few buttons marked `mobile`.
+           !important is required: WebHotkeys' onToggle does `$(el).show()` whenever a group is enabled
+           (General/Media/Playthrough/Switches all get enabled once presenting starts, or per-frame for
+           Media) – jQuery's show(), finding this rule still resolves to `none`, falls back to the button's
+           default display and sets that *inline*, which would otherwise defeat a plain (non-important) rule. */
+        #hud-menu button:not([data-role~="mobile"]) {
+            display: none !important;
+        }
+
+        #mobile-nav {
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            left: 0;
+            bottom: 0;
+            width: 100vw;
+            padding: 8px 8px max(8px, env(safe-area-inset-bottom));
+            gap: 8px;
+            background: linear-gradient(to top, rgba(0, 0, 0, .55), transparent);
+            pointer-events: none; /* taps between buttons still reach the frame beneath */
+
+            button {
+                pointer-events: auto;
+                position: relative; /* anchors the .btn-loading spinner ring */
+                min-width: 56px;
+                min-height: 56px;
+                font-size: 180%;
+                background: rgba(0, 0, 0, .35);
+                color: var(--base);
+                border: none;
+                border-radius: 50%;
+                transition: transform .1s, background-color .1s;
+
+                /* Immediate feedback that a tap registered, before anything else has had time to happen. */
+                &.tapped {
+                    transform: scale(0.82);
+                    background: rgba(255, 255, 255, .25);
+                }
+
+                /* The frame didn't arrive within 200ms (see Hud.tapFeedback) – show that something's happening. */
+                &.btn-loading::after {
+                    content: '';
+                    position: absolute;
+                    inset: 4px;
+                    border: 3px solid rgba(255, 255, 255, .25);
+                    border-top-color: #0fa;
+                    border-radius: 50%;
+                    pointer-events: none;
+                    animation: hud-spin .8s linear infinite;
+                }
+
+                /* Hint, while swipe-dragging (see Hud.swipeHint), of which way a release would go. */
+                &.swipe-hint {
+                    background: rgba(255, 255, 255, .3);
+                    text-shadow: 0 0 8px #0fa, 0 0 16px #0fa;
+                }
+            }
+        }
+
     }
 
     #hud-righttop-wrapper {
@@ -320,11 +377,24 @@ frame-preview {
 
         width: 100vw;
 
+        /* Thumbnails clone the real frame (which letterboxes a photo to the device's own aspect ratio via
+           object-fit:contain) – fine full-screen, but it wastes a lot of the tile as grey padding in a small
+           overview. Crop to fill instead, like any normal photo-grid/gallery app. */
+        frame-preview img,
+        frame-preview video {
+            object-fit: cover;
+        }
+
         &#hud-thumbnails {
             /* thumbnail ribbon */
             height: 30vh;
             bottom: 0;
             gap: 1px;
+
+            >frame-preview {
+                width: 30vw;
+                height: 30vh;
+            }
         }
 
         &#hud-grid {
@@ -490,10 +560,9 @@ frame-preview {
         }
 
         >frame-preview {
+            /* size is set per-container above (thumbnail ribbon: fixed 30vw/30vh; grid: calc() by --columns) */
             text-align: center;
             position: relative;
-            width: 30vw;
-            height: 30vh;
             color: black;
             background-color: lightgray;
 

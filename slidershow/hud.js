@@ -19,6 +19,13 @@ class Hud {
         this.grid = new GridController(this.playback, this, this.$hud_grid)
         this.$hud_properties = $("#hud-properties").hide() // by default off
         this.$control_icons = $("#control-icons")
+        this.$mobile_nav = $("#mobile-nav")
+        // On mobile the bottom nav bar replaces the top icons entirely (bigger, thumb-reachable) – #control-icons
+        // is statically `display:none` there (style.css), so only #mobile-nav needs the fade in/out treatment.
+        // On desktop it's the other way around: #mobile-nav must never be touched by jQuery show/hide – it would
+        // fall back to `display:block` there since the stylesheet keeps it `none` outside `pointer: coarse`,
+        // and jQuery's fadeIn always forces *some* visible display.
+        this.$hud_hideable = playback.isMobileMode ? this.$mobile_nav : this.$control_icons
 
         this.previewCache = new Map()
         this.propertyPanel = new PropertyPanel(this)
@@ -26,9 +33,12 @@ class Hud {
         this.init_grid()
 
         // Playback icon shows the menu
-        this.playback_icon_interval = new Interval(() => this.$control_icons.fadeOut(500, () => this.$playback_icon.html("☰")), 1000)
+        this.playback_icon_interval = new Interval(() => this.$hud_hideable.fadeOut(500, () => this.$playback_icon.html("☰")), 1000)
         this.$playback_icon = $("<div/>", { id: "playback-icon", html: "☰" })
             .appendTo(this.$control_icons)
+            // the bottom nav's ☰ button is the same control on mobile – shares the click behavior and
+            // mirrors the same transient icon (play/pause, video rate, …)
+            .add(this.$mobile_nav.find("[data-role=menu]"))
             .on("click", () => {
                 this.toggleMenu()
                 this.playback_icon("☰")
@@ -38,11 +48,11 @@ class Hud {
         this.$hud_loading = $("<div/>", { id: "hud-loading" }).appendTo("#hud")
         this._loading_timer = undefined
 
-        this.$control_icons
+        this.$hud_hideable
             .hide()
             .on("mouseenter", () => this.$playback_icon.html("☰") && this.playback_icon_interval.freeze()) // icon will not disappear on hover
             .on("mouseleave", () => this.playback_icon_interval.unfreeze())
-        $(document).on("mousemove", () => this.playback_icon())
+        $(document).on("mousemove touchstart", () => this.playback_icon())
         this.$hud_menu.on("mousemove", "button", e => this.playback_icon(e.target.title)) // menu hover hint
 
         // Next / prev icons
@@ -52,6 +62,18 @@ class Hud {
         $("<div/>", { html: "▷" })
             .appendTo(this.$control_icons)
             .on("click", () => pl.goNext())
+
+        // Bottom mobile nav bar (touch devices, see the `pointer: coarse` media query).
+        // Its "menu" button is wired above, together with the top ☰ icon.
+        // The "tapped" state starts on touchstart (not click, which only fires once the finger lifts –
+        // that would make the feedback feel delayed/laggy) and, on prev/next, stays on through the whole
+        // switch (cleared in tapFeedback once the new frame has arrived) so it's obvious we're switching.
+        this.$mobile_nav
+            .on("touchstart", "button", e => $(e.currentTarget).addClass("tapped"))
+            .on("touchend touchcancel", "[data-role=grid]", e => $(e.currentTarget).removeClass("tapped"))
+            .on("click", "[data-role=prev]", e => { pl.goPrev(); this.tapFeedback(e.currentTarget) })
+            .on("click", "[data-role=next]", e => { pl.goNext(); this.tapFeedback(e.currentTarget) })
+            .on("click", "[data-role=grid]", () => this.toggle_grid())
 
         // Events
         this.$hud_gps.on("click", () => {
@@ -86,11 +108,36 @@ class Hud {
         }
     }
 
+    /**
+     * Keeps the nav button in its "tapped" state (set immediately on touchstart) all the way through the
+     * switch – no premature reset on touchend – adding a spinner too if the frame doesn't arrive within
+     * 200ms (noticeable on a slow real server). Both clear together once the new frame has actually arrived.
+     * @param {HTMLElement} btn
+     */
+    tapFeedback(btn) {
+        const $btn = $(btn)
+        const spinnerTimer = setTimeout(() => $btn.addClass("btn-loading"), 200)
+        this.playback.frame.loaded.then(() => {
+            clearTimeout(spinnerTimer)
+            $btn.removeClass("tapped btn-loading")
+        })
+    }
+
+    /**
+     * Visual hint of which way a threshold swipe (see the mobile touch handling in playback.js) would go
+     * if released right now.
+     * @param {?("prev"|"next")} direction Null to clear.
+     */
+    swipeHint(direction) {
+        $("[data-role=prev]", this.$mobile_nav).toggleClass("swipe-hint", direction === "prev")
+        $("[data-role=next]", this.$mobile_nav).toggleClass("swipe-hint", direction === "next")
+    }
+
     playback_icon(html = "") {
         if (html) {
             this.$playback_icon.html(html)
         }
-        this.$control_icons.stop(true).fadeIn(0)
+        this.$hud_hideable.stop(true).fadeIn(0)
         this.playback_icon_interval.start()
     }
 
@@ -156,6 +203,18 @@ class Hud {
     /** Grid setup */
     init_grid() {
         this.$hud_grid
+            // A second tap on the already-selected photo enters it, like the Enter hotkey – there's no
+            // reliable double-tap on mobile to mirror the desktop "grid disappears on double click" below.
+            // Must run (and decide) before the general frame-preview click handler updates playback.index
+            // to this ref, and stop that handler from then re-navigating now that the grid is closed –
+            // this works because handlers on the same element run in registration order, and this one is
+            // registered first (init_grid() runs before that handler is set up).
+            .on("click", "frame-preview", e => {
+                if (this.playback.isMobileMode && Number(e.currentTarget.dataset.ref) === this.playback.index) {
+                    this.toggle_grid()
+                    e.stopImmediatePropagation()
+                }
+            })
             // grid disappears on double click
             .on("dblclick", "frame-preview", () => this.toggle_grid())
             // grid section buttons
