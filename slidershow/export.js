@@ -90,7 +90,8 @@ class Export {
             const newHandle = await this.assure_handler()
             const fileStream = await newHandle.createWritable()
             await fileStream.write(data)
-            fileStream.close()
+            await fileStream.close() // otherwise "Saved" shows while the file is still flushing
+
             this.menu.playback.hud.info("Saved")
         } else {
             this.download(data)
