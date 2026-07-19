@@ -346,11 +346,11 @@ class Hud {
     }
 
     /**
-     *
+     * File info block (filename, EXIF device/datetime, GPS, tag).
+     * Extracted from refresh() so that late-arriving EXIF data can re-render just this part.
      * @param {Frame} frame
-     * @param {boolean} scrollToCurrent
      */
-    refresh(frame, scrollToCurrent = false) {
+    file_info(frame) {
         const $actor = frame.$actor
 
         this.$hud_filename.html(frame.get_filename($actor) || "?")
@@ -359,6 +359,15 @@ class Hud {
         // display the map button only if map was previously blocked by user
         this.$hud_gps.html($actor.data("gps") ? "🗺" : "")
         this.tag($actor.attr("data-tag"))
+    }
+
+    /**
+     *
+     * @param {Frame} frame
+     * @param {boolean} scrollToCurrent
+     */
+    refresh(frame, scrollToCurrent = false) {
+        this.file_info(frame)
 
         // Counter
         const collection_index = frame.$frame.index() + 1

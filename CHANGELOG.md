@@ -1,6 +1,7 @@
 # CHANGELOG
 
 ## 1.0.0 (unreleased)
+* fix: EXIF metadata (date, camera, GPS) show in the HUD already on the first visit of a frame, not only after returning to it
 * enh (menu): styled file-picker button, "Press F1 for keyboard shortcuts" hint
 * fix: video end time `mm:ss` in a media fragment was read as `hh:mm` (60× longer)
 * fix: panning the map (shown via <kbd>m</kbd>) before the first GPS frame threw an error

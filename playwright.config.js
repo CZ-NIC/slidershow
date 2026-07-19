@@ -6,5 +6,7 @@ module.exports = defineConfig({
     testDir: "tests",
     use: {
         browserName: "chromium",
+        // exif-js re-fetches the image over XHR, which file:// forbids by default
+        launchOptions: { args: ["--allow-file-access-from-files"] },
     },
 })

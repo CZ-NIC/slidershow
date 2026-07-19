@@ -709,7 +709,8 @@ class Frame {
         this.loaded.then(() => {
             const tag = $actor.prop("tagName")
             if (tag === "IMG") {
-                Frame.exif($actor)
+                // when EXIF arrives late, refresh the HUD file info – unless the user already moved on
+                Frame.exif($actor, null, () => this === this.playback.frame && this.playback.hud.file_info(this))
                 this.panorama_starter?.()
                 Promise.all(this.effects).then(() => {
                     this.zoom.init(this.$actor, true)
