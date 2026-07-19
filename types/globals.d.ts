@@ -1,10 +1,14 @@
 // Type stubs for the CDN-loaded vendors (see slidershow/slidershow.js).
 // Only editor IntelliSense / `checkJs` uses this file; nothing loads it at runtime.
 
-import * as Leaflet from "leaflet"
+// (Leaflet needs no stub: @types/leaflet declares the global `L` itself via `export as namespace L`.)
 
 declare global {
-    const L: typeof Leaflet
+    interface Window {
+        /** File System Access API – Chrome only */
+        showSaveFilePicker?: (options?: any) => Promise<any>
+        jQuery: JQueryStatic
+    }
 
     class WebHotkeys {
         constructor(...args: any[])
