@@ -1,6 +1,7 @@
 # CHANGELOG
 
 ## 1.0.0 (unreleased)
+* fix: intermittent startup crash (`document.querySelector(...) is null` in `loadjQuery`) – no longer races the parser inserting the jQuery script
 * feat: auto-forward settable from the hash (`#1&state=duration:5`), round-trips with the auto-forward button
 * feat: `data-thumb` thumbnail preview – shows a lightweight preview while the full-quality file downloads, grid/ribbon uses it exclusively
 * enh: HUD loading spinner while the current frame's full-quality media downloads

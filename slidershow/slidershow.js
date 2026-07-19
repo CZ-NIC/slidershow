@@ -87,7 +87,10 @@ function loadjQuery(callback) {
     }
     // Allow using $ in the body without the need of load blocks.
     document.write('<script data-templated=1 src="https://code.jquery.com/jquery-3.7.1.min.js" integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo=" crossorigin="anonymous"></script>')
-    document.querySelector("script[data-templated]").addEventListener("load", () => callback())
+    // The written <script> may not be in the DOM synchronously (document.write from an external script feeds the
+    // parser's input stream), so querying it here can race and return null. Poll for jQuery instead.
+    const wait_for_jquery = () => window.jQuery ? callback() : setTimeout(wait_for_jquery, 10)
+    wait_for_jquery()
 }
 
 function loadScript(attrs) {
