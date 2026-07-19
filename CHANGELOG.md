@@ -1,6 +1,12 @@
 # CHANGELOG
 
 ## 1.0.0 (unreleased)
+* fix: map route was fetched and drawn twice when geometry is shown
+* fix: unsaved-changes guard registered one handler per edit
+* fix: progress spinner never finished when a dropped file could not be identified
+* fix: the URL query string was dropped from the address bar on frame change
+* fix: "Saved" could pop up before the exported file finished writing (Chrome rewrite mode)
+* fix: never-rotated images no longer get a spurious rotate animation on zoom steps
 * enh: unexpected JS errors pop up as a toast instead of dying silently in the console
 * enh: single stylesheet source – `style.css` now uses native CSS nesting & custom properties, the LESS source is gone (needs an evergreen browser, ≳ late 2023)
 * feat: `<article data-src>` – the `<img>`/`<video>` child is created automatically from the file extension

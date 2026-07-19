@@ -119,7 +119,12 @@ const PROP_CALLBACKS = {
     // We infer the rotation from a step.
     // The user clicks rotate left, the actor has no data-rotate set
     // but the step rotated it. We return deg.
-    "rotate": $el => parseFloat($el.css("rotate"))
+    "rotate": $el => {
+        // computed `rotate` is "none" for a never-rotated element -> parseFloat gives NaN,
+        // which must not short-circuit the DOM walk in prop()
+        const deg = parseFloat($el.css("rotate"))
+        return isNaN(deg) ? undefined : deg
+    }
 }
 
 main()
