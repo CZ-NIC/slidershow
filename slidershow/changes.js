@@ -62,7 +62,8 @@ class Changes {
     this.applied_changes.length = 0
     this.$buttonRedo.prop("disabled", true)
     this.$buttonUndo.prop("disabled", false)
-    $(window).on('beforeunload', () => true)
+    // namespaced & re-registered so that repeated edits do not pile up handlers
+    $(window).off('beforeunload.slidershow').on('beforeunload.slidershow', () => true)
     if (run_now) {
       fn_redo(val)
       do_always?.()
@@ -70,7 +71,7 @@ class Changes {
   }
 
   unblock_unload() {
-    $(window).off("beforeunload")
+    $(window).off("beforeunload.slidershow")
   }
 
   redo() {
