@@ -28,7 +28,7 @@ test("notification history command shows past notifications newest-first", async
         playback.hud.ok("Title", "second message")
     })
     await page.evaluate(() => playback.hud.show_notification_history())
-    const dialog = page.locator(".ZebraDialog", { hasText: "Historie notifikací" })
+    const dialog = page.locator(".ZebraDialog", { hasText: "Notification history" })
     await expect(dialog).toBeVisible()
     const text = await dialog.textContent()
     expect(text.indexOf("second message")).toBeLessThan(text.indexOf("first message"))

@@ -523,8 +523,8 @@ class Hud {
     show_notification_history() {
         const items = this.info_history.length
             ? this.info_history.slice().reverse().map(h => `<div>${h.time} — ${h.text}</div>`).join("")
-            : "Žádné notifikace."
-        new $.Zebra_Dialog(items, { type: "information", title: "Historie notifikací" })
+            : "No notifications yet."
+        new $.Zebra_Dialog(items, { type: "information", title: "Notification history" })
     }
 
     /**

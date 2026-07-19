@@ -95,7 +95,7 @@ test("export_albums aborts with a conflict notice when the target already has an
         await menu.export.export_albums(albums, union)
     })
 
-    await expect(page.locator(".ZebraDialog", { hasText: "už obsahuje" })).toBeVisible()
+    await expect(page.locator(".ZebraDialog", { hasText: "already contains" })).toBeVisible()
 
     const top = await page.evaluate(async () => {
         const root = await navigator.storage.getDirectory()

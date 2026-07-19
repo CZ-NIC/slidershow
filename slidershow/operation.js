@@ -109,14 +109,14 @@ class Operation {
         ],
             [
                 ["Alt+Shift+g", "🔀", "Group frames according to their tag", () => pl.section_controller.group()],
+                ["Alt+Shift+t", "🏷", "Name tags…", () => this._nameTagsDialog()],
                 [["Numpad0", "Digit0"], "⛔", "Tag 0", () => pl.frame.set_tag(null)],
                 [["Numpad1", "Digit1"], "1", "Tag 1", () => pl.frame.set_tag(1)],
                 [["Numpad2", "Digit2"], "2", "Tag 2", () => pl.frame.set_tag(2)],
                 [["Numpad3", "Digit3"], "3", "Tag 3", () => pl.frame.set_tag(3)],
             ],
             [
-                ["Pojmenovat tagy…", () => this._nameTagsDialog(), () => true, "Name tags"],
-                ["Filtrovat grid podle tagu…", () => this._filterGridDialog(), () => true, "Filter grid by tag"],
+                ["Filter grid by tag…", () => this._filterGridDialog(), () => true, "Filter grid by tag"],
             ]).toggle(pl.tagging_mode)
     }
 
@@ -127,7 +127,7 @@ class Operation {
         const pl = this.playback
         const current = pl.hud.grid.filterTag
         new $.Zebra_Dialog("Tag number to show in the grid, empty to show all", {
-            title: "Filtrovat grid podle tagu",
+            title: "Filter grid by tag",
             type: "prompt",
             default_value: current == null ? "" : String(current),
             buttons: ["Cancel", {
@@ -148,7 +148,7 @@ class Operation {
         const pl = this.playback
         const current = ($main.attr("data-tag-names") || "").split(",").join(", ")
         new $.Zebra_Dialog("Tag names, comma separated, position = digit 1, 2, …", {
-            title: "Pojmenovat tagy",
+            title: "Name tags",
             type: "prompt",
             default_value: current,
             buttons: ["Cancel", {
@@ -327,7 +327,7 @@ class Operation {
                 }, "mobile"],
             ],
             [
-                ["Historie notifikací", () => pl.hud.show_notification_history(), () => true, "Notification history"],
+                ["Notification history", () => pl.hud.show_notification_history(), () => true, "Notification history"],
             ]).disable()
 
         function zoom(little) {
@@ -476,7 +476,7 @@ class Operation {
             ["Alt+m", "🧰", "Show splashscreen", () => menu.stop_playback()],
             ["Alt+w", "&#127916;", "Auxiliary window", () => menu.aux_window.open()],
             ['Ctrl+s', "&#128190;", "Export", () => menu.export.export_dialog()],
-            ['Ctrl+Shift+s', "&#128193;", "Export alba do složek…", () => menu.export.export_albums_dialog()],
+            ['Ctrl+Shift+s', "&#128193;", "Export albums to folders…", () => menu.export.export_albums_dialog()],
             ['F1', "&#9432;", "Help", () => menu.help()],
         ])
     }

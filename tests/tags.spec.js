@@ -64,5 +64,5 @@ test("group by tags uses the first token and notifies about multi-tagged frames"
     const sectionNames = await page.$$eval("section", els => els.map(e => e.dataset.name))
     expect(sectionNames.sort()).toEqual(["1", "2"])
 
-    await expect(page.locator(".ZebraDialog", { hasText: "má víc tagů" })).toBeVisible()
+    await expect(page.locator(".ZebraDialog", { hasText: "have more than one tag" })).toBeVisible()
 })

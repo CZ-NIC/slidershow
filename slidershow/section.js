@@ -228,7 +228,7 @@ class SectionController {
                 pl.positionFrames()
                 pl.goToFrame(pl.$current.data("frame").index - 1) // keeps you on the same frame (works badly)
                 if (multiTagged.length) {
-                    pl.hud.ok("Group by tags", `${multiTagged.length} fotek má víc tagů — zařazeny jen podle prvního:<br>${multiTagged.slice(0, 5).join("<br>")}`)
+                    pl.hud.ok("Group by tags", `${multiTagged.length} frames have more than one tag — grouped by the first one only:<br>${multiTagged.slice(0, 5).join("<br>")}`)
                 }
             },
             () => {

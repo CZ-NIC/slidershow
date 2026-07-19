@@ -166,23 +166,23 @@ class Export {
 
     export_albums_dialog() {
         if (!window.showDirectoryPicker) {
-            this.playback.hud.ok("Export alba", "Export alb do složek funguje jen v Chrome/Edge.")
+            this.playback.hud.ok("Export albums", "Exporting albums to folders only works in Chrome/Edge.")
             return
         }
         const albums = this.collect_albums()
         if (!albums.length) {
-            this.playback.hud.ok("Export alba", "Žádné pojmenované tagy. Nejprve je pojmenujte (Alt+T → „Pojmenovat tagy…“).")
+            this.playback.hud.ok("Export albums", "No named tags. Name them first (Alt+T → \"Name tags…\").")
             return
         }
         const allFrames = this.union_frames(albums)
         const missing = allFrames.filter(f => !f.$actor.data("file")).length
 
-        const summary = albums.map(a => `${a.name}: ${a.frames.length} souborů`).join("<br>")
-            + `<br>vsechny: ${allFrames.length} souborů`
-            + (missing ? `<br>${missing} souborů bude číst ze zdrojové složky` : "")
+        const summary = albums.map(a => `${a.name}: ${a.frames.length} files`).join("<br>")
+            + `<br>vsechny: ${allFrames.length} files`
+            + (missing ? `<br>${missing} file(s) will be read from the source folder` : "")
 
         new $.Zebra_Dialog(summary, {
-            title: "Export alba do složek",
+            title: "Export albums to folders",
             type: "question",
             buttons: ["Cancel", {
                 caption: "Export",
@@ -221,7 +221,7 @@ class Export {
             }
         }
         if (conflicts.length) {
-            this.playback.hud.ok("Export alba", `Cílová složka už obsahuje: ${conflicts.join(", ")}. Vyberte prázdnou složku.`)
+            this.playback.hud.ok("Export albums", `Target folder already contains: ${conflicts.join(", ")}. Pick an empty folder.`)
             return
         }
 
@@ -244,9 +244,9 @@ class Export {
         }
 
         const summary = Object.entries(results)
-            .map(([name, r]) => `${name}: ${r.copiedNames.length} zkopírováno` + (r.missing.length ? `, ${r.missing.length} chybí` : ""))
+            .map(([name, r]) => `${name}: ${r.copiedNames.length} copied` + (r.missing.length ? `, ${r.missing.length} missing` : ""))
             .join("<br>")
-        this.playback.hud.ok("Export alba dokončen", `${summary}<br>Přetáhněte složku do uploadu Zonerama / Google Photos.`)
+        this.playback.hud.ok("Album export finished", `${summary}<br>Drag the folder into the Zonerama / Google Photos upload.`)
     }
 
     /**

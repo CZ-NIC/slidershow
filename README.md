@@ -111,7 +111,7 @@ While presenting, you may appraise an auxiliary window on the second monitor tha
 
 Start tagging mode with <kbd>Alt+T</kbd>. Use Numpad to tag the images – think of a tag as a number that corresponds to one of your categories. A photo may carry several tags at once: hitting a digit again toggles that tag off, <kbd>0</kbd> clears all of them. Then in the menu, hit <kbd>Alt+Shift+G</kbd> to group the images to the `<section>` according to tags. Export with <kbd>Ctrl+S</kbd>. Sorted & ready!
 
-Tags can be named through the command palette ("Pojmenovat tagy…"): a comma-separated list where position corresponds to the digit (first name = tag 1, second = tag 2, …). Named tags then show up everywhere a tag is displayed (HUD, thumbnails, grid) instead of the bare digit.
+Tags can be named through the "Name tags…" button/command (<kbd>Alt+Shift+T</kbd> while in tagging mode): a comma-separated list where position corresponds to the digit (first name = tag 1, second = tag 2, …). Named tags then show up everywhere a tag is displayed (HUD, thumbnails, grid) instead of the bare digit.
 
 <sub>Note that the tag is stored in the browser (local storage)[https://developer.mozilla.org/en-US/docs/Web/API/Window/localStorage] by the file name so that you do not lose the information at a sudden crash. However, in case you import another photo with the same name, it will inherit the tag from the clashing file.</sub>
 
