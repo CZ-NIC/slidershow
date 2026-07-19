@@ -26,6 +26,33 @@ class GridController {
          */
         this.colMap = []
         this.isDisplayed = false
+        /** @type {?number} When set, only frames carrying this tag are shown in the grid. */
+        this.filterTag = null
+    }
+
+    /**
+     * Show only frames carrying `tag` in the grid (non-destructive album preview); `null` shows all.
+     * @param {?number} tag
+     */
+    setFilter(tag) {
+        this.filterTag = tag
+        if (!this.hud.grid_visible) {
+            this.hud.toggle_grid()
+        } else {
+            this.hud.reset_grid()
+        }
+        this.pl.session.store()
+    }
+
+    /**
+     * @param {HTMLElement} el
+     * @returns {boolean} Whether `el` should be part of the (possibly tag-filtered) grid.
+     */
+    _matchesFilter(el) {
+        if (this.filterTag == null || !$(el).is(FRAME_SELECTOR)) {
+            return true // no filter, or a section/main header – headers are never filtered out
+        }
+        return $(el).data("frame")?.get_tags().includes(this.filterTag) ?? false
     }
 
     changeColumnsCount(step = 1) {
@@ -39,7 +66,7 @@ class GridController {
      * @param {boolean} scrollToCurrent
     */
     load(scrollToCurrent = false) {
-        this.$framesSections = $(FRAME_SECTION_SELECTOR)
+        this.$framesSections = $(FRAME_SECTION_SELECTOR).filter((_, el) => this._matchesFilter(el))
         this.columns = GRID_COLUMNS
         this.$container.css("--columns", GRID_COLUMNS) // keep the CSS var in sync (esp. on the very first load)
         this.preload_radius = Math.ceil(GRID_PRELOAD_RADIUS / GRID_COLUMNS) * GRID_COLUMNS

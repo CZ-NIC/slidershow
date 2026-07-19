@@ -116,7 +116,29 @@ class Operation {
             ],
             [
                 ["Pojmenovat tagy…", () => this._nameTagsDialog(), () => true, "Name tags"],
+                ["Filtrovat grid podle tagu…", () => this._filterGridDialog(), () => true, "Filter grid by tag"],
             ]).toggle(pl.tagging_mode)
+    }
+
+    /**
+     * Prompt for a tag number to show alone in the grid (non-destructive album preview); empty clears the filter.
+     */
+    _filterGridDialog() {
+        const pl = this.playback
+        const current = pl.hud.grid.filterTag
+        new $.Zebra_Dialog("Tag number to show in the grid, empty to show all", {
+            title: "Filtrovat grid podle tagu",
+            type: "prompt",
+            default_value: current == null ? "" : String(current),
+            buttons: ["Cancel", {
+                caption: "Ok",
+                default_confirmation: true,
+                callback: (_, value) => {
+                    const tag = value ? Number(value) : null
+                    pl.hud.grid.setFilter(Number.isFinite(tag) ? tag : null)
+                }
+            }]
+        })
     }
 
     /**
