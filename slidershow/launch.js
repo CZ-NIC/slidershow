@@ -147,6 +147,18 @@ function main() {
 
     // Restore on hash
     $(window).on("hashchange", () => menu?.playback.session.restore())
+
+    // Surface unexpected errors to the presenter instead of dying silently in the console
+    let last_error = ""
+    const announce = message => {
+        if (message !== last_error) { // no toast flood when the same error repeats (ex: on every frame change)
+            last_error = message
+            setTimeout(() => last_error = "", 5000)
+            menu?.playback.hud.info("Error: " + message)
+        }
+    }
+    window.addEventListener("error", e => announce(e.message))
+    window.addEventListener("unhandledrejection", e => announce(String(e.reason?.message ?? e.reason)))
 }
 
 // Common functions
