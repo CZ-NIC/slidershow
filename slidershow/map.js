@@ -250,7 +250,7 @@ class MapWidget {
         if (geometry_show) {
             // if we await, it takes longer but the geometry is more stable
             // however, we do not want the user to lag
-            await Promise.race([this._route(geometry_show, places, geometry_criterion), new Promise(resolve => setTimeout(() => resolve(), ROUTE_TIMEOUT))])
+            await Promise.race([routePromise, new Promise(resolve => setTimeout(() => resolve(), ROUTE_TIMEOUT))])
         }
         if (markers_show) {
             places.forEach(place => {
