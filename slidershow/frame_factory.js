@@ -105,6 +105,7 @@ class FrameFactory {
                 return FrameFactory.img(filename, append, data, ram_only, callback)
             default:
                 console.warn("Cannot identify", filename)
+                callback?.() // otherwise the progress spinner never completes
                 FrameFactory.text("Cannot be identified: " + filename, append)
                 return null
         }
