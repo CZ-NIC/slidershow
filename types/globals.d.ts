@@ -10,6 +10,12 @@ declare global {
         jQuery: JQueryStatic
     }
 
+    class Hotkey {
+        enabled: boolean
+        disable(): this
+        [key: string]: any
+    }
+
     class WebHotkeys {
         constructor(...args: any[])
         grab(shortcut: string, hint: string, method: Function, ...args: any[]): any

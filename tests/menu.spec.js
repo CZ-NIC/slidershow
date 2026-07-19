@@ -15,6 +15,18 @@ test("append panel is folded when a presentation is loaded", async ({ page }) =>
     await expect(page.locator("#defaults input[name=duration]")).toBeHidden()
 })
 
+test("Alt+m returns to the splashscreen while presenting", async ({ page }) => {
+    await page.goto(fixture("basic"))
+    await page.locator("#start").click()
+    await expect(page.locator("menu")).toBeHidden()
+
+    // navigate a bit first – frames without media used to disable the Media group
+    // repeatedly, which knocked the clashing global Alt+m out of the registry
+    await page.keyboard.press("PageDown")
+    await page.keyboard.press("Alt+m")
+    await expect(page.locator("menu")).toBeVisible()
+})
+
 test("append panel is unfolded when the presentation has no frames", async ({ page }) => {
     await page.goto(fixture("empty"))
     await expect(page.locator("#append-panel")).toHaveAttribute("open")

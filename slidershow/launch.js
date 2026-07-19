@@ -1,3 +1,13 @@
+// WebHotkeys ≤ 0.9.4 bug: disabling an already disabled hotkey does registry.splice(-1, 1),
+// which throws away the *last* hotkey in the shared registry. When two groups share
+// a combination (Alt+m: mute / splashscreen), the other group's hotkey silently vanished.
+{
+    const disable = Hotkey.prototype.disable
+    Hotkey.prototype.disable = function () {
+        return this.enabled ? disable.call(this) : this
+    }
+}
+
 /** @type {WebHotkeys} */
 const wh = window.webHotkeys.setOptions({
     onToggle: (el, enabled) => $(el).toggle(enabled), // hide DOM element on hotkey disable

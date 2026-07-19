@@ -1,6 +1,7 @@
 # CHANGELOG
 
 ## 1.0.0 (unreleased)
+* fix: <kbd>Alt+M</kbd> (show splashscreen) stopped working after visiting a frame without media (shortcut clash with video mute uncovered a WebHotkeys bug)
 * fix: EXIF metadata (date, camera, GPS) show in the HUD already on the first visit of a frame, not only after returning to it
 * enh (menu): styled file-picker button, "Press F1 for keyboard shortcuts" hint
 * fix: video end time `mm:ss` in a media fragment was read as `hh:mm` (60× longer)
