@@ -109,11 +109,13 @@ While presenting, you may appraise an auxiliary window on the second monitor tha
 
 ## Organizing
 
-Start tagging mode with <kbd>Alt+T</kbd>. Use Numpad to tag the images – think of a tag as a number that corresponds to one of your categories.. Then in the menu, hit <kbd>Alt+Shift+G</kbd> to group the images to the `<section>` according to tags. Export with <kbd>Ctrl+S</kbd>. Sorted & ready!
+Start tagging mode with <kbd>Alt+T</kbd>. Use Numpad to tag the images – think of a tag as a number that corresponds to one of your categories. A photo may carry several tags at once: hitting a digit again toggles that tag off, <kbd>0</kbd> clears all of them. Then in the menu, hit <kbd>Alt+Shift+G</kbd> to group the images to the `<section>` according to tags. Export with <kbd>Ctrl+S</kbd>. Sorted & ready!
+
+Tags can be named through the command palette ("Pojmenovat tagy…"): a comma-separated list where position corresponds to the digit (first name = tag 1, second = tag 2, …). Named tags then show up everywhere a tag is displayed (HUD, thumbnails, grid) instead of the bare digit.
 
 <sub>Note that the tag is stored in the browser (local storage)[https://developer.mozilla.org/en-US/docs/Web/API/Window/localStorage] by the file name so that you do not lose the information at a sudden crash. However, in case you import another photo with the same name, it will inherit the tag from the clashing file.</sub>
 
-<sub>Grouping images works that way: It iterates over all the frames and if they are not in the section, having the same name (tag), it will create such section. So at the first grouping, frames keep their former order in the new sections. The second time, they will get appended to the section's end.<br>You can easily re-order by date etc. in the grid view (key <kbd>G</kbd>).</sub>
+<sub>Grouping images works that way: It iterates over all the frames and if they are not in the section, having the same name (tag), it will create such section. A frame with several tags is grouped only by the first one (with a notice); so at the first grouping, frames keep their former order in the new sections. The second time, they will get appended to the section's end.<br>You can easily re-order by date etc. in the grid view (key <kbd>G</kbd>).</sub>
 
 # Structure
 
@@ -190,6 +192,12 @@ Standard HTML ID serves for navigation.
     <article id=my_frame>...</article>
 </section>
 ```
+### `data-tag`
+Set by the tagging feature (see [Organizing](#organizing)) on the frame's `<img>`/`<video>`, not hand-authored. Space-separated list of digit tokens, e.g. `data-tag="1 2"` for a frame in both tag 1 and tag 2.
+
+### `data-tag-names`
+On `<main>`: comma-separated display names for tags, position = digit (`data-tag-names="rodiče,vedoucí"` names tag 1 "rodiče" and tag 2 "vedoucí"). Digits past the list still work, shown as bare numbers.
+
 ### `<!-- presenter's notes -->`
 You may use HTML comments just before the frame or as the first frame child. Markdown syntax is supported. These will be displayed in the auxiliary window while presenting.
 

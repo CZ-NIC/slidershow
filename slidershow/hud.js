@@ -319,7 +319,7 @@ class Hud {
 
                 // tag visible
                 if (pl.tagging_mode) {
-                    $thumbnail.append($("<span/>", { html: frame.$actor.attr("data-tag"), class: "tag", title: "Tag that helps you organize" }))
+                    $thumbnail.append($("<span/>", { html: frame.tag_display(), class: "tag", title: "Tag that helps you organize" }))
                 }
 
                 // Scale – use the proportions of the full screen but shrink to max thumbnail width
@@ -417,7 +417,7 @@ class Hud {
         this.$hud_datetime.text($actor.data("datetime") || "")
         // display the map button only if map was previously blocked by user
         this.$hud_gps.html($actor.data("gps") ? "🗺" : "")
-        this.tag($actor.attr("data-tag"))
+        this.tag(frame)
     }
 
     /**
@@ -467,9 +467,13 @@ class Hud {
         })
     }
 
-    tag(tag = "") {
-        this.$hud_tag.html(tag ? "TAG: " + tag : "")
-        this.getThumbnail(this.playback.frame).find(".tag").html(tag)
+    /**
+     * @param {Frame} frame
+     */
+    tag(frame) {
+        const value = frame.tag_display()
+        this.$hud_tag.html(value ? "TAG: " + value : "")
+        this.getThumbnail(frame).find(".tag").html(value)
     }
 
     /**

@@ -113,7 +113,34 @@ class Operation {
                 [["Numpad1", "Digit1"], "1", "Tag 1", () => pl.frame.set_tag(1)],
                 [["Numpad2", "Digit2"], "2", "Tag 2", () => pl.frame.set_tag(2)],
                 [["Numpad3", "Digit3"], "3", "Tag 3", () => pl.frame.set_tag(3)],
+            ],
+            [
+                ["Pojmenovat tagy…", () => this._nameTagsDialog(), () => true, "Name tags"],
             ]).toggle(pl.tagging_mode)
+    }
+
+    /**
+     * Prompt for the tag names list (`<main data-tag-names="rodiče,vedoucí">`), undoable.
+     */
+    _nameTagsDialog() {
+        const pl = this.playback
+        const current = ($main.attr("data-tag-names") || "").split(",").join(", ")
+        new $.Zebra_Dialog("Tag names, comma separated, position = digit 1, 2, …", {
+            title: "Pojmenovat tagy",
+            type: "prompt",
+            default_value: current,
+            buttons: ["Cancel", {
+                caption: "Ok",
+                default_confirmation: true,
+                callback: (_, value) => {
+                    const names = (value || "").split(",").map(s => s.trim()).filter(Boolean).join(",")
+                    const before = $main.attr("data-tag-names") || ""
+                    pl.changes.undoable("Name tags",
+                        () => $main.attr("data-tag-names", names),
+                        () => before ? $main.attr("data-tag-names", before) : $main.removeAttr("data-tag-names"))
+                }
+            }]
+        })
     }
 
     editingInit() {

@@ -184,6 +184,8 @@ class SectionController {
         const redos = []
         /** @type {JQuery[]} */
         const added = []
+        /** @type {string[]} */
+        const multiTagged = []
 
         if (!$frames) {
             $frames = pl.$articles
@@ -193,12 +195,22 @@ class SectionController {
             () => {
                 redos.length = 0
                 added.length = 0
+                multiTagged.length = 0
                 $frames.each((_, el) => {
                     const $frame = $(el)
                     /** @type {Frame} */
                     const frame = $frame.data("frame")
 
-                    const name = criterion == "tags" ? frame.$actor.attr("data-tag") : this._toGroupKey(frame.$actor.data("datetime"), criterion)
+                    let name
+                    if (criterion == "tags") {
+                        const tags = frame.get_tags()
+                        name = tags[0]
+                        if (tags.length > 1) {
+                            multiTagged.push(`${frame.get_filename()} → ${tags.join(", ")}`)
+                        }
+                    } else {
+                        name = this._toGroupKey(frame.$actor.data("datetime"), criterion)
+                    }
                     if (!name) { // leave in the former section
                         return
                     }
@@ -215,6 +227,9 @@ class SectionController {
                 })
                 pl.positionFrames()
                 pl.goToFrame(pl.$current.data("frame").index - 1) // keeps you on the same frame (works badly)
+                if (multiTagged.length) {
+                    pl.hud.ok("Group by tags", `${multiTagged.length} fotek má víc tagů — zařazeny jen podle prvního:<br>${multiTagged.slice(0, 5).join("<br>")}`)
+                }
             },
             () => {
                 redos.reverse().map(f => f())

@@ -1261,19 +1261,66 @@ class Frame {
         }
     }
 
+    /**
+     * Currently set tags (`data-tag` is a space-separated token list of digits).
+     * @param {?JQuery} $actor
+     * @returns {number[]}
+     */
+    get_tags($actor = null) {
+        $actor = $actor || this.$actor
+        return ($actor.attr("data-tag") || "").split(/\s+/).filter(Boolean).map(Number)
+    }
+
+    /**
+     * Tag names, position = digit 1, 2, … (`<main data-tag-names="rodiče,vedoucí">`).
+     * @param {?JQuery} $actor
+     * @returns {string[]}
+     */
+    tag_names($actor = null) {
+        $actor = $actor || this.$actor
+        const raw = prop("tag-names", $actor, "")
+        return raw ? String(raw).split(",") : []
+    }
+
+    /**
+     * Display string joining tag names (or bare digits when unnamed) with " · ".
+     * @param {?JQuery} $actor
+     * @returns {string}
+     */
+    tag_display($actor = null) {
+        $actor = $actor || this.$actor
+        const names = this.tag_names($actor)
+        return this.get_tags($actor).map(t => names[t - 1] || t).join(" · ")
+    }
+
+    /**
+     * Toggle tag `n` membership; `0`/`null` clears all tags. Undoable.
+     * @param {?number} tag
+     */
     set_tag(tag) {
         const $actor = this.$actor
         const name = this.get_filename()
-
         const key = "TAG: " + name
-        if (tag) {
-            localStorage.setItem(key, tag)
-            $actor.attr("data-tag", tag)
-        } else {
-            localStorage.removeItem(key)
-            $actor.removeAttr("data-tag")
+        const before = this.get_tags()
+        const after = !tag ? [] : before.includes(tag)
+            ? before.filter(t => t !== tag)
+            : [...before, tag].sort((a, b) => a - b)
+
+        const write = (tokens) => {
+            const value = tokens.join(" ")
+            if (value) {
+                localStorage.setItem(key, value)
+                $actor.attr("data-tag", value)
+            } else {
+                localStorage.removeItem(key)
+                $actor.removeAttr("data-tag")
+            }
+            this.playback.hud.tag(this)
         }
-        this.playback.hud.tag(tag)
+
+        this.playback.changes.undoable(`Tag ${tag ?? "clear"} on ${name}`,
+            () => write(after),
+            () => write(before))
     }
 
     static exif($el, data = null, callback = null) {
