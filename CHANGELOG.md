@@ -1,6 +1,11 @@
 # CHANGELOG
 
 ## 1.0.0 (unreleased)
+* enh (menu): styled file-picker button, "Press F1 for keyboard shortcuts" hint
+* fix: video end time `mm:ss` in a media fragment was read as `hh:mm` (60× longer)
+* fix: panning the map (shown via <kbd>m</kbd>) before the first GPS frame threw an error
+* fix: grouping by a tag with spaces or quotes broke mid-operation
+* fix: programmatic `FrameFactory.img`/`video` without a File crashed
 * enh (menu): the Append frames panel is collapsible – folded when a presentation is loaded (Start is the primary action), unfolded when empty, auto-unfolds on file drag; the Defaults form folds separately
 * fix: map route was fetched and drawn twice when geometry is shown
 * fix: unsaved-changes guard registered one handler per edit

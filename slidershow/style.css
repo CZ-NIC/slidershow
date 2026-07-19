@@ -51,6 +51,34 @@ menu {
         cursor: pointer;
     }
 
+    /* the native file input looks foreign here – the label acts as the button */
+    #file {
+        display: none;
+    }
+
+    #file-label {
+        display: inline-block;
+        margin-top: 10px;
+        padding: 5px 25px;
+        border: 1px solid var(--base);
+        border-radius: 5px;
+        cursor: pointer;
+
+        &:hover {
+            background-color: var(--soft-highlight);
+        }
+    }
+
+    #menu-hint {
+        position: absolute;
+        bottom: 4%;
+        left: 0;
+        right: 0;
+        text-align: center;
+        font-size: 1vw;
+        opacity: 0.6;
+    }
+
     #drop {
         margin-top: 20px;
         font-weight: bold;

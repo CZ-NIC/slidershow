@@ -156,6 +156,7 @@ function get_menu() {
         <div>
             <details id="append-panel">
                 <summary>Append frames</summary>
+                <label for="file" id="file-label">Choose files…</label>
                 <input type="file" id="file" multiple>
 
                 <div id="drop" data-placeholder="Drag files here">
@@ -172,5 +173,6 @@ function get_menu() {
                 </form>
             </details>
         </div>
+        <div id="menu-hint">Press <kbd>F1</kbd> for keyboard shortcuts</div>
     </menu>`)
 }
