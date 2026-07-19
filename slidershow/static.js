@@ -217,8 +217,9 @@ function getEndTimeFromURL(url) {
     url = new URL(url).hash
     if (url.startsWith("#t=") && url.includes(",")) {
         const endtime = url.split("=")[1].split(",").pop()
-        if (endtime.includes(":")) { // #t=01:01:10 -> 3670 seconds
-            return endtime.split(":").map((val, index) => parseFloat(val) * Math.pow(60, 2 - index)).reduce((a, b) => a + b, 0)
+        if (endtime.includes(":")) { // #t=01:01:10 -> 3670 seconds, #t=01:30 -> 90 seconds
+            const parts = endtime.split(":")
+            return parts.map((val, index) => parseFloat(val) * Math.pow(60, parts.length - 1 - index)).reduce((a, b) => a + b, 0)
         } else { // #t=20 -> 20 seconds
             return parseFloat(endtime)
         }
