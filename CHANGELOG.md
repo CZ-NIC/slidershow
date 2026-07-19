@@ -1,6 +1,7 @@
 # CHANGELOG
 
 ## 1.0.0 (unreleased)
+* enh: single stylesheet source – `style.css` now uses native CSS nesting & custom properties, the LESS source is gone (needs an evergreen browser, ≳ late 2023)
 * feat: `<article data-src>` – the `<img>`/`<video>` child is created automatically from the file extension
 * fix: intermittent startup crash (`document.querySelector(...) is null` in `loadjQuery`) – no longer races the parser inserting the jQuery script
 * feat: auto-forward settable from the hash (`#1&state=duration:5`), round-trips with the auto-forward button
