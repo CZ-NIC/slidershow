@@ -205,7 +205,8 @@ class SectionController {
                     redos.push(this.redoForMoving($frame))
 
                     // find or create section to put the frame to (to its end)
-                    let $section = $(`section[data-name=${name}]`)
+                    // quoted + escaped: a hand-authored tag may contain spaces or quotes
+                    let $section = $(`section[data-name="${String(name).replaceAll('\\', '\\\\').replaceAll('"', '\\"')}"]`)
                     if (!$section.length) {
                         $section = $("<section/>", { "data-name": name }).prependTo($main)
                         added.push($section)
