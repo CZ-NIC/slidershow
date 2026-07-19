@@ -47,6 +47,10 @@ menu {
         font-size: 50px;
     }
 
+    summary {
+        cursor: pointer;
+    }
+
     #drop {
         margin-top: 20px;
         font-weight: bold;

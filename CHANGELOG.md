@@ -1,6 +1,7 @@
 # CHANGELOG
 
 ## 1.0.0 (unreleased)
+* enh (menu): the Append frames panel is collapsible – folded when a presentation is loaded (Start is the primary action), unfolded when empty, auto-unfolds on file drag; the Defaults form folds separately
 * fix: map route was fetched and drawn twice when geometry is shown
 * fix: unsaved-changes guard registered one handler per edit
 * fix: progress spinner never finished when a dropped file could not be identified

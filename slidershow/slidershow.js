@@ -154,19 +154,23 @@ function get_menu() {
             </div>
 
         <div>
-            Append frames<br />
-            <input type="file" id="file" multiple>
+            <details id="append-panel">
+                <summary>Append frames</summary>
+                <input type="file" id="file" multiple>
 
-            <div id="drop" data-placeholder="Drag files here">
-                Drag files here
-            </div>
+                <div id="drop" data-placeholder="Drag files here">
+                    Drag files here
+                </div>
 
-            <form id="defaults">
-                Defaults
-                <br />Duration <input name="duration" size="4" placeholder="0"> s
-                <br />Transition <input name="transition-duration" size="4" placeholder="0"> s
-                <br />Media folder path <input title="If not set, we put the media data inside the DOM (RAM consuming)" name="path" value="" placeholder="./">
-            </form>
+                <form id="defaults">
+                    <details>
+                        <summary>Defaults</summary>
+                        Duration <input name="duration" size="4" placeholder="0"> s
+                        <br />Transition <input name="transition-duration" size="4" placeholder="0"> s
+                        <br />Media folder path <input title="If not set, we put the media data inside the DOM (RAM consuming)" name="path" value="" placeholder="./">
+                    </details>
+                </form>
+            </details>
         </div>
     </menu>`)
 }

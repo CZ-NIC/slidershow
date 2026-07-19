@@ -15,6 +15,10 @@ class Menu {
 
         this.export = new Export(this)
 
+        // With a presentation loaded, Start is the primary action – keep the append panel folded.
+        // With no frames, appending is the only action – unfold it.
+        this.$append_panel = $("#append-panel").prop("open", !$(FRAME_SELECTOR).length)
+
         if (!$(FRAME_SELECTOR).length) {
             this.$start_wrapper.hide()
         }
@@ -37,6 +41,7 @@ class Menu {
                 $drop.text('Drop failed, try again')
             }
         }).on("dragover", ev => {
+            this.$append_panel.prop("open", true) // dragging files in → reveal the drop zone
             $drop.text("Drop anywhere")
             ev.preventDefault()
 
