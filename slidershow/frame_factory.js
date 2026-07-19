@@ -31,7 +31,7 @@ class FrameFactory {
      */
     static img(filename, append = true, data = null, ram_only = false, callback = null) {
         // data-src preserve the performance for serveral thousand frames
-        const $el = $(`<img/>`, { "data-src": filename, "data-datetime": formatDateMs(data.lastModified) })
+        const $el = $(`<img/>`, { "data-src": filename, "data-datetime": formatDateMs(data?.lastModified) })
         const $frame = FrameFactory.html($el, append)
 
         if (data) {
@@ -57,7 +57,7 @@ class FrameFactory {
      * @returns {JQuery}
      */
     static video(filename, append = true, data = null, ram_only = false) {
-        const $el = $(`<video/>`, { "controls": true, "autoplay": true, "data-src": filename, "data-datetime": formatDateMs(data.lastModified) })
+        const $el = $(`<video/>`, { "controls": true, "autoplay": true, "data-src": filename, "data-datetime": formatDateMs(data?.lastModified) })
         const $frame = FrameFactory.html($el, append)
         if (data && ram_only) {
             FrameFactory._read(data, $el)
