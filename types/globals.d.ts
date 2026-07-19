@@ -7,6 +7,7 @@ declare global {
     interface Window {
         /** File System Access API – Chrome only */
         showSaveFilePicker?: (options?: any) => Promise<any>
+        showDirectoryPicker?: (options?: any) => Promise<any>
         jQuery: JQueryStatic
     }
 

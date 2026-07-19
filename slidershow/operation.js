@@ -476,6 +476,7 @@ class Operation {
             ["Alt+m", "🧰", "Show splashscreen", () => menu.stop_playback()],
             ["Alt+w", "&#127916;", "Auxiliary window", () => menu.aux_window.open()],
             ['Ctrl+s', "&#128190;", "Export", () => menu.export.export_dialog()],
+            ['Ctrl+Shift+s', "&#128193;", "Export alba do složek…", () => menu.export.export_albums_dialog()],
             ['F1', "&#9432;", "Help", () => menu.help()],
         ])
     }
