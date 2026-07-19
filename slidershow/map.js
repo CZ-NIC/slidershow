@@ -134,7 +134,7 @@ class MapWidget {
 
         map.on('moveend zoomend', () => {
             if (!this.animation.length) {
-                this._finished()
+                this._finished?.() // null until the first _engage (ex: hud map shown manually, then panned)
             }
         })
         return this
