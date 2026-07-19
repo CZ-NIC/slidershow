@@ -1,0 +1,13 @@
+{
+    "compilerOptions": {
+        "checkJs": true,
+        "target": "es2022",
+        "lib": ["es2022", "dom", "dom.iterable"],
+        "moduleDetection": "auto",
+        "noEmit": true,
+        "skipLibCheck": true,
+        "strict": false,
+        "types": ["jquery", "jqueryui", "leaflet"]
+    },
+    "include": ["slidershow/**/*.js", "types/**/*.d.ts"]
+}
