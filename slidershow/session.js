@@ -94,7 +94,7 @@ class Session {
         ].filter(Boolean).join(",")
 
         // update the hash without triggering hashchange event
-        history.replaceState(null, null, document.location.pathname + '#' + index + (state ? `&state=${state}` : ""))
+        history.replaceState(null, null, document.location.pathname + document.location.search + '#' + index + (state ? `&state=${state}` : ""))
     }
 
     /**
