@@ -48,11 +48,9 @@ class Session {
                     pl.tagging_mode = true
                     pl.operation.tagging.enable()
                     break;
-                case "grid-filter":
-                    pl.hud.grid.filterTag = Number(value)
-                    if (!pl.hud.grid_visible) {
-                        pl.hud.toggle_grid()
-                    }
+                case "tag-filter":
+                    pl.tag_filter = (value || "").split("+").filter(Boolean).map(Number)
+                    pl.hud.refresh_tag_filter_icon()
                     break;
                 case "no-steps":
                     pl.step_disabled = true
@@ -91,7 +89,7 @@ class Session {
         const state = [
             this.playback.editing_mode ? "editing" : "",
             this.playback.tagging_mode ? "tagging" : "",
-            this.playback.hud.grid.filterTag != null ? `grid-filter:${this.playback.hud.grid.filterTag}` : "",
+            this.playback.tag_filter.length ? `tag-filter:${this.playback.tag_filter.join("+")}` : "",
             this.playback.step_disabled ? "no-steps" : "",
             this.playback.hud.$hud_thumbnails.is(":visible") ? "thumbnails" : "",
             this.playback.hud.$hud_grid.is(":visible") ? "grid" : "",

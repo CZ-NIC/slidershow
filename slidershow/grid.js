@@ -26,33 +26,18 @@ class GridController {
          */
         this.colMap = []
         this.isDisplayed = false
-        /** @type {?number} When set, only frames carrying this tag are shown in the grid. */
-        this.filterTag = null
-    }
-
-    /**
-     * Show only frames carrying `tag` in the grid (non-destructive album preview); `null` shows all.
-     * @param {?number} tag
-     */
-    setFilter(tag) {
-        this.filterTag = tag
-        if (!this.hud.grid_visible) {
-            this.hud.toggle_grid()
-        } else {
-            this.hud.reset_grid()
-        }
-        this.pl.session.store()
     }
 
     /**
      * @param {HTMLElement} el
-     * @returns {boolean} Whether `el` should be part of the (possibly tag-filtered) grid.
+     * @returns {boolean} Whether `el` should be part of the (possibly tag-filtered) grid. The shared
+     * tag_filter lives on Playback – it also affects normal (non-grid) navigation, see Playback.set_tag_filter.
      */
     _matchesFilter(el) {
-        if (this.filterTag == null || !$(el).is(FRAME_SELECTOR)) {
-            return true // no filter, or a section/main header – headers are never filtered out
+        if (!$(el).is(FRAME_SELECTOR)) {
+            return true // a section/main header – headers are never filtered out
         }
-        return $(el).data("frame")?.get_tags().includes(this.filterTag) ?? false
+        return this.pl.frame_matches_filter($(el).data("frame"))
     }
 
     changeColumnsCount(step = 1) {

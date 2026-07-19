@@ -12,6 +12,7 @@ class Hud {
         this.$hud_gps = $("#hud-gps")
         this.$hud_tag = $("#hud-tag")
         this.$hud_counter = $("#hud-counter")
+        this.$hud_tag_filter = $("#hud-tag-filter").hide().on("click", () => this.playback.set_tag_filter([]))
         this.$hud_menu = $("#hud-menu")
         this.$command_palette = $("#command-palette")
         this.$hud_thumbnails = $("#hud-thumbnails").hide() // by default off
@@ -477,6 +478,21 @@ class Hud {
         const value = frame.tag_display()
         this.$hud_tag.html(value ? "TAG: " + value : "")
         this.getThumbnail(frame).find(".tag").html(value)
+    }
+
+    /**
+     * Refresh the small clickable icon next to the frame counter that shows the active tag_filter
+     * (click clears it – use the "Filter by tag…" command to change the selection instead).
+     */
+    refresh_tag_filter_icon() {
+        const pl = this.playback
+        if (!pl.tag_filter.length) {
+            this.$hud_tag_filter.html("").hide()
+            return
+        }
+        const names = pl.frame.tag_names()
+        const label = pl.tag_filter.map(t => names[t - 1] || t).join(", ")
+        this.$hud_tag_filter.html(`🏷 ${label} ✕`).show()
     }
 
     /**

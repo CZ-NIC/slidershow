@@ -116,49 +116,92 @@ class Operation {
                 [["Numpad3", "Digit3"], "3", "Tag 3", () => pl.frame.set_tag(3)],
             ],
             [
-                ["Filter grid by tag…", () => this._filterGridDialog(), () => true, "Filter grid by tag"],
+                ["Filter by tag…", () => this._filterByTagDialog(), () => true, "Filter by tag"],
             ]).toggle(pl.tagging_mode)
     }
 
     /**
-     * Prompt for a tag number to show alone in the grid (non-destructive album preview); empty clears the filter.
+     * All tag digits currently applied to at least one frame, ascending.
+     * @returns {number[]}
      */
-    _filterGridDialog() {
+    _usedTags() {
+        const set = new Set()
+        this.playback.$articles.each((_, el) => $(el).data("frame").get_tags().forEach(t => set.add(t)))
+        return [...set].sort((a, b) => a - b)
+    }
+
+    /**
+     * Checkbox list (one per used tag) to show only frames carrying any of the checked tags (OR) –
+     * applies to both the grid and normal navigation, see Playback.set_tag_filter. A "Clear filter"
+     * button resets it; the small icon next to the frame counter does the same in one click.
+     */
+    _filterByTagDialog() {
         const pl = this.playback
-        const current = pl.hud.grid.filterTag
-        new $.Zebra_Dialog("Tag number to show in the grid, empty to show all", {
-            title: "Filter grid by tag",
-            type: "prompt",
-            default_value: current == null ? "" : String(current),
-            buttons: ["Cancel", {
-                caption: "Ok",
-                default_confirmation: true,
-                callback: (_, value) => {
-                    const tag = value ? Number(value) : null
-                    pl.hud.grid.setFilter(Number.isFinite(tag) ? tag : null)
+        const usedTags = this._usedTags()
+        if (!usedTags.length) {
+            pl.hud.ok("Filter by tag", "No tags are used yet.")
+            return
+        }
+        const names = pl.frame.tag_names()
+        const $list = $("<div/>", { class: "tag-filter-list" })
+        usedTags.forEach(t => {
+            const label = names[t - 1] ? `${names[t - 1]} (${t})` : String(t)
+            $("<label/>").append(
+                $("<input/>", { type: "checkbox", value: t, checked: pl.tag_filter.includes(t) }),
+                document.createTextNode(" " + label)
+            ).appendTo($list)
+        })
+
+        new $.Zebra_Dialog({
+            message: "Show only frames carrying any of the checked tags:",
+            source: { inline: $list },
+            type: "question",
+            title: "Filter by tag",
+            buttons: [
+                { caption: "Clear filter", callback: () => pl.set_tag_filter([]) },
+                "Cancel",
+                {
+                    caption: "Ok",
+                    default_confirmation: true,
+                    callback: () => pl.set_tag_filter($("input:checked", $list).map((_, el) => Number($(el).val())).get())
                 }
-            }]
+            ]
         })
     }
 
     /**
-     * Prompt for the tag names list (`<main data-tag-names="rodiče,vedoucí">`), undoable.
+     * Column of number+name inputs (`<main data-tag-names="rodiče,vedoucí">`), undoable. Rows cover every
+     * currently used tag and every already-named tag, so a name is never silently dropped.
      */
     _nameTagsDialog() {
         const pl = this.playback
-        const current = ($main.attr("data-tag-names") || "").split(",").join(", ")
-        new $.Zebra_Dialog("Tag names, comma separated, position = digit 1, 2, …", {
+        const existing = ($main.attr("data-tag-names") || "").split(",")
+        const maxTag = Math.max(3, existing.length, ...this._usedTags())
+        const $list = $("<div/>", { class: "tag-names-list" })
+        for (let t = 1; t <= maxTag; t++) {
+            $("<label/>").append(
+                document.createTextNode(t + ": "),
+                $("<input/>", { type: "text", value: existing[t - 1] || "" })
+            ).appendTo($list)
+        }
+
+        new $.Zebra_Dialog({
+            message: "Name your tags (position = digit):",
+            source: { inline: $list },
+            type: "question",
             title: "Name tags",
-            type: "prompt",
-            default_value: current,
             buttons: ["Cancel", {
                 caption: "Ok",
                 default_confirmation: true,
-                callback: (_, value) => {
-                    const names = (value || "").split(",").map(s => s.trim()).filter(Boolean).join(",")
+                callback: () => {
+                    const names = $("input", $list).map((_, el) => String($(el).val()).trim()).get()
+                    while (names.length && !names[names.length - 1]) {
+                        names.pop() // trim trailing empty rows
+                    }
+                    const value = names.join(",")
                     const before = $main.attr("data-tag-names") || ""
                     pl.changes.undoable("Name tags",
-                        () => $main.attr("data-tag-names", names),
+                        () => $main.attr("data-tag-names", value),
                         () => before ? $main.attr("data-tag-names", before) : $main.removeAttr("data-tag-names"))
                 }
             }]

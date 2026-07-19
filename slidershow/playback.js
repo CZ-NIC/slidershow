@@ -71,6 +71,8 @@ class Playback {
         // On mobile the authored pan/zoom "flyover" (data-step-points) is disabled by default – just the plain
         // full-screen photo, swipeable/pinch-zoomable, no automatic camera movement.
         this.step_disabled = this.isMobileMode
+        /** @type {number[]} Tags to show alone (OR – a frame matches if it carries any of them); empty = no filter. Affects both the grid and normal navigation. */
+        this.tag_filter = []
 
         this.operation = new Operation(this)
         this.section_controller = new SectionController(this)
@@ -452,6 +454,9 @@ class Playback {
             // Setting the existing frame here would mean no action triggered when hitting LeftArrow being in the beginning.
             index = this.$articles.length - 1
         }
+        if (this.tag_filter.length) {
+            index = this._nextMatchingIndex(index, 1)
+        }
         this.goToFrame(index, true)
     }
     previousFrame(count = 1) {
@@ -460,7 +465,47 @@ class Playback {
             // why letting out of range for count == 1? See nextFrame comment.
             index = 0
         }
+        if (this.tag_filter.length) {
+            index = this._nextMatchingIndex(index, -1)
+        }
         this.goToFrame(index)
+    }
+
+    /**
+     * @param {Frame} frame
+     * @returns {boolean} Whether `frame` passes the active tag_filter (always true when no filter is set).
+     */
+    frame_matches_filter(frame) {
+        return !this.tag_filter.length || frame.get_tags().some(t => this.tag_filter.includes(t))
+    }
+
+    /**
+     * From `index`, walk in `direction` (±1) until a frame passes tag_filter. An index that runs out of
+     * range is returned unchanged, so the existing "swipe past the end" out-of-range handling still applies.
+     */
+    _nextMatchingIndex(index, direction) {
+        while (index >= 0 && index < this.$articles.length && !this.frame_matches_filter($(this.$articles[index]).data("frame"))) {
+            index += direction
+        }
+        return index
+    }
+
+    /**
+     * Show only frames carrying any of `tags` (OR), in both the grid and normal navigation; empty/null clears it.
+     * @param {?number[]} tags
+     */
+    set_tag_filter(tags) {
+        this.tag_filter = tags || []
+        this.hud.refresh_tag_filter_icon()
+        this.hud.reset_grid()
+        this.session.store()
+        if (!this.hud.grid_visible && !this.frame_matches_filter(this.frame)) {
+            const forward = this._nextMatchingIndex(this.index, 1)
+            const index = forward < this.$articles.length ? forward : this._nextMatchingIndex(this.index, -1)
+            if (index >= 0 && index < this.$articles.length) {
+                this.goToFrame(index)
+            }
+        }
     }
 
     nextSection() {

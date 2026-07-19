@@ -38,7 +38,9 @@ test("set_tag toggles multi-valued tags, clears on 0, persists to localStorage, 
 
 test("tag names dialog resolves digits to names in the HUD", async ({ page }) => {
     await page.evaluate(() => playback.operation._nameTagsDialog())
-    await page.locator(".ZebraDialog_Prompt_Input").fill("rodiče,vedoucí")
+    const inputs = page.locator(".tag-names-list input")
+    await inputs.nth(0).fill("rodiče")
+    await inputs.nth(1).fill("vedoucí")
     await page.getByRole("link", { name: "Ok" }).click()
     expect(await page.evaluate(() => $main.attr("data-tag-names"))).toBe("rodiče,vedoucí")
 

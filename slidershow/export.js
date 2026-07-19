@@ -246,7 +246,7 @@ class Export {
         const summary = Object.entries(results)
             .map(([name, r]) => `${name}: ${r.copiedNames.length} copied` + (r.missing.length ? `, ${r.missing.length} missing` : ""))
             .join("<br>")
-        this.playback.hud.ok("Album export finished", `${summary}<br>Drag the folder into the Zonerama / Google Photos upload.`)
+        this.playback.hud.ok("Album export finished", summary)
     }
 
     /**

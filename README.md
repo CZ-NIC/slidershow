@@ -111,11 +111,15 @@ While presenting, you may appraise an auxiliary window on the second monitor tha
 
 Start tagging mode with <kbd>Alt+T</kbd>. Use Numpad to tag the images – think of a tag as a number that corresponds to one of your categories. A photo may carry several tags at once: hitting a digit again toggles that tag off, <kbd>0</kbd> clears all of them. Then in the menu, hit <kbd>Alt+Shift+G</kbd> to group the images to the `<section>` according to tags. Export with <kbd>Ctrl+S</kbd>. Sorted & ready!
 
-Tags can be named through the "Name tags…" button/command (<kbd>Alt+Shift+T</kbd> while in tagging mode): a comma-separated list where position corresponds to the digit (first name = tag 1, second = tag 2, …). Named tags then show up everywhere a tag is displayed (HUD, thumbnails, grid) instead of the bare digit.
+Tags can be named through the "Name tags…" button/command (<kbd>Alt+Shift+T</kbd> while in tagging mode): one row per digit, position corresponds to the digit (first row = tag 1, second = tag 2, …). Named tags then show up everywhere a tag is displayed (HUD, thumbnails, grid) instead of the bare digit.
+
+"Filter by tag…" (command palette, tagging group) shows only frames carrying any of the checked tags – a non-destructive preview of one or several albums at once. It applies both to the grid overview and to normal navigation (next/previous frame skip over hidden ones). A small icon appears next to the frame counter while a filter is active; click it to clear the filter, or reopen "Filter by tag…" to change the selection.
 
 <sub>Note that the tag is stored in the browser (local storage)[https://developer.mozilla.org/en-US/docs/Web/API/Window/localStorage] by the file name so that you do not lose the information at a sudden crash. However, in case you import another photo with the same name, it will inherit the tag from the clashing file.</sub>
 
 <sub>Grouping images works that way: It iterates over all the frames and if they are not in the section, having the same name (tag), it will create such section. A frame with several tags is grouped only by the first one (with a notice); so at the first grouping, frames keep their former order in the new sections. The second time, they will get appended to the section's end.<br>You can easily re-order by date etc. in the grid view (key <kbd>G</kbd>).</sub>
+
+"Export albums to folders…" (<kbd>Ctrl+Shift+S</kbd>, Chrome/Edge only) exports one folder per *named* tag plus a `vsechny` folder with everything, alongside an `alba.json` and one `<album>.txt` per album. Handy to prepare per-person, overlapping albums (e.g. "everyone" / "parents" / "leaders") for dragging into a photo-sharing upload.
 
 # Structure
 

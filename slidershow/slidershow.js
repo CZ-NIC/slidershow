@@ -149,6 +149,7 @@ function get_menu() {
             <div id="hud-datetime"></div>
             <div id="hud-tag"></div>
             <div id="hud-counter"></div>
+            <div id="hud-tag-filter" title="Filtered by tag – click to change or clear"></div>
         </div>
         <div id="hud-properties"></div>
         <div id="hud-thumbnails"></div>
