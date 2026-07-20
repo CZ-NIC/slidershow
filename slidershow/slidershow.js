@@ -108,7 +108,10 @@ function loadScript(attrs) {
         // own files served off jsdelivr) is reported to window.onerror as an opaque "Script error." with no
         // message/file/line – all the CDN hosts used here (jsdelivr, cdnjs, code.jquery.com, unpkg) send the
         // CORS headers needed for the browser to disclose the real error once the tag is marked crossorigin.
-        Object.entries({ crossOrigin: "anonymous", ...attrs }).forEach(([k, v]) => script[k] = v)
+        // Only applied to http(s) sources: on file:// (local dev via presenter.html/tutorial_local.html), marking
+        // a same-origin/local script crossorigin turns it into a CORS request, which the browser always blocks.
+        const defaults = /^https?:/.test(attrs.src) ? { crossOrigin: "anonymous" } : {}
+        Object.entries({ ...defaults, ...attrs }).forEach(([k, v]) => script[k] = v)
         script.onload = resolve
         script.onerror = reject
         script.setAttribute('data-templated', '1')
