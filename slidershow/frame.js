@@ -180,6 +180,7 @@ class Frame {
      * @param {*} oldVal If this is a user direct change, we might use the old value to compensate the change.
      */
     refresh_actor(propertyName = true, oldVal = null) {
+        prop_invalidate() // a property write (rotate, fit, …) typically precedes a refresh – re-read fresh
         if (this.$actor.length) {
             if (propertyName === true || propertyName === "rotate") {
                 const old = this.zoom.get(this.$actor)

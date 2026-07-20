@@ -38,6 +38,7 @@ class Session {
                     // setting `data-duration` on <main>, where prop() ends its walk.
                     if (!isNaN(parseFloat(value))) {
                         $main.attr("data-duration", parseFloat(value))
+                        prop_invalidate()
                     }
                     break;
                 case "editing":
@@ -54,6 +55,7 @@ class Session {
                     break;
                 case "tag-names":
                     $main.attr("data-tag-names", (value || "").split("+").join(","))
+                    prop_invalidate()
                     break;
                 case "no-steps":
                     pl.step_disabled = true

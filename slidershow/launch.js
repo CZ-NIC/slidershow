@@ -10,6 +10,12 @@ const FRAME_SECTION_SELECTOR = FRAME_SELECTOR + ",main,main section"
 const VIDEO_EXTENSIONS = ["mp4", "mov", "avi", "vob", "ogv", "webm", "mts", "3gp", "mpg", "mpeg", "wmv", "hevc"]
 const IMAGE_EXTENSIONS = ["jpg", "jpeg", "jxl", "png", "gif", "avif", "webp", "heic"]
 
+// prop() memoization store – declared up here (above the main() call below) so it's initialized before
+// any load-time prop() read. See prop() / prop_invalidate() for the caching contract.
+/** @type {WeakMap<Element, Map<string, {gen:number, def:any, defProperty:?string, value:any}>>} */
+const _propCache = new WeakMap()
+let _propGen = 0
+
 /** To fetch docs */
 const DOCS_URI = "https://cdn.jsdelivr.net/gh/CZ-NIC/slidershow@main/README.md"
 /** To link docs */
@@ -210,6 +216,14 @@ function docname() {
  * @param {boolean} css Check element CSS first before investigating DOM.
  * @returns {undefined|boolean|number|string} Undefined if not set neither in the def param, nor in the PROP_DEFAULT.
  */
+/**
+ * Invalidate the prop() memoization. O(1) (just bumps a generation counter), so callers over-invalidate
+ * freely: bumping too often only lowers the cache hit-rate, it can never return a stale value. Call it
+ * right after writing any `data-*` attribute that prop() resolves (rotate, duration, tag-names, …), and
+ * after structural DOM changes (reset/regroup) that could move which ancestor a lookup resolves to.
+ */
+function prop_invalidate() { _propGen++ }
+
 function prop(property, $el, def = null, defProperty = null, css = false) {
     // First, we might have to check the CSS. This has sense for actors only.
     // The CSS might have been altered by a step so that the value in the DOM
@@ -220,6 +234,29 @@ function prop(property, $el, def = null, defProperty = null, css = false) {
             return val
         }
     }
+    // Memoize the closest()+data() DOM walk (a single goToFrame does dozens of prop() reads, ex.
+    // positionFrames reads the constant `spread-frames` once per frame). Never cache a live-CSS read
+    // (css=true with a PROP_CALLBACKS entry depends on computed style, not the DOM) nor a multi/zero
+    // element set. Any data-* write bumps _propGen via prop_invalidate(), dropping the whole cache.
+    const el = ($el.length === 1 && !(css && PROP_CALLBACKS[property])) ? $el[0] : null
+    if (el) {
+        const hit = _propCache.get(el)?.get(property)
+        if (hit && hit.gen === _propGen && hit.def === def && hit.defProperty === defProperty) {
+            return hit.value
+        }
+    }
+    const value = _prop_resolve(property, $el, def, defProperty)
+    if (el) {
+        let byProp = _propCache.get(el)
+        if (!byProp) {
+            _propCache.set(el, byProp = new Map())
+        }
+        byProp.set(property, { gen: _propGen, def, defProperty, value })
+    }
+    return value
+}
+
+function _prop_resolve(property, $el, def, defProperty) {
     // Why .removeDate? Because the DOM might have changed.
     // User did it or we set up main.duration by the auto-forward button. And the .data value is cached.
     // We do not read the attr because we need the conversion that happens when jQuery fetches data from attr.

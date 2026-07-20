@@ -296,6 +296,7 @@ class Playback {
      *
      */
     reset() {
+        prop_invalidate() // frames may have been re-parented (regroup/import) – ancestor resolution changed
         Frame.mediaConvert()
         this.$articles = Frame.load_all(this).show()
         this.$current = this.frame?.$frame ?? this.$articles.first()
@@ -312,6 +313,7 @@ class Playback {
     }
 
     positionFrames(x1 = null, x2 = null, x3 = null, x4 = null) {
+        prop_invalidate() // re-layout after a structural change; ancestor resolution may have moved
         let slide_index = -1
         let frame_index = -1
 
@@ -563,6 +565,7 @@ class Playback {
      * @param {Boolean} supress_transition Block animation to the frame
      */
     goToFrame(index, moving = false, supress_transition = false) {
+        prop_invalidate() // fresh frame: drop the previous frame's memoized prop() lookups
         // Central tag_filter enforcement – every navigation path (next/prevFrame, sections, goToSlide,
         // hash restore, ribbon/grid clicks) funnels through here, so redirecting once covers them all.
         if (this.tag_filter.length && this.$articles[index]) {

@@ -240,6 +240,7 @@ class Operation {
                 () => {
                     $main.attr("data-tag-names", value)
                     value ? localStorage.setItem(key, value) : localStorage.removeItem(key)
+                    prop_invalidate()
                 },
                 () => {
                     if (before) {
@@ -249,6 +250,7 @@ class Operation {
                         $main.removeAttr("data-tag-names")
                         localStorage.removeItem(key)
                     }
+                    prop_invalidate()
                 })
         }
         this._confirmOnEnter($list)

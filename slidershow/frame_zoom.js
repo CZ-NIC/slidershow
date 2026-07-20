@@ -287,6 +287,7 @@ class FrameZoom {
         // rotation
         if (rotate || prop("rotate", $el, null, null, true) !== null) { // set new rotation or unset rotation
             $el.attr("data-rotate", rotate)
+            prop_invalidate()
             this.frame.add_effect(r =>
                 $el.animate({ rotate: rotate + "deg" }, transition_duration * 1000, "linear",
                     () => r()))
@@ -303,6 +304,7 @@ class FrameZoom {
                 // 2. We set its section rotation to 90
                 // 3. The image should not be affected but it is.
                 $el.removeAttr("data-rotate")
+                prop_invalidate()
             }
         }
         return duration ?? prop("step-duration", $el, null, "duration")
