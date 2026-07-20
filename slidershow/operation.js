@@ -153,6 +153,27 @@ class Operation {
     }
 
     /**
+     * Arrow Up/Down move focus between `selector` elements inside $container – dialog rows are plain
+     * <label> wrappers (not a native <select>/radio-group), so the browser gives no such navigation for free.
+     * @param {JQuery} $container
+     * @param {string} selector
+     */
+    _arrowNavigate($container, selector) {
+        $container.on("keydown", e => {
+            if (e.key !== "ArrowDown" && e.key !== "ArrowUp") {
+                return
+            }
+            const $items = $container.find(selector)
+            const i = $items.index(document.activeElement)
+            if (i === -1) {
+                return
+            }
+            e.preventDefault()
+            $items.eq((i + (e.key === "ArrowDown" ? 1 : -1) + $items.length) % $items.length).focus()
+        })
+    }
+
+    /**
      * All tag digits currently applied to at least one frame, ascending.
      * @returns {number[]}
      */
@@ -185,6 +206,7 @@ class Operation {
         })
 
         this._confirmOnEnter($list)
+        this._arrowNavigate($list, "input[type=checkbox]")
 
         new $.Zebra_Dialog({
             message: "Show only frames carrying any of the checked tags:",

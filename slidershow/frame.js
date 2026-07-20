@@ -1306,6 +1306,19 @@ class Frame {
     }
 
     /**
+     * Whether every currently set tag has a name – bare digits need a "🏷" hint to read as a tag at all,
+     * whereas names are self-explanatory on their own.
+     * @param {?JQuery} $actor
+     * @returns {boolean}
+     */
+    tags_all_named($actor = null) {
+        $actor = $actor || this.$actor
+        const names = this.tag_names($actor)
+        const tags = this.get_tags($actor)
+        return tags.length > 0 && tags.every(t => names[t - 1])
+    }
+
+    /**
      * Toggle tag `n` membership; `0`/`null` clears all tags. Undoable.
      * @param {?number} tag
      */

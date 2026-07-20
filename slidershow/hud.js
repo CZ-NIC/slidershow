@@ -10,7 +10,7 @@ class Hud {
         this.$hud_device = $("#hud-device")
         this.$hud_datetime = $("#hud-datetime")
         this.$hud_gps = $("#hud-gps")
-        this.$hud_tag = $("#hud-tag")
+        this.$hud_tag = $("#hud-tag").on("click", () => this.playback.operation._filterByTagDialog())
         this.$hud_counter = $("#hud-counter")
         this.$hud_tag_filter = $("#hud-tag-filter").hide().on("click", () => this.playback.set_tag_filter([]))
         this.$hud_menu = $("#hud-menu")
@@ -494,7 +494,7 @@ class Hud {
      */
     tag(frame) {
         const value = frame.tag_display()
-        this.$hud_tag.html(value ? "TAG: " + value : "")
+        this.$hud_tag.html(value && !frame.tags_all_named() ? "🏷 " + value : value)
         this.getThumbnail(frame).find(".tag").html(value)
     }
 

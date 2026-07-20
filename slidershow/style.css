@@ -365,8 +365,17 @@ frame-preview {
         }
 
         #hud-tag {
+            display: inline-block;
             background-color: var(--control);
-            font-size: 300%;
+            color: var(--base);
+            font-size: 100%;
+            padding: .15em .7em;
+            border-radius: 1em;
+            cursor: pointer;
+
+            &:empty {
+                display: none;
+            }
         }
 
         #hud-tag-filter {
