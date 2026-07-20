@@ -144,6 +144,9 @@ class GridController {
             case "delete":
                 pl.section_controller.deleteSection($section)
                 break
+            case "untag-all":
+                pl.section_controller.untagAll($section)
+                break
             case "sort-sections":
                 pl.section_controller.sortSections(param)
                 break
@@ -274,6 +277,7 @@ class GridController {
                             </div>
                         </div>
                         <button data-role='flatten-subsections'>flatten subsections</button>
+                        <button data-role='untag-all'>untag all</button>
                         <div class="section-menu tag-filter-menu">
                             <span>filter by tag ▾</span>
                             <div class="dropdown tag-filter-dropdown"></div>
@@ -309,6 +313,7 @@ class GridController {
                                     <button data-role='regroup' data-param='tags'>by tags</button>
                                 </div>
                             </div>
+                            <button data-role='untag-all'>untag all</button>
                             <button data-role='delete'>delete</button></div>`
 
     /** <frame-preview> index in this.$framesSections

@@ -163,6 +163,30 @@ class SectionController {
         )
     }
 
+    /**
+     * Clear every tag from all frames inside $section (recursively). One undoable for the whole batch.
+     * @param {JQuery} $section A <section> or <main>.
+     */
+    untagAll($section) {
+        const pl = this.playback
+        const label = $section.is("main") ? "presentation" : this.getSectionName($section)
+        /** @type {{frame: Frame, before: number[]}[]} Only frames that actually carry tags. */
+        const tagged = $section.find(FRAME_TAGS).toArray()
+            .map(el => $(el).data("frame"))
+            .filter(frame => frame.get_tags().length)
+            .map(frame => ({ frame, before: frame.get_tags() }))
+
+        if (!tagged.length) {
+            pl.hud.info("No tags to remove")
+            return
+        }
+
+        pl.changes.undoable(`Untag ${tagged.length} frames in ${label}`,
+            () => tagged.forEach(({ frame }) => frame.write_tags([])),
+            () => tagged.forEach(({ frame, before }) => frame.write_tags(before))
+        )
+    }
+
     deleteSection($section) {
         const pl = this.playback
         // Every frame that disappears with the section – recursively, incl. nested subsections and
@@ -237,6 +261,9 @@ class SectionController {
         const added = []
         /** @type {string[]} */
         const multiTagged = []
+        /** @type {{el: HTMLElement, prev: ?Element}[]} Every section that existed before this regroup, with
+         * its original preceding sibling – lets undo reattach the ones we emptied and revert the numeric sort. */
+        let sectionsBefore = []
 
         if (!$frames) {
             $frames = pl.$articles
@@ -247,8 +274,10 @@ class SectionController {
                 redos.length = 0
                 added.length = 0
                 multiTagged.length = 0
-                /** @type {?JQuery} Catch-all for frames without a group key that were sitting loose directly under <main>. */
-                let $looseSection = null
+                sectionsBefore = this.getDirectSections($main).toArray()
+                    .map(el => ({ el, prev: el.previousElementSibling }))
+                /** @type {JQuery} Catch-all for frames without a group key; reused across regroups so it never duplicates. */
+                let $looseSection = this.getDirectSections($main).filter("[data-untagged]").first()
                 $frames.each((_, el) => {
                     const $frame = $(el)
                     /** @type {Frame} */
@@ -267,17 +296,16 @@ class SectionController {
                         title = name
                     }
                     if (!name) {
-                        // No group key – leave in the former section, unless that "former section" is
-                        // really no section at all (a loose frame directly under <main>): give it one,
-                        // so every frame ends up with a nameable home and the grid's counts stay simple.
-                        if ($frame.parent().is($main)) {
-                            redos.push(this.redoForMoving($frame))
-                            if (!$looseSection) {
-                                $looseSection = $("<section/>").prependTo($main)
-                                added.push($looseSection)
-                            }
-                            $frame.appendTo($looseSection)
+                        // No group key (untagged, ex. cleared with "0", or no datetime): collect every such
+                        // frame into a single catch-all section. Previously only frames sitting loose directly
+                        // under <main> were gathered, so photos untagged inside an existing section stayed
+                        // scattered there after a regroup; now they all land in one place.
+                        redos.push(this.redoForMoving($frame))
+                        if (!$looseSection.length) {
+                            $looseSection = $("<section/>", { "data-untagged": "", "data-title": "untagged" }).appendTo($main)
+                            added.push($looseSection)
                         }
+                        $frame.appendTo($looseSection)
                         return
                     }
                     redos.push(this.redoForMoving($frame))
@@ -299,6 +327,16 @@ class SectionController {
                     }
                     $frame.appendTo($section)
                 })
+                // Drop sections this regroup emptied out (frames all moved elsewhere), so no ghost zero-frame
+                // sections linger. Kept in `sectionsBefore`, so undo reattaches them.
+                this.getDirectSections($main).filter((_, sec) => !$(sec).find(FRAME_TAGS).length).detach()
+                if (criterion == "tags") {
+                    // Order the resulting sections by tag number (1, 2, 3…) instead of by the order frames
+                    // happened to appear; the untagged catch-all (no numeric name) sinks to the end.
+                    this.getDirectSections($main).toArray()
+                        .sort((a, b) => this._tagSortKey(a) - this._tagSortKey(b))
+                        .forEach(section => $(section).parent().append(section))
+                }
                 pl.positionFrames()
                 pl.goToFrame(pl.$current.data("frame").index - 1) // keeps you on the same frame (works badly)
                 if (multiTagged.length) {
@@ -306,11 +344,25 @@ class SectionController {
                 }
             },
             () => {
+                // Restore each pre-existing section to its original position first (reattaches the ones we
+                // emptied, reverts the numeric sort), so frames can then move back into containers that exist.
+                sectionsBefore.forEach(({ el, prev }) =>
+                    prev && prev.parentNode ? prev.after(el) : $main[0].prepend(el))
                 redos.reverse().map(f => f())
                 added.map(el => $(el).remove())
             },
             () => pl.resetAndGo()
         )
+    }
+
+    /**
+     * @param {HTMLElement} section
+     * @returns {number} Numeric sort key from a section's data-name (a tag number). Non-numeric names
+     * (ex. the nameless untagged catch-all) sort to the end.
+     */
+    _tagSortKey(section) {
+        const n = parseFloat($(section).attr("data-name"))
+        return isNaN(n) ? Infinity : n
     }
 
     /**

@@ -109,7 +109,9 @@ While presenting, you may appraise an auxiliary window on the second monitor tha
 
 ## Organizing
 
-Start tagging mode with <kbd>Alt+T</kbd>. Use Numpad to tag the images – think of a tag as a number that corresponds to one of your categories. A photo may carry several tags at once: hitting a digit again toggles that tag off, <kbd>0</kbd> clears all of them. Then in the menu, hit <kbd>Alt+Shift+G</kbd> to group the images to the `<section>` according to tags. Export with <kbd>Ctrl+S</kbd>. Sorted & ready!
+Start tagging mode with <kbd>Alt+T</kbd>. Use Numpad to tag the images – think of a tag as a number that corresponds to one of your categories. A photo may carry several tags at once: hitting a digit again toggles that tag off, <kbd>0</kbd> clears all of them. Then in the menu, hit <kbd>Alt+Shift+G</kbd> to group the images to the `<section>` according to tags. The resulting sections come out ordered by tag number (1, 2, 3…), with every untagged photo gathered into a single catch-all section at the end. Export with <kbd>Ctrl+S</kbd>. Sorted & ready!
+
+To wipe tags again, the grid ribbon has an "untag all" button on each section and on the whole presentation, clearing the tags of every frame inside in one undoable step.
 
 Tags can be named through the "Name tags…" button/command (<kbd>Alt+Shift+T</kbd> while in tagging mode): one row per digit, position corresponds to the digit (first row = tag 1, second = tag 2, …). Named tags then show up everywhere a tag is displayed (HUD, thumbnails, grid) instead of the bare digit.
 

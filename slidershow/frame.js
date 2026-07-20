@@ -1374,29 +1374,33 @@ class Frame {
      * @param {?number} tag
      */
     set_tag(tag) {
-        const $actor = this.$actor
         const name = this.get_filename()
-        const key = "TAG: " + name
         const before = this.get_tags()
         const after = !tag ? [] : before.includes(tag)
             ? before.filter(t => t !== tag)
             : [...before, tag].sort((a, b) => a - b)
 
-        const write = (tokens) => {
-            const value = tokens.join(" ")
-            if (value) {
-                localStorage.setItem(key, value)
-                $actor.attr("data-tag", value)
-            } else {
-                localStorage.removeItem(key)
-                $actor.removeAttr("data-tag")
-            }
-            this.playback.hud.tag(this)
-        }
-
         this.playback.changes.undoable(`Tag ${tag ?? "clear"} on ${name}`,
-            () => write(after),
-            () => write(before))
+            () => this.write_tags(after),
+            () => this.write_tags(before))
+    }
+
+    /**
+     * Persist a tag token list to `data-tag` + localStorage and refresh the frame's badge. Not undoable
+     * on its own – callers (set_tag, bulk untag) wrap it in a `changes.undoable`.
+     * @param {number[]} tokens
+     */
+    write_tags(tokens) {
+        const key = "TAG: " + this.get_filename()
+        const value = tokens.join(" ")
+        if (value) {
+            localStorage.setItem(key, value)
+            this.$actor.attr("data-tag", value)
+        } else {
+            localStorage.removeItem(key)
+            this.$actor.removeAttr("data-tag")
+        }
+        this.playback.hud.tag(this)
     }
 
     static exif($el, data = null, callback = null) {

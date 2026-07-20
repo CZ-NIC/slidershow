@@ -61,6 +61,46 @@ test("renaming a tag and re-grouping refreshes the section's title, keeping the 
     expect(title).toBe("rodina")
 })
 
+test("group by tags orders the resulting sections by tag number", async ({ page }) => {
+    await page.evaluate(() => {
+        const f = playback.$articles.toArray().map(el => $(el).data("frame"))
+        f[0].set_tag(3) // tagged out of numeric order on purpose
+        f[1].set_tag(1)
+        f[2].set_tag(2)
+    })
+    await page.evaluate(() => playback.section_controller.group("tags"))
+
+    const names = await page.evaluate(() => $("main > section").toArray().map(el => el.dataset.name))
+    expect(names).toEqual(["1", "2", "3"])
+})
+
+test("group by tags puts the untagged catch-all after the numbered sections", async ({ page }) => {
+    await page.evaluate(() => {
+        const f = playback.$articles.toArray().map(el => $(el).data("frame"))
+        f[0].set_tag(2) // one.jpg
+        f[2].set_tag(1) // three.jpg – two.jpg stays untagged
+    })
+    await page.evaluate(() => playback.section_controller.group("tags"))
+
+    const names = await page.evaluate(() => $("main > section").toArray().map(el => el.dataset.name))
+    expect(names).toEqual(["1", "2", undefined]) // numeric first, the data-untagged catch-all last
+})
+
+test("untagAll clears every tag inside <main> and is undoable", async ({ page }) => {
+    await page.evaluate(() => {
+        const f = playback.$articles.toArray().map(el => $(el).data("frame"))
+        f[0].set_tag(1)
+        f[1].set_tag(2)
+    })
+    expect(await page.evaluate(() => $("main [data-tag]").length)).toBe(2)
+
+    await page.evaluate(() => playback.section_controller.untagAll($main))
+    expect(await page.evaluate(() => $("main [data-tag]").length)).toBe(0)
+
+    await page.evaluate(() => playback.changes.undo())
+    expect(await page.evaluate(() => $("main [data-tag]").length)).toBe(2)
+})
+
 test("grid 'Presentation' header shows both section and frame counts", async ({ page }) => {
     await page.evaluate(() => {
         playback.$articles.toArray().map(el => $(el).data("frame"))[0].set_tag(1)

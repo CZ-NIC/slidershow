@@ -1,6 +1,10 @@
 # CHANGELOG
 
 ## 1.0.0 (unreleased)
+* fix (navigation): <kbd>Alt+PageDown</kbd> on the very first (loose, directly under `<main>`) frame jumped straight to the last slide instead of the next section
+* fix (tagging): "Group frames according to their tag" now gathers *every* untagged frame (ex. cleared with <kbd>0</kbd>) into a single catch-all section — previously only frames loose under `<main>` were collected, so photos untagged inside an existing section stayed scattered there
+* enh (tagging): after "Group frames according to their tag" the resulting sections are ordered by tag number (1, 2, 3…) instead of by the order frames happened to appear; the untagged catch-all sinks to the end
+* feat (tagging): "untag all" button/command on a section and on the presentation (`<main>`) clears the tags from every frame inside, in one undoable step
 * enh: `data-fallback` accepts several space-separated templates, tried in order until one actually loads/decodes – lets a single `data-fallback` set on `<main>` cover both photos and videos (which need differently-named/typed replacement files) without the generator having to know which applies to a given file
 * enh: `data-datetime` now resolves through the general `prop()` inheritance (like `data-thumb`/`data-fallback`/`data-rotate`) instead of being read only off the `<img>`/`<video>` element, so it can be set once on `<article>`/`<section>`/`<main>` without a nested media tag
 * feat: `data-fallback` (same template/inheritance as `data-thumb`) points to a pre-converted alternative file that's loaded automatically when `data-src` fails to load/decode (ex: HEIC/HEIF photos Chrome on Windows can't render); if the fallback also fails (or none is set), a toast warns about the unsupported file for the frame currently being viewed (the thumbnail, if any, stays visible)

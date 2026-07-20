@@ -515,9 +515,13 @@ class Playback {
     }
 
     nextSection() {
-        // XX Inintuitive. When being at the first article at <main><article /><section /><article last>,
-        // next sections puts you to the last, skipping all the sections.
-        const $next = this.getSection().next().find(FRAME_TAGS).first()
+        const $section = this.getSection()
+        // A loose frame sits directly under <main> (no wrapping <section>), so its "section" resolves to
+        // <main> itself, whose .next() holds no frames — the old code then fell back to the very last slide.
+        // Advance to the first following <section> inside <main> instead.
+        const $next = $section.is("main")
+            ? this.frame.$frame.nextAll("section").first().find(FRAME_TAGS).first()
+            : $section.next().find(FRAME_TAGS).first()
         this.goToArticle($next.length ? $next : this.$articles.last(), true)
     }
     previousSection() {
