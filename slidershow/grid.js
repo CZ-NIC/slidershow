@@ -159,6 +159,9 @@ class GridController {
                     pl.hud.info(`${this.files.length} media imported`)
                 }).trigger("click")
                 break
+            case "filter-tag":
+                pl.operation._filterByTagDialog()
+                break
             default:
                 this.info("Unknown action")
                 break
@@ -266,6 +269,7 @@ class GridController {
                             </div>
                         </div>
                         <button data-role='flatten-subsections'>flatten subsections</button>
+                        <button data-role='filter-tag'>filter by tag…</button>
                     </div>`
 
     _sectionMenuTemplate = `<div class="section-menus">
@@ -404,12 +408,30 @@ class GridController {
      * @param {boolean} prepend
      */
     _assureMain(main, prepend = false) {
+        const pl = this.pl
         const $mc = $(`<section-controller data-role="main">
-                    <span class="section-title">${this.pl.section_controller.getSectionName($(main), "Presentation")}</span>
+                    <span class="section-title">${pl.section_controller.getSectionName($(main), "Presentation")}</span>
+                    ${this._tagFilterBadge()}
                     ${this._menuOfMainTemplate}
                 </section-controller>`)
             .data("section", main)
+        $mc.find(".tag-filter-badge").on("click", () => pl.set_tag_filter([]))
         return prepend ? $mc.prependTo(this.$container) : $mc.appendTo(this.$container)
+    }
+
+    /**
+     * Small "clear filter" badge mirroring #hud-tag-filter (see Hud.refresh_tag_filter_icon), shown next
+     * to the "Presentation" title so the grid makes clear it is only showing a filtered subset.
+     * @returns {string}
+     */
+    _tagFilterBadge() {
+        const pl = this.pl
+        if (!pl.tag_filter.length) {
+            return ""
+        }
+        const names = pl.frame.tag_names()
+        const label = pl.tag_filter.map(t => names[t - 1] || t).join(", ")
+        return `<span class="tag-filter-badge" title="Clear tag filter">🏷 ${label} ✕</span>`
     }
 
     /**

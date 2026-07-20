@@ -15,16 +15,47 @@ class SectionController {
      */
     getSectionName($section, fallbackLabel = "Section") {
         const title = $section.data("title") || $section.data("name")
-        const sectionCount = $section.children("section").length
-        const frameCount = $section.children(FRAME_SELECTOR).length
+        const { sections: sectionCount, frames: frameCount } = this.getDirectCounts($section)
         const counts = sectionCount
             ? `${sectionCount} section${sectionCount === 1 ? "" : "s"}, ${frameCount} frame${frameCount === 1 ? "" : "s"}`
             : String(frameCount)
         return `${title || fallbackLabel} (${counts})`
     }
 
+    /**
+     * Counts sections/frames "logically" inside $section – a section/frame counts as direct even when
+     * wrapped in one or more plain <div>s (ex. a layout wrapper for centering, or a shared-duration
+     * group), as long as no other <section>/frame boundary sits in between. A single find() over the
+     * subtree (native querySelectorAll, not manual recursion) plus a cheap ancestor check per match, so
+     * this stays fine even on large presentations.
+     * @param {JQuery} $section
+     * @returns {{sections: number, frames: number}}
+     */
+    getDirectCounts($section) {
+        const isDirect = (el) => $(el).parentsUntil($section, this._boundarySelector()).length === 0
+        return {
+            sections: this.getDirectSections($section).length,
+            frames: $section.find(FRAME_TAGS).filter((_, el) => isDirect(el)).length,
+        }
+    }
+
+    /**
+     * @param {JQuery} $section
+     * @returns {JQuery<HTMLElement>} <section>s "directly" inside $section – seeing through transparent
+     * wrapper elements (any plain <div>, ex. a layout wrapper for centering, or a shared-duration group)
+     * but not crossing another <section>/frame boundary. Single find() (native traversal), not manual
+     * recursion.
+     */
+    getDirectSections($section) {
+        return $section.find("section").filter((_, el) => $(el).parentsUntil($section, this._boundarySelector()).length === 0)
+    }
+
+    _boundarySelector() {
+        return "section, " + FRAME_TAGS
+    }
+
     getSubsectionCount($section) {
-        return `(${$section.children("section").length})`
+        return `(${this.getDirectSections($section).length})`
     }
 
     /**
@@ -131,11 +162,11 @@ class SectionController {
         const $frames = $section.children(FRAME_SELECTOR)
 
         const $prev = $section.prev()
-        const sectionReinsert = $prev.length ? [$prev, "after"] : [$section.parent(), "prepend"]
+        const $parent = $section.parent()
 
         pl.changes.undoable("Delete section " + pl.section_controller.getSectionName($section),
             () => $section.detach(),
-            () => sectionReinsert[0][sectionReinsert[1]]($section),
+            () => $prev.length ? $section.insertAfter($prev) : $section.prependTo($parent),
             () => {
                 pl.reset()
                 const deletedIndices = $frames.map((_, el) => $(el).data("frame").index).get()
@@ -150,7 +181,7 @@ class SectionController {
 
     flattenSubsections($main) {
         const pl = this.playback
-        const $subsections = $main.children("section")
+        const $subsections = this.getDirectSections($main)
 
         if (!$subsections.length) {
             pl.hud.info("No subsections to flatten")
@@ -162,9 +193,10 @@ class SectionController {
         const snapshots = $subsections.map((_, section) => {
             const $section = $(section)
             const $prev = $section.prev()
-            const sectionReinsert = $prev.length ? [$prev, "after"] : [$section.parent(), "prepend"]
+            const $parent = $section.parent()
+            const reinsert = () => $prev.length ? $section.insertAfter($prev) : $section.prependTo($parent)
             const $children = $section.children()
-            return { $section, sectionReinsert, $children }
+            return { $section, reinsert, $children }
         }).get()
 
         pl.changes.undoable("Flatten subsections " + pl.section_controller.getSubsectionCount($main),
@@ -175,9 +207,9 @@ class SectionController {
                 })
             },
             () => {
-                snapshots.forEach(({ $section, sectionReinsert, $children }) => {
-                    sectionReinsert[0][sectionReinsert[1]]($section)  // restore section
-                    $section.append($children)                         // restore its contents
+                snapshots.forEach(({ reinsert, $section, $children }) => {
+                    reinsert()                    // restore section
+                    $section.append($children)    // restore its contents
                 })
             },
             () => pl.reset()
@@ -283,11 +315,10 @@ class SectionController {
         pl.changes.undoable(`Sort sections alphabetically`,
             () => {
                 // Save original order for undo
-                originalOrder = $main.children("section").map((_, el) => el).get()
+                originalOrder = this.getDirectSections($main).map((_, el) => el).get()
 
                 // Sort sections alphabetically by data-name
-                const $sections = $main.children("section")
-                const sorted = $sections.get().sort((a, b) => {
+                const sorted = originalOrder.slice().sort((a, b) => {
                     const nameA = ($(a).attr("data-name") || "").toLowerCase()
                     const nameB = ($(b).attr("data-name") || "").toLowerCase()
                     return order === "asc"
@@ -295,12 +326,14 @@ class SectionController {
                         : nameB.localeCompare(nameA)
                 })
 
-                // Re-append in sorted order (preserving articles inside)
-                sorted.forEach(section => $main.append(section))
+                // Re-append in sorted order (preserving articles inside). Appending to each section's own
+                // current parent – not unconditionally $main – keeps it inside whatever wrapper div it
+                // actually lives in (ex. a layout wrapper around all sections).
+                sorted.forEach(section => $(section).parent().append(section))
             },
             () => {
                 // Undo: restore original order
-                originalOrder.forEach(section => $main.append(section))
+                originalOrder.forEach(section => $(section).parent().append(section))
 
             },
             () => {

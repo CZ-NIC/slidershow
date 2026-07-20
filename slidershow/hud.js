@@ -10,7 +10,10 @@ class Hud {
         this.$hud_device = $("#hud-device")
         this.$hud_datetime = $("#hud-datetime")
         this.$hud_gps = $("#hud-gps")
-        this.$hud_tag = $("#hud-tag").on("click", () => this.playback.operation._filterByTagDialog())
+        this.$hud_tag = $("#hud-tag").on("click", () => {
+            const op = this.playback.operation
+            this.playback.tagging_mode ? op._tagFrameDialog() : op._filterByTagDialog()
+        })
         this.$hud_counter = $("#hud-counter")
         this.$hud_tag_filter = $("#hud-tag-filter").hide().on("click", () => this.playback.set_tag_filter([]))
         this.$hud_menu = $("#hud-menu")
@@ -69,6 +72,9 @@ class Hud {
         $("<div/>", { html: "▷" })
             .appendTo(this.$control_icons)
             .on("click", () => pl.goNext())
+        $("<div/>", { html: "&#9638;", title: "Grid overview" })
+            .appendTo(this.$control_icons)
+            .on("click", () => this.toggle_grid())
 
         // Bottom mobile nav bar (touch devices, see the `pointer: coarse` media query).
         // Its "menu" button is wired above, together with the top ☰ icon.
@@ -237,19 +243,26 @@ class Hud {
         const $container = this.$hud_thumbnails
 
         const THUMBNAIL_COUNT = 6
-        // visible frames' indices
+        // frames matching the active tag_filter (all of them when no filter is set), in order
+        const matching = pl.tag_filter.length
+            ? pl.$articles.toArray().filter(el => pl.frame_matches_filter($(el).data("frame")))
+            : pl.$articles.toArray()
+        const currentPos = Math.max(0, matching.indexOf(frame.$frame[0]))
+        // visible positions within `matching`
         const middle = Math.ceil(THUMBNAIL_COUNT / 2)
-        const frameIds = Array.from({ length: THUMBNAIL_COUNT }, (_, i) =>
-            i + (frame.index + middle >= pl.$articles.length ?
-                pl.$articles.length - THUMBNAIL_COUNT  // keep same thumbnails number at the ribbon end
-                : Math.max(0, frame.index - middle)))
-            .filter(id => id >= 0)
+        const positions = Array.from({ length: THUMBNAIL_COUNT }, (_, i) =>
+            i + (currentPos + middle >= matching.length ?
+                matching.length - THUMBNAIL_COUNT  // keep same thumbnails number at the ribbon end
+                : Math.max(0, currentPos - middle)))
+            .filter(pos => pos >= 0 && pos < matching.length)
+        const frames = positions.map(pos => $(matching[pos]).data("frame"))
+        const frameIds = frames.map(f => f.index)
 
         // remove old unused thumbnails
         $("frame-preview", $container).filter((_, el) => !frameIds.includes(Number(el.dataset.ref))).remove()
 
         // arrange thumbnails
-        this._2frames(frameIds).forEach(frame => this.assureThumbnail(frame, $container))
+        frames.forEach(frame => this.assureThumbnail(frame, $container))
 
         // film-strip should not take excessive height
         const scaleFactorX = $("frame-preview:first", $container).width() / pl.$current.width()
@@ -257,15 +270,6 @@ class Hud {
 
         // highlight current frame preview
         this.makeThumbnailsImportable($container, false) // prevent scrolling which scrolls main frame, not the thumbnails because there are only little of them
-    }
-
-    /**
-     *
-     * @param {number[]} indices of frames
-     * @returns {Frame[]}
-     */
-    _2frames(indices) {
-        return indices.map(index => $(this.playback.$articles[index]).data("frame"))
     }
 
     /**

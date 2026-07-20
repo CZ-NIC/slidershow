@@ -14,6 +14,18 @@ body {
     margin: 0;
 }
 
+kbd {
+    display: inline-block;
+    min-width: 1em;
+    padding: .05em .45em;
+    border: 1px solid currentColor;
+    border-radius: .3em;
+    font-family: monospace;
+    font-size: .85em;
+    line-height: 1.4;
+    box-shadow: 0 1px 0 currentColor;
+}
+
 main {
     position: relative;
     /* zoom:0.05 */
@@ -482,12 +494,29 @@ frame-preview {
                 padding: 4px 8px;
                 margin: 10px;
 
+                /* the "Presentation" (main) controller is always the grid's first row – give it enough
+                   clearance from #control-icons (fixed at top:3vh right:3vw) so its own hover-menu/arrow
+                   in the top-right corner isn't fought over with the fixed icons sitting on top of it. */
+                &[data-role="main"] {
+                    margin-top: max(10px, 6vh);
+                }
+
                 &.dragging-target {
                     box-shadow: inset 0px 0px 5px 0px var(--highlight);
                 }
 
                 .section-title {
                     flex: 1;
+                }
+
+                .tag-filter-badge {
+                    cursor: pointer;
+                    background-color: var(--control);
+                    color: var(--base);
+                    font-size: 90%;
+                    padding: .15em .7em;
+                    border-radius: 1em;
+                    margin-right: 8px;
                 }
 
                 &::after {

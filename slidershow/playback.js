@@ -615,8 +615,9 @@ class Playback {
 
 
 
+        const followingIndex = this.tag_filter.length ? this._nextMatchingIndex(index + 1, 1) : index + 1
         /** @type {Frame|undefined} */
-        const following = $(this.$articles[index + 1]).data("frame")
+        const following = $(this.$articles[followingIndex]).data("frame")
 
         // Make sure that current frame was preloaded.
         // We moved the playback position, old preloading tasks are no more valid, clear them.
