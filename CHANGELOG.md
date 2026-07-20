@@ -1,7 +1,7 @@
 # CHANGELOG
 
 ## 1.0.0 (unreleased)
-* feat: "Export albums to folders…" (<kbd>Ctrl+Shift+S</kbd>, Chrome/Edge) copies one folder per named tag plus a `vsechny` folder with everything, with `alba.json` + `<album>.txt` alongside
+* feat: "Export albums to folders…" (<kbd>Ctrl+Shift+S</kbd>, Chrome/Edge) copies one folder per named tag plus a `vsechny` folder with everything, with `alba.json` + `<album>.txt` alongside; the source folder (for photos not currently loaded in memory) is searched recursively, so a common ancestor of several subfolders works, can be changed at any time via "Change source folder…", and missing files can be retried against a different folder without re-exporting everything
 * feat (tagging): "Filter by tag…" shows only frames carrying any of the checked tags (OR across several), in both the grid and normal navigation; a HUD icon next to the frame counter appears while active and clears it on click
 * feat (tagging): tags are now multi-valued – a frame can carry several tags at once, toggled per digit (<kbd>0</kbd> still clears all); tags can be named via a new "Name tags…" command/button (<kbd>Alt+Shift+T</kbd>, `data-tag-names` on `<main>`), and named tags show wherever a tag is displayed (HUD, thumbnails, grid); tagging is now undoable
 * enh (hud): notification toasts stay up longer for longer messages instead of a fixed 2s, and a new "Notification history" command lists the last 50

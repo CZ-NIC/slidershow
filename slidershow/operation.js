@@ -121,6 +121,23 @@ class Operation {
     }
 
     /**
+     * Suspend every hotkey group while a Zebra_Dialog with its own inputs/checkboxes is open.
+     * WebHotkeys deliberately lets single-char keys (Space, digits, letters…) through when a checkbox
+     * is focused (it only special-cases text inputs/contenteditable) – without this, Space would toggle
+     * "Next frame" instead of the checkbox, and non-text hotkeys like Alt+combos fire even while typing
+     * in a text field. Pass the returned resume() as the dialog's `onClose` (fires on every close path –
+     * Ok, Cancel, the × button, Escape).
+     * @returns {function(): void}
+     */
+    suspendHotkeys() {
+        const groups = [this.global_shortcuts, this.switches, this.playthrough, this.general,
+            this.tagging, this.editing, this.media, this.properties, this.grid]
+        const wasEnabled = groups.map(g => g.some(h => h.enabled))
+        groups.forEach(g => g.disable())
+        return () => groups.forEach((g, i) => wasEnabled[i] && g.enable())
+    }
+
+    /**
      * All tag digits currently applied to at least one frame, ascending.
      * @returns {number[]}
      */
@@ -157,6 +174,7 @@ class Operation {
             source: { inline: $list },
             type: "question",
             title: "Filter by tag",
+            onClose: this.suspendHotkeys(),
             buttons: [
                 { caption: "Clear filter", callback: () => pl.set_tag_filter([]) },
                 "Cancel",
@@ -176,7 +194,7 @@ class Operation {
     _nameTagsDialog() {
         const pl = this.playback
         const existing = ($main.attr("data-tag-names") || "").split(",")
-        const maxTag = Math.max(3, existing.length, ...this._usedTags())
+        const maxTag = Math.max(9, existing.length, ...this._usedTags())
         const $list = $("<div/>", { class: "tag-names-list" })
         for (let t = 1; t <= maxTag; t++) {
             $("<label/>").append(
@@ -190,6 +208,7 @@ class Operation {
             source: { inline: $list },
             type: "question",
             title: "Name tags",
+            onClose: this.suspendHotkeys(),
             buttons: ["Cancel", {
                 caption: "Ok",
                 default_confirmation: true,

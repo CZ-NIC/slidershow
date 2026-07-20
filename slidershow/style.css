@@ -368,6 +368,10 @@ frame-preview {
             background-color: var(--control);
             font-size: 300%;
         }
+
+        #hud-tag-filter {
+            cursor: pointer;
+        }
     }
 
 
@@ -848,6 +852,17 @@ article-map {
 
     to {
         opacity: 0;
+    }
+}
+
+/* "Name tags…" / "Filter by tag…" dialogs (operation.js) – one row per line, the digit leads the row. */
+.tag-names-list,
+.tag-filter-list {
+    text-align: left;
+
+    label {
+        display: block;
+        padding: .2em 0;
     }
 }
 

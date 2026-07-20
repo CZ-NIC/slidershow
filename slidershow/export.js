@@ -164,6 +164,29 @@ class Export {
         return result
     }
 
+    /**
+     * Longest common directory prefix of `frames`' `data-src`/`src` paths (empty if none has a path,
+     * ex. plain filenames or data URLs) – shown as a hint of which folder to pick as the source.
+     * @param {Frame[]} frames
+     * @returns {string}
+     */
+    _common_path_hint(frames) {
+        const dirs = frames
+            .map(f => String(f.$actor.data("src") || f.$actor.attr("src") || ""))
+            .filter(p => p.includes("/"))
+            .map(p => p.slice(0, p.lastIndexOf("/")))
+        if (!dirs.length) {
+            return ""
+        }
+        return dirs.reduce((a, b) => {
+            let i = 0
+            while (i < a.length && a[i] === b[i]) {
+                i++
+            }
+            return a.slice(0, i)
+        })
+    }
+
     export_albums_dialog() {
         if (!window.showDirectoryPicker) {
             this.playback.hud.ok("Export albums", "Exporting albums to folders only works in Chrome/Edge.")
@@ -175,20 +198,33 @@ class Export {
             return
         }
         const allFrames = this.union_frames(albums)
-        const missing = allFrames.filter(f => !f.$actor.data("file")).length
+        const missingFrames = allFrames.filter(f => !f.$actor.data("file"))
+        const pathHint = this._common_path_hint(missingFrames)
 
         const summary = albums.map(a => `${a.name}: ${a.frames.length} files`).join("<br>")
             + `<br>vsechny: ${allFrames.length} files`
-            + (missing ? `<br>${missing} file(s) will be read from the source folder` : "")
+            + (missingFrames.length
+                ? `<br>${missingFrames.length} file(s) aren't loaded in memory (path-based / reopened presentation)`
+                + ` – you'll be asked for a "source folder" to read them from (its subfolders are searched too).`
+                + (pathHint ? `<br>Hint: their path looks like <code>${pathHint}/…</code> – pick that folder, or a parent of it.` : "")
+                : "")
 
-        new $.Zebra_Dialog(summary, {
+        new $.Zebra_Dialog({
+            message: summary,
             title: "Export albums to folders",
             type: "question",
-            buttons: ["Cancel", {
-                caption: "Export",
-                default_confirmation: true,
-                callback: () => this.export_albums(albums, allFrames)
-            }]
+            buttons: [
+                "Cancel",
+                ...(missingFrames.length ? [{
+                    caption: "Change source folder…",
+                    callback: () => this._change_source_dir_handle().then(() => this.export_albums_dialog())
+                }] : []),
+                {
+                    caption: "Export",
+                    default_confirmation: true,
+                    callback: () => this.export_albums(albums, allFrames)
+                }
+            ]
         })
     }
 
@@ -197,12 +233,13 @@ class Export {
      * @param {Frame[]} allFrames
      */
     async export_albums(albums, allFrames) {
-        let sourceDir = null
+        let sourceIndex = null
         if (allFrames.some(f => !f.$actor.data("file"))) {
-            sourceDir = await this._get_source_dir_handle()
+            const sourceDir = await this._get_source_dir_handle()
             if (!sourceDir) {
                 return // user cancelled the source folder picker
             }
+            sourceIndex = await this._build_source_index(sourceDir)
         }
 
         let targetDir
@@ -226,37 +263,84 @@ class Export {
         }
 
         const semaphore = new Semaphore(4)
+        /** @type {Object<string, FileSystemDirectoryHandle>} */
+        const dirHandles = {}
         /** @type {Object<string, {copiedNames: string[], missing: string[]}>} */
         const results = {}
 
-        const vsechnyDir = await targetDir.getDirectoryHandle("vsechny", { create: true })
-        results["vsechny"] = await this._copy_frames(allFrames, vsechnyDir, sourceDir, semaphore)
+        dirHandles["vsechny"] = await targetDir.getDirectoryHandle("vsechny", { create: true })
+        results["vsechny"] = await this._copy_frames(allFrames, dirHandles["vsechny"], sourceIndex, semaphore)
 
         for (const album of albums) {
-            const dir = await targetDir.getDirectoryHandle(album.name, { create: true })
-            results[album.name] = await this._copy_frames(album.frames, dir, sourceDir, semaphore)
+            dirHandles[album.name] = await targetDir.getDirectoryHandle(album.name, { create: true })
+            results[album.name] = await this._copy_frames(album.frames, dirHandles[album.name], sourceIndex, semaphore)
         }
 
+        await this._write_alba(targetDir, results)
+        this._show_export_summary(targetDir, albums, allFrames, dirHandles, results, semaphore)
+    }
+
+    async _write_alba(targetDir, results) {
         const alba = Object.fromEntries(Object.entries(results).map(([name, r]) => [name, r.copiedNames]))
         await this._write_text(targetDir, "alba.json", JSON.stringify(alba, null, 2))
-        for (const album of albums) {
-            await this._write_text(targetDir, `${album.name}.txt`, results[album.name].copiedNames.join("\n"))
+        for (const [name, r] of Object.entries(results)) {
+            if (name !== "vsechny") {
+                await this._write_text(targetDir, `${name}.txt`, r.copiedNames.join("\n"))
+            }
         }
+    }
 
+    /**
+     * @param {FileSystemDirectoryHandle} targetDir
+     * @param {Album[]} albums
+     * @param {Frame[]} allFrames
+     * @param {Object<string, FileSystemDirectoryHandle>} dirHandles
+     * @param {Object<string, {copiedNames: string[], missing: string[]}>} results
+     * @param {Semaphore} semaphore
+     */
+    _show_export_summary(targetDir, albums, allFrames, dirHandles, results, semaphore) {
         const summary = Object.entries(results)
             .map(([name, r]) => `${name}: ${r.copiedNames.length} copied` + (r.missing.length ? `, ${r.missing.length} missing` : ""))
             .join("<br>")
-        this.playback.hud.ok("Album export finished", summary)
+        this.playback.hud._pushHistory(summary)
+
+        const missingCount = results["vsechny"].missing.length
+        new $.Zebra_Dialog(summary, {
+            title: "Album export finished",
+            type: missingCount ? "question" : "information",
+            buttons: missingCount ? [{ caption: "Done" }, {
+                caption: "Change source folder & retry",
+                callback: async () => {
+                    const sourceDir = await this._change_source_dir_handle()
+                    if (!sourceDir) {
+                        return
+                    }
+                    const sourceIndex = await this._build_source_index(sourceDir)
+                    for (const [name, dirHandle] of Object.entries(dirHandles)) {
+                        const frames = (name === "vsechny" ? allFrames : albums.find(a => a.name === name).frames)
+                            .filter(f => results[name].missing.includes(f.get_filename()))
+                        if (!frames.length) {
+                            continue
+                        }
+                        const retried = await this._copy_frames(frames, dirHandle, sourceIndex, semaphore)
+                        results[name].copiedNames.push(...retried.copiedNames)
+                        results[name].missing = retried.missing
+                    }
+                    await this._write_alba(targetDir, results)
+                    this._show_export_summary(targetDir, albums, allFrames, dirHandles, results, semaphore)
+                }
+            }] : false
+        })
     }
 
     /**
      * @param {Frame[]} frames
      * @param {FileSystemDirectoryHandle} dirHandle
-     * @param {?FileSystemDirectoryHandle} sourceDir
+     * @param {?Map<string, FileSystemFileHandle>} sourceIndex
      * @param {Semaphore} semaphore
      * @returns {Promise<{copiedNames: string[], missing: string[]}>}
      */
-    async _copy_frames(frames, dirHandle, sourceDir, semaphore) {
+    async _copy_frames(frames, dirHandle, sourceIndex, semaphore) {
         const copiedNames = []
         const missing = []
         const usedNames = new Set()
@@ -264,7 +348,7 @@ class Export {
         await Promise.all(frames.map(async frame => {
             const release = await semaphore.acquire()
             try {
-                const file = await this._frame_file(frame, sourceDir)
+                const file = await this._frame_file(frame, sourceIndex)
                 if (!file) {
                     missing.push(frame.get_filename())
                     return
@@ -299,20 +383,44 @@ class Export {
     }
 
     /**
+     * Recursively index every file under `dir` by basename, so the source folder can be a common
+     * ancestor of photos spread across several subfolders (first match wins on a duplicate basename –
+     * same caveat as the localStorage tag/name lookup elsewhere in the app).
+     * @param {FileSystemDirectoryHandle} dir
+     * @returns {Promise<Map<string, FileSystemFileHandle>>}
+     */
+    async _build_source_index(dir) {
+        const index = new Map()
+        const walk = async (dirHandle) => {
+            for await (const [name, handle] of dirHandle.entries()) {
+                if (handle.kind === "file") {
+                    if (!index.has(name)) {
+                        index.set(name, handle)
+                    }
+                } else if (handle.kind === "directory") {
+                    await walk(handle)
+                }
+            }
+        }
+        await walk(dir)
+        return index
+    }
+
+    /**
      * @param {Frame} frame
-     * @param {?FileSystemDirectoryHandle} sourceDir
+     * @param {?Map<string, FileSystemFileHandle>} sourceIndex
      * @returns {Promise<?File>}
      */
-    async _frame_file(frame, sourceDir) {
+    async _frame_file(frame, sourceIndex) {
         const stashed = frame.$actor.data("file")
         if (stashed) {
             return stashed
         }
-        if (!sourceDir) {
+        const handle = sourceIndex?.get(frame.get_filename())
+        if (!handle) {
             return null
         }
         try {
-            const handle = await sourceDir.getFileHandle(frame.get_filename())
             return await handle.getFile()
         } catch (e) {
             return null
@@ -347,6 +455,22 @@ class Export {
         }
         await this._persist_handle(handle)
         return handle
+    }
+
+    /**
+     * Always opens the picker (skips the persisted-handle fast path in _get_source_dir_handle), so the
+     * user can pick a different folder even after one was already persisted from a previous export.
+     * @returns {Promise<?FileSystemDirectoryHandle>} Null if the user cancels the picker.
+     */
+    async _change_source_dir_handle() {
+        try {
+            const handle = await window.showDirectoryPicker({ mode: "read", id: "slidershow-source", startIn: "pictures" })
+            await this._persist_handle(handle)
+            this.playback.hud.info("Source folder updated.")
+            return handle
+        } catch (e) {
+            return null
+        }
     }
 
     async _persist_handle(handle) {

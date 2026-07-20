@@ -116,3 +116,99 @@ test("collision suffix: two frames sharing a basename in the same album get a _2
     })
     expect(names).toEqual(["pic.jpg", "pic_2.jpg", "pic_3.jpg"])
 })
+
+test("_build_source_index finds files in nested subfolders (a common ancestor works as the source)", async ({ page }) => {
+    const found = await page.evaluate(async () => {
+        const root = await navigator.storage.getDirectory()
+        await root.remove({ recursive: true }).catch(() => { })
+        const sub1 = await root.getDirectoryHandle("sub1", { create: true })
+        const write = async (dir, name) => {
+            const fh = await dir.getFileHandle(name, { create: true })
+            const w = await fh.createWritable()
+            await w.write("x")
+            await w.close()
+        }
+        await write(sub1, "one.jpg")
+        const deep = await (await root.getDirectoryHandle("sub2", { create: true })).getDirectoryHandle("deep", { create: true })
+        await write(deep, "two.jpg")
+
+        const index = await menu.export._build_source_index(root)
+        return [...index.keys()].sort()
+    })
+    expect(found).toEqual(["one.jpg", "two.jpg"])
+})
+
+test("_change_source_dir_handle overrides a previously persisted source folder", async ({ page }) => {
+    await page.evaluate(async () => {
+        const root = await navigator.storage.getDirectory()
+        await root.remove({ recursive: true }).catch(() => { })
+        await root.getDirectoryHandle("folderA", { create: true })
+        await root.getDirectoryHandle("folderB", { create: true })
+    })
+
+    await page.evaluate(async () => {
+        const root = await navigator.storage.getDirectory()
+        window.showDirectoryPicker = async () => root.getDirectoryHandle("folderA")
+        await menu.export._get_source_dir_handle()
+    })
+    expect(await page.evaluate(async () => (await menu.export._load_persisted_handle()).name)).toBe("folderA")
+
+    await page.evaluate(async () => {
+        const root = await navigator.storage.getDirectory()
+        window.showDirectoryPicker = async () => root.getDirectoryHandle("folderB")
+        await menu.export._change_source_dir_handle()
+    })
+    expect(await page.evaluate(async () => (await menu.export._load_persisted_handle()).name)).toBe("folderB")
+
+    // _get_source_dir_handle now reuses folderB straight away – no re-prompt needed
+    await page.evaluate(() => {
+        window.showDirectoryPicker = async () => { throw new Error("should not be called – a valid handle is already persisted") }
+    })
+    expect(await page.evaluate(async () => (await menu.export._get_source_dir_handle()).name)).toBe("folderB")
+})
+
+test("export summary offers Change source folder & retry when files are missing, and retry recovers them", async ({ page }) => {
+    await page.evaluate(async () => {
+        const root = await navigator.storage.getDirectory()
+        await root.remove({ recursive: true }).catch(() => { })
+        await root.getDirectoryHandle("empty", { create: true })
+        const found = await root.getDirectoryHandle("found", { create: true })
+        const fh = await found.getFileHandle("three.jpg", { create: true })
+        const w = await fh.createWritable()
+        await w.write("data")
+        await w.close()
+
+        // three.jpg has to come from a source folder – drop its in-memory File stash
+        const frames = playback.$articles.toArray().map(el => $(el).data("frame"))
+        frames[2].$actor.removeData("file")
+
+        window.__sourcePick = "empty"
+        window.showDirectoryPicker = async (opts) => opts.mode === "readwrite"
+            ? root.getDirectoryHandle("target", { create: true })
+            : root.getDirectoryHandle(window.__sourcePick)
+    })
+
+    await page.evaluate(async () => {
+        const albums = menu.export.collect_albums()
+        const union = menu.export.union_frames(albums)
+        await menu.export.export_albums(albums, union)
+    })
+
+    await expect(page.locator(".ZebraDialog", { hasText: "missing" })).toBeVisible()
+    const retryButton = page.getByRole("link", { name: "Change source folder & retry" })
+    await expect(retryButton).toBeVisible()
+
+    await page.evaluate(() => window.__sourcePick = "found")
+    await retryButton.click()
+
+    await expect.poll(() => page.locator(".ZebraDialog").last().textContent()).not.toContain("missing")
+
+    const copied = await page.evaluate(async () => {
+        const root = await navigator.storage.getDirectory()
+        const vsechny = await (await root.getDirectoryHandle("target")).getDirectoryHandle("vsechny")
+        const names = []
+        for await (const name of vsechny.keys()) names.push(name)
+        return names.sort()
+    })
+    expect(copied).toEqual(["one.jpg", "three.jpg", "two.jpg"])
+})
