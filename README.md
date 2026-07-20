@@ -437,7 +437,13 @@ Some formats do not play in every browser (ex: HEIC/HEIF photos are decoded by S
 <main data-fallback="converted/{name}.jpg">
 ```
 
-You prepare the alternative file yourself; SlideRshow never converts it. If `data-fallback` is missing, empty, or also fails to load, the original error is left as-is (broken `<img>`/`<video>`), no error is shown.
+Several space-separated templates may be given – useful when a single `data-fallback` set high up (ex: on `<main>`) has to cover both photos and videos, which convert to different containers/extensions. Each candidate is tried in order; the first that actually loads/decodes wins:
+
+```html
+<main data-fallback="converted/{name}.jpg converted/{name}.mp4">
+```
+
+You prepare the alternative file(s) yourself; SlideRshow never converts them. If none of the candidates loads (or `data-fallback` is empty/missing), a toast warns about the unsupported file for the frame currently being viewed (a visible thumbnail, if any, stays on screen).
 
 ### `<video>`
 

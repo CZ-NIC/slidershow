@@ -1,6 +1,7 @@
 # CHANGELOG
 
 ## 1.0.0 (unreleased)
+* enh: `data-fallback` accepts several space-separated templates, tried in order until one actually loads/decodes – lets a single `data-fallback` set on `<main>` cover both photos and videos (which need differently-named/typed replacement files) without the generator having to know which applies to a given file
 * enh: `data-datetime` now resolves through the general `prop()` inheritance (like `data-thumb`/`data-fallback`/`data-rotate`) instead of being read only off the `<img>`/`<video>` element, so it can be set once on `<article>`/`<section>`/`<main>` without a nested media tag
 * feat: `data-fallback` (same template/inheritance as `data-thumb`) points to a pre-converted alternative file that's loaded automatically when `data-src` fails to load/decode (ex: HEIC/HEIF photos Chrome on Windows can't render); if the fallback also fails (or none is set), a toast warns about the unsupported file for the frame currently being viewed (the thumbnail, if any, stays visible)
 * enh (grid): nested sections & loose frames — section/presentation headers now count frames recursively (all the way down, across nested subsections) while still listing only the direct subsections; regroup and post-delete navigation see through `<div>` wrappers (e.g. `data-duration` groups) via a new `getDirectFrames`; frames living loose under `<main>` (in no `<section>`) get a full-width "Loose frames" divider in the grid instead of looking glued to the section above them (frame ordering still leaves div-wrapped groups untouched — known limitation)

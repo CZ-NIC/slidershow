@@ -474,10 +474,12 @@ class Frame {
                 const release = await gate(playback?.original_loader)
                 try {
                     let final_src = await Frame.probe_image(src) ? src : null
-                    if (!final_src) { // browser could not decode the original (ex: HEIC/HEIF) – try data-fallback
-                        const fallback = Frame.get_fallback_src($el)
-                        if (fallback && await Frame.probe_image(fallback)) {
-                            final_src = fallback
+                    if (!final_src) { // browser could not decode the original (ex: HEIC/HEIF) – try data-fallback candidates in order
+                        for (const fallback of Frame.get_fallback_src($el)) {
+                            if (await Frame.probe_image(fallback)) {
+                                final_src = fallback
+                                break
+                            }
                         }
                     }
                     if (final_src) {
@@ -521,12 +523,14 @@ class Frame {
             })
 
             el.src = src
-            if (!(await await_load())) { // browser could not load/decode the file – try data-fallback
-                const fallback = Frame.get_fallback_src($el)
+            if (!(await await_load())) { // browser could not load/decode the file – try data-fallback candidates in order
                 let ok = false
-                if (fallback) {
+                for (const fallback of Frame.get_fallback_src($el)) {
                     el.src = fallback
-                    ok = await await_load()
+                    if (await await_load()) {
+                        ok = true
+                        break
+                    }
                 }
                 if (!ok && distance() === 0) { // only warn for the frame actually being viewed, not background preloads
                     playback?.hud?.info(`Unsupported or unreadable file: ${src}`)
@@ -546,27 +550,39 @@ class Frame {
      * @returns {?string}
      */
     static get_thumb_src($el) {
-        return Frame._resolve_src_template($el, "thumb")
+        const template = prop("thumb", $el, "")
+        return Frame._resolve_placeholders(template, $el)
     }
 
     /**
-     * Resolve the fallback URL for a media element from the inherited `data-fallback` template, used when
-     * the browser fails to load/decode `data-src` (ex: HEIC/HEIF photos Chrome cannot render). Same
-     * placeholder syntax as `data-thumb` – see get_thumb_src().
+     * Resolve the fallback URL candidate(s) for a media element from the inherited `data-fallback`
+     * template, used when the browser fails to load/decode `data-src` (ex: HEIC/HEIF photos Chrome
+     * cannot render). Same placeholder syntax as `data-thumb` – see get_thumb_src().
+     *
+     * Several space-separated templates may be given, ex: `"{dir}{file}.jpg {dir}{file}.mp4"` — tried
+     * in order by the caller (see load()), first one that actually loads/decodes wins. Useful when
+     * `data-fallback` is set high up (ex: on `<main>`) for a presentation mixing photos and videos: the
+     * two need differently-named (and differently-typed) replacement files, so a single candidate could
+     * not cover both, but the caller does not need to know which one applies to a given file.
      * @param {JQuery} $el
-     * @returns {?string}
+     * @returns {string[]} Empty when data-fallback is not set.
      */
     static get_fallback_src($el) {
-        return Frame._resolve_src_template($el, "fallback")
+        const template = prop("fallback", $el, "")
+        return template.split(/\s+/).filter(Boolean)
+            .map(t => Frame._resolve_placeholders(t, $el))
+            .filter(Boolean)
     }
 
     /**
+     * Substitutes {dir}/{file}/{name}/{ext} (derived from the element's data-src) into one template.
+     * A template without placeholders (ex: set directly on one <img data-thumb="...">) is used verbatim,
+     * which lets a single attribute act both as a presentation-wide convention and a per-file override.
+     * @param {string} template
      * @param {JQuery} $el
-     * @param {string} prop_name
      * @returns {?string}
      */
-    static _resolve_src_template($el, prop_name) {
-        const template = prop(prop_name, $el, "")
+    static _resolve_placeholders(template, $el) {
         const src = $el.data("src")
         if (!template || !src) {
             return null
