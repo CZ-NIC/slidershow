@@ -1,6 +1,7 @@
 # CHANGELOG
 
 ## 1.0.0 (unreleased)
+* enh: the loading spinner shows the download percentage while a video's or image's full-quality file is still downloading (video via native `progress`/`buffered`; images via a progress-tracked `fetch()`, falling back to the plain `<img>` load over `file://` or when `Content-Length` is missing)
 * fix (navigation): <kbd>Alt+PageDown</kbd> on the very first (loose, directly under `<main>`) frame jumped straight to the last slide instead of the next section
 * fix (tagging): "Group frames according to their tag" now gathers *every* untagged frame (ex. cleared with <kbd>0</kbd>) into a single catch-all section — previously only frames loose under `<main>` were collected, so photos untagged inside an existing section stayed scattered there
 * enh (tagging): after "Group frames according to their tag" the resulting sections are ordered by tag number (1, 2, 3…) instead of by the order frames happened to appear; the untagged catch-all sinks to the end

@@ -56,6 +56,7 @@ class Hud {
 
         // Loading spinner, revealed while the current frame's full-quality media is still downloading.
         this.$hud_loading = $("<div/>", { id: "hud-loading" }).appendTo("#hud")
+        this.$hud_loading_percent = $("<span/>").appendTo(this.$hud_loading)
         this._loading_timer = undefined
 
         this.$hud_hideable
@@ -484,13 +485,33 @@ class Hud {
     /**
      * Reveal a loading spinner while `frame`'s full-quality media is still downloading, hide it once loaded.
      * A short delay first avoids a flash on frames that are already cached.
+     * For a <video> actor, the spinner also shows the buffered percentage – unlike <img>, <video> exposes
+     * download progress natively via the `progress` event and the `buffered` ranges.
+     * For an <img> actor, Frame._fetch_with_progress() (see frame.js) fetches the full file itself and
+     * triggers `loadprogress.slidershow` with the percentage, since a plain <img src> exposes no progress.
      * @param {Frame} frame
      */
     loading(frame) {
         clearTimeout(this._loading_timer)
         this.$hud_loading.removeClass("active")
+        this.$hud_loading_percent.text("")
         this._loading_timer = setTimeout(() => this.$hud_loading.addClass("active"), 150)
+
+        const $video = frame.$actor.is("video") ? frame.$actor : null
+        $video?.on("progress.slidershow-load", () => {
+            const el = $video[0]
+            if (el.duration && isFinite(el.duration) && el.buffered.length) {
+                const percent = Math.round(el.buffered.end(el.buffered.length - 1) / el.duration * 100)
+                this.$hud_loading_percent.text(percent + "%")
+            }
+        })
+
+        const $img = frame.$actor.is("img") ? frame.$actor : null
+        $img?.on("loadprogress.slidershow", (e, percent) => this.$hud_loading_percent.text(percent + "%"))
+
         frame.loaded.then(() => {
+            $video?.off("progress.slidershow-load")
+            $img?.off("loadprogress.slidershow")
             if (this.playback.frame === frame) { // ignore if the user has navigated away meanwhile
                 clearTimeout(this._loading_timer)
                 this.$hud_loading.removeClass("active")

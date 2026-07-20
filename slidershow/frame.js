@@ -473,7 +473,15 @@ class Frame {
             const full_task = (async () => {
                 const release = await gate(playback?.original_loader)
                 try {
-                    let final_src = await Frame.probe_image(src) ? src : null
+                    let final_src
+                    try {
+                        final_src = await Frame.probe_image_with_progress($el, src, percent => $el.trigger("loadprogress.slidershow", [percent]))
+                    } catch (e) {
+                        if (e.name === "AbortError") { // frame was unloaded mid-fetch – nothing left to do
+                            return
+                        }
+                        throw e
+                    }
                     if (!final_src) { // browser could not decode the original (ex: HEIC/HEIF) – try data-fallback candidates in order
                         for (const fallback of Frame.get_fallback_src($el)) {
                             if (await Frame.probe_image(fallback)) {
@@ -522,8 +530,30 @@ class Frame {
                 }
             })
 
-            el.src = src
-            if (!(await await_load())) { // browser could not load/decode the file – try data-fallback candidates in order
+            let loaded = false
+            if (isImg) { // try a progress-tracked fetch first, so the HUD spinner can show a percentage
+                let blob_src
+                try {
+                    blob_src = await Frame._fetch_with_progress($el, src, percent => $el.trigger("loadprogress.slidershow", [percent]))
+                } catch (e) {
+                    if (e.name === "AbortError") { // frame was unloaded mid-fetch – nothing left to do
+                        return
+                    }
+                    throw e
+                }
+                if (blob_src) {
+                    el.src = blob_src
+                    loaded = await await_load()
+                    if (!loaded) { // fetched fine but the browser could not decode it (ex: HEIC/HEIF)
+                        URL.revokeObjectURL(blob_src)
+                    }
+                }
+            }
+            if (!loaded) {
+                el.src = src
+                loaded = await await_load()
+            }
+            if (!loaded) { // browser could not load/decode the file – try data-fallback candidates in order
                 let ok = false
                 for (const fallback of Frame.get_fallback_src($el)) {
                     el.src = fallback
@@ -612,6 +642,84 @@ class Frame {
     }
 
     /**
+     * Like probe_image(), but downloads through Frame._fetch_with_progress() first (reporting progress
+     * via `onProgress`) so the HUD spinner can show a percentage – falls back to the plain, progress-less
+     * probe_image() when progress-tracked fetching is not possible (file://, no Content-Length, network
+     * error) or when the fetched bytes turn out undecodable (ex: HEIC/HEIF – the caller's data-fallback
+     * loop then takes over).
+     * @param {JQuery} $el
+     * @param {string} src
+     * @param {Function} onProgress Called with an integer percent (0-100) as bytes arrive.
+     * @returns {Promise<?string>} A usable src (object URL or the original `src`), or null when undecodable.
+     * @throws {DOMException} AbortError when the frame was unloaded (Frame.unload_media()) mid-fetch.
+     */
+    static async probe_image_with_progress($el, src, onProgress) {
+        const blob_src = await Frame._fetch_with_progress($el, src, onProgress)
+        if (blob_src) {
+            if (await Frame.probe_image(blob_src)) {
+                return blob_src
+            }
+            URL.revokeObjectURL(blob_src) // fetched fine but the browser could not decode it (ex: HEIC/HEIF)
+        }
+        return await Frame.probe_image(src) ? src : null
+    }
+
+    /**
+     * Downloads `src` via fetch(), reporting an integer percent (0-100) to `onProgress` as chunks arrive –
+     * unlike a plain <img src>, which exposes no progress. The AbortController is stashed on $el's jQuery
+     * data so Frame.unload_media() can cancel an in-flight download when the frame is skipped/unloaded
+     * before it finishes.
+     * @param {JQuery} $el
+     * @param {string} src
+     * @param {Function} onProgress
+     * @returns {Promise<?string>} An object URL for the downloaded blob, or null when progress-tracked
+     *  fetching is not applicable (non-http(s) scheme, ex: file:///data:/blob:) or the response has no
+     *  usable Content-Length (ex: chunked/compressed transfer – percent could not be computed) or failed.
+     * @throws {DOMException} AbortError when aborted via Frame.unload_media() mid-fetch.
+     */
+    static async _fetch_with_progress($el, src, onProgress) {
+        let protocol
+        try {
+            protocol = new URL(src, location.href).protocol
+        } catch (e) {
+            return null
+        }
+        if (protocol !== "http:" && protocol !== "https:") {
+            return null
+        }
+
+        const controller = new AbortController()
+        $el.data("progress-abort", controller)
+        try {
+            const response = await fetch(src, { signal: controller.signal })
+            const total = Number(response.headers.get("Content-Length")) || 0
+            if (!response.ok || !response.body || !total) {
+                return null
+            }
+            const reader = response.body.getReader()
+            const chunks = []
+            let loaded = 0
+            for (; ;) {
+                const { done, value } = await reader.read()
+                if (done) {
+                    break
+                }
+                chunks.push(value)
+                loaded += value.length
+                onProgress(Math.round(loaded / total * 100))
+            }
+            return URL.createObjectURL(new Blob(chunks))
+        } catch (e) {
+            if (e.name === "AbortError") {
+                throw e
+            }
+            return null // network/CORS failure – caller falls back to the plain <img src>
+        } finally {
+            $el.removeData("progress-abort")
+        }
+    }
+
+    /**
      * Opposite of this.preload()
      * Functionality should be partially duplicated finalize_frames (due to performance reasons).
      * Somewhere the duplication has no sense, like putting video[data-autoplay-prevented]
@@ -639,12 +747,14 @@ class Frame {
 
     /** If there is a place the `[src]` can be re-read, delete it. */
     static unload_media($el, $el_original = null) {
+        $el.data("progress-abort")?.abort() // cancel Frame._fetch_with_progress() if it is still in flight
         if ($el.attr("data-thumb-shown")) {
             // The full-quality file never finished loading; drop the thumbnail too so a future preload() starts over
             // instead of finding a (thumbnail) `src` already present and skipping the load.
             $el.removeAttr("src data-thumb-shown")
-        } else if (($el_original || $el).data(READ_SRC) || $el.data("src") && $el.data("src") === $el.attr("src")) {
-            URL.revokeObjectURL($el.attr("src")) // for the case this is a blob URL given by FrameFactory reader
+        } else if (($el_original || $el).data(READ_SRC) || $el.data("src") && $el.data("src") === $el.attr("src")
+            || $el.attr("src")?.startsWith("blob:")) {
+            URL.revokeObjectURL($el.attr("src")) // for the case this is a blob URL (FrameFactory reader, or Frame._fetch_with_progress())
             $el.removeAttr("src")
         }
         if ($el.is("video") && $el.attr("autoplay")) {

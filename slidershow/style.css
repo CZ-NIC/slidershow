@@ -259,7 +259,18 @@ frame-preview {
         animation: hud-spin .8s linear infinite;
 
         &.active {
-            display: block;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* Buffered percentage for <video>, set by Hud.loading(). Empty text collapses to nothing for <img>.
+           Counter-rotated so the text stays upright while the spinner itself spins around it. */
+        > span {
+            animation: hud-spin-reverse .8s linear infinite;
+            font-size: 11px;
+            color: #0fa;
+            white-space: nowrap;
         }
     }
 
@@ -902,6 +913,12 @@ article-map {
 @keyframes hud-spin {
     to {
         transform: rotate(360deg);
+    }
+}
+
+@keyframes hud-spin-reverse {
+    to {
+        transform: rotate(-360deg);
     }
 }
 
