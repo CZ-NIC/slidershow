@@ -113,7 +113,8 @@ const PROP_DEFAULT = {
     "spread-frames": "spiral",
     "step-shown": false,
     "rotate": 0,
-    "thumb": ""
+    "thumb": "",
+    "fallback": ""
 }
 const PROP_NONSCALAR = {
     "step-points": true,

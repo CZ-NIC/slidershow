@@ -581,6 +581,27 @@ frame-preview {
                         }
                     }
 
+                    .tag-filter-dropdown {
+                        min-width: 160px;
+
+                        label {
+                            display: block;
+                            padding: 4px 12px;
+                            white-space: nowrap;
+                            cursor: pointer;
+
+                            &:hover {
+                                background: rgba(255, 255, 255, 0.1);
+                            }
+                        }
+
+                        .dropdown-empty {
+                            display: block;
+                            padding: 4px 12px;
+                            opacity: .7;
+                        }
+                    }
+
                     &:hover .dropdown {
                         display: flex;
                     }
@@ -598,6 +619,17 @@ frame-preview {
                     }
                 }
 
+            }
+
+            /* Cue heading a run of frames that live loose under <main> (in no <section>). Full-width so it
+               forces a row break, keeping orphans from looking glued to the section above them. */
+            .grid-orphan-divider {
+                flex-basis: 100%;
+                padding: 4px 8px;
+                margin: 10px 10px 0;
+                font-size: 90%;
+                font-style: italic;
+                opacity: 0.55;
             }
         }
 

@@ -423,6 +423,16 @@ You only prepare the thumbnails yourself (ex: with `ffmpeg`/`imagemagick`) – S
 
 The grid/ribbon overview (<kbd>Alt+G</kbd>/<kbd>Alt+J</kbd>) uses the thumbnail exclusively and never downloads the full file just to show a preview.
 
+#### Fallback source (`data-fallback`)
+
+Some formats do not play in every browser (ex: HEIC/HEIF photos are decoded by Safari but not by Chrome on Windows). Set `data-fallback` – same placeholder syntax and inheritance as `data-thumb` – to a pre-converted alternative that is loaded automatically if `data-src` fails to load or decode:
+
+```html
+<main data-fallback="converted/{name}.jpg">
+```
+
+You prepare the alternative file yourself; SlideRshow never converts it. If `data-fallback` is missing, empty, or also fails to load, the original error is left as-is (broken `<img>`/`<video>`), no error is shown.
+
 ### `<video>`
 
 ```html

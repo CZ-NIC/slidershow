@@ -15,7 +15,10 @@ class SectionController {
      */
     getSectionName($section, fallbackLabel = "Section") {
         const title = $section.data("title") || $section.data("name")
-        const { sections: sectionCount, frames: frameCount } = this.getDirectCounts($section)
+        // Sections: only the direct subsections (the outline at this level). Frames: the TOTAL all the way
+        // down (every frame in every nested subsection), so a header answers "how big is this group".
+        const sectionCount = this.getDirectSections($section).length
+        const frameCount = this.getTotalFrameCount($section)
         const counts = sectionCount
             ? `${sectionCount} section${sectionCount === 1 ? "" : "s"}, ${frameCount} frame${frameCount === 1 ? "" : "s"}`
             : String(frameCount)
@@ -23,20 +26,12 @@ class SectionController {
     }
 
     /**
-     * Counts sections/frames "logically" inside $section – a section/frame counts as direct even when
-     * wrapped in one or more plain <div>s (ex. a layout wrapper for centering, or a shared-duration
-     * group), as long as no other <section>/frame boundary sits in between. A single find() over the
-     * subtree (native querySelectorAll, not manual recursion) plus a cheap ancestor check per match, so
-     * this stays fine even on large presentations.
      * @param {JQuery} $section
-     * @returns {{sections: number, frames: number}}
+     * @returns {number} Every frame anywhere inside $section, recursively – across div wrappers AND nested
+     * subsections. Plain find() (native querySelectorAll), fine even on large presentations.
      */
-    getDirectCounts($section) {
-        const isDirect = (el) => $(el).parentsUntil($section, this._boundarySelector()).length === 0
-        return {
-            sections: this.getDirectSections($section).length,
-            frames: $section.find(FRAME_TAGS).filter((_, el) => isDirect(el)).length,
-        }
+    getTotalFrameCount($section) {
+        return $section.find(FRAME_TAGS).length
     }
 
     /**
@@ -48,6 +43,17 @@ class SectionController {
      */
     getDirectSections($section) {
         return $section.find("section").filter((_, el) => $(el).parentsUntil($section, this._boundarySelector()).length === 0)
+    }
+
+    /**
+     * @param {JQuery} $section
+     * @returns {JQuery<HTMLElement>} Frames "directly" inside $section at this logical level – seeing
+     * through transparent <div> wrappers (layout/shared-duration groups) but NOT descending into nested
+     * <section>s (those own their frames). Mirror of getDirectSections; use it for section-level ops
+     * (regroup, navigation) so a frame wrapped in a <div data-duration> is not overlooked.
+     */
+    getDirectFrames($section) {
+        return $section.find(FRAME_TAGS).filter((_, el) => $(el).parentsUntil($section, "section").length === 0)
     }
 
     _boundarySelector() {
@@ -159,7 +165,9 @@ class SectionController {
 
     deleteSection($section) {
         const pl = this.playback
-        const $frames = $section.children(FRAME_SELECTOR)
+        // Every frame that disappears with the section – recursively, incl. nested subsections and
+        // div-wrapped frames – so the post-delete navigation lands on a frame that still exists.
+        const $frames = $section.find(FRAME_TAGS)
 
         const $prev = $section.prev()
         const $parent = $section.parent()

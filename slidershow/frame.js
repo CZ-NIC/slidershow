@@ -473,18 +473,21 @@ class Frame {
             const full_task = (async () => {
                 const release = await gate(playback?.original_loader)
                 try {
-                    const ok = await new Promise(r => { // a hidden Image, so the visible thumbnail is not interrupted
-                        const preloader = new Image()
-                        preloader.onload = () => r(true)
-                        preloader.onerror = () => r(false)
-                        preloader.src = src
-                    })
-                    if (ok) {
+                    let final_src = await Frame.probe_image(src) ? src : null
+                    if (!final_src) { // browser could not decode the original (ex: HEIC/HEIF) – try data-fallback
+                        const fallback = Frame.get_fallback_src($el)
+                        if (fallback && await Frame.probe_image(fallback)) {
+                            final_src = fallback
+                        }
+                    }
+                    if (final_src) {
                         full_shown = true
-                        $el.attr("src", src).removeAttr("data-thumb-shown") // instant cache hit, no second request
+                        $el.attr("src", final_src).removeAttr("data-thumb-shown") // instant cache hit, no second request
                         // Wait for the visible element too – `loaded` must not resolve while it still displays the thumbnail
                         // (Chrome keeps el.complete false for a moment even on a cache hit, which made Frame.exif bail out).
                         await new Promise(r => { el.onload = r; el.onerror = r })
+                    } else if (distance() === 0) { // the thumbnail (if any) stays visible; only warn for the frame actually being viewed
+                        playback?.hud?.info(`Unsupported or unreadable file: ${src}`)
                     }
                 } finally {
                     release()
@@ -507,16 +510,28 @@ class Frame {
         // Full file (a video, or an image without a thumbnail template), throttled by the stricter limiter.
         const release = await gate(playback?.original_loader)
         try {
-            el.src = src
-            await new Promise(r => {
+            const await_load = () => new Promise(r => {
                 if (isImg) {
-                    el.onload = r
-                    el.onerror = r
+                    el.onload = () => r(true)
+                    el.onerror = () => r(false)
                 } else {
-                    el.onloadeddata = r
-                    el.onerror = r
+                    el.onloadeddata = () => r(true)
+                    el.onerror = () => r(false)
                 }
             })
+
+            el.src = src
+            if (!(await await_load())) { // browser could not load/decode the file – try data-fallback
+                const fallback = Frame.get_fallback_src($el)
+                let ok = false
+                if (fallback) {
+                    el.src = fallback
+                    ok = await await_load()
+                }
+                if (!ok && distance() === 0) { // only warn for the frame actually being viewed, not background preloads
+                    playback?.hud?.info(`Unsupported or unreadable file: ${src}`)
+                }
+            }
         } finally {
             release()
         }
@@ -531,7 +546,27 @@ class Frame {
      * @returns {?string}
      */
     static get_thumb_src($el) {
-        const template = prop("thumb", $el, "")
+        return Frame._resolve_src_template($el, "thumb")
+    }
+
+    /**
+     * Resolve the fallback URL for a media element from the inherited `data-fallback` template, used when
+     * the browser fails to load/decode `data-src` (ex: HEIC/HEIF photos Chrome cannot render). Same
+     * placeholder syntax as `data-thumb` – see get_thumb_src().
+     * @param {JQuery} $el
+     * @returns {?string}
+     */
+    static get_fallback_src($el) {
+        return Frame._resolve_src_template($el, "fallback")
+    }
+
+    /**
+     * @param {JQuery} $el
+     * @param {string} prop_name
+     * @returns {?string}
+     */
+    static _resolve_src_template($el, prop_name) {
+        const template = prop(prop_name, $el, "")
         const src = $el.data("src")
         if (!template || !src) {
             return null

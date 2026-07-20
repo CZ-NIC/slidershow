@@ -115,8 +115,9 @@ class GridController {
 
     sectionMenuAction($section, role, param) {
         const pl = this.pl
-        /** @type {JQuery} Frames in the current section  */
-        const $frames = $section.children(FRAME_SELECTOR)
+        /** @type {JQuery} Frames at this section's own level – seeing through <div> wrappers, but not into
+         * nested subsections (they have their own ribbon). Used for regroup/import placement. */
+        const $frames = pl.section_controller.getDirectFrames($section)
         /** @type {JQuery} Current frame (does not have to be in the section) */
         const $frame = pl.frame.$frame
         const cc = pl.changes
@@ -152,15 +153,15 @@ class GridController {
             case "add-subsection":
                 pl.section_controller.insertNewSection($section, param === "before")
                 break
+            case "clear-tag-filter":
+                pl.set_tag_filter([])
+                break
             case "import":
                 $("<input/>", { type: "file" }).change(function () {
                     const frames = pl.menu.loadFiles([...this.files])
                     pl.section_controller.importFrames(frames, rightPlace(), false)
                     pl.hud.info(`${this.files.length} media imported`)
                 }).trigger("click")
-                break
-            case "filter-tag":
-                pl.operation._filterByTagDialog()
                 break
             default:
                 this.info("Unknown action")
@@ -184,11 +185,15 @@ class GridController {
          *
          */
         function order(callback) {
-            const $orig_frames = $frames.map((_, e) => e)
-            $frames.sort((a, b) => callback($(a).data("frame"), $(b).data("frame")))
+            // Reordering re-appends the frames, which would rip a frame out of a layout / shared-duration
+            // <div> wrapper. So order only touches the section's *unwrapped* direct children; frames inside
+            // wrapper divs keep their grouping untouched (known limitation, mirrored by the count helpers).
+            const $orderable = $section.children(FRAME_SELECTOR)
+            const $orig_frames = $orderable.map((_, e) => e)
+            $orderable.sort((a, b) => callback($(a).data("frame"), $(b).data("frame")))
 
             cc.undoable("Sort frames",
-                () => $section.append($frames),
+                () => $section.append($orderable),
                 () => $section.append($orig_frames),
                 () => pl.resetAndGo())
         }
@@ -269,7 +274,10 @@ class GridController {
                             </div>
                         </div>
                         <button data-role='flatten-subsections'>flatten subsections</button>
-                        <button data-role='filter-tag'>filter by tag…</button>
+                        <div class="section-menu tag-filter-menu">
+                            <span>filter by tag ▾</span>
+                            <div class="dropdown tag-filter-dropdown"></div>
+                        </div>
                     </div>`
 
     _sectionMenuTemplate = `<div class="section-menus">
@@ -310,6 +318,30 @@ class GridController {
     }
 
 
+    /** @param {HTMLElement} el @returns {boolean} A frame element (article / article-map). */
+    _isFrameEl(el) {
+        return !!el && ["ARTICLE", "ARTICLE-MAP"].includes(el.tagName)
+    }
+
+    /**
+     * @param {HTMLElement} el
+     * @returns {boolean} A frame living loose under <main>, in no <section> at all (possibly inside a plain
+     * layout <div>). Its logical home is <main> – the "Presentation" ribbon – not any section.
+     */
+    _isOrphan(el) {
+        return this._isFrameEl(el) && !$(el).closest("section").length
+    }
+
+    /**
+     * @param {number} i Index into this.$framesSections
+     * @returns {boolean} This position starts a run of orphan frames that directly follows an in-section
+     * frame – the exact spot where, without a cue, orphans look "glued" to the previous section. (A run
+     * right after the <main>/<section> ribbon needs no extra cue; the ribbon already heads it.)
+     */
+    _orphanRunStart(i) {
+        return this._isOrphan(this.$framesSections[i]) && this._isFrameEl(this.$framesSections[i - 1]) && !this._isOrphan(this.$framesSections[i - 1])
+    }
+
     _buildColMap() {
         const colMap = []
         let col = 0
@@ -318,6 +350,7 @@ class GridController {
                 col = 0
                 colMap[i] = null
             } else {
+                if (this._orphanRunStart(i)) col = 0 // break onto a fresh row under the loose-frames divider
                 colMap[i] = col
                 col = (col + 1) % this.columns
             }
@@ -398,8 +431,25 @@ class GridController {
             el = this._assureSection(frameOrSection, prepend)
         } else {
             el = this.hud.assureThumbnail($(frameOrSection).data("frame"), this.$container, prepend)
+            this._assureOrphanDivider(el, fsIndex)
         }
         el.data("fsIndex", fsIndex)
+    }
+
+    /**
+     * Insert a full-width "loose frames" divider right before the thumbnail `$thumb` when it starts a run
+     * of orphan frames – so they read as belonging to the presentation, not to the section above them.
+     * Placed relative to the already-inserted thumbnail (works for both append and prepend); carries the
+     * thumbnail's fsIndex so _discardFarItems reclaims it together with the frame it heads.
+     * @param {JQuery} $thumb
+     * @param {?number} fsIndex Index of the thumbnail's frame in this.$framesSections
+     */
+    _assureOrphanDivider($thumb, fsIndex) {
+        if (fsIndex == null || !this._orphanRunStart(fsIndex)) return
+        if ($thumb[0].previousElementSibling?.classList.contains("grid-orphan-divider")) return // already there
+        $("<div/>", { class: "grid-orphan-divider", text: "Loose frames — outside any section" })
+            .data("fsIndex", fsIndex)
+            .insertBefore($thumb)
     }
 
     /**
@@ -416,7 +466,37 @@ class GridController {
                 </section-controller>`)
             .data("section", main)
         $mc.find(".tag-filter-badge").on("click", () => pl.set_tag_filter([]))
+        this.refreshTagFilterDropdown($mc.find(".tag-filter-dropdown"))
+        // Rebuilt on every hover rather than once – tags may have been added/removed directly in the
+        // grid (digit hotkeys on the current frame) since this ribbon was last (re)rendered, and that
+        // does not by itself trigger a grid rebuild (see Hud.tag()).
+        $mc.find(".tag-filter-menu").on("mouseenter", () => this.refreshTagFilterDropdown($mc.find(".tag-filter-dropdown")))
         return prepend ? $mc.prependTo(this.$container) : $mc.appendTo(this.$container)
+    }
+
+    /**
+     * (Re)builds the "filter by tag ▾" dropdown: one checkbox per currently used tag, with its live
+     * frame count, checked to match `playback.tag_filter`. Checking/unchecking applies the filter
+     * immediately (see the delegated "change" handler in Hud.init_grid).
+     * @param {JQuery} $dropdown
+     */
+    refreshTagFilterDropdown($dropdown) {
+        const pl = this.pl
+        const counts = new Map()
+        pl.$articles.each((_, el) => $(el).data("frame").get_tags().forEach(t => counts.set(t, (counts.get(t) || 0) + 1)))
+        const usedTags = [...counts.keys()].sort((a, b) => a - b)
+        if (!usedTags.length) {
+            $dropdown.html(`<span class="dropdown-empty">No tags used yet</span>`)
+            return
+        }
+        const names = pl.frame.tag_names()
+        const items = usedTags.map(t => {
+            const label = names[t - 1] ? `${names[t - 1]} (${t})` : String(t)
+            const checked = pl.tag_filter.includes(t) ? "checked" : ""
+            return `<label><input type="checkbox" value="${t}" ${checked}> ${label} (${counts.get(t)})</label>`
+        }).join("")
+        const clear = pl.tag_filter.length ? `<button data-role="clear-tag-filter">Clear filter</button>` : ""
+        $dropdown.html(items + clear)
     }
 
     /**

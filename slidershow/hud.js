@@ -232,6 +232,11 @@ class Hud {
             .on("dblclick", "frame-preview", () => this.toggle_grid())
             // grid section buttons
             .on("click", "section-controller button", e => this.grid.sectionMenuAction($($(e.target.closest("section-controller")).data("section")), e.target.dataset.role, e.target.dataset.param))
+            // tag filter dropdown – checking/unchecking applies the filter immediately
+            .on("change", ".tag-filter-dropdown input[type=checkbox]", e => {
+                const checked = $(e.currentTarget).closest(".tag-filter-dropdown").find("input:checked").map((_, el) => Number($(el).val())).get()
+                this.playback.set_tag_filter(checked)
+            })
     }
 
     /**
