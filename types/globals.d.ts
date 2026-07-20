@@ -11,6 +11,12 @@ declare global {
         jQuery: JQueryStatic
     }
 
+    // TS's lib.dom.d.ts doesn't yet know about the File System Access API's permission methods.
+    interface FileSystemHandle {
+        queryPermission?(options?: any): Promise<"granted" | "denied" | "prompt">
+        requestPermission?(options?: any): Promise<"granted" | "denied" | "prompt">
+    }
+
     class WebHotkeys {
         constructor(...args: any[])
         grab(shortcut: string, hint: string, method: Function, ...args: any[]): any

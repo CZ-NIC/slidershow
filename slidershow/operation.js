@@ -138,6 +138,21 @@ class Operation {
     }
 
     /**
+     * Enter confirms the dialog (clicks its "Ok" button) even when focus is on a checkbox. Zebra_Dialog's
+     * own Enter-confirms-default-button wiring listens for `keypress`, which browsers don't reliably fire
+     * for Enter while a checkbox is focused (unlike a text input) – `keydown` always fires.
+     * @param {JQuery} $container The dialog's inline content (passed as `source: {inline: ...}`).
+     */
+    _confirmOnEnter($container) {
+        $container.on("keydown", e => {
+            if (e.key === "Enter") {
+                e.preventDefault()
+                $container.closest(".ZebraDialog").find("a").filter((_, el) => $(el).text().trim() === "Ok").trigger("click")
+            }
+        })
+    }
+
+    /**
      * All tag digits currently applied to at least one frame, ascending.
      * @returns {number[]}
      */
@@ -169,6 +184,8 @@ class Operation {
             ).appendTo($list)
         })
 
+        this._confirmOnEnter($list)
+
         new $.Zebra_Dialog({
             message: "Show only frames carrying any of the checked tags:",
             source: { inline: $list },
@@ -185,6 +202,7 @@ class Operation {
                 }
             ]
         })
+        $("input", $list).first().focus()
     }
 
     /**
@@ -203,6 +221,36 @@ class Operation {
             ).appendTo($list)
         }
 
+        const apply = () => {
+            const names = $("input", $list).map((_, el) => String($(el).val()).trim()).get()
+            while (names.length && !names[names.length - 1]) {
+                names.pop() // trim trailing empty rows
+            }
+            const invalid = names.filter(n => /[/\\,]/.test(n))
+            if (invalid.length) {
+                pl.hud.ok("Name tags", `Remove / \\ or , from: ${invalid.join(", ")} (names are stored comma-separated).`)
+                return
+            }
+            const value = names.join(",")
+            const before = $main.attr("data-tag-names") || ""
+            const key = "TAG-NAMES: " + docname()
+            pl.changes.undoable("Name tags",
+                () => {
+                    $main.attr("data-tag-names", value)
+                    value ? localStorage.setItem(key, value) : localStorage.removeItem(key)
+                },
+                () => {
+                    if (before) {
+                        $main.attr("data-tag-names", before)
+                        localStorage.setItem(key, before)
+                    } else {
+                        $main.removeAttr("data-tag-names")
+                        localStorage.removeItem(key)
+                    }
+                })
+        }
+        this._confirmOnEnter($list)
+
         new $.Zebra_Dialog({
             message: "Name your tags (position = digit):",
             source: { inline: $list },
@@ -212,19 +260,10 @@ class Operation {
             buttons: ["Cancel", {
                 caption: "Ok",
                 default_confirmation: true,
-                callback: () => {
-                    const names = $("input", $list).map((_, el) => String($(el).val()).trim()).get()
-                    while (names.length && !names[names.length - 1]) {
-                        names.pop() // trim trailing empty rows
-                    }
-                    const value = names.join(",")
-                    const before = $main.attr("data-tag-names") || ""
-                    pl.changes.undoable("Name tags",
-                        () => $main.attr("data-tag-names", value),
-                        () => before ? $main.attr("data-tag-names", before) : $main.removeAttr("data-tag-names"))
-                }
+                callback: apply
             }]
         })
+        $("input", $list).first().focus()
     }
 
     editingInit() {

@@ -169,6 +169,30 @@ function main() {
 // Common functions
 
 /**
+ * The presentation's file name, used to key document-wide localStorage entries (ex. tag names) and as
+ * the default download/save-as name.
+ * "http://example.com/" -> example.com
+ * "http://example.com/foo" -> foo.html
+ * "http://example.com/foo/" -> foo.html
+ * "http://example.com/foo/bar.htm" -> bar.htm
+ * @returns {string}
+ */
+function docname() {
+    let name
+    const url = window.location.pathname.split("/")
+    while (!name && url.length) {
+        name = url.pop()
+    }
+    if (!name) {
+        name = "slidershow.html"
+    }
+    if (!/(\.html|\.htm)$/i.test(name)) {
+        name += ".html";
+    }
+    return name
+}
+
+/**
  * Return closest prop, defined in the step or DOM.
  * Ex: prop("rotate", img) -> checks current step, then img[data-rotate],
  *  then article[data-rotate], then sections[data-rotate], then main[data-rotate]

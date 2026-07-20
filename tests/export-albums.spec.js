@@ -212,3 +212,50 @@ test("export summary offers Change source folder & retry when files are missing,
     })
     expect(copied).toEqual(["one.jpg", "three.jpg", "two.jpg"])
 })
+
+test("_validate_albums flags a reserved name, a path separator, and a name collision", async ({ page }) => {
+    const problems = await page.evaluate(() => menu.export._validate_albums([
+        { name: "vsechny", tag: 1, frames: [] },
+        { name: "mama/tata", tag: 2, frames: [] },
+        { name: "deti", tag: 3, frames: [] },
+        { name: "Deti", tag: 4, frames: [] }, // case-insensitive collision with "deti"
+    ]))
+    expect(problems.some(p => p.includes("reserved"))).toBe(true)
+    expect(problems.some(p => p.includes("separator"))).toBe(true)
+    expect(problems.some(p => p.includes("collide"))).toBe(true)
+})
+
+test("export_albums_dialog refuses to proceed when an album name is reserved/colliding", async ({ page }) => {
+    await page.evaluate(() => $main.attr("data-tag-names", "vsechny,vedouci")) // tag 1 named "vsechny" – reserved
+    await page.evaluate(() => menu.export.export_albums_dialog())
+    await expect(page.locator(".ZebraDialog", { hasText: "reserved" })).toBeVisible()
+    // no "Export" button offered – nothing should have run
+    await expect(page.getByRole("link", { name: "Export" })).toHaveCount(0)
+})
+
+test("conflict check also catches a loose alba.json/*.txt left over from a previous export", async ({ page }) => {
+    await page.evaluate(async () => {
+        const root = await navigator.storage.getDirectory()
+        await root.remove({ recursive: true }).catch(() => { })
+        const fh = await root.getFileHandle("rodice.txt", { create: true }) // stray file, no subfolders
+        const w = await fh.createWritable()
+        await w.write("stale")
+        await w.close()
+        window.showDirectoryPicker = async () => navigator.storage.getDirectory()
+    })
+
+    await page.evaluate(async () => {
+        const albums = menu.export.collect_albums()
+        const union = menu.export.union_frames(albums)
+        await menu.export.export_albums(albums, union)
+    })
+
+    await expect(page.locator(".ZebraDialog", { hasText: "already contains" })).toBeVisible()
+    const top = await page.evaluate(async () => {
+        const root = await navigator.storage.getDirectory()
+        const names = []
+        for await (const name of root.keys()) names.push(name)
+        return names
+    })
+    expect(top).toEqual(["rodice.txt"]) // aborted – nothing else got created, the stale file wasn't touched
+})

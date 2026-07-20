@@ -187,6 +187,39 @@ class Export {
         })
     }
 
+    /**
+     * Guards against album names that would corrupt the export: two tags sharing a name (or a tag
+     * named "vsechny", the reserved catch-all folder) end up copied into the very same folder – later
+     * files silently overwrite earlier ones and `alba.json`/`<album>.txt` collapse to the last one
+     * written, since both are keyed by name. A `/` or `\` would also make `getDirectoryHandle(name,
+     * {create:true})` throw mid-export (an unhandled rejection, not a dialog).
+     * @param {Album[]} albums
+     * @returns {string[]} Human-readable problems, empty if `albums` are all export-safe.
+     */
+    _validate_albums(albums) {
+        const problems = []
+        const seenNames = new Map()
+        for (const album of albums) {
+            if (album.name.toLowerCase() === "vsechny") {
+                problems.push(`Tag name "${album.name}" is reserved (used for the "vsechny" folder) – rename it.`)
+            }
+            if (/[/\\]/.test(album.name)) {
+                problems.push(`Tag name "${album.name}" contains a path separator – rename it.`)
+            }
+            const key = album.name.toLowerCase()
+            if (seenNames.has(key)) {
+                problems.push(`Tags named "${seenNames.get(key)}" and "${album.name}" would collide into the same folder – rename one.`)
+            } else {
+                seenNames.set(key, album.name)
+            }
+        }
+        return problems
+    }
+
+    /**
+     * Entry point for Ctrl+Shift+S: browser-support check, named-tags/validation checks, then a summary
+     * dialog (per-album counts, a source-folder hint if some files aren't in memory) with an "Export" button.
+     */
     export_albums_dialog() {
         if (!window.showDirectoryPicker) {
             this.playback.hud.ok("Export albums", "Exporting albums to folders only works in Chrome/Edge.")
@@ -195,6 +228,11 @@ class Export {
         const albums = this.collect_albums()
         if (!albums.length) {
             this.playback.hud.ok("Export albums", "No named tags. Name them first (Alt+T → \"Name tags…\").")
+            return
+        }
+        const problems = this._validate_albums(albums)
+        if (problems.length) {
+            this.playback.hud.ok("Export albums", `Fix tag names before exporting:<br>${problems.join("<br>")}`)
             return
         }
         const allFrames = this.union_frames(albums)
@@ -250,9 +288,18 @@ class Export {
         }
 
         const folderNames = ["vsechny", ...albums.map(a => a.name)]
+        // Loose files from a previous export (alba.json, <album>.txt) must abort too, not just the
+        // subfolders – otherwise they're silently overwritten by the fresh run.
+        const fileNames = ["alba.json", ...albums.map(a => `${a.name}.txt`)]
         const conflicts = []
         for (const name of folderNames) {
             const exists = await targetDir.getDirectoryHandle(name).then(() => true, () => false)
+            if (exists) {
+                conflicts.push(name)
+            }
+        }
+        for (const name of fileNames) {
+            const exists = await targetDir.getFileHandle(name).then(() => true, () => false)
             if (exists) {
                 conflicts.push(name)
             }
@@ -427,6 +474,11 @@ class Export {
         }
     }
 
+    /**
+     * @param {FileSystemDirectoryHandle} dirHandle
+     * @param {string} name
+     * @param {string} text
+     */
     async _write_text(dirHandle, name, text) {
         const handle = await dirHandle.getFileHandle(name, { create: true })
         const writable = await handle.createWritable()
@@ -473,6 +525,9 @@ class Export {
         }
     }
 
+    /**
+     * @param {FileSystemDirectoryHandle} handle
+     */
     async _persist_handle(handle) {
         const db = await this._open_handle_db()
         const tx = db.transaction("handles", "readwrite")
@@ -480,6 +535,9 @@ class Export {
         return new Promise(resolve => tx.oncomplete = resolve)
     }
 
+    /**
+     * @returns {Promise<?FileSystemDirectoryHandle>} Null if nothing was ever persisted, or on any IndexedDB error.
+     */
     async _load_persisted_handle() {
         try {
             const db = await this._open_handle_db()
@@ -494,6 +552,9 @@ class Export {
         }
     }
 
+    /**
+     * @returns {Promise<IDBDatabase>}
+     */
     _open_handle_db() {
         return new Promise((resolve, reject) => {
             const req = indexedDB.open("slidershow-albums", 1)

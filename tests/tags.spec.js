@@ -68,3 +68,54 @@ test("group by tags uses the first token and notifies about multi-tagged frames"
 
     await expect(page.locator(".ZebraDialog", { hasText: "have more than one tag" })).toBeVisible()
 })
+
+test("Name tags dialog: first input is focused, Enter confirms, commas/slashes are rejected", async ({ page }) => {
+    await page.evaluate(() => playback.operation._nameTagsDialog())
+    await expect(page.locator(".tag-names-list input").first()).toBeFocused()
+
+    // invalid characters: warned, nothing is saved (the dialog itself still closes on Ok/Enter – the
+    // library has no notion of "stay open, this input was rejected" for custom inline content)
+    await page.locator(".tag-names-list input").first().fill("a/b")
+    await page.keyboard.press("Enter")
+    const warning = page.locator(".ZebraDialog", { hasText: "Remove" })
+    await expect(warning).toBeVisible()
+    expect(await page.evaluate(() => $main.attr("data-tag-names"))).toBeUndefined()
+    await warning.getByRole("link", { name: "Ok" }).click() // dismiss the warning
+    await expect(warning).not.toBeVisible() // let its close animation finish before reopening
+
+    // reopen, fix the value, Enter confirms via keydown (not just a click) – scoped to the now-visible
+    // dialog since the first one's (closed, but not detached) .tag-names-list is still in the DOM
+    await page.evaluate(() => playback.operation._nameTagsDialog())
+    await page.locator(".ZebraDialog:visible .tag-names-list input").first().fill("rodina")
+    await page.keyboard.press("Enter")
+    await expect(page.locator(".ZebraDialog:visible")).toHaveCount(0)
+    expect(await page.evaluate(() => $main.attr("data-tag-names"))).toBe("rodina")
+})
+
+test("tag names persist to localStorage keyed by document name and restore on a fresh load", async ({ page }) => {
+    await page.evaluate(() => playback.operation._nameTagsDialog())
+    await page.locator(".tag-names-list input").first().fill("rodina")
+    await page.getByRole("link", { name: "Ok" }).click()
+
+    const key = await page.evaluate(() => "TAG-NAMES: " + docname())
+    expect(await page.evaluate(k => localStorage.getItem(k), key)).toBe("rodina")
+
+    // simulate a crash/reload of the very same (unsaved) presentation: data-tag-names is gone from the
+    // fresh DOM, but the boot-time restore in Playback's constructor should bring it back from localStorage
+    await page.reload()
+    await page.locator("#start").click()
+    await expect.poll(() => page.url()).toContain("#1")
+    expect(await page.evaluate(() => $main.attr("data-tag-names"))).toBe("rodina")
+})
+
+test("Filter by tag dialog: first checkbox is focused and Enter confirms (with whatever is checked)", async ({ page }) => {
+    await page.evaluate(() => playback.frame.set_tag(1))
+    await page.evaluate(() => playback.operation._filterByTagDialog())
+    const firstCheckbox = page.locator(".tag-filter-list input").first()
+    await expect(firstCheckbox).toBeFocused()
+
+    await firstCheckbox.check() // Enter itself doesn't toggle a checkbox – only Space/click do
+    await page.keyboard.press("Enter")
+    await expect(page.locator(".ZebraDialog:visible")).toHaveCount(0)
+    expect(await page.evaluate(() => playback.tag_filter)).toEqual([1])
+})

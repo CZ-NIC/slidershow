@@ -74,6 +74,16 @@ class Playback {
         /** @type {number[]} Tags to show alone (OR – a frame matches if it carries any of them); empty = no filter. Affects both the grid and normal navigation. */
         this.tag_filter = []
 
+        // Tag names are document-wide (unlike per-file tags, which are already restored per-frame via
+        // Frame.check_tag()), so restore them once here – but only if this document doesn't already
+        // carry its own data-tag-names (ex. a previously exported/saved file), which must win.
+        if (!$main.attr("data-tag-names")) {
+            const savedNames = localStorage.getItem("TAG-NAMES: " + docname())
+            if (savedNames) {
+                $main.attr("data-tag-names", savedNames)
+            }
+        }
+
         this.operation = new Operation(this)
         this.section_controller = new SectionController(this)
         this.reset()
@@ -454,19 +464,13 @@ class Playback {
             // Setting the existing frame here would mean no action triggered when hitting LeftArrow being in the beginning.
             index = this.$articles.length - 1
         }
-        if (this.tag_filter.length) {
-            index = this._nextMatchingIndex(index, 1)
-        }
-        this.goToFrame(index, true)
+        this.goToFrame(index, true) // tag_filter (if any) is enforced centrally in goToFrame
     }
     previousFrame(count = 1) {
         let index = this.index - count
         if (count > 1 && index < 0) {
             // why letting out of range for count == 1? See nextFrame comment.
             index = 0
-        }
-        if (this.tag_filter.length) {
-            index = this._nextMatchingIndex(index, -1)
         }
         this.goToFrame(index)
     }
@@ -499,12 +503,8 @@ class Playback {
         this.hud.refresh_tag_filter_icon()
         this.hud.reset_grid()
         this.session.store()
-        if (!this.hud.grid_visible && !this.frame_matches_filter(this.frame)) {
-            const forward = this._nextMatchingIndex(this.index, 1)
-            const index = forward < this.$articles.length ? forward : this._nextMatchingIndex(this.index, -1)
-            if (index >= 0 && index < this.$articles.length) {
-                this.goToFrame(index)
-            }
+        if (!this.hud.grid_visible) {
+            this.goToFrame(this.index) // no-op if the current frame still matches; redirects otherwise
         }
     }
 
@@ -559,6 +559,18 @@ class Playback {
      * @param {Boolean} supress_transition Block animation to the frame
      */
     goToFrame(index, moving = false, supress_transition = false) {
+        // Central tag_filter enforcement – every navigation path (next/prevFrame, sections, goToSlide,
+        // hash restore, ribbon/grid clicks) funnels through here, so redirecting once covers them all.
+        if (this.tag_filter.length && this.$articles[index]) {
+            if (!this.frame_matches_filter($(this.$articles[index]).data("frame"))) {
+                const forward = this._nextMatchingIndex(index, 1)
+                const candidate = forward < this.$articles.length ? forward : this._nextMatchingIndex(index, -1)
+                if (candidate >= 0 && candidate < this.$articles.length) {
+                    index = candidate
+                }
+            }
+        }
+
         const $last = this.$current
         const next = this.$articles[index]
         const $current = next ? $(next) : $last

@@ -60,6 +60,18 @@ test("tag-filter hash key restores the filter (multiple tags, + separated)", asy
     expect(await page.evaluate(() => playback.tag_filter)).toEqual([1, 2])
 })
 
+test("set_tag_filter is enforced centrally in goToFrame, not just next/previousFrame", async ({ page }) => {
+    await page.evaluate(() => playback.set_tag_filter([1])) // one.jpg (0) and three.jpg (2)
+
+    // goToSlide funnels through goToFrame – asking for the hidden frame 2 (two.jpg) should redirect
+    await page.evaluate(() => playback.goToSlide(2))
+    expect(await page.evaluate(() => playback.index)).not.toBe(1)
+
+    // a direct goToFrame call (e.g. a ribbon/grid thumbnail click) is redirected the same way
+    await page.evaluate(() => playback.goToFrame(1))
+    expect(await page.evaluate(() => playback.index)).not.toBe(1)
+})
+
 test("Filter by tag dialog: checked tags apply, Clear filter resets", async ({ page }) => {
     await page.evaluate(() => playback.operation._filterByTagDialog())
     const rows = page.locator(".tag-filter-list label")
@@ -67,7 +79,7 @@ test("Filter by tag dialog: checked tags apply, Clear filter resets", async ({ p
 
     await page.locator(".tag-filter-list input[value='1']").check()
     await page.getByRole("link", { name: "Ok" }).click()
-    await expect(page.locator(".ZebraDialog")).toBeHidden()
+    await expect(page.locator(".ZebraDialog:visible")).toHaveCount(0)
     expect(await page.evaluate(() => playback.tag_filter)).toEqual([1])
 
     await page.evaluate(() => playback.operation._filterByTagDialog())

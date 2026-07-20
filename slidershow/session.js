@@ -102,25 +102,8 @@ class Session {
         history.replaceState(null, null, document.location.pathname + document.location.search + '#' + index + (state ? `&state=${state}` : ""))
     }
 
-    /**
-     * "http://example.com/" -> example.com
-     * "http://example.com/foo" -> foo.html
-     * "http://example.com/foo/" -> foo.html
-     * "http://example.com/foo/bar.htm" -> bar.htm
-     */
     get docname() {
-        let name
-        const url = window.location.pathname.split("/")
-        while (!name && url.length) {
-            name = url.pop()
-        }
-        if (!name) {
-            name = "slidershow.html"
-        }
-        if (!/(\.html|\.htm)$/i.test(name)) {
-            name += ".html";
-        }
-        return name
+        return docname()
     }
 
 }

@@ -1272,12 +1272,15 @@ class Frame {
     }
 
     /**
-     * Tag names, position = digit 1, 2, … (`<main data-tag-names="rodiče,vedoucí">`).
+     * Tag names, position = digit 1, 2, … (`<main data-tag-names="rodiče,vedoucí">`). Defaults to
+     * `$main` rather than the frame's own `$actor` – it's document-wide, not per-frame, and `$actor` is
+     * an empty jQuery on the splashscreen's dummy frame (before the first goToFrame), which would
+     * otherwise make prop()'s upward walk find nothing.
      * @param {?JQuery} $actor
      * @returns {string[]}
      */
     tag_names($actor = null) {
-        $actor = $actor || this.$actor
+        $actor = $actor || $main
         const raw = prop("tag-names", $actor, "")
         return raw ? String(raw).split(",") : []
     }
