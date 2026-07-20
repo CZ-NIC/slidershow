@@ -381,10 +381,14 @@ class Frame {
     async preload() {
         const $frame = this.$frame
         if ($frame.attr("data-preloaded")) {
-            // When we call playback.reset() (ex: after frame duplication), we get here (to the recreation of the frame) with data-preloaded already true.
+            // When we call playback.reset() (ex: after frame duplication, which clones the attribute along
+            // with the DOM but gets a brand new Frame object), we get here with data-preloaded already true
+            // but this particular Frame instance possibly never added to playback.preloaded yet – fix that up.
+            this.playback.preloaded.add(this)
             return [this.loaded] // might be already done (or might be still running when preload called twice at the same moment)
         }
         $frame.attr("data-preloaded", 1) // prevent another preload
+        this.playback.preloaded.add(this)
 
         // Process media
         const loaded = $frame.find("img[data-src], video[data-src]").map((_, el) => {
@@ -563,6 +567,7 @@ class Frame {
     unload() {
         const $frame = this.$frame
         $frame.removeAttr("data-preloaded")
+        this.playback.preloaded.delete(this)
 
         // The frame is no more loaded
         this.loaded = new Promise(r => this._loaded = r)

@@ -43,6 +43,10 @@ class Playback {
         */
         this.bg_tasks = []
 
+        /** @type {Set<Frame>} Currently-preloaded frames, kept incrementally by Frame.preload()/unload()
+         * so navigation doesn't need an O(n) `[data-preloaded]` scan across the whole deck every step. */
+        this.preloaded = new Set()
+
         /** @type {Semaphore} Throttles full-quality media downloads and serves them nearest-frame-first,
          * so a real server is not flooded and the current frame's original is never stuck behind neighbours. */
         this.original_loader = new Semaphore(ORIGINAL_CONCURRENCY)
@@ -664,8 +668,8 @@ class Playback {
             this.process_bg_tasks([
                 () => new Promise(resolve => setTimeout(resolve, 100)), // since preblink is a costly operation, wait a moment. User might be holding forward arrow (100 photos / 7 secs, do not slow it down).
                 () => following?.preblink(),
-                ...nearby.filter(f => f.$frame.not("[data-preloaded]").length).map(f => () => f.preload()),
-                ...Frame.frames(this.$articles.filter("[data-preloaded]")).map(f => nearby.includes(f) ? null : () => f.unload()).filter(Boolean),
+                ...nearby.filter(f => !this.preloaded.has(f)).map(f => () => f.preload()),
+                ...[...this.preloaded].map(f => nearby.includes(f) ? null : () => f.unload()).filter(Boolean),
             ])
         })
     }

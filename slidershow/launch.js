@@ -147,8 +147,14 @@ function main() {
             .removeAttr(EXPORT_SRC_BYTES)
     })
 
-    // Restore frame size on window zoom
-    $(window).on("resize", () => menu?.playback.goToFrame(menu?.playback.index))
+    // Restore frame size on window zoom. Debounced – a resize fires repeatedly while dragging a window
+    // edge or hiding/showing a mobile browser's URL bar, and goToFrame() isn't cheap (preload/positioning
+    // bookkeeping), so only the final size in a burst actually triggers it.
+    let resize_timer
+    $(window).on("resize", () => {
+        clearTimeout(resize_timer)
+        resize_timer = setTimeout(() => menu?.playback.goToFrame(menu?.playback.index), 150)
+    })
 
     // Restore on hash
     $(window).on("hashchange", () => menu?.playback.session.restore())
