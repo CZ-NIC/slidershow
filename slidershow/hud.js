@@ -31,6 +31,9 @@ class Hud {
         /** @type {Array<{time: string, text: string}>} Bounded history of info()/ok() notifications. */
         this.info_history = []
 
+        /** @type {Map<Frame, string>} Cached lightweight `data-thumb` preview HTML, keyed by the (stable)
+         * Frame object so it survives reorder/regroup. Lets a grid scrolled back over already-seen frames
+         * skip the clone + image-probe in assureThumbnail. Cleared on reset() (structural/media changes). */
         this.previewCache = new Map()
         this.propertyPanel = new PropertyPanel(this)
         this.palette = new CommandPalette(this)
@@ -301,13 +304,20 @@ class Hud {
 
                 // When a data-thumb is configured, use it instead of the full-quality file – the grid may
                 // show hundreds of previews at once and should never force-download large originals.
-                let html = await frame.get_preview_thumb()
-                if (html === null) {
-                    frame.preload()
-                    await frame.loaded
-                    html = frame.get_preview()
+                // The cheap data-thumb HTML is memoized (previewCache), so scrolling back over a frame does
+                // not re-clone its subtree and re-probe the thumb image every time it re-enters the grid.
+                let html = this.previewCache.get(frame)
+                if (html === undefined) {
+                    html = await frame.get_preview_thumb()
+                    if (html === null) {
+                        frame.preload()
+                        await frame.loaded
+                        html = frame.get_preview() // full preview, not cached (depends on live preload state)
+                    } else {
+                        this.previewCache.set(frame, html)
+                    }
+                    if (!$thumbnail[0].isConnected) return // could have been removed while awaiting
                 }
-                if (!$thumbnail[0].isConnected) return // could have been removed while awaiting
 
                 $thumbnail.html(html)
                 if (!$thumbnail.text().trim()) {
@@ -361,8 +371,16 @@ class Hud {
             $("frame-preview", $container).removeClass("current").filter(this.getThumbnail(pl.frame)).addClass("current")
         }
 
-        // make importable and draggable
-        pl.menu.importable($("frame-preview, section-controller", $container), (frames, target, before) => {
+        // make importable and draggable – only elements not initialized yet. jQuery UI .draggable()
+        // re-inits (destroy+recreate) on every element it is called on, and this method runs on every
+        // frame change / scroll page while the grid is open, so re-running it over the whole loaded set
+        // (hundreds of thumbnails) was pure waste. New elements have no .ui-draggable class yet.
+        const $new = $("frame-preview, section-controller", $container).not(".ui-draggable")
+        if (!$new.length) {
+            return
+        }
+
+        pl.menu.importable($new, (frames, target, before) => {
             if (target.tagName === "SECTION-CONTROLLER") {
                 pl.section_controller.importFrames(frames, $($(target).data("section")), before ? "prepend" : before)
             } else {
@@ -553,6 +571,7 @@ class Hud {
     }
 
     reset() {
+        this.previewCache.clear() // media/structure may have changed – drop memoized previews
         this.reset_thumbnails()
         this.$hud_properties.html("")
         this.reset_grid()

@@ -1,4 +1,7 @@
 const EDITABLE_ELEMENTS = "h1,h2,h3,h4,h5,h6,p,li"
+// EXIF (APP1) lives at the very start of a JPEG, so this leading slice is enough to read all metadata –
+// no need to materialize a whole 10s-of-MB File as an ArrayBuffer just to fetch the camera/date/GPS tags.
+const EXIF_HEADER_BYTES = 256 * 1024
 class Frame {
     /**
      *
@@ -1370,8 +1373,12 @@ class Frame {
             callback?.()
         }
 
+        // A File/Blob is read by exif-js via FileReader – slice off just the header so a large photo
+        // isn't fully read into an ArrayBuffer only to extract a few metadata tags. A bare element (no
+        // File, ex. a served presentation) keeps the original behaviour (exif-js fetches it itself).
+        const source = data instanceof Blob ? data.slice(0, EXIF_HEADER_BYTES) : (data || el)
         // raises uncatcheable log when CORS encoutered
-        EXIF.getData(data || el, function () {
+        EXIF.getData(source, function () {
             process(EXIF.getAllTags(this))
         })
     }

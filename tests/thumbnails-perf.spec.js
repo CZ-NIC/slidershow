@@ -1,0 +1,67 @@
+const { test, expect } = require("@playwright/test")
+const path = require("path")
+
+const FIXTURE = "file://" + path.resolve(__dirname, "fixtures/tags.html")
+
+test.beforeEach(async ({ page }) => {
+    await page.goto(FIXTURE)
+    await page.locator("#start").click()
+    await expect.poll(() => page.url()).toContain("#1")
+})
+
+test("makeThumbnailsImportable only (re)initializes elements that aren't draggable yet", async ({ page }) => {
+    const newlyInitialized = await page.evaluate(() => {
+        playback.hud.toggle_grid() // builds the grid + initializes its thumbnails once
+        const $container = playback.hud.grid.$container
+
+        // spy: importable() is called with exactly the elements about to be made draggable
+        let initializedCount = 0
+        const original = playback.menu.importable.bind(playback.menu)
+        playback.menu.importable = ($el, cb) => { initializedCount += $el.length; return original($el, cb) }
+
+        // no new thumbnails were added, so a repeated call must initialize nothing
+        playback.hud.makeThumbnailsImportable($container)
+        playback.hud.makeThumbnailsImportable($container)
+        return initializedCount
+    })
+    expect(newlyInitialized).toBe(0)
+})
+
+test("assureThumbnail memoizes the data-thumb preview per frame and clears it on reset", async ({ page }) => {
+    const result = await page.evaluate(async () => {
+        const frame = $(playback.$articles[0]).data("frame")
+        let builds = 0
+        frame.get_preview_thumb = async () => { builds++; return "<img class='thumb'>" }
+
+        const $c = $("<div/>").appendTo("body")
+        playback.hud.assureThumbnail(frame, $c)
+        await new Promise(r => setTimeout(r, 60)) // assureThumbnail fills the preview in a setTimeout(1)
+
+        const cachedAfterFirst = playback.hud.previewCache.has(frame)
+
+        // discard the DOM node (as grid scrolling does) and re-add it – must hit the cache, not rebuild
+        playback.hud.getThumbnail(frame, $c).remove()
+        playback.hud.assureThumbnail(frame, $c)
+        await new Promise(r => setTimeout(r, 60))
+
+        const buildsAfterReAdd = builds
+        playback.hud.reset()
+        return { cachedAfterFirst, buildsAfterReAdd, clearedByReset: playback.hud.previewCache.has(frame) }
+    })
+    expect(result.cachedAfterFirst).toBe(true)
+    expect(result.buildsAfterReAdd).toBe(1) // built once, the re-add was a cache hit
+    expect(result.clearedByReset).toBe(false)
+})
+
+test("Frame.exif reads only the header slice of a large File, not the whole file", async ({ page }) => {
+    const seenSize = await page.evaluate(() => {
+        const big = new File([new Uint8Array(1024 * 1024)], "big.jpg", { type: "image/jpeg" }) // 1 MB
+        let size = null
+        const original = EXIF.getData
+        EXIF.getData = (src) => { size = src instanceof Blob ? src.size : -1 } // capture, don't actually parse
+        Frame.exif($("<img/>"), big, () => { })
+        EXIF.getData = original
+        return size
+    })
+    expect(seenSize).toBe(256 * 1024) // sliced to EXIF_HEADER_BYTES, not the full 1 MB
+})
