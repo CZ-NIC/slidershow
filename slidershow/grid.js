@@ -405,7 +405,7 @@ class GridController {
      */
     _assureMain(main, prepend = false) {
         const $mc = $(`<section-controller data-role="main">
-                    <span class="section-title">Presentation ${this.pl.section_controller.getSectionName($(main))}</span>
+                    <span class="section-title">${this.pl.section_controller.getSectionName($(main), "Presentation")}</span>
                     ${this._menuOfMainTemplate}
                 </section-controller>`)
             .data("section", main)
@@ -419,7 +419,7 @@ class GridController {
      */
     _assureSection(currentSection, prepend = false) {
         const $sc = $(`<section-controller>
-                        <span class="section-title">Section ${this.pl.section_controller.getSectionName($(currentSection))}</span>
+                        <span class="section-title">${this.pl.section_controller.getSectionName($(currentSection))}</span>
                         ${this._sectionMenuTemplate}
                     </section-controller>`)
             .data("section", currentSection)

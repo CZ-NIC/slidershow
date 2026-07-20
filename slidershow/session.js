@@ -52,6 +52,9 @@ class Session {
                     pl.tag_filter = (value || "").split("+").filter(Boolean).map(Number)
                     pl.hud.refresh_tag_filter_icon()
                     break;
+                case "tag-names":
+                    $main.attr("data-tag-names", (value || "").split("+").join(","))
+                    break;
                 case "no-steps":
                     pl.step_disabled = true
                     break
@@ -90,6 +93,7 @@ class Session {
             this.playback.editing_mode ? "editing" : "",
             this.playback.tagging_mode ? "tagging" : "",
             this.playback.tag_filter.length ? `tag-filter:${this.playback.tag_filter.join("+")}` : "",
+            this.playback.frame.tag_names().length ? `tag-names:${this.playback.frame.tag_names().join("+")}` : "",
             this.playback.step_disabled ? "no-steps" : "",
             this.playback.hud.$hud_thumbnails.is(":visible") ? "thumbnails" : "",
             this.playback.hud.$hud_grid.is(":visible") ? "grid" : "",

@@ -226,9 +226,11 @@ class Operation {
             while (names.length && !names[names.length - 1]) {
                 names.pop() // trim trailing empty rows
             }
-            const invalid = names.filter(n => /[/\\,]/.test(n))
+            // / \ and , break the comma-joined data-tag-names storage; : & and + break the #hash=state
+            // encoding (tag-names:a+b, key:value pairs split on ":", entries split on "&"/",").
+            const invalid = names.filter(n => /[/\\,:&+]/.test(n))
             if (invalid.length) {
-                pl.hud.ok("Name tags", `Remove / \\ or , from: ${invalid.join(", ")} (names are stored comma-separated).`)
+                pl.hud.ok("Name tags", `Remove / \\ , : & or + from: ${invalid.join(", ")}.`)
                 return
             }
             const value = names.join(",")

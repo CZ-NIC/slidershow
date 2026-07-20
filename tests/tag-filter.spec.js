@@ -86,3 +86,18 @@ test("Filter by tag dialog: checked tags apply, Clear filter resets", async ({ p
     await page.getByRole("link", { name: "Clear filter" }).click()
     expect(await page.evaluate(() => playback.tag_filter)).toEqual([])
 })
+
+test("tag names round-trip through the #hash too, not just localStorage", async ({ page }) => {
+    await page.evaluate(() => $main.attr("data-tag-names", "rodice,vedouci"))
+    await page.evaluate(() => playback.session.store())
+    await expect.poll(() => page.url()).toContain("tag-names:rodice+vedouci")
+
+    // simulate opening that exact URL fresh, with localStorage empty – the hash alone must restore it.
+    // A same-document page.goto() (URL differs only by hash) wouldn't actually reload the app, so force
+    // a real reload instead.
+    await page.evaluate(() => localStorage.clear())
+    await page.reload()
+    await page.locator("#start").click()
+    await expect.poll(() => page.url()).toContain("#1")
+    expect(await page.evaluate(() => $main.attr("data-tag-names"))).toBe("rodice,vedouci")
+})

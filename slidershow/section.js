@@ -7,9 +7,20 @@ class SectionController {
         this.playback = playback
     }
 
-    getSectionName($section) {
-        const name = $section.data("name")
-        return `${name ? name + " " : ""}(${$section.children().length})`
+    /**
+     * @param {JQuery} $section
+     * @param {string} fallbackLabel Shown instead of a title when the section has none (ex. "Presentation" for <main>).
+     * @returns {string} "‹title or fallback› (‹counts›)" – counts are "N sections, M frames" when the
+     * section directly contains subsections, otherwise just the frame count.
+     */
+    getSectionName($section, fallbackLabel = "Section") {
+        const title = $section.data("title") || $section.data("name")
+        const sectionCount = $section.children("section").length
+        const frameCount = $section.children(FRAME_SELECTOR).length
+        const counts = sectionCount
+            ? `${sectionCount} section${sectionCount === 1 ? "" : "s"}, ${frameCount} frame${frameCount === 1 ? "" : "s"}`
+            : String(frameCount)
+        return `${title || fallbackLabel} (${counts})`
     }
 
     getSubsectionCount($section) {
@@ -196,22 +207,37 @@ class SectionController {
                 redos.length = 0
                 added.length = 0
                 multiTagged.length = 0
+                /** @type {?JQuery} Catch-all for frames without a group key that were sitting loose directly under <main>. */
+                let $looseSection = null
                 $frames.each((_, el) => {
                     const $frame = $(el)
                     /** @type {Frame} */
                     const frame = $frame.data("frame")
 
-                    let name
+                    let name, title
                     if (criterion == "tags") {
                         const tags = frame.get_tags()
                         name = tags[0]
+                        title = name ? frame.tag_names()[name - 1] || null : null
                         if (tags.length > 1) {
                             multiTagged.push(`${frame.get_filename()} → ${tags.join(", ")}`)
                         }
                     } else {
                         name = this._toGroupKey(frame.$actor.data("datetime"), criterion)
+                        title = name
                     }
-                    if (!name) { // leave in the former section
+                    if (!name) {
+                        // No group key – leave in the former section, unless that "former section" is
+                        // really no section at all (a loose frame directly under <main>): give it one,
+                        // so every frame ends up with a nameable home and the grid's counts stay simple.
+                        if ($frame.parent().is($main)) {
+                            redos.push(this.redoForMoving($frame))
+                            if (!$looseSection) {
+                                $looseSection = $("<section/>").prependTo($main)
+                                added.push($looseSection)
+                            }
+                            $frame.appendTo($looseSection)
+                        }
                         return
                     }
                     redos.push(this.redoForMoving($frame))
@@ -222,6 +248,14 @@ class SectionController {
                     if (!$section.length) {
                         $section = $("<section/>", { "data-name": name }).prependTo($main)
                         added.push($section)
+                    }
+                    // data-title is the resolved display label (ex. a tag's name) at grouping time, kept
+                    // separate from data-name (the stable key sections are matched/reused by) – renaming
+                    // a tag later only refreshes data-title on the next regroup, data-name never changes.
+                    if (title) {
+                        $section.attr("data-title", title)
+                    } else {
+                        $section.removeAttr("data-title")
                     }
                     $frame.appendTo($section)
                 })
