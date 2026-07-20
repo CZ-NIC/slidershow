@@ -225,6 +225,15 @@ function docname() {
  */
 function prop_invalidate() { _propGen++ }
 
+/**
+ * Drop the memoized prop() lookups of a single element (its whole property map). Use this instead of the
+ * global prop_invalidate() when only one element's own `data-*` changed and no ancestor moved – ex. an async
+ * EXIF write sets `data-datetime` on one leaf actor, so bumping the global generation (and losing every other
+ * frame's cache during a bulk import) is wasteful. Safe because actors are leaves: nothing resolves through them.
+ * @param {Element} el
+ */
+function prop_invalidate_el(el) { _propCache.delete(el) }
+
 function prop(property, $el, def = null, defProperty = null, css = false) {
     // First, we might have to check the CSS. This has sense for actors only.
     // The CSS might have been altered by a step so that the value in the DOM

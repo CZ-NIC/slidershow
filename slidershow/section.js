@@ -263,7 +263,7 @@ class SectionController {
                             multiTagged.push(`${frame.get_filename()} → ${tags.join(", ")}`)
                         }
                     } else {
-                        name = this._toGroupKey(frame.$actor.data("datetime"), criterion)
+                        name = this._toGroupKey(prop("datetime", frame.$actor), criterion)
                         title = name
                     }
                     if (!name) {

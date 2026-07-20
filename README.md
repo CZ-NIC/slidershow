@@ -402,6 +402,12 @@ A generator may not even know the file type. Put `data-src` directly on an empty
 <article data-src="clip.mp4"></article> <!-- becomes <article><video data-src="clip.mp4"></article> -->
 ```
 
+Attributes like `data-datetime` are inherited from the `<article>` too, so a generator can put them directly there without knowing whether it will become an `<img>` or `<video>`:
+
+```html
+<article data-src="foto.jpg" data-datetime="2024-01-02T10:00:00"></article>
+```
+
 #### Thumbnail preview (`data-thumb`)
 
 If your originals are large (multi-MB photos over a slow connection), let SlideRshow show a small preview first and swap in the full file only once it has fully downloaded. Set `data-thumb` on `<main>` (or a `<section>`, or a single `<img>`/`<video>`) to a template resolved against that element's `data-src`:
@@ -448,7 +454,7 @@ You prepare the alternative file yourself; SlideRshow never converts it. If `dat
 * When a new frame appears, first video gets focus. Whether `autoplay` is present, it starts playing. Keys like <kbd>Space</kbd>, <kbd>Left</kbd>, <kbd>Right</kbd> stop working for frame switching to avoid interfering with the video controls.
 
 #### `data-datetime`
-File modification time if available.
+File modification time if available. Like `data-thumb`, it inherits from ancestors (`<article>`, `<section>`, `<main>`) – the closest element wins, so it may be set once on an `<article>` even without a nested `<img>`/`<video>`.
 
 #### `data-playback-rate`
 The speed of the video.

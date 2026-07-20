@@ -1419,6 +1419,9 @@ class Frame {
             }
 
             $el.attr(attrs).data("exif-done", 1)
+            // EXIF resolves async; if it wrote data-datetime, drop this actor's memoized prop() lookups so a
+            // stale (pre-EXIF) value isn't served. Per-element (not global) to keep a bulk import's cache warm.
+            if (attrs["data-datetime"]) { prop_invalidate_el(el) }
             callback?.()
         }
 

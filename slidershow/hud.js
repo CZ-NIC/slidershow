@@ -445,7 +445,7 @@ class Hud {
 
         this.$hud_filename.html(frame.get_filename($actor) || "?")
         this.$hud_device.text($actor.data("device") || "")
-        this.$hud_datetime.text($actor.data("datetime") || "")
+        this.$hud_datetime.text(prop("datetime", $actor) || "")
         // display the map button only if map was previously blocked by user
         this.$hud_gps.html($actor.data("gps") ? "🗺" : "")
         this.tag(frame)
