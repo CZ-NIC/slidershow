@@ -205,6 +205,21 @@ function formatDateMs(ms) {
 }
 
 /**
+ * Human-readable byte count, e.g. 1536 → "1.5 kB", 0 → "0 B". Steps by 1024.
+ * @param {number} bytes
+ * @returns {string}
+ */
+function formatBytes(bytes) {
+    if (!bytes || bytes < 1) {
+        return "0 B"
+    }
+    const units = ["B", "kB", "MB", "GB", "TB"]
+    const i = Math.min(units.length - 1, Math.floor(Math.log(bytes) / Math.log(1024)))
+    const value = bytes / Math.pow(1024, i)
+    return `${i === 0 ? value : value.toFixed(value < 10 ? 1 : 0)} ${units[i]}`
+}
+
+/**
  * This works well however the video stop ~ 100 ms later than the endtime.
  *
  * HTMLMediaElement endtime to seconds

@@ -127,7 +127,8 @@ class Export {
      */
 
     /**
-     * @returns {Album[]} One entry per *named* tag in use (unnamed tags are not exportable albums).
+     * @returns {Album[]} One entry per tag in use, ascending. Named tags use their name as the folder;
+     * unnamed tags fall back to `tag-<digit>` (so tagging without naming still exports something useful).
      */
     collect_albums() {
         const pl = this.playback
@@ -144,8 +145,8 @@ class Export {
             })
         })
         return [...byTag.entries()]
-            .filter(([tag]) => names[tag - 1])
-            .map(([tag, frames]) => ({ tag, name: names[tag - 1], frames }))
+            .sort((a, b) => a[0] - b[0])
+            .map(([tag, frames]) => ({ tag, name: names[tag - 1] || `tag-${tag}`, frames }))
     }
 
     /**
@@ -222,12 +223,15 @@ class Export {
      */
     export_albums_dialog() {
         if (!window.showDirectoryPicker) {
-            this.playback.hud.ok("Export albums", "Exporting albums to folders only works in Chrome/Edge.")
+            this.playback.hud.ok("Export albums",
+                "Exporting to folders works only in Chrome/Edge.<br>"
+                + "Your tags are saved inside the presentation – export it with <kbd>Ctrl+S</kbd>, "
+                + "open the exported file in Chrome, and run this again (<kbd>Ctrl+Shift+S</kbd>).")
             return
         }
         const albums = this.collect_albums()
         if (!albums.length) {
-            this.playback.hud.ok("Export albums", "No named tags. Name them first (Alt+T → \"Name tags…\").")
+            this.playback.hud.ok("Export albums", "No tags used yet. Tag some frames first (Alt+T, then a digit).")
             return
         }
         const problems = this._validate_albums(albums)
@@ -236,19 +240,58 @@ class Export {
             return
         }
         const allFrames = this.union_frames(albums)
-        const missingFrames = allFrames.filter(f => !f.$actor.data("file"))
+        // A relative-path frame on a file:// presentation isn't fetchable on its own, but becomes so once
+        // the user supplies a base URL – offer that field instead of forcing a source folder for it.
+        const baseCandidates = allFrames.filter(f =>
+            !f.$actor.data("file") && !this._frame_http_url(f, "") && !!this._frame_http_url(f, "http://x/"))
+        // Truly need a local source folder: no in-memory File, not fetchable over http even with a base.
+        const missingFrames = allFrames.filter(f =>
+            !f.$actor.data("file") && !this._frame_http_url(f, "") && !baseCandidates.includes(f))
         const pathHint = this._common_path_hint(missingFrames)
 
-        const summary = albums.map(a => `${a.name}: ${a.frames.length} files`).join("<br>")
-            + `<br>vsechny: ${allFrames.length} files`
-            + (missingFrames.length
-                ? `<br>${missingFrames.length} file(s) aren't loaded in memory (path-based / reopened presentation)`
-                + ` – you'll be asked for a "source folder" to read them from (its subfolders are searched too).`
-                + (pathHint ? `<br>Hint: their path looks like <code>${pathHint}/…</code> – pick that folder, or a parent of it.` : "")
+        // Total size is free only for in-memory Files (File.size); http/path files would each cost a
+        // network HEAD/getFile() to measure, so they're only counted, not summed.
+        let knownBytes = 0
+        let unknownCount = 0
+        allFrames.forEach(f => {
+            const file = f.$actor.data("file")
+            if (file && typeof file.size === "number") {
+                knownBytes += file.size
+            } else {
+                unknownCount++
+            }
+        })
+        const sizeLine = unknownCount === allFrames.length
+            ? `Total size: unknown (${unknownCount} file(s) not in memory)`
+            : `Total size: ${formatBytes(knownBytes)}` + (unknownCount ? ` (+ ${unknownCount} file(s) of unknown size)` : "")
+
+        const rows = [...albums.map(a => ({ name: a.name, count: a.frames.length })), { name: "vsechny", count: allFrames.length }]
+            .map(({ name, count }) => `<tr><td>${this._esc(name)}</td><td>${count}</td></tr>`).join("")
+        const summary = `<table class="album-summary">${rows}</table>${sizeLine}<br>`
+            + (baseCandidates.length
+                ? `<br>${baseCandidates.length} file(s) are referenced by a relative path – give the base URL below to download them over http.`
                 : "")
+            + (missingFrames.length
+                ? `<br>${missingFrames.length} file(s) aren't in memory and can't be fetched over http`
+                + ` – you'll be asked for a "source folder" to read them from (its subfolders are searched too).`
+                + (pathHint ? `<br>Hint: their path looks like <code>${this._esc(pathHint)}/…</code> – pick that folder, or a parent of it.` : "")
+                : "")
+
+        const $extra = $("<div/>", { class: "album-export-extra" })
+        let $baseInput = null
+        if (baseCandidates.length) {
+            $baseInput = $("<input/>", {
+                type: "text",
+                value: localStorage.getItem("ALBUM-BASE-URL") || "",
+                placeholder: "https://example.com/photos/",
+                style: "width:100%"
+            })
+            $("<label/>").append(document.createTextNode("Base URL: "), $baseInput).appendTo($extra)
+        }
 
         new $.Zebra_Dialog({
             message: summary,
+            source: { inline: $extra },
             title: "Export albums to folders",
             type: "question",
             buttons: [
@@ -260,19 +303,35 @@ class Export {
                 {
                     caption: "Export",
                     default_confirmation: true,
-                    callback: () => this.export_albums(albums, allFrames)
+                    callback: () => {
+                        const baseUrl = $baseInput ? String($baseInput.val()).trim() : ""
+                        if (baseUrl) {
+                            localStorage.setItem("ALBUM-BASE-URL", baseUrl)
+                        }
+                        this.export_albums(albums, allFrames, baseUrl)
+                    }
                 }
             ]
         })
     }
 
     /**
+     * Minimal HTML escaping for names/paths interpolated into a dialog's message string.
+     * @param {string} s
+     * @returns {string}
+     */
+    _esc(s) {
+        return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+    }
+
+    /**
      * @param {Album[]} albums
      * @param {Frame[]} allFrames
+     * @param {string} baseUrl Base URL for relative-path frames on a file:// presentation (empty otherwise).
      */
-    async export_albums(albums, allFrames) {
+    async export_albums(albums, allFrames, baseUrl = "") {
         let sourceIndex = null
-        if (allFrames.some(f => !f.$actor.data("file"))) {
+        if (allFrames.some(f => this._frame_needs_source(f, baseUrl))) {
             const sourceDir = await this._get_source_dir_handle()
             if (!sourceDir) {
                 return // user cancelled the source folder picker
@@ -316,15 +375,15 @@ class Export {
         const results = {}
 
         dirHandles["vsechny"] = await targetDir.getDirectoryHandle("vsechny", { create: true })
-        results["vsechny"] = await this._copy_frames(allFrames, dirHandles["vsechny"], sourceIndex, semaphore)
+        results["vsechny"] = await this._copy_frames(allFrames, dirHandles["vsechny"], sourceIndex, semaphore, baseUrl)
 
         for (const album of albums) {
             dirHandles[album.name] = await targetDir.getDirectoryHandle(album.name, { create: true })
-            results[album.name] = await this._copy_frames(album.frames, dirHandles[album.name], sourceIndex, semaphore)
+            results[album.name] = await this._copy_frames(album.frames, dirHandles[album.name], sourceIndex, semaphore, baseUrl)
         }
 
         await this._write_alba(targetDir, results)
-        this._show_export_summary(targetDir, albums, allFrames, dirHandles, results, semaphore)
+        this._show_export_summary(targetDir, albums, allFrames, dirHandles, results, semaphore, baseUrl)
     }
 
     async _write_alba(targetDir, results) {
@@ -344,8 +403,9 @@ class Export {
      * @param {Object<string, FileSystemDirectoryHandle>} dirHandles
      * @param {Object<string, {copiedNames: string[], missing: string[]}>} results
      * @param {Semaphore} semaphore
+     * @param {string} baseUrl
      */
-    _show_export_summary(targetDir, albums, allFrames, dirHandles, results, semaphore) {
+    _show_export_summary(targetDir, albums, allFrames, dirHandles, results, semaphore, baseUrl = "") {
         const summary = Object.entries(results)
             .map(([name, r]) => `${name}: ${r.copiedNames.length} copied` + (r.missing.length ? `, ${r.missing.length} missing` : ""))
             .join("<br>")
@@ -369,12 +429,12 @@ class Export {
                         if (!frames.length) {
                             continue
                         }
-                        const retried = await this._copy_frames(frames, dirHandle, sourceIndex, semaphore)
+                        const retried = await this._copy_frames(frames, dirHandle, sourceIndex, semaphore, baseUrl)
                         results[name].copiedNames.push(...retried.copiedNames)
                         results[name].missing = retried.missing
                     }
                     await this._write_alba(targetDir, results)
-                    this._show_export_summary(targetDir, albums, allFrames, dirHandles, results, semaphore)
+                    this._show_export_summary(targetDir, albums, allFrames, dirHandles, results, semaphore, baseUrl)
                 }
             }] : false
         })
@@ -385,9 +445,10 @@ class Export {
      * @param {FileSystemDirectoryHandle} dirHandle
      * @param {?Map<string, FileSystemFileHandle>} sourceIndex
      * @param {Semaphore} semaphore
+     * @param {string} baseUrl
      * @returns {Promise<{copiedNames: string[], missing: string[]}>}
      */
-    async _copy_frames(frames, dirHandle, sourceIndex, semaphore) {
+    async _copy_frames(frames, dirHandle, sourceIndex, semaphore, baseUrl = "") {
         const copiedNames = []
         const missing = []
         const usedNames = new Set()
@@ -395,7 +456,7 @@ class Export {
         await Promise.all(frames.map(async frame => {
             const release = await semaphore.acquire()
             try {
-                const file = await this._frame_file(frame, sourceIndex)
+                const file = await this._frame_file(frame, sourceIndex, baseUrl)
                 if (!file) {
                     missing.push(frame.get_filename())
                     return
@@ -454,14 +515,29 @@ class Export {
     }
 
     /**
+     * The bytes to write for a frame, tried in order: the in-memory File (dragged/opened from disk),
+     * an http(s) fetch (files served over the web), then a picked source folder (path-based frames
+     * whose media lives on disk).
      * @param {Frame} frame
      * @param {?Map<string, FileSystemFileHandle>} sourceIndex
-     * @returns {Promise<?File>}
+     * @param {string} baseUrl Base URL for relative-path frames on a file:// presentation.
+     * @returns {Promise<?(File|Blob)>}
      */
-    async _frame_file(frame, sourceIndex) {
+    async _frame_file(frame, sourceIndex, baseUrl = "") {
         const stashed = frame.$actor.data("file")
         if (stashed) {
             return stashed
+        }
+        const url = this._frame_http_url(frame, baseUrl)
+        if (url) {
+            try {
+                const resp = await fetch(url)
+                if (resp.ok) {
+                    return await resp.blob()
+                }
+            } catch (e) {
+                // fall through to the source folder (e.g. offline, CORS, or a stale URL)
+            }
         }
         const handle = sourceIndex?.get(frame.get_filename())
         if (!handle) {
@@ -472,6 +548,45 @@ class Export {
         } catch (e) {
             return null
         }
+    }
+
+    /**
+     * The http(s) URL a frame's media can be fetched from, or null when it isn't fetchable over the
+     * network. An absolute `http(s):`/`data:`/`blob:` `data-src`/`src` is used as-is; a relative path
+     * resolves against the current document when *it* is served over http(s), otherwise against
+     * `baseUrl` (the field the dialog offers when the presentation is opened from disk).
+     * @param {Frame} frame
+     * @param {string} baseUrl
+     * @returns {?string}
+     */
+    _frame_http_url(frame, baseUrl = "") {
+        const src = String(frame.$actor.data("src") || frame.$actor.attr("src") || $("source", frame.$actor).attr("src") || "")
+        if (!src) {
+            return null
+        }
+        if (/^(https?:|data:|blob:)/i.test(src)) {
+            return src
+        }
+        const base = /^https?:$/i.test(location.protocol) ? document.baseURI : baseUrl
+        if (!base) {
+            return null
+        }
+        try {
+            return new URL(src, base).href
+        } catch (e) {
+            return null
+        }
+    }
+
+    /**
+     * Whether a frame can only be read from a local source folder – no in-memory File and not fetchable
+     * over http (even with `baseUrl`). Such frames drive the "pick a source folder" prompt.
+     * @param {Frame} frame
+     * @param {string} baseUrl
+     * @returns {boolean}
+     */
+    _frame_needs_source(frame, baseUrl = "") {
+        return !frame.$actor.data("file") && !this._frame_http_url(frame, baseUrl)
     }
 
     /**

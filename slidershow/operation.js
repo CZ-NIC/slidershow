@@ -184,6 +184,17 @@ class Operation {
     }
 
     /**
+     * Number of frames carrying each tag digit.
+     * @returns {Map<number, number>}
+     */
+    _tagCounts() {
+        const counts = new Map()
+        this.playback.$articles.each((_, el) =>
+            $(el).data("frame").get_tags().forEach(t => counts.set(t, (counts.get(t) || 0) + 1)))
+        return counts
+    }
+
+    /**
      * Checkbox list (one per used tag) to show only frames carrying any of the checked tags (OR) –
      * applies to both the grid and normal navigation, see Playback.set_tag_filter. A "Clear filter"
      * button resets it; the small icon next to the frame counter does the same in one click.
@@ -234,12 +245,15 @@ class Operation {
     _nameTagsDialog() {
         const pl = this.playback
         const existing = ($main.attr("data-tag-names") || "").split(",")
+        const counts = this._tagCounts()
         const maxTag = Math.max(9, existing.length, ...this._usedTags())
         const $list = $("<div/>", { class: "tag-names-list" })
         for (let t = 1; t <= maxTag; t++) {
+            const count = counts.get(t) || 0
             $("<label/>").append(
                 document.createTextNode(t + ": "),
-                $("<input/>", { type: "text", value: existing[t - 1] || "" })
+                $("<input/>", { type: "text", value: existing[t - 1] || "" }),
+                $("<span/>", { class: "tag-count", text: count ? ` (${count})` : "" })
             ).appendTo($list)
         }
 

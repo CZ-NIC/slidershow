@@ -1,6 +1,8 @@
 # CHANGELOG
 
 ## 1.0.0 (unreleased)
+* enh (export albums): "Export albums to folders…" now (1) downloads photos served over http(s) instead of only reading in-memory/on-disk files — relative paths resolve against the presentation's URL, or against a "Base URL" field the dialog offers when the presentation is opened from `file://`; (2) exports *unnamed* tags too, into a `tag-<digit>` folder; (3) shows a per-tag table (name → count) plus a total size (summed from in-memory files, with a count of files whose size isn't known without a network/disk read); and, in Firefox (no folder-export support), tells you your tags are saved so you can export the presentation with <kbd>Ctrl+S</kbd> and re-run the folder export in Chrome
+* enh (tagging): the "Name tags…" dialog shows, next to each input, how many frames carry that tag
 * enh: the loading spinner shows the download percentage while a video's or image's full-quality file is still downloading (video via native `progress`/`buffered`; images via a progress-tracked `fetch()`, falling back to the plain `<img>` load over `file://` or when `Content-Length` is missing)
 * fix (navigation): <kbd>Alt+PageDown</kbd> on the very first (loose, directly under `<main>`) frame jumped straight to the last slide instead of the next section
 * fix (tagging): "Group frames according to their tag" now gathers *every* untagged frame (ex. cleared with <kbd>0</kbd>) into a single catch-all section — previously only frames loose under `<main>` were collected, so photos untagged inside an existing section stayed scattered there

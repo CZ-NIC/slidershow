@@ -9,6 +9,7 @@ test.beforeEach(async ({ page }) => {
     await expect.poll(() => page.url()).toContain("#1")
     await page.evaluate(() => {
         $main.attr("data-tag-names", "rodice,vedouci")
+        prop_invalidate() // the real "Name tags" dialog does this; tag_names() reads the memoized prop()
         const frames = playback.$articles.toArray().map(el => $(el).data("frame"))
         frames[0].set_tag(1) // one.jpg -> rodice
         frames[1].set_tag(2) // two.jpg -> vedouci
@@ -213,6 +214,78 @@ test("export summary offers Change source folder & retry when files are missing,
     expect(copied).toEqual(["one.jpg", "three.jpg", "two.jpg"])
 })
 
+test("collect_albums also exports unnamed tags into a tag-<digit> folder, included in vsechny", async ({ page }) => {
+    const result = await page.evaluate(() => {
+        const frames = playback.$articles.toArray().map(el => $(el).data("frame"))
+        frames[0].set_tag(3) // one.jpg -> tag 3 (unnamed)
+        const albums = menu.export.collect_albums()
+        const union = menu.export.union_frames(albums)
+        return {
+            albums: albums.map(a => ({ name: a.name, files: a.frames.map(f => f.get_filename()).sort() })),
+            union: union.map(f => f.get_filename()).sort(),
+        }
+    })
+    // rodice (1), vedouci (2), tag-3 (unnamed) – ascending by digit
+    expect(result.albums).toEqual([
+        { name: "rodice", files: ["one.jpg", "three.jpg"] },
+        { name: "vedouci", files: ["three.jpg", "two.jpg"] },
+        { name: "tag-3", files: ["one.jpg"] },
+    ])
+    expect(result.union).toEqual(["one.jpg", "three.jpg", "two.jpg"])
+})
+
+test("_frame_http_url: absolute http used as-is, relative needs a base URL on a file:// presentation", async ({ page }) => {
+    const urls = await page.evaluate(() => {
+        const frame = $(playback.$articles[0]).data("frame")
+        const set = v => frame.$actor.data("src", v)
+        set("http://example.com/pics/one.jpg")
+        const absolute = menu.export._frame_http_url(frame, "")
+        set("sub/one.jpg")
+        const relativeNoBase = menu.export._frame_http_url(frame, "")
+        const relativeWithBase = menu.export._frame_http_url(frame, "http://example.com/pics/")
+        return { absolute, relativeNoBase, relativeWithBase }
+    })
+    expect(urls.absolute).toBe("http://example.com/pics/one.jpg")
+    expect(urls.relativeNoBase).toBe(null) // file:// doc + relative path + no base → not fetchable
+    expect(urls.relativeWithBase).toBe("http://example.com/pics/sub/one.jpg")
+})
+
+test("export_albums fetches over http when a frame has no in-memory File", async ({ page }) => {
+    await page.evaluate(async () => {
+        const root = await navigator.storage.getDirectory()
+        await root.remove({ recursive: true }).catch(() => { })
+        window.showDirectoryPicker = async () => navigator.storage.getDirectory()
+
+        // three.jpg: no stashed File, only an absolute http data-src → must be fetched, never a source folder
+        const frames = playback.$articles.toArray().map(el => $(el).data("frame"))
+        frames[2].$actor.removeData("file")
+        frames[2].$actor.data("src", "http://example.com/three.jpg")
+        window.__fetched = []
+        window.fetch = async (url) => {
+            window.__fetched.push(String(url))
+            return { ok: true, blob: async () => new Blob(["remote-bytes"]) }
+        }
+    })
+
+    await page.evaluate(async () => {
+        const albums = menu.export.collect_albums()
+        const union = menu.export.union_frames(albums)
+        await menu.export.export_albums(albums, union)
+    })
+
+    const out = await page.evaluate(async () => {
+        const root = await navigator.storage.getDirectory()
+        const vsechny = await root.getDirectoryHandle("vsechny")
+        const names = []
+        for await (const name of vsechny.keys()) names.push(name)
+        const handle = await vsechny.getFileHandle("three.jpg")
+        return { fetched: window.__fetched, files: names.sort(), text: await (await handle.getFile()).text() }
+    })
+    expect(out.fetched).toContain("http://example.com/three.jpg")
+    expect(out.files).toEqual(["one.jpg", "three.jpg", "two.jpg"])
+    expect(out.text).toBe("remote-bytes") // written from the fetched blob, not a source folder
+})
+
 test("_validate_albums flags a reserved name, a path separator, and a name collision", async ({ page }) => {
     const problems = await page.evaluate(() => menu.export._validate_albums([
         { name: "vsechny", tag: 1, frames: [] },
@@ -226,7 +299,10 @@ test("_validate_albums flags a reserved name, a path separator, and a name colli
 })
 
 test("export_albums_dialog refuses to proceed when an album name is reserved/colliding", async ({ page }) => {
-    await page.evaluate(() => $main.attr("data-tag-names", "vsechny,vedouci")) // tag 1 named "vsechny" – reserved
+    await page.evaluate(() => {
+        $main.attr("data-tag-names", "vsechny,vedouci") // tag 1 named "vsechny" – reserved
+        prop_invalidate() // tag_names() reads the memoized prop(); the real dialog invalidates after a write
+    })
     await page.evaluate(() => menu.export.export_albums_dialog())
     await expect(page.locator(".ZebraDialog", { hasText: "reserved" })).toBeVisible()
     // no "Export" button offered – nothing should have run

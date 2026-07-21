@@ -92,6 +92,20 @@ test("Name tags dialog: first input is focused, Enter confirms, commas/slashes a
     expect(await page.evaluate(() => $main.attr("data-tag-names"))).toBe("rodina")
 })
 
+test("Name tags dialog shows the frame count carrying each tag next to its input", async ({ page }) => {
+    await page.evaluate(() => {
+        const frames = playback.$articles.toArray().map(el => $(el).data("frame"))
+        frames[0].set_tag(1)
+        frames[1].set_tag(1)
+        frames[2].set_tag(2)
+    })
+    await page.evaluate(() => playback.operation._nameTagsDialog())
+    const counts = page.locator(".tag-names-list label .tag-count")
+    await expect(counts.nth(0)).toHaveText(" (2)") // tag 1 on two frames
+    await expect(counts.nth(1)).toHaveText(" (1)") // tag 2 on one frame
+    await expect(counts.nth(2)).toHaveText("")     // tag 3 unused → no count shown
+})
+
 test("tag names persist to localStorage keyed by document name and restore on a fresh load", async ({ page }) => {
     await page.evaluate(() => playback.operation._nameTagsDialog())
     await page.locator(".tag-names-list input").first().fill("rodina")

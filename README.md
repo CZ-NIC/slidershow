@@ -121,7 +121,7 @@ Tags can be named through the "Name tags…" button/command (<kbd>Alt+Shift+T</k
 
 <sub>Grouping images works that way: It iterates over all the frames and if they are not in the section, having the same name (tag), it will create such section. A frame with several tags is grouped only by the first one (with a notice); so at the first grouping, frames keep their former order in the new sections. The second time, they will get appended to the section's end.<br>You can easily re-order by date etc. in the grid view (key <kbd>G</kbd>).</sub>
 
-"Export albums to folders…" (<kbd>Ctrl+Shift+S</kbd>, Chrome/Edge only) exports one folder per *named* tag plus a `vsechny` folder with everything, alongside an `alba.json` and one `<album>.txt` per album. Handy to prepare per-person, overlapping albums (e.g. "everyone" / "parents" / "leaders") for dragging into a photo-sharing upload.
+"Export albums to folders…" (<kbd>Ctrl+Shift+S</kbd>, Chrome/Edge only) exports one folder per tag — named tags use their name, unnamed ones a `tag-<digit>` folder — plus a `vsechny` folder with everything, alongside an `alba.json` and one `<album>.txt` per album. Handy to prepare per-person, overlapping albums (e.g. "everyone" / "parents" / "leaders") for dragging into a photo-sharing upload. The dialog previews a per-tag count table and the total size. Photos are read from the in-memory file (if dropped in), fetched over http(s) (if the presentation — or the given "Base URL" — is on the web), or, failing both, from a source folder you pick (searched recursively). Firefox can't write folders; export the presentation with <kbd>Ctrl+S</kbd> (your tags are saved inside it) and re-run this in Chrome.
 
 # Structure
 

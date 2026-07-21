@@ -951,6 +951,23 @@ article-map {
         display: block;
         padding: .2em 0;
     }
+
+    .tag-count {
+        opacity: .6;
+    }
+}
+
+.album-summary {
+    margin: 0 auto .5em;
+    text-align: left;
+
+    td {
+        padding: .1em .6em .1em 0;
+    }
+
+    td:last-child {
+        text-align: right;
+    }
 }
 
 #preblink-prevention {
