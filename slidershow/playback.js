@@ -514,6 +514,21 @@ class Playback {
         }
     }
 
+    /**
+     * Apply tag `n` (toggle; null/0 clears) – to the grid selection as a single undoable when the grid is
+     * open with a selection, otherwise to the current frame. The digit hotkeys funnel through here so they
+     * do the expected thing in both contexts.
+     * @param {?number} n
+     */
+    tag_current(n) {
+        const grid = this.hud.grid
+        if (this.hud.grid_visible && grid.hasSelection()) {
+            grid.tagSelection(n)
+        } else {
+            this.frame.set_tag(n)
+        }
+    }
+
     nextSection() {
         const $section = this.getSection()
         // A loose frame sits directly under <main> (no wrapping <section>), so its "section" resolves to

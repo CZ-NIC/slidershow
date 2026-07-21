@@ -90,30 +90,30 @@ class Operation {
     taggingInit() {
         const pl = this.playback
         return this._group("Tagging", [
-            [["Numpad4", "Digit4"], "Tag 4", () => pl.frame.set_tag(4)],
-            [["Numpad5", "Digit5"], "Tag 5", () => pl.frame.set_tag(5)],
-            [["Numpad6", "Digit6"], "Tag 6", () => pl.frame.set_tag(6)],
-            [["Numpad7", "Digit7"], "Tag 7", () => pl.frame.set_tag(7)],
-            [["Numpad8", "Digit8"], "Tag 8", () => pl.frame.set_tag(8)],
-            [["Numpad9", "Digit9"], "Tag 9", () => pl.frame.set_tag(9)],
-            ["Alt+Numpad0", "Tag 10", () => pl.frame.set_tag(10)],
-            ["Alt+Numpad1", "Tag 11", () => pl.frame.set_tag(11)],
-            ["Alt+Numpad2", "Tag 12", () => pl.frame.set_tag(12)],
-            ["Alt+Numpad3", "Tag 13", () => pl.frame.set_tag(13)],
-            ["Alt+Numpad4", "Tag 14", () => pl.frame.set_tag(14)],
-            ["Alt+Numpad5", "Tag 15", () => pl.frame.set_tag(15)],
-            ["Alt+Numpad6", "Tag 16", () => pl.frame.set_tag(16)],
-            ["Alt+Numpad7", "Tag 17", () => pl.frame.set_tag(17)],
-            ["Alt+Numpad8", "Tag 18", () => pl.frame.set_tag(18)],
-            ["Alt+Numpad9", "Tag 19", () => pl.frame.set_tag(19)],
+            [["Numpad4", "Digit4"], "Tag 4", () => pl.tag_current(4)],
+            [["Numpad5", "Digit5"], "Tag 5", () => pl.tag_current(5)],
+            [["Numpad6", "Digit6"], "Tag 6", () => pl.tag_current(6)],
+            [["Numpad7", "Digit7"], "Tag 7", () => pl.tag_current(7)],
+            [["Numpad8", "Digit8"], "Tag 8", () => pl.tag_current(8)],
+            [["Numpad9", "Digit9"], "Tag 9", () => pl.tag_current(9)],
+            ["Alt+Numpad0", "Tag 10", () => pl.tag_current(10)],
+            ["Alt+Numpad1", "Tag 11", () => pl.tag_current(11)],
+            ["Alt+Numpad2", "Tag 12", () => pl.tag_current(12)],
+            ["Alt+Numpad3", "Tag 13", () => pl.tag_current(13)],
+            ["Alt+Numpad4", "Tag 14", () => pl.tag_current(14)],
+            ["Alt+Numpad5", "Tag 15", () => pl.tag_current(15)],
+            ["Alt+Numpad6", "Tag 16", () => pl.tag_current(16)],
+            ["Alt+Numpad7", "Tag 17", () => pl.tag_current(17)],
+            ["Alt+Numpad8", "Tag 18", () => pl.tag_current(18)],
+            ["Alt+Numpad9", "Tag 19", () => pl.tag_current(19)],
         ],
             [
                 ["Alt+Shift+g", "🔀", "Group frames according to their tag", () => pl.section_controller.group()],
-                ["Alt+Shift+t", "🏷", "Name tags…", () => this._nameTagsDialog()],
-                [["Numpad0", "Digit0"], "⛔", "Tag 0", () => pl.frame.set_tag(null)],
-                [["Numpad1", "Digit1"], "1", "Tag 1", () => pl.frame.set_tag(1)],
-                [["Numpad2", "Digit2"], "2", "Tag 2", () => pl.frame.set_tag(2)],
-                [["Numpad3", "Digit3"], "3", "Tag 3", () => pl.frame.set_tag(3)],
+                ["Alt+Shift+t", "🔤", "Name tags…", () => this._nameTagsDialog()],
+                [["Numpad0", "Digit0"], "⛔", "Tag 0", () => pl.tag_current(null)],
+                [["Numpad1", "Digit1"], "1", "Tag 1", () => pl.tag_current(1)],
+                [["Numpad2", "Digit2"], "2", "Tag 2", () => pl.tag_current(2)],
+                [["Numpad3", "Digit3"], "3", "Tag 3", () => pl.tag_current(3)],
             ],
             [
                 ["Filter by tag…", () => this._filterByTagDialog(), () => true, "Filter by tag"],
@@ -536,27 +536,51 @@ class Operation {
 
     gridInit() {
         const pl = this.playback
+        /** @returns {GridController} */
+        const g = () => pl.hud.grid
         return this._group("Grid", [
             ["Enter", "Enter the frame (hides the grid)", () => this.playback.hud.toggle_grid()],
+            // Escape clears the selection first (only then, on a second press, toggles the menu)
+            ["Escape", "Clear selection / menu", () => g().hasSelection() ? g().clearSelection() : pl.hud.toggleMenu()],
 
-            // NOTE we may implement selections. In that case, these shortcuts should be hidden or moved to a command palette. Too much of them!
-            // ["Shift+ArrowRight", "select right", "Add right frame to selection", () => pl.section_controller.moveFrame(pl.index, pl.index+1, false)],
-            ["Ctrl+ArrowUp", "Move up", () => pl.section_controller.moveFrame(pl.index, pl.hud.grid.getFrameIndexInNextRow(-1), true)],
-            ["Ctrl+ArrowDown", "Move down", () => pl.section_controller.moveFrame(pl.index, pl.hud.grid.getFrameIndexInNextRow(1), false)],
-            ["Ctrl+ArrowLeft", "Move left", () => pl.section_controller.moveFrame(pl.index, pl.index - 1, true)],
-            ["Ctrl+ArrowRight", "Move right", () => pl.section_controller.moveFrame(pl.index, pl.index + 1, false)],
+            // Ctrl+Arrow – move the whole selection (or the cursor frame alone) as one block
+            ["Ctrl+ArrowUp", "Move selection up", () => g().moveSelection("up")],
+            ["Ctrl+ArrowDown", "Move selection down", () => g().moveSelection("down")],
+            ["Ctrl+ArrowLeft", "Move selection left", () => g().moveSelection("left")],
+            ["Ctrl+ArrowRight", "Move selection right", () => g().moveSelection("right")],
 
-            ["ArrowUp", "Go up", () => pl.goToFrame(pl.hud.grid.getFrameIndexInNextRow(-1))],
-            ["ArrowDown", "Go down", () => pl.goToFrame(pl.hud.grid.getFrameIndexInNextRow(1))],
-            ["ArrowLeft", "Go left", () => pl.previousFrame()], // normally, left arrow triggers next step but this would block the grid, we need next frame
-            ["ArrowRight", "Go right", () => pl.nextFrame()],
+            // Shift+Arrow – stretch/shrink the selection from the anchor (Shift+Up adds the row above)
+            ["Shift+ArrowUp", "Extend selection up", () => g().extendTo(g().getFrameIndexInNextRow(-1))],
+            ["Shift+ArrowDown", "Extend selection down", () => g().extendTo(g().getFrameIndexInNextRow(1))],
+            ["Shift+ArrowLeft", "Extend selection left", () => g().extendTo(pl.index - 1)],
+            ["Shift+ArrowRight", "Extend selection right", () => g().extendTo(pl.index + 1)],
 
-            ["PageUp", "Page up", () => pl.goToFrame(pl.hud.grid.getFrameIndexInNextPage(-1))],
-            ["PageDown", "Page down", () => pl.goToFrame(pl.hud.grid.getFrameIndexInNextPage(1))],
+            // Space / Ctrl+Space – add/remove the current frame from the selection (Space keeps the cursor
+            // free to move on with plain arrows, so a scattered pick can be built by Space+arrows alone)
+            ["Space", "Toggle frame in selection", () => g().toggleSelect()],
+            ["Ctrl+Space", "Toggle frame in selection", () => g().toggleSelect()],
+            ["Delete", "Delete selection", () => g().deleteSelection()],
+
+            // Clipboard – both the Ctrl+letter and the classic Insert/Delete styles
+            ["Ctrl+c", "Copy selection", () => g().copySelection()],
+            ["Ctrl+Insert", "Copy selection", () => g().copySelection()],
+            ["Ctrl+x", "Cut selection", () => g().cutSelection()],
+            ["Shift+Delete", "Cut selection", () => g().cutSelection()],
+            ["Ctrl+v", "Paste selection", () => g().paste()],
+            ["Shift+Insert", "Paste selection", () => g().paste()],
+
+            // plain Arrow – move the cursor, KEEPING the selection (Escape clears it)
+            ["ArrowUp", "Go up", () => g().moveCursor(() => pl.goToFrame(g().getFrameIndexInNextRow(-1)))],
+            ["ArrowDown", "Go down", () => g().moveCursor(() => pl.goToFrame(g().getFrameIndexInNextRow(1)))],
+            ["ArrowLeft", "Go left", () => g().moveCursor(() => pl.previousFrame())], // normally, left arrow triggers next step but this would block the grid, we need next frame
+            ["ArrowRight", "Go right", () => g().moveCursor(() => pl.nextFrame())],
+
+            ["PageUp", "Page up", () => g().moveCursor(() => pl.goToFrame(g().getFrameIndexInNextPage(-1)))],
+            ["PageDown", "Page down", () => g().moveCursor(() => pl.goToFrame(g().getFrameIndexInNextPage(1)))],
         ],
             [
                 ["Alt+?", "✥", "Navigation help", () =>
-                    new $.Zebra_Dialog("Use arrows to navigate.<br>Ctrl+Arrow to move.<br>PageUp/Down.<br>Home/End.<br>Enter to access the frame.", {
+                    new $.Zebra_Dialog("Arrows move the cursor.<br>Shift+Arrow selects a range (Shift+Up grabs the row above), Space / Ctrl+Space toggle one frame; Shift/Ctrl+click do the same with the mouse. Escape clears the selection.<br>Ctrl+Arrow moves the frame / selection.<br>Over a selection: a digit tags all, 0 untags, Delete removes; Ctrl+C/X/V (or Ctrl+Insert / Shift+Delete / Shift+Insert) copy / cut / paste.<br>PageUp/Down, Home/End.<br>Enter to access the frame.", {
                         title: "Grid navigation help",
                         buttons: false
                     })],
@@ -594,7 +618,7 @@ class Operation {
                     pl.hud.info(`Editing mode ${pl.editing_mode ? "enabled" : "disabled."}`)
                     pl.session.store()
                 }],
-                ["Alt+t", "&#128204;", "Tagging mode", () => {
+                ["Alt+t", "🏷", "Tagging mode", () => {
                     pl.tagging_mode = !pl.tagging_mode
                     // when there will be interfering shortcuts like numbers, we have retag the previous shortcuts
                     pl.operation.tagging.toggle(pl.tagging_mode)

@@ -103,13 +103,25 @@ The `<menu>` is displayed before the presentation starts, unless the `<main>` ha
 
 While presenting, press <kbd>Alt+J</kbd> to display the thumbnail ribbon or <kbd>Alt+G</kbd> to see full grid. There, you can easily sort the frames. Either move them one by one or sort whole section (by EXIF date or file names). Import new images just by dragging them in.
 
+### Multi-selection
+
+The grid supports a file-manager style multi-selection – the current (highlighted) frame doubles as the selection cursor. While a selection exists, a "N frames selected" badge with copy/cut/paste/delete/clear buttons shows at the top.
+
+- <kbd>Shift+Arrow</kbd> stretches or shrinks the selection from the cursor; <kbd>Shift+Up</kbd> grabs the whole row above. <kbd>Shift+click</kbd> extends to the clicked frame.
+- <kbd>Space</kbd> (or <kbd>Ctrl+Space</kbd>) toggles the current frame in/out of the selection; <kbd>Ctrl+click</kbd> does the same for the clicked frame. A <kbd>Shift</kbd>/<kbd>Ctrl</kbd>+drag draws a rubber-band box that adds every frame it covers.
+- A plain <kbd>Arrow</kbd> moves the cursor **keeping** the selection – so you can build a scattered pick with just <kbd>Space</kbd>+arrows. <kbd>Escape</kbd> (or a plain click) clears it.
+- <kbd>Ctrl+Arrow</kbd> moves the whole selection as one block (a single undoable), even across sections, and is symmetric – <kbd>Ctrl+Down</kbd> then <kbd>Ctrl+Up</kbd> returns to the exact layout. Dragging a selected thumbnail moves the whole selection. With nothing selected it moves just the current frame, as before.
+- With the selection in place: a digit tags every selected frame at once (bulk-consistent: if they all already carry the tag, it is removed from all), <kbd>0</kbd> untags them, <kbd>Delete</kbd> removes them, and <kbd>Ctrl+C</kbd>/<kbd>Ctrl+X</kbd>/<kbd>Ctrl+V</kbd> (or the classic <kbd>Ctrl+Insert</kbd> / <kbd>Shift+Delete</kbd> / <kbd>Shift+Insert</kbd>) copy / cut / paste them after the cursor – each as one undoable step.
+
+The selection is a grid-only convenience; it is never saved into the presentation nor exported.
+
 ## Auxiliary window
 
 While presenting, you may appraise an auxiliary window on the second monitor that shows you the next frame and presenting notes. Start it with <kbd>Alt+W</kbd>.
 
 ## Organizing
 
-Start tagging mode with <kbd>Alt+T</kbd>. Use Numpad to tag the images – think of a tag as a number that corresponds to one of your categories. A photo may carry several tags at once: hitting a digit again toggles that tag off, <kbd>0</kbd> clears all of them. Then in the menu, hit <kbd>Alt+Shift+G</kbd> to group the images to the `<section>` according to tags. The resulting sections come out ordered by tag number (1, 2, 3…), with every untagged photo gathered into a single catch-all section at the end. Export with <kbd>Ctrl+S</kbd>. Sorted & ready!
+Start tagging mode with <kbd>Alt+T</kbd>. Use Numpad to tag the images – think of a tag as a number that corresponds to one of your categories. A photo may carry several tags at once: hitting a digit again toggles that tag off, <kbd>0</kbd> clears all of them. Text frames (with no photo/video) can be tagged too – their tag rides along in the exported document. Then in the menu, hit <kbd>Alt+Shift+G</kbd> to group the images to the `<section>` according to tags. The resulting sections come out ordered by tag number (1, 2, 3…), with every untagged photo gathered into a single catch-all section at the end. Export with <kbd>Ctrl+S</kbd>. Sorted & ready!
 
 To wipe tags again, the grid ribbon has an "untag all" button on each section and on the whole presentation, clearing the tags of every frame inside in one undoable step.
 

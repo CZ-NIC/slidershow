@@ -214,6 +214,15 @@ frame-preview {
 
 
 
+/* Rubber-band rectangle drawn during a Shift/Ctrl+drag selection in the grid (lives in <body>). */
+.grid-marquee {
+    position: fixed;
+    z-index: 20;
+    border: 1px solid var(--highlight);
+    background-color: color-mix(in srgb, var(--highlight) 20%, transparent);
+    pointer-events: none;
+}
+
 #hud {
     position: fixed; /* note that when position:fixed does not work when moving body */
     z-index: 10;
@@ -403,6 +412,69 @@ frame-preview {
 
         #hud-tag-filter {
             cursor: pointer;
+        }
+    }
+
+    /* "N frames selected" badge – top-centre over the grid, with clipboard/clear buttons and a hint. */
+    #hud-selection {
+        left: 50%;
+        top: 2vh;
+        transform: translateX(-50%);
+        z-index: 3;
+        display: flex;
+        align-items: center;
+        gap: .5em;
+        padding: .3em .6em;
+        border-radius: 1em;
+        background-color: var(--control);
+        color: var(--base);
+        box-shadow: 0 2px 8px rgba(0, 0, 0, .4);
+        user-select: none;
+
+        button[data-sel="clear"] {
+            margin-right: .1em;
+            border-right: 1px solid rgba(255, 255, 255, .25);
+            padding-right: .5em;
+        }
+
+        /* Empty-grid hint: a faint teaser of the multi-select affordance, no buttons. */
+        &[data-mode="hint"] {
+            opacity: .55;
+            font-style: italic;
+
+            button,
+            .sel-hint {
+                display: none;
+            }
+        }
+
+        .sel-count {
+            font-weight: bold;
+        }
+
+        .sel-hint {
+            opacity: .7;
+            font-size: 80%;
+            cursor: help;
+        }
+
+        button {
+            background: none;
+            border: 0;
+            color: inherit;
+            font-size: 115%;
+            cursor: pointer;
+            padding: .1em .25em;
+            border-radius: .3em;
+
+            &:hover {
+                background-color: rgba(255, 255, 255, .2);
+            }
+
+            &:disabled {
+                opacity: .35;
+                cursor: default;
+            }
         }
     }
 
@@ -678,6 +750,29 @@ frame-preview {
                     left: -4px;
                     border-width: 0 0 6px 6px;
                 }
+            }
+
+            /* Multi-selection (grid only). The cursor frame is `.current`; the other chosen frames are
+               `.selected`. A tinted fill + inset ring reads clearly even under the .current corner marks. */
+            &.selected {
+                outline: 2px solid var(--highlight);
+                box-shadow: inset 0 0 0 3px var(--highlight);
+                background-color: color-mix(in srgb, var(--highlight) 35%, lightgray);
+            }
+
+            /* Frames sitting in a cut-clipboard, greyed out like a file manager until they're pasted. */
+            &.cut {
+                opacity: .4;
+
+                >* {
+                    filter: grayscale(1);
+                }
+            }
+
+            /* Frames on a copy-clipboard – a dashed ring marks them as "will be cloned on paste". */
+            &.copied {
+                outline: 3px dashed var(--control);
+                outline-offset: -3px;
             }
 
             .delete {

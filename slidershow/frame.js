@@ -1423,12 +1423,24 @@ class Frame {
     }
 
     check_tag() {
-        const $actor = this.$actor
         const name = this.get_filename()
+        if (!name) {
+            return // a text frame has no filename to key localStorage by; its data-tag travels in the document
+        }
         const tag = localStorage.getItem("TAG: " + name)
         if (tag) {
-            $actor.attr("data-tag", tag)
+            this._tagTarget().attr("data-tag", tag)
         }
+    }
+
+    /**
+     * Where `data-tag` lives: the media actor when there is one, otherwise the frame itself – so text
+     * frames (no `<img>`/`<video>`) are taggable too. Their tag rides along in the exported document; only
+     * localStorage persistence is skipped for them (no filename to key by).
+     * @returns {JQuery}
+     */
+    _tagTarget() {
+        return this.$actor.length ? this.$actor : this.$frame
     }
 
     /**
@@ -1437,7 +1449,7 @@ class Frame {
      * @returns {number[]}
      */
     get_tags($actor = null) {
-        $actor = $actor || this.$actor
+        $actor = $actor || this._tagTarget()
         return ($actor.attr("data-tag") || "").split(/\s+/).filter(Boolean).map(Number)
     }
 
@@ -1461,7 +1473,7 @@ class Frame {
      * @returns {string}
      */
     tag_display($actor = null) {
-        $actor = $actor || this.$actor
+        $actor = $actor || this._tagTarget()
         const names = this.tag_names($actor)
         return this.get_tags($actor).map(t => names[t - 1] || t).join(" · ")
     }
@@ -1473,7 +1485,7 @@ class Frame {
      * @returns {boolean}
      */
     tags_all_named($actor = null) {
-        $actor = $actor || this.$actor
+        $actor = $actor || this._tagTarget()
         const names = this.tag_names($actor)
         const tags = this.get_tags($actor)
         return tags.length > 0 && tags.every(t => names[t - 1])
@@ -1501,14 +1513,15 @@ class Frame {
      * @param {number[]} tokens
      */
     write_tags(tokens) {
-        const key = "TAG: " + this.get_filename()
+        const name = this.get_filename() // empty for a text frame – then we only touch the DOM, not localStorage
+        const $target = this._tagTarget()
         const value = tokens.join(" ")
         if (value) {
-            localStorage.setItem(key, value)
-            this.$actor.attr("data-tag", value)
+            if (name) localStorage.setItem("TAG: " + name, value)
+            $target.attr("data-tag", value)
         } else {
-            localStorage.removeItem(key)
-            this.$actor.removeAttr("data-tag")
+            if (name) localStorage.removeItem("TAG: " + name)
+            $target.removeAttr("data-tag")
         }
         this.playback.hud.tag(this)
     }

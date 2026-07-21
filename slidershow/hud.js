@@ -12,7 +12,7 @@ class Hud {
         this.$hud_gps = $("#hud-gps")
         this.$hud_tag = $("#hud-tag").on("click", () => {
             const op = this.playback.operation
-            this.playback.tagging_mode ? op._tagFrameDialog() : op._filterByTagDialog()
+            this.playback.tagging_mode ? op._nameTagsDialog() : op._filterByTagDialog()
         })
         this.$hud_counter = $("#hud-counter")
         this.$hud_tag_filter = $("#hud-tag-filter").hide().on("click", () => this.playback.set_tag_filter([]))
@@ -21,6 +21,18 @@ class Hud {
         this.$hud_thumbnails = $("#hud-thumbnails").hide() // by default off
         this.$hud_grid = $("#hud-grid").hide() // by default off
         this.grid = new GridController(this.playback, this, this.$hud_grid)
+        this.$hud_selection = $("#hud-selection")
+        // "N frames selected" badge shown while a grid selection exists; its buttons proxy the grid clipboard.
+        this.$hud_selection.on("click", "button", e => {
+            const g = this.grid
+            switch (e.currentTarget.dataset.sel) {
+                case "copy": g.copySelection(); break
+                case "cut": g.cutSelection(); break
+                case "paste": g.paste(); break
+                case "delete": g.deleteSelection(); break
+                case "clear": g.clearSelection(); break
+            }
+        })
         this.$hud_properties = $("#hud-properties").hide() // by default off
         this.$control_icons = $("#control-icons")
         this.$mobile_nav = $("#mobile-nav")
@@ -95,6 +107,18 @@ class Hud {
         })
         this.$hud_thumbnails.add(this.$hud_grid).on("click", "frame-preview", e => {
             const ref = Number(e.currentTarget.dataset.ref)
+            if (this.grid_visible) { // file-manager style modified clicks build a selection
+                if (e.ctrlKey || e.metaKey) {
+                    this.playback.goToFrame(ref)
+                    this.grid.toggleSelect(ref)
+                    return
+                }
+                if (e.shiftKey) {
+                    this.grid.extendTo(ref)
+                    return
+                }
+                this.grid.clearSelection() // a plain click resets the selection to just this frame
+            }
             this.playback.goToFrame(ref)
         })
     }
@@ -187,6 +211,7 @@ class Hud {
             this.display_grid(true)
         } else {
             // even that the frame was focused, it was not yet prepared and entered
+            this.grid.clearSelection() // the selection is a grid-only convenience; drop it on leaving the grid
             this.playback.goToFrame(this.playback.frame.index, false, true)
         }
         this.playback.operation.grid.toggle(on)
@@ -238,6 +263,7 @@ class Hud {
                 const checked = $(e.currentTarget).closest(".tag-filter-dropdown").find("input:checked").map((_, el) => Number($(el).val())).get()
                 this.playback.set_tag_filter(checked)
             })
+        this.grid.initMarquee() // Shift/Ctrl+drag rubber-band selection
     }
 
     /**
@@ -276,6 +302,46 @@ class Hud {
 
         // highlight current frame preview
         this.makeThumbnailsImportable($container, false) // prevent scrolling which scrolls main frame, not the thumbnails because there are only little of them
+    }
+
+    /**
+     * Show/update the "N frames selected" badge (top-centre) while a grid selection exists; hide it
+     * otherwise. The Paste button is only enabled once something has been copied/cut. Called from
+     * GridController._syncSelectionClass on every selection change.
+     */
+    refresh_selection_info() {
+        const grid = this.grid
+        if (!this.grid_visible) {
+            this.$hud_selection.hide()
+            return
+        }
+        const n = grid.selection.size
+        const clip = grid.clipboard
+        const clipN = clip?.frames?.length || 0
+
+        // Empty grid → a faint always-there hint that teaches the multi-select affordance.
+        if (!n && !clipN) {
+            this.$hud_selection.attr("data-mode", "hint").css("display", "flex")
+                .find(".sel-count").text("Select frames — Shift/Ctrl-click or drag a box, or Space")
+            return
+        }
+
+        // Message: how many are on the clipboard (to copy/move) vs. merely selected. When the clipboard
+        // is a subset of the current selection, spell out the "N other selected" remainder.
+        let text
+        if (!clipN) {
+            text = `${n} frame${n > 1 ? "s" : ""} selected`
+        } else {
+            const clipIndices = new Set(clip.frames.map(f => f.index))
+            const others = [...grid.selection].filter(i => !clipIndices.has(i)).length
+            text = `${clipN} frame${clipN > 1 ? "s" : ""} ${clip.cut ? "to move" : "to copy"}`
+            if (others) {
+                text += `, ${others} other selected`
+            }
+        }
+        this.$hud_selection.attr("data-mode", "active").css("display", "flex")
+            .find(".sel-count").text(text)
+        this.$hud_selection.find("[data-sel=paste]").prop("disabled", !clipN)
     }
 
     /**
@@ -346,9 +412,11 @@ class Hud {
                     $thumbnail.append($("<span/>", { html: frame.tag_display(), class: "tag", title: "Tag that helps you organize" }))
                 }
 
-                // Scale – use the proportions of the full screen but shrink to max thumbnail width
-                const scaleFactorX = $thumbnail.width() / pl.$current.width()
-                $(":first", $thumbnail).css({ "scale": String(scaleFactorX) })
+                // Scale – use the proportions of the full screen but shrink to max thumbnail width.
+                // $current can momentarily be a detached (just-deleted) frame with width 0, which would make
+                // the scale Infinity and blow the preview out of its cell – fall back to a live frame / the window.
+                const fullWidth = pl.$current.width() || pl.$articles.first().width() || $(window).width()
+                $(":first", $thumbnail).css({ "scale": String($thumbnail.width() / fullWidth) })
             }, 1)
         }
         if (prepend) {
@@ -381,6 +449,11 @@ class Hud {
             $("frame-preview", $container).removeClass("current").filter(this.getThumbnail(pl.frame)).addClass("current")
         }
 
+        // paint the multi-selection (grid only) so freshly scrolled-in thumbnails match this.grid.selection
+        if ($container[0] === this.$hud_grid[0]) {
+            this.grid._syncSelectionClass()
+        }
+
         // make importable and draggable – only elements not initialized yet. jQuery UI .draggable()
         // re-inits (destroy+recreate) on every element it is called on, and this method runs on every
         // frame change / scroll page while the grid is open, so re-running it over the whole loaded set
@@ -410,13 +483,18 @@ class Hud {
                 stop: (_, ui) => {
                     clean()
                     const [target, before] = underlyingEl(ui)
-                    if (target) {
-                        const index = ui.helper.data("ref")
-                        if (target.tagName === "SECTION-CONTROLLER") {
-                            pl.section_controller.putFrameIntoSection(index, $(target).data("section"))
-                        } else {
-                            pl.section_controller.moveFrame(index, target.dataset.ref, before)
-                        }
+                    if (!target) {
+                        return
+                    }
+                    const index = ui.helper.data("ref")
+                    // when the dragged thumbnail is part of a multi-selection, the whole selection travels
+                    const multi = this.grid_visible && this.grid.selection.has(Number(index)) && this.grid.selection.size > 1
+                    if (target.tagName === "SECTION-CONTROLLER") {
+                        const section = $(target).data("section")
+                        multi ? this.grid.putSelectionIntoSection(section) : pl.section_controller.putFrameIntoSection(index, section)
+                    } else {
+                        const ref = target.dataset.ref
+                        multi ? this.grid.moveSelectionBeside(ref, before) : pl.section_controller.moveFrame(index, ref, before)
                     }
                 }
             })

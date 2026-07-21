@@ -26,6 +26,16 @@ class GridController {
          */
         this.colMap = []
         this.isDisplayed = false
+
+        /** @type {Set<number>} Selected frame indices (into pl.$articles). Ephemeral UI state, purely a
+         * grid-overview convenience – it is NOT part of the presentation and is never exported nor persisted. */
+        this.selection = new Set()
+        /** @type {?number} Anchor frame index for Shift-range extension (the fixed end of the range). */
+        this.anchor = null
+        /** @type {?{html: string[], cut: boolean, frames: Frame[]}} Copy/cut clipboard. `html` are the
+         * sanitized frames a copy-paste clones; `frames` the live originals a cut-paste moves (and, for a
+         * cut, the ones painted with the `cut` class). */
+        this.clipboard = null
     }
 
     /**
@@ -656,5 +666,391 @@ class GridController {
             i += direction
         }
         return direction > 0 ? this.pl.$articles.length - 1 : 0
+    }
+
+    // ---- Multi-selection ---------------------------------------------------------------------------
+    // A file-manager style selection layered over the grid. The current frame (pl.index) doubles as the
+    // selection cursor; `selection` holds the extra chosen frames and `anchor` is the fixed end of a
+    // Shift-range. Bulk operations (tag / delete / move) act on the selection, falling back to the cursor
+    // alone when nothing is selected. Wired to hotkeys in Operation.gridInit and clicks in Hud.init.
+
+    /** @returns {boolean} */
+    hasSelection() {
+        return this.selection.size > 0
+    }
+
+    /** Drop the whole selection (and its anchor) and repaint. */
+    clearSelection() {
+        this.selection.clear()
+        this.anchor = null
+        this._syncSelectionClass()
+    }
+
+    /**
+     * Frames the bulk operations act on: the selection in document order, or just the cursor frame when
+     * nothing is selected.
+     * @returns {Frame[]}
+     */
+    selectedFrames() {
+        const indices = this.hasSelection() ? [...this.selection] : [this.pl.index]
+        return indices.sort((a, b) => a - b)
+            .map(i => $(this.pl.$articles[i]).data("frame"))
+            .filter(Boolean)
+    }
+
+    /** Replace the selection with the (filter-visible) frame indices in the inclusive range a…b. */
+    _selectRange(a, b) {
+        this.selection.clear()
+        const [lo, hi] = a <= b ? [a, b] : [b, a]
+        for (let i = lo; i <= hi; i++) {
+            if (this.pl.frame_matches_filter($(this.pl.$articles[i]).data("frame"))) {
+                this.selection.add(i)
+            }
+        }
+    }
+
+    /** Toggle `index` (defaults to the cursor) in/out of the selection – Ctrl+Space / Ctrl+click. */
+    toggleSelect(index = this.pl.index) {
+        if (this.selection.has(index)) {
+            this.selection.delete(index)
+        } else {
+            this.selection.add(index)
+        }
+        this.anchor = index
+        this._syncSelectionClass()
+    }
+
+    /**
+     * Plain cursor move (arrow without a modifier): move the cursor but KEEP the selection, and re-anchor
+     * to the new cursor so a following Shift+arrow extends from here. Keeping the selection lets you build a
+     * scattered pick with just Space+arrows – Escape (or a plain click) is what clears it.
+     * @param {function} navFn Performs the actual navigation (goToFrame / next-prevFrame).
+     */
+    moveCursor(navFn) {
+        navFn()
+        this.anchor = this.pl.index
+        this._syncSelectionClass()
+    }
+
+    /**
+     * Shift+arrow: stretch/shrink the selection from the anchor to `targetIndex` and move the cursor there.
+     * A whole "Shift+Up adds the row above" falls out for free – the row's frames sit in the contiguous
+     * index range between anchor and target.
+     * @param {?number} targetIndex
+     */
+    extendTo(targetIndex) {
+        if (targetIndex == null || targetIndex < 0 || targetIndex >= this.pl.$articles.length) {
+            return
+        }
+        if (this.anchor === null) {
+            this.anchor = this.pl.index
+        }
+        this._selectRange(this.anchor, targetIndex)
+        this.pl.goToFrame(targetIndex)
+        this._syncSelectionClass()
+    }
+
+    /**
+     * Paint `selected` on the chosen thumbnails, `cut` on those in a cut-clipboard (greyed, "about to
+     * move") and `copied` on those in a copy-clipboard (dashed outline, "will be cloned") – so the user
+     * can tell which frames are on the clipboard – then refresh the badge.
+     */
+    _syncSelectionClass() {
+        const clip = this.clipboard
+        const clipSet = new Set(clip ? clip.frames.map(f => f.index) : [])
+        this.$container.children("frame-preview").each((_, el) => {
+            const ref = Number(el.dataset.ref)
+            $(el).toggleClass("selected", this.selection.has(ref))
+                .toggleClass("cut", !!clip?.cut && clipSet.has(ref))
+                .toggleClass("copied", !!clip && !clip.cut && clipSet.has(ref))
+        })
+        this.hud.refresh_selection_info()
+    }
+
+    /**
+     * Shift/Ctrl+drag over the grid draws a rubber-band rectangle that adds every frame it touches to the
+     * selection – an alternative to clicking each one. Bound once (Hud.init_grid) in the capture phase so
+     * it pre-empts the per-thumbnail jQuery-UI drag (which reorders on a plain, modifier-free drag). A drag
+     * shorter than the threshold is left alone, so a modifier *click* still falls through to its handler.
+     */
+    initMarquee() {
+        const container = this.$container[0]
+        const THRESHOLD = 5
+        let start = null, $box = null, base = null, moved = false
+
+        container.addEventListener("mousedown", e => {
+            if (e.button !== 0 || !(e.shiftKey || e.ctrlKey || e.metaKey)) {
+                return
+            }
+            if (e.target instanceof Element && e.target.closest("button, input, a")) {
+                return // let modifier-clicks on ribbon controls work normally
+            }
+            e.stopPropagation() // pre-empt the thumbnail's drag-to-reorder
+            e.preventDefault()  // no native image/text drag ghost
+            start = { x: e.clientX, y: e.clientY }
+            moved = false
+
+            const onMove = ev => {
+                if (!moved && Math.hypot(ev.clientX - start.x, ev.clientY - start.y) < THRESHOLD) {
+                    return
+                }
+                if (!moved) { // threshold crossed – begin the rubber band, remembering the pre-existing pick
+                    moved = true
+                    base = new Set(this.selection)
+                    $box = $("<div class='grid-marquee'/>").appendTo(document.body)
+                }
+                const x1 = Math.min(start.x, ev.clientX), y1 = Math.min(start.y, ev.clientY)
+                const x2 = Math.max(start.x, ev.clientX), y2 = Math.max(start.y, ev.clientY)
+                $box.css({ left: x1, top: y1, width: x2 - x1, height: y2 - y1 })
+                this._applyMarquee(base, x1, y1, x2, y2)
+            }
+            const onUp = () => {
+                document.removeEventListener("mousemove", onMove, true)
+                document.removeEventListener("mouseup", onUp, true)
+                if (moved) {
+                    $box?.remove()
+                    $box = null
+                    // a click fires right after the drag – swallow it so it doesn't re-toggle/extend
+                    const swallow = ce => { ce.stopImmediatePropagation(); ce.preventDefault() }
+                    container.addEventListener("click", swallow, { capture: true, once: true })
+                    setTimeout(() => container.removeEventListener("click", swallow, true), 0)
+                }
+                start = null
+            }
+            document.addEventListener("mousemove", onMove, true)
+            document.addEventListener("mouseup", onUp, true)
+        }, true)
+    }
+
+    /**
+     * Union `base` with every filter-visible frame whose thumbnail intersects the client-space rectangle.
+     * @param {Set<number>} base Selection to grow from (captured when the drag began)
+     */
+    _applyMarquee(base, x1, y1, x2, y2) {
+        this.selection = new Set(base)
+        this.$container.children("frame-preview").each((_, el) => {
+            const r = el.getBoundingClientRect()
+            if (r.left < x2 && r.right > x1 && r.top < y2 && r.bottom > y1) {
+                const ref = Number(el.dataset.ref)
+                if (this.pl.frame_matches_filter($(this.pl.$articles[ref]).data("frame"))) {
+                    this.selection.add(ref)
+                }
+            }
+        })
+        this._syncSelectionClass()
+    }
+
+    /**
+     * One undoable that relocates the DOM nodes `$moved` via `doFn`, restores each to its original sibling
+     * on undo, and once the reorder settles reselects `reselectFrames` at their fresh indices (repainting).
+     * @param {string} label
+     * @param {JQuery} $moved Nodes detached/reinserted by doFn – captured now for the undo restore.
+     * @param {function} doFn
+     * @param {Frame[]} reselectFrames Frames to re-mark selected afterwards (their .index is reassigned by reset()).
+     */
+    _relocate(label, $moved, doFn, reselectFrames) {
+        const pl = this.pl
+        // Restores replay in document order so an earlier node that was another's original prev-sibling is
+        // back in place before the later one references it.
+        const restores = $moved.toArray().map(el => {
+            const $f = $(el), $prev = $f.prev(), $parent = $f.parent()
+            return $prev.length ? () => $f.insertAfter($prev) : () => $f.prependTo($parent)
+        })
+        pl.changes.undoable(label, doFn, () => restores.forEach(r => r()), () => {
+            pl.resetAndGo()
+            this.selection = new Set(reselectFrames.map(f => f.index))
+            this.anchor = null
+            if (this.isDisplayed) {
+                this._syncSelectionClass()
+            }
+        })
+    }
+
+    /**
+     * Move the whole selection (or the cursor frame alone) as one block, one undoable. Rather than moving
+     * the block, it hops the (up to) one row's / one column's worth of NON-selected frames adjacent to the
+     * block over to its far side: the block slides the opposite way and the move is perfectly symmetric, so
+     * Ctrl+Down then Ctrl+Up returns to the exact original layout (may cross section boundaries).
+     * @param {"up"|"down"|"left"|"right"} dir
+     */
+    moveSelection(dir) {
+        const pl = this.pl
+        const indices = (this.hasSelection() ? [...this.selection] : [pl.index]).sort((a, b) => a - b)
+        const forward = dir === "down" || dir === "right"
+        const step = (dir === "up" || dir === "down") ? this.columns : 1
+        const selSet = new Set(indices)
+        const N = pl.$articles.length
+
+        const pivots = []
+        if (forward) {
+            for (let i = indices[indices.length - 1] + 1; i < N && pivots.length < step; i++) {
+                if (!selSet.has(i)) pivots.push(i)
+            }
+        } else {
+            for (let i = indices[0] - 1; i >= 0 && pivots.length < step; i--) {
+                if (!selSet.has(i)) pivots.push(i)
+            }
+        }
+        if (!pivots.length) {
+            pl.shake()
+            return
+        }
+        pivots.sort((a, b) => a - b)
+
+        const $pivots = $(pivots.map(i => pl.$articles[i]))
+        const $blockFirst = $(pl.$articles[indices[0]])
+        const $blockLast = $(pl.$articles[indices[indices.length - 1]])
+        const movedFrames = indices.map(i => $(pl.$articles[i]).data("frame"))
+
+        this._relocate(`Move ${movedFrames.length} frames`, $pivots,
+            () => forward ? $blockFirst.before($pivots) : $blockLast.after($pivots),
+            movedFrames)
+    }
+
+    /** Drag-drop of a multi-selection: move every selected frame next to `targetRef` (before/after it). */
+    moveSelectionBeside(targetRef, before) {
+        const pl = this.pl
+        targetRef = Number(targetRef)
+        const frames = this.selectedFrames()
+        if (frames.some(f => f.index === targetRef)) {
+            return // dropped onto one of the dragged frames – no-op
+        }
+        const $frames = $(frames.map(f => f.$frame[0]))
+        const $target = $(pl.$articles[targetRef])
+        this._relocate(`Move ${frames.length} frames`, $frames,
+            () => $target[before ? "before" : "after"]($frames), frames)
+    }
+
+    /** Drag-drop of a multi-selection onto a section ribbon: prepend every selected frame into it. */
+    putSelectionIntoSection(section) {
+        const frames = this.selectedFrames()
+        const $frames = $(frames.map(f => f.$frame[0]))
+        this._relocate(`Move ${frames.length} frames to section`, $frames,
+            () => $(section).prepend($frames), frames)
+    }
+
+    /**
+     * Toggle tag `n` on every selected frame as one undoable (`n` null/0 clears). Bulk-consistent: if all
+     * selected frames already carry `n` it is removed from all, otherwise added to all.
+     * @param {?number} n
+     */
+    tagSelection(n) {
+        const pl = this.pl
+        const frames = this.selectedFrames()
+        const snap = frames.map(f => ({ f, before: f.get_tags() }))
+        let label, apply
+        if (!n) {
+            label = `Clear tags on ${frames.length} frames`
+            apply = () => []
+        } else {
+            const allHave = snap.every(({ before }) => before.includes(n))
+            label = `${allHave ? "Untag" : "Tag"} ${n} on ${frames.length} frames`
+            apply = ({ before }) => allHave
+                ? before.filter(t => t !== n)
+                : (before.includes(n) ? before : [...before, n].sort((a, b) => a - b))
+        }
+        pl.changes.undoable(label,
+            () => snap.forEach(s => s.f.write_tags(apply(s))),
+            () => snap.forEach(({ f, before }) => f.write_tags(before)))
+    }
+
+    /** Delete every selected frame as one undoable, then land the cursor on a surviving frame. */
+    deleteSelection() {
+        const pl = this.pl
+        const frames = this.selectedFrames()
+        if (frames.length === 1) {
+            frames[0].delete()
+            this.clearSelection()
+            return
+        }
+        const snaps = frames.map(f => {
+            const $frame = f.$frame
+            const $prev = $frame.prev()
+            const $parent = $frame.parent()
+            return { $frame, reinsert: $prev.length ? () => $frame.insertAfter($prev) : () => $frame.prependTo($parent) }
+        })
+        const landing = Math.min(...frames.map(f => f.index))
+        pl.changes.undoable(`Delete ${frames.length} frames`,
+            () => snaps.forEach(s => s.$frame.detach()),
+            () => snaps.forEach(s => s.reinsert()),
+            () => {
+                this.selection.clear()
+                this.anchor = null
+                pl.reset()
+                const target = pl.$articles[Math.min(landing, pl.$articles.length - 1)] ?? pl.$articles.get(-1)
+                pl.goToFrame($(target).data("frame")?.index ?? 0)
+                this._syncSelectionClass()
+            })
+    }
+
+    // ---- Clipboard (copy / cut / paste) -----------------------------------------------------------
+    // Copy serializes the selected frames so a paste inserts fresh clones; cut keeps the live frames so a
+    // paste moves them. Paste drops the frames right after the current cursor frame. Both keybinding styles
+    // are wired in Operation.gridInit (Ctrl+C/X/V and Ctrl+Insert / Shift+Delete / Shift+Insert).
+
+    /**
+     * Serialize frames for the clipboard, stripping the live transient state (inline position `style`,
+     * `data-preloaded`, generated `data-templated` children) so a pasted clone loads its preview from
+     * scratch instead of inheriting a "already positioned & preloaded" corpse that never renders.
+     * @param {Frame[]} frames
+     * @returns {string[]}
+     */
+    _serialize(frames) {
+        return frames.map(f => {
+            const $c = f.$frame.clone().removeAttr("style").removeAttr("data-preloaded")
+            $c.find("[data-templated]").remove()
+            return $c[0].outerHTML
+        })
+    }
+
+    /** Remember the selection for a clone-on-paste copy. */
+    copySelection() {
+        const frames = this.selectedFrames()
+        if (!frames.length) {
+            return
+        }
+        this.clipboard = { html: this._serialize(frames), cut: false, frames }
+        this.pl.hud.info(`Copied ${frames.length} frames`)
+        this._syncSelectionClass()
+    }
+
+    /** Remember the selection for a move-on-paste cut. */
+    cutSelection() {
+        const frames = this.selectedFrames()
+        if (!frames.length) {
+            return
+        }
+        this.clipboard = { html: this._serialize(frames), cut: true, frames }
+        this.pl.hud.info(`Cut ${frames.length} frames`)
+        this._syncSelectionClass()
+    }
+
+    /** Insert the clipboard just after the current cursor frame – cloning on copy, moving on cut. */
+    paste() {
+        const pl = this.pl
+        const clip = this.clipboard
+        if (!clip?.html?.length) {
+            pl.shake()
+            return
+        }
+        const $cursor = pl.frame.$frame
+
+        if (clip.cut) {
+            const frames = clip.frames.filter(f => f.$frame.parent().length) // still in the DOM
+            if (!frames.length || frames.some(f => f.index === pl.index)) {
+                pl.shake() // nothing to move, or pasting onto one of the cut frames itself
+                return
+            }
+            const $frames = $(frames.map(f => f.$frame[0]))
+            this.clipboard = null // cleared before the move so _relocate's repaint drops the "cut" marks
+            this._relocate(`Move ${frames.length} frames`, $frames, () => $cursor.after($frames), frames)
+        } else {
+            /** @type {JQuery[]} Fresh clones – matches the array-of-jQuery shape SectionController.importFrames expects. */
+            const $new = clip.html.map(h => $(h))
+            pl.section_controller.importFrames($new, $cursor, false) // inserted after the cursor, undoable
+            this.selection = new Set($new.map($f => $f.data("frame")?.index).filter(i => i != null))
+            this.anchor = null
+            this._syncSelectionClass()
+        }
     }
 }

@@ -155,6 +155,15 @@ function get_menu() {
             <div id="hud-tag-filter" title="Filtered by tag – click to change or clear"></div>
         </div>
         <div id="hud-properties"></div>
+        <div id="hud-selection" style="display:none">
+            <button data-sel="clear" title="Clear selection (Escape)">&#10006;</button>
+            <span class="sel-count"></span>
+            <span class="sel-hint" title="Shift+Arrow / Shift+click: select a range&#10;Space / Ctrl+click: toggle one frame&#10;Ctrl+Arrow: move the selection&#10;Escape: clear">⇧ range · Ctrl toggle</span>
+            <button data-sel="copy" title="Copy (Ctrl+C / Ctrl+Insert)">&#128203;</button>
+            <button data-sel="cut" title="Cut (Ctrl+X / Shift+Delete)">&#9986;</button>
+            <button data-sel="paste" title="Paste after the current frame (Ctrl+V / Shift+Insert)">&#128229;</button>
+            <button data-sel="delete" title="Delete (Delete)">&#128465;</button>
+        </div>
         <div id="hud-thumbnails"></div>
         <div id="hud-grid"></div>
         <div id="control-icons"></div>

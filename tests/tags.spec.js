@@ -36,6 +36,22 @@ test("set_tag toggles multi-valued tags, clears on 0, persists to localStorage, 
     expect(await page.evaluate(f => localStorage.getItem("TAG: " + f), filename)).toBeNull()
 })
 
+test("text frames (no media) are taggable too – data-tag lands on the article itself", async ({ page }) => {
+    await page.evaluate(() => {
+        $main.empty()
+        $("<section/>").append($("<article/>").html("<h1>Intro</h1><p>text only</p>")).appendTo($main)
+        playback.reset()
+        const $f = $("main article").first()
+        playback.frame = $f.data("frame"); playback.$current = $f; playback.index = 0
+    })
+    await page.evaluate(() => playback.frame.set_tag(2))
+    expect(await page.evaluate(() => playback.frame.$frame.attr("data-tag"))).toBe("2")
+    expect(await page.evaluate(() => playback.frame.get_tags())).toEqual([2])
+
+    await page.evaluate(() => playback.frame.set_tag(2)) // toggle off
+    expect(await page.evaluate(() => playback.frame.$frame.attr("data-tag"))).toBeUndefined()
+})
+
 test("tag names dialog resolves digits to names in the HUD", async ({ page }) => {
     await page.evaluate(() => playback.operation._nameTagsDialog())
     const inputs = page.locator(".tag-names-list input")
