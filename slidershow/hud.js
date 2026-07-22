@@ -21,6 +21,16 @@ class Hud {
         this.$hud_thumbnails = $("#hud-thumbnails").hide() // by default off
         this.$hud_grid = $("#hud-grid").hide() // by default off
         this.grid = new GridController(this.playback, this, this.$hud_grid)
+        // Spinner + percentage / retry badge, own row just below #hud-selection – see _updateGridStatusRow().
+        this.$hud_grid_status = $("#hud-grid-status")
+        this.$hud_grid_loading = $("#hud-grid-loading")
+        this.$hud_grid_loading_percent = this.$hud_grid_loading.find("span")
+        this._grid_loading_pending = 0
+        this._grid_loading_total = 0
+        /** @type {Set<Frame>} Frames whose grid thumbnail failed outright – both the sli-thumb probe (if
+         * any) and the full-quality fallback. Offered a bulk retry via the "⚠ Retry N frames" badge. */
+        this._grid_failed = new Set()
+        this.$hud_grid_retry = $("#hud-grid-retry").on("click", () => this._retryGridFrames())
         this.$hud_selection = $("#hud-selection")
         // "N frames selected" badge shown while a grid selection exists; its buttons proxy the grid clipboard.
         this.$hud_selection.on("click", "button", e => {
@@ -70,6 +80,13 @@ class Hud {
         this.$hud_loading = $("<div/>", { id: "hud-loading" }).appendTo("#hud")
         this.$hud_loading_percent = $("<span/>").appendTo(this.$hud_loading)
         this._loading_timer = undefined
+
+        // Retry button, same central spot – shown instead of the spinner once frame.load_failed is set
+        // (Frame._load_media gave up on the full-quality file entirely, ex: a transient network failure).
+        this.$hud_retry = $("<button/>", { id: "hud-retry", html: "&#8635; Retry", title: "Try downloading this file again" })
+            .appendTo("#hud")
+            .hide()
+            .on("click", () => this._retryCurrentFrame())
 
         // Countdown-to-next bar (auto-forward). Off by default; toggled via "Countdown bar" (Shift+c),
         // hash-settable (#&state=progress). A pure CSS-transition fill – progress_start() animates the
@@ -219,6 +236,7 @@ class Hud {
             // even that the frame was focused, it was not yet prepared and entered
             this.grid.clearSelection() // the selection is a grid-only convenience; drop it on leaving the grid
             this.playback.goToFrame(this.playback.frame.index, false, true)
+            this._updateGridStatusRow() // outstanding fetches (if any) keep running, just no longer shown
         }
         this.playback.operation.grid.toggle(on)
         this.playback.session.store()
@@ -410,50 +428,65 @@ class Hud {
             // go to frame
             $thumbnail = $("<frame-preview/>", { html: "...", "data-ref": frame.index })
 
+            const isGrid = $container.is(this.$hud_grid)
+            if (isGrid) {
+                this._gridLoadingDelta(1)
+            }
+
             setTimeout(async () => {
-                // Element might been removed meanwhile, do not bother to preload.
-                // We might ex. keep PageDown hit while scrolling down grid. That way, we scroll 1000 frames / 5 sec, without setTimeout like 400 frames.
-                if (!$thumbnail[0].isConnected) return
+                try {
+                    // Element might been removed meanwhile, do not bother to preload.
+                    // We might ex. keep PageDown hit while scrolling down grid. That way, we scroll 1000 frames / 5 sec, without setTimeout like 400 frames.
+                    if (!$thumbnail[0].isConnected) return
 
-                // When a sli-thumb is configured, use it instead of the full-quality file – the grid may
-                // show hundreds of previews at once and should never force-download large originals.
-                // The cheap sli-thumb HTML is memoized (previewCache), so scrolling back over a frame does
-                // not re-clone its subtree and re-probe the thumb image every time it re-enters the grid.
-                let html = this.previewCache.get(frame)
-                if (html === undefined) {
-                    html = await frame.get_preview_thumb()
-                    if (html === null) {
-                        frame.preload()
-                        await frame.loaded
-                        html = frame.get_preview() // full preview, not cached (depends on live preload state)
-                    } else {
-                        this.previewCache.set(frame, html)
+                    // When a sli-thumb is configured, use it instead of the full-quality file – the grid may
+                    // show hundreds of previews at once and should never force-download large originals.
+                    // The cheap sli-thumb HTML is memoized (previewCache), so scrolling back over a frame does
+                    // not re-clone its subtree and re-probe the thumb image every time it re-enters the grid.
+                    let html = this.previewCache.get(frame)
+                    if (html === undefined) {
+                        html = await frame.get_preview_thumb()
+                        if (html === null) {
+                            frame.preload()
+                            await frame.loaded
+                            html = frame.get_preview() // full preview, not cached (depends on live preload state)
+                            if (isGrid && frame.load_failed) {
+                                this._grid_failed.add(frame)
+                                this._updateGridRetryBadge()
+                            }
+                        } else {
+                            this.previewCache.set(frame, html)
+                        }
+                        if (!$thumbnail[0].isConnected) return // could have been removed while awaiting
                     }
-                    if (!$thumbnail[0].isConnected) return // could have been removed while awaiting
-                }
 
-                $thumbnail.html(html)
-                if (!$thumbnail.text().trim()) {
-                    // Strange bug. When having just a full-stretched image in the frame, vertical scrollbar appeared unless font-size or line-height were zero.
-                    // When I copied full HTML, no scrollbar was visible, albeit I found no single difference in the DevTools.
-                    $("> *", $thumbnail).css("font-size", "0")
-                }
+                    $thumbnail.html(html)
+                    if (!$thumbnail.text().trim()) {
+                        // Strange bug. When having just a full-stretched image in the frame, vertical scrollbar appeared unless font-size or line-height were zero.
+                        // When I copied full HTML, no scrollbar was visible, albeit I found no single difference in the DevTools.
+                        $("> *", $thumbnail).css("font-size", "0")
+                    }
 
-                // delete frame
-                if (pl.editing_mode) {
-                    $thumbnail.append($("<span/>", { html: "&#10006;", class: "delete", title: "Delete frame" }).on("click", () => frame.delete()))
-                }
+                    // delete frame
+                    if (pl.editing_mode) {
+                        $thumbnail.append($("<span/>", { html: "&#10006;", class: "delete", title: "Delete frame" }).on("click", () => frame.delete()))
+                    }
 
-                // tag visible
-                if (pl.tagging_mode) {
-                    $thumbnail.append($("<span/>", { html: frame.tag_display(), class: "tag", title: "Tag that helps you organize" }))
-                }
+                    // tag visible
+                    if (pl.tagging_mode) {
+                        $thumbnail.append($("<span/>", { html: frame.tag_display(), class: "tag", title: "Tag that helps you organize" }))
+                    }
 
-                // Scale – use the proportions of the full screen but shrink to max thumbnail width.
-                // $current can momentarily be a detached (just-deleted) frame with width 0, which would make
-                // the scale Infinity and blow the preview out of its cell – fall back to a live frame / the window.
-                const fullWidth = pl.$current.width() || pl.$articles.first().width() || $(window).width()
-                $(":first", $thumbnail).css({ "scale": String($thumbnail.width() / fullWidth) })
+                    // Scale – use the proportions of the full screen but shrink to max thumbnail width.
+                    // $current can momentarily be a detached (just-deleted) frame with width 0, which would make
+                    // the scale Infinity and blow the preview out of its cell – fall back to a live frame / the window.
+                    const fullWidth = pl.$current.width() || pl.$articles.first().width() || $(window).width()
+                    $(":first", $thumbnail).css({ "scale": String($thumbnail.width() / fullWidth) })
+                } finally {
+                    if (isGrid) {
+                        this._gridLoadingDelta(-1)
+                    }
+                }
             }, 1)
         }
         if (prepend) {
@@ -462,6 +495,74 @@ class Hud {
             $thumbnail.appendTo($container)
         }
         return $thumbnail
+    }
+
+    /**
+     * Update the spinner + percentage (#hud-grid-loading) by `delta` outstanding grid thumbnail fetches.
+     * Called from assureThumbnail() when a fetch starts (+1) and finishes (-1).
+     * `_grid_loading_total` tracks how many were queued in the current batch, so the percentage reflects
+     * progress through it; once every fetch in the batch settles (pending back to 0) it resets to 0, so
+     * the next scroll-triggered batch starts its own percentage from scratch instead of inheriting a
+     * near-100% figure from the tail of the previous one.
+     * @param {number} delta
+     */
+    _gridLoadingDelta(delta) {
+        if (delta > 0) {
+            this._grid_loading_total += delta
+        }
+        this._grid_loading_pending += delta
+        // Bookkeeping must not depend on grid_visible – a fetch started while the grid was open can well
+        // settle after it's closed, and using visibility here (rather than only "is the batch actually
+        // done") let `total` get reset to 0 while `pending` was still > 0, so the next percent computed
+        // after reopening divided by a stale 0 total and displayed -Infinity.
+        if (this._grid_loading_pending > 0) {
+            const percent = Math.round((this._grid_loading_total - this._grid_loading_pending) / this._grid_loading_total * 100)
+            this.$hud_grid_loading_percent.text(percent + "%")
+            this.$hud_grid_loading.addClass("active")
+        } else {
+            this.$hud_grid_loading.removeClass("active")
+            this._grid_loading_total = 0
+        }
+        this._updateGridStatusRow()
+    }
+
+    /**
+     * Show/hide the "⚠ Retry N frames" badge (#hud-grid-retry) to match `_grid_failed`'s current size.
+     */
+    _updateGridRetryBadge() {
+        const n = this._grid_failed.size
+        if (n) {
+            this.$hud_grid_retry.text(`⚠ Retry ${n} frame${n > 1 ? "s" : ""}`).show()
+        } else {
+            this.$hud_grid_retry.hide()
+        }
+        this._updateGridStatusRow()
+    }
+
+    /**
+     * #hud-grid-status (spinner + retry badge) is its own row below #hud-selection, entirely absent –
+     * not just invisible – while there is nothing to show, so it never reserves dead space nor shifts
+     * the "Select frames…" pill above it. Shown whenever either child has something to display.
+     */
+    _updateGridStatusRow() {
+        const show = this.grid_visible && (this._grid_loading_pending > 0 || this._grid_failed.size > 0)
+        this.$hud_grid_status.toggleClass("active", show)
+    }
+
+    /**
+     * Bulk-retry every grid thumbnail whose full-quality fetch failed outright (see assureThumbnail()) –
+     * drops each frame back to a clean, unloaded state and re-triggers its thumbnail load from scratch.
+     */
+    _retryGridFrames() {
+        const frames = [...this._grid_failed]
+        this._grid_failed.clear()
+        this._updateGridRetryBadge()
+        for (const frame of frames) {
+            this.previewCache.delete(frame)
+            frame.unload()
+            this.getThumbnail(frame, this.$hud_grid).remove()
+            this.assureThumbnail(frame, this.$hud_grid)
+        }
     }
 
     /**
@@ -610,6 +711,7 @@ class Hud {
         clearTimeout(this._loading_timer)
         this.$hud_loading.removeClass("active")
         this.$hud_loading_percent.text("")
+        this.$hud_retry.hide()
         this._loading_timer = setTimeout(() => this.$hud_loading.addClass("active"), 150)
 
         const $video = frame.$actor.is("video") ? frame.$actor : null
@@ -630,8 +732,22 @@ class Hud {
             if (this.playback.frame === frame) { // ignore if the user has navigated away meanwhile
                 clearTimeout(this._loading_timer)
                 this.$hud_loading.removeClass("active")
+                this.$hud_retry.toggle(!!frame.load_failed)
             }
         })
+    }
+
+    /**
+     * Retry the current frame's full-quality download after Frame._load_media gave up on it entirely
+     * (frame.load_failed) – drops it back to a clean, unloaded state and re-arms the spinner.
+     */
+    _retryCurrentFrame() {
+        const frame = this.playback.frame
+        frame.load_failed = false
+        this.$hud_retry.hide()
+        frame.unload()
+        frame.preload()
+        this.loading(frame)
     }
 
     /**
@@ -717,6 +833,8 @@ class Hud {
 
     reset() {
         this.previewCache.clear() // media/structure may have changed – drop memoized previews
+        this._grid_failed.clear()
+        this._updateGridRetryBadge()
         this.reset_thumbnails()
         this.$hud_properties.html("")
         this.reset_grid()

@@ -1,13 +1,43 @@
 :root {
+    /* Interactive state colors */
     --highlight: yellow;
     --control: blue;
     --soft-highlight: darkblue;
     --base: white;
+
+    /* Backgrounds */
+    --bg-dark: black;
+    --bg-neutral: lightgray;
+    --bg-surface-dark: #1a1a1a;
+    --bg-menu: #222;
+    --bg-menu-hover: #333;
+
+    /* Text colors */
+    --text-muted: #666;
+
+    /* Borders & strokes */
+    --border-default: #444;
+    --border-focus: #888;
+    --border-lighter: #eee;
+    --border-muted: gray;
+
+    /* Status & indicators */
+    --color-error: red;
+    --indicator-progress: #0fa;
+    --progress-fill: hsl(320, 80%, 60%);
+    --progress-text: hsl(180, 80%, 47%);
+
+    /* Special highlights */
+    --point-highlight: lightyellow;
+    --shadow-accent: darkcyan;
+
+    /* Overlay mixing base (for color-mix) */
+    --surface-white: white;
 }
 
 
 body {
-    background-color: black;
+    background-color: var(--bg-dark);
     color: var(--base);
     overflow-y: hidden;
     overflow-x: hidden;
@@ -175,18 +205,18 @@ menu {
 
         .circle-progress-value {
             stroke-width: 6px;
-            stroke: hsl(320, 80%, 60%);
+            stroke: var(--progress-fill);
             stroke-dasharray: 4 1;
         }
 
         .circle-progress-circle {
             stroke-width: 6px;
-            stroke: #eee;
+            stroke: var(--border-lighter);
         }
 
         .circle-progress-text {
             font-weight: bold;
-            fill: hsl(180, 80%, 47%);
+            fill: var(--progress-text);
         }
     }
 }
@@ -218,7 +248,7 @@ menu {
 
                 height: 25px;
                 width: 25px;
-                background-color: red;
+                background-color: var(--color-error);
                 border-radius: 50%;
                 display: inline-block;
             }
@@ -256,7 +286,7 @@ frame-preview {
         [sli-step].step-not-yet-visible {
             /* Aux window uses this to display elements hidden in the main window */
             opacity: .5;
-            border: 1px dotted red;
+            border: 1px dotted var(--color-error);
             /* so that the opacity could be seen when animation ended on opacity:0 */
             animation-fill-mode: unset;
         }
@@ -315,7 +345,7 @@ frame-preview {
 
         > :hover {
             cursor: pointer;
-            text-shadow: 0 0 7px #fff, 0 0 10px #fff, 0 0 21px #fff, 0 0 42px #0fa, 0 0 82px #0fa, 0 0 92px #0fa, 0 0 102px #0fa, 0 0 151px #0fa;
+            text-shadow: 0 0 7px var(--surface-white), 0 0 10px var(--surface-white), 0 0 21px var(--surface-white), 0 0 42px var(--indicator-progress), 0 0 82px var(--indicator-progress), 0 0 92px var(--indicator-progress), 0 0 102px var(--indicator-progress), 0 0 151px var(--indicator-progress);
         }
     }
 
@@ -328,8 +358,8 @@ frame-preview {
         width: 44px;
         height: 44px;
         margin: -22px 0 0 -22px;
-        border: 4px solid rgba(255, 255, 255, .25);
-        border-top-color: #0fa;
+        border: 4px solid color-mix(in srgb, var(--surface-white) 25%, transparent);
+        border-top-color: var(--indicator-progress);
         border-radius: 50%;
         pointer-events: none;
         z-index: 2;
@@ -346,8 +376,31 @@ frame-preview {
         > span {
             animation: hud-spin-reverse .8s linear infinite;
             font-size: 11px;
-            color: #0fa;
+            color: var(--indicator-progress);
             white-space: nowrap;
+        }
+    }
+
+    /* Retry button – same centered spot as #hud-loading, shown instead of it once Frame._load_media
+       gives up on the current frame's full-quality file entirely (frame.load_failed, set by Hud.loading()). */
+    #hud-retry {
+        display: none;
+        position: fixed;
+        left: 50%;
+        top: 50%;
+        transform: translate(-50%, -50%);
+        z-index: 2;
+        padding: .4em 1em;
+        border: 0;
+        border-radius: 1.5em;
+        background-color: var(--control);
+        color: var(--base);
+        font-size: 100%;
+        cursor: pointer;
+        box-shadow: 0 2px 8px color-mix(in srgb, var(--bg-dark) 40%, transparent);
+
+        &:hover {
+            filter: brightness(1.2);
         }
     }
 
@@ -407,7 +460,7 @@ frame-preview {
             width: 100vw;
             padding: 8px 8px max(8px, env(safe-area-inset-bottom));
             gap: 8px;
-            background: linear-gradient(to top, rgba(0, 0, 0, .55), transparent);
+            background: linear-gradient(to top, color-mix(in srgb, var(--bg-dark) 55%, transparent), transparent);
             pointer-events: none; /* taps between buttons still reach the frame beneath */
 
             button {
@@ -416,7 +469,7 @@ frame-preview {
                 min-width: 56px;
                 min-height: 56px;
                 font-size: 180%;
-                background: rgba(0, 0, 0, .35);
+                background: color-mix(in srgb, var(--bg-dark) 35%, transparent);
                 color: var(--base);
                 border: none;
                 border-radius: 50%;
@@ -425,7 +478,7 @@ frame-preview {
                 /* Immediate feedback that a tap registered, before anything else has had time to happen. */
                 &.tapped {
                     transform: scale(0.82);
-                    background: rgba(255, 255, 255, .25);
+                    background: color-mix(in srgb, var(--surface-white) 25%, transparent);
                 }
 
                 /* The frame didn't arrive within 200ms (see Hud.tapFeedback) – show that something's happening. */
@@ -433,8 +486,8 @@ frame-preview {
                     content: '';
                     position: absolute;
                     inset: 4px;
-                    border: 3px solid rgba(255, 255, 255, .25);
-                    border-top-color: #0fa;
+                    border: 3px solid color-mix(in srgb, var(--surface-white) 25%, transparent);
+                    border-top-color: var(--indicator-progress);
                     border-radius: 50%;
                     pointer-events: none;
                     animation: hud-spin .8s linear infinite;
@@ -442,8 +495,8 @@ frame-preview {
 
                 /* Hint, while swipe-dragging (see Hud.swipeHint), of which way a release would go. */
                 &.swipe-hint {
-                    background: rgba(255, 255, 255, .3);
-                    text-shadow: 0 0 8px #0fa, 0 0 16px #0fa;
+                    background: color-mix(in srgb, var(--surface-white) 30%, transparent);
+                    text-shadow: 0 0 8px var(--indicator-progress), 0 0 16px var(--indicator-progress);
                 }
             }
         }
@@ -523,6 +576,70 @@ frame-preview {
         }
     }
 
+    /* Grid loading spinner + "⚠ Retry N frames" badge – its own row just below #hud-selection, so it
+       takes up no space at all (not even an invisible placeholder) while nothing is loading/failed, and
+       showing/hiding it never resizes or shifts the "Select frames…" pill above it. */
+    #hud-grid-status {
+        left: 50%;
+        top: 5.6vh;
+        transform: translateX(-50%);
+        z-index: 3;
+        display: none;
+        align-items: center;
+        gap: .5em;
+        color: var(--base);
+        user-select: none;
+
+        &.active {
+            display: flex;
+        }
+    }
+
+    #hud-grid-loading {
+        display: none;
+        position: relative;
+        width: 1.3em;
+        height: 1.3em;
+        border: 2px solid color-mix(in srgb, var(--surface-white) 30%, transparent);
+        border-top-color: var(--indicator-progress);
+        border-radius: 50%;
+        pointer-events: none;
+        animation: hud-spin .8s linear infinite;
+
+        &.active {
+            display: inline-block;
+        }
+
+        /* Percentage done so far in the current loading batch – counter-rotated so the text stays upright. */
+        span {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            animation: hud-spin-reverse .8s linear infinite;
+            font-size: 50%;
+            color: var(--indicator-progress);
+            white-space: nowrap;
+        }
+    }
+
+    /* "⚠ Retry N frames" – shown once a grid thumbnail's full load gave up outright
+       (see Hud.assureThumbnail()/_grid_failed). */
+    #hud-grid-retry {
+        display: none;
+        padding: .15em .6em;
+        border-radius: 1em;
+        background-color: color-mix(in srgb, var(--color-error) 30%, transparent);
+        box-shadow: 0 2px 8px color-mix(in srgb, var(--bg-dark) 40%, transparent);
+        cursor: pointer;
+        user-select: none;
+
+        &:hover {
+            background-color: color-mix(in srgb, var(--color-error) 50%, transparent);
+        }
+    }
+
     /* "N frames selected" badge – top-centre over the grid, with clipboard/clear buttons and a hint. */
     #hud-selection {
         left: 50%;
@@ -536,12 +653,12 @@ frame-preview {
         border-radius: 1em;
         background-color: var(--control);
         color: var(--base);
-        box-shadow: 0 2px 8px rgba(0, 0, 0, .4);
+        box-shadow: 0 2px 8px color-mix(in srgb, var(--bg-dark) 40%, transparent);
         user-select: none;
 
         button[data-sel="clear"] {
             margin-right: .1em;
-            border-right: 1px solid rgba(255, 255, 255, .25);
+            border-right: 1px solid color-mix(in srgb, var(--surface-white) 25%, transparent);
             padding-right: .5em;
         }
 
@@ -576,7 +693,7 @@ frame-preview {
             border-radius: .3em;
 
             &:hover {
-                background-color: rgba(255, 255, 255, .2);
+                background-color: color-mix(in srgb, var(--surface-white) 20%, transparent);
             }
 
             &:disabled {
@@ -619,7 +736,7 @@ frame-preview {
             flex-wrap: wrap;
             overflow: auto;
             height: 100vh;
-            background: black;
+            background: var(--bg-dark);
 
             --columns: 5;
 
@@ -739,7 +856,7 @@ frame-preview {
                         border-radius: 3px;
 
                         &:hover {
-                            background: rgba(255, 255, 255, 0.1);
+                            background: color-mix(in srgb, var(--surface-white) 10%, transparent);
                         }
                     }
 
@@ -748,8 +865,8 @@ frame-preview {
                         position: absolute;
                         top: 100%;
                         right: 0;
-                        background: #222;
-                        border: 1px solid #444;
+                        background: var(--bg-menu);
+                        border: 1px solid var(--border-default);
                         border-radius: 4px;
                         padding: 4px 0;
                         z-index: 100;
@@ -767,7 +884,7 @@ frame-preview {
                             cursor: pointer;
 
                             &:hover {
-                                background: rgba(255, 255, 255, 0.1);
+                                background: color-mix(in srgb, var(--surface-white) 10%, transparent);
                             }
                         }
                     }
@@ -782,7 +899,7 @@ frame-preview {
                             cursor: pointer;
 
                             &:hover {
-                                background: rgba(255, 255, 255, 0.1);
+                                background: color-mix(in srgb, var(--surface-white) 10%, transparent);
                             }
                         }
 
@@ -828,11 +945,11 @@ frame-preview {
             /* size is set per-container above (thumbnail ribbon: fixed 30vw/30vh; grid: calc() by --columns) */
             text-align: center;
             position: relative;
-            color: black;
-            background-color: lightgray;
+            color: var(--bg-dark);
+            background-color: var(--bg-neutral);
 
             &.current {
-                outline: 2px solid black;
+                outline: 2px solid var(--bg-dark);
                 background-color: var(--highlight);
                 z-index: 1;
 
@@ -842,7 +959,7 @@ frame-preview {
                     position: absolute;
                     width: 50px;
                     height: 50px;
-                    border-color: black;
+                    border-color: var(--bg-dark);
                     border-style: solid;
                     z-index: 10;
                 }
@@ -865,7 +982,7 @@ frame-preview {
             &.selected {
                 outline: 2px solid var(--highlight);
                 box-shadow: inset 0 0 0 3px var(--highlight);
-                background-color: color-mix(in srgb, var(--highlight) 35%, lightgray);
+                background-color: color-mix(in srgb, var(--highlight) 35%, var(--bg-neutral));
             }
 
             /* Frames sitting in a cut-clipboard, greyed out like a file manager until they're pasted. */
@@ -930,9 +1047,9 @@ frame-preview {
         max-height: 70vh;
         top: 0;
         right: 0;
-        background-color: lightgray;
+        background-color: var(--bg-neutral);
 
-        color: black;
+        color: var(--bg-dark);
         padding: 10px;
         overflow: auto;
 
@@ -953,8 +1070,8 @@ frame-preview {
                 >span {
                     cursor: pointer;
                     display: inline-block;
-                    background-color: lightyellow;
-                    border: 1px solid gray;
+                    background-color: var(--point-highlight);
+                    border: 1px solid var(--border-muted);
                     border-radius: 5px;
                     padding: 3px;
                 }
@@ -976,15 +1093,15 @@ frame-preview {
             width: 100%;
             box-sizing: border-box;
             padding: 6px 10px;
-            background: #1a1a1a;
-            border: 1px solid #444;
+            background: var(--bg-surface-dark);
+            border: 1px solid var(--border-default);
             border-radius: 4px;
-            color: white;
+            color: var(--surface-white);
             font-size: 0.85em;
             outline: none;
 
             &:focus {
-                border-color: #888;
+                border-color: var(--border-focus);
             }
 
             &:not(:focus)+.palette-results {
@@ -996,8 +1113,8 @@ frame-preview {
             list-style: none;
             margin: 4px 0 0;
             padding: 0;
-            background: #1a1a1a;
-            border: 1px solid #444;
+            background: var(--bg-surface-dark);
+            border: 1px solid var(--border-default);
             border-radius: 4px;
             max-height: 300px;
             overflow-y: auto;
@@ -1009,18 +1126,18 @@ frame-preview {
 
                 &:hover,
                 &.active {
-                    background: #333;
+                    background: var(--bg-menu-hover);
                 }
 
                 mark {
                     background: none;
-                    color: yellow;
+                    color: var(--highlight);
                     font-weight: bold;
                 }
             }
 
             .hint {
-                color: #666;
+                color: var(--text-muted);
                 font-size: 0.9em;
                 white-space: nowrap;
             }

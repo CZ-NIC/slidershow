@@ -58,6 +58,10 @@ class Frame {
 
         this.shortcuts = []
 
+        /** @type {boolean} True once Frame._load_media gives up on the full-quality file entirely (ex: a
+         * transient network failure) – checked by Hud.loading()/assureThumbnail() to offer a retry. */
+        this.load_failed = false
+
         /** @type {Promise[]} All the effects that should hold playback. Await this.loaded first.*/
         this.effects = []
 
@@ -363,7 +367,7 @@ class Frame {
             // Thumbnails already display the image, so no need to do it again.
             this.playback.$preblink_prevention.hide()
         }
-        else if (this.$actor) {
+        else if (this.$actor.length) {
             const $placeholder = this.playback.$preblink_prevention
             if ($placeholder.data('preblinking')) {
                 return
@@ -490,6 +494,9 @@ class Frame {
                             }
                         }
                     }
+                    if (frame) {
+                        frame.load_failed = !final_src
+                    }
                     if (final_src) {
                         full_shown = true
                         $el.attr("src", final_src).removeAttr("sli-thumb-shown") // instant cache hit, no second request
@@ -554,17 +561,19 @@ class Frame {
                 loaded = await await_load()
             }
             if (!loaded) { // browser could not load/decode the file – try sli-fallback candidates in order
-                let ok = false
                 for (const fallback of Frame.get_fallback_src($el)) {
                     el.src = fallback
                     if (await await_load()) {
-                        ok = true
+                        loaded = true
                         break
                     }
                 }
-                if (!ok && distance() === 0) { // only warn for the frame actually being viewed, not background preloads
+                if (!loaded && distance() === 0) { // only warn for the frame actually being viewed, not background preloads
                     playback?.hud?.info(`Unsupported or unreadable file: ${src}`)
                 }
+            }
+            if (frame) {
+                frame.load_failed = !loaded
             }
         } finally {
             release()
@@ -1345,7 +1354,21 @@ class Frame {
             return null
         }
         const thumb = Frame.get_thumb_src(this.$actor)
-        if (!thumb || !(await Frame.probe_image(thumb))) {
+        if (!thumb) {
+            return null
+        }
+        // Route through the same limiter as regular thumbnail loading (frame.js:_load_media) – otherwise
+        // a big grid fires one unthrottled `new Image()` probe per visible cell (up to GRID_PRELOAD_RADIUS
+        // at once), which over http(s) floods the browser's per-host connection pool and starves them all.
+        const distance = Math.abs(this.index - this.playback.index)
+        const release = distance > 0 ? await this.playback.thumb_loader.acquire(() => distance) : () => { }
+        let ok
+        try {
+            ok = await Frame.probe_image(thumb)
+        } finally {
+            release()
+        }
+        if (!ok) {
             return null
         }
 

@@ -155,6 +155,10 @@ function get_menu() {
             <div id="hud-tag-filter" title="Filtered by tag – click to change or clear"></div>
         </div>
         <div id="hud-properties"></div>
+        <div id="hud-grid-status">
+            <div id="hud-grid-loading"><span></span></div>
+            <span id="hud-grid-retry" title="Retry loading these files"></span>
+        </div>
         <div id="hud-selection" style="display:none">
             <button data-sel="clear" title="Clear selection (Escape)">&#10006;</button>
             <span class="sel-count"></span>
