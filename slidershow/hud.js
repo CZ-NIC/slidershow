@@ -203,6 +203,14 @@ class Hud {
     }
 
     toggleMenu() {
+        const hudVisible = $hud.is(":visible")
+        if (!hudVisible) {
+            $hud.show(0)
+            this.$hud_menu.show(0)
+            this.palette.$wrapper.show(0)
+            return
+        }
+
         const menuVisible = this.$hud_menu.is(":visible")
         const paletteVisible = this.palette.$wrapper.is(":visible")
 
@@ -235,7 +243,9 @@ class Hud {
         } else {
             // even that the frame was focused, it was not yet prepared and entered
             this.grid.clearSelection() // the selection is a grid-only convenience; drop it on leaving the grid
-            this.playback.goToFrame(this.playback.frame.index, false, true)
+            if (this.playback.frame) {
+                this.playback.goToFrame(this.playback.frame.index, false, true)
+            }
             this._updateGridStatusRow() // outstanding fetches (if any) keep running, just no longer shown
         }
         this.playback.operation.grid.toggle(on)

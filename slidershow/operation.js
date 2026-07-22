@@ -20,16 +20,23 @@ class Operation {
 
     /**
      * @param {string} group_name
-     * @returns {function} Will create the button and return values suitable for a Hotkey
+     * @returns {function} Will create a button or label and return values suitable for a Hotkey (or null for labels)
      */
     _button(group_name) {
         const $group = $("<div/>", { "data-hotkey-group": group_name }).appendTo(this.playback.hud.$hud_menu)
-        /**@param {Button} button */
-        return ([hotkey, symbol, hint, fn, role = null]) => [hotkey,
-            $("<button/>", { "title": hint, "data-hotkey": hotkey, "html": symbol, "data-role": role })
-                .on("click", fn)
-                .appendTo($group)[0]
-        ]
+        /**@param {Button} item */
+        return ([hotkey, symbol, hint, fn, role = null]) => {
+            // null hotkey means this is a non-interactive label
+            if (hotkey === null) {
+                $group.append($("<span/>", { class: "hud-menu-label", text: symbol, "aria-hidden": "true" }))
+                return null
+            }
+            return [hotkey,
+                $("<button/>", { "title": hint, "data-hotkey": hotkey, "html": symbol, "data-role": role })
+                    .on("click", fn)
+                    .appendTo($group)[0]
+            ]
+        }
     }
 
     /**
@@ -65,6 +72,9 @@ class Operation {
         // Ex. ['/', '?'] -> Button with '/', alternate shortcut with '/'
         const normalizedButtons = buttons.map(button => {
             const [hotkey, symbol, hint, fn, role = null] = button
+            if (hotkey === null) {
+                return button // labels pass through unchanged
+            }
             if (Array.isArray(hotkey)) {
                 const [primaryHotkey, ...otherHotkeys] = hotkey
                 otherHotkeys.forEach(hk => shortcuts.push([hk, hint, fn]))
@@ -73,7 +83,7 @@ class Operation {
             return button
         })
 
-        const group = wh.group(group_name, normalizedButtons.map(this._button(group_name)))
+        const group = wh.group(group_name, normalizedButtons.map(this._button(group_name)).filter(Boolean))
         if (shortcuts.length) {
             wh.group(group_name, shortcuts)
         }
@@ -442,6 +452,7 @@ class Operation {
             [
                 ["m", "🗺", "Toggle hud map", () => pl.hud_map.toggle(true), "not-video mobile"],
                 ["i", "ℹ", "Toggle file info", () => $("#hud-fileinfo").toggle(), "mobile"],
+                [null, "🔍", null, null],
                 ["z", "⤢", "Photo or video zoom (cycle)", () => zoom()],
                 ["Shift+z", "+", "Photo or video little zoom in", () => zoom(true), "magnify-little"],
                 ["Shift+x", "−", "Photo or video little zoom out", () => zoom(-1), "magnify-little"],
@@ -469,12 +480,9 @@ class Operation {
             ],
             [
                 ["Notification history", () => pl.hud.show_notification_history(), () => true, "Notification history"],
-            ]).disable()
+            ])
 
-        // Non-interactive label - the four zoom buttons ("z"/"Shift+z"/"Shift+x"/"Shift+Alt+z") drop
-        // the repeated 🔍 glyph in favor of one shared lens icon in front of the group.
-        $("<span/>", { class: "hud-menu-label", text: "🔍", "aria-hidden": "true" })
-            .insertBefore($(`[data-hotkey-group="General"] [data-hotkey="z"]`, pl.hud.$hud_menu))
+        group.disable()
 
         return group
 

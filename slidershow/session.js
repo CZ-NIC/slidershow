@@ -91,6 +91,9 @@ class Session {
                     // already handled at program start
                     // NOTE undocumented feature: Append this to file name to disable maps `#&state=map-disabled`
                     break;
+                case "start":
+                    // Hash-triggered autostart flag (actual start happens in Menu constructor to skip splash)
+                    break;
                 default:
                     console.warn("[slidershow] Unknown hash key:" + key)
                     break;

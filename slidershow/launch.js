@@ -1,6 +1,10 @@
 /** @type {WebHotkeys} */
 const wh = window.webHotkeys.setOptions({
-    onToggle: (el, enabled) => $(el).toggle(enabled), // hide DOM element on hotkey disable
+    onToggle: (el, enabled) => {
+        $(el).toggle(enabled)
+        // Also toggle labels (non-interactive icons) in the same group
+        $(el).closest("[data-hotkey-group]").find(".hud-menu-label").toggle(enabled)
+    }, // hide DOM element on hotkey disable
 })
 const $main = $("body > main").length ? $("body > main") : $("<main/>").appendTo("body")
 const $hud = $("#hud")

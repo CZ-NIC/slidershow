@@ -1,6 +1,7 @@
 # CHANGELOG
 
 ## 1.0.0 (unreleased)
+* feat: autostart presentation from URL hash – append `&state=start` to skip the splash screen and begin playback immediately (stackable with other state flags: `#1&state=thumbnails,grid,start`)
 * fix (grid): a `sli-thumb` preview probe (`Frame.get_preview_thumb()`) fired an unthrottled `new Image()` per visible tile – a big grid could open up to `GRID_PRELOAD_RADIUS` (60) of these at once, flooding the browser's per-host connection pool over http(s) and leaving many thumbnails stuck unloaded; now gated through the same `thumb_loader` limiter as regular thumbnail loading
 * feat (grid): a small spinner + percentage, in its own row right below the "Select frames…" pill (top-centre), shows progress while grid thumbnails are still being fetched, and disappears entirely (no reserved space) once the grid catches up
 * feat: when a file's full-quality download fails outright (ex: a transient network blip), a "↻ Retry" button appears where the loading spinner was (main view, centered) – click it to try again from a clean state. The grid gets an equivalent "⚠ Retry N frames" badge next to its spinner, bulk-retrying every thumbnail that failed the same way
