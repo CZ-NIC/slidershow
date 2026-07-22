@@ -25,7 +25,7 @@ test("export round-trips: the exported file boots and keeps frames + data attrib
     await page.goto("file://" + EXPORTED)
     await expect(page.locator("#start")).toBeVisible()
     await expect(page.locator("article")).toHaveCount(3)
-    await expect(page.locator("article[data-duration='7.5']")).toHaveCount(1)
+    await expect(page.locator("article[sli-duration='7.5']")).toHaveCount(1)
 
     await page.locator("#start").click()
     await expect.poll(() => page.url()).toContain("#1")

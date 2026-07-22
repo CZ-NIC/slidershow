@@ -35,9 +35,9 @@ class Session {
             switch (key) {
                 case "duration":
                     // Auto-forward from the hash. Overrides the authored default by
-                    // setting `data-duration` on <main>, where prop() ends its walk.
+                    // setting `sli-duration` on <main>, where prop() ends its walk.
                     if (!isNaN(parseFloat(value))) {
-                        $main.attr("data-duration", parseFloat(value))
+                        $main.attr("sli-duration", parseFloat(value))
                         prop_invalidate()
                     }
                     break;
@@ -54,13 +54,13 @@ class Session {
                     pl.hud.refresh_tag_filter_icon()
                     break;
                 case "tag-names":
-                    $main.attr("data-tag-names", (value || "").split("+").join(","))
+                    $main.attr("sli-tag-names", (value || "").split("+").join(","))
                     prop_invalidate()
                     break;
                 case "loop-presentation":
                     // Wrap from the last frame back to the first (kiosk playback). Sets the same
-                    // <main data-loop-presentation> the toggle command and the menu "Kiosk" button write.
-                    $main.attr("data-loop-presentation", "true")
+                    // <main sli-loop-presentation> the toggle command and the menu "Kiosk" button write.
+                    $main.attr("sli-loop-presentation", "true")
                     prop_invalidate()
                     break;
                 case "progress":
@@ -102,7 +102,7 @@ class Session {
     store() {
         const index = this.playback.index + 1
 
-        const duration = $main.attr("data-duration")
+        const duration = $main.attr("sli-duration")
         const state = [
             prop("loop-presentation", $main) ? "loop-presentation" : "",
             this.playback.hud.progress_visible ? "progress" : "",

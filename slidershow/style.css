@@ -30,8 +30,8 @@ main {
     position: relative;
     /* zoom:0.05 */
 
-    [data-thumb-shown] {
-        /* data-thumb preview is shown while the full-quality file downloads in the background */
+    [sli-thumb-shown] {
+        /* sli-thumb preview is shown while the full-quality file downloads in the background */
         filter: blur(12px);
         transition: filter .3s;
     }
@@ -248,7 +248,7 @@ frame-preview {
             animation: unset !important;
         }
 
-        [data-step].step-not-yet-visible {
+        [sli-step].step-not-yet-visible {
             /* Aux window uses this to display elements hidden in the main window */
             opacity: .5;
             border: 1px dotted red;
@@ -458,17 +458,35 @@ frame-preview {
 
     #hud-menu {
         display: none; /* hidden by default */
+        max-width: min(90vw, 480px); /* wide groups (Switches/Playthrough) still wrap internally on narrow viewports */
+
+        /* one group per row - a group with all its buttons hidden (ex: Tagging outside tagging mode)
+           collapses to a margin-only sliver instead of a stray bordered/lined strip. */
+        [data-hotkey-group] {
+            margin-bottom: .3em;
+
+            &:last-child {
+                margin-bottom: 0;
+            }
+        }
 
         button {
             font-size: 100%;
+            margin: 0 0 2px 2px;
 
             &[data-role="magnify-little"] {
                 text-shadow: 0 0 darkcyan;
             }
+        }
 
-            &[data-role="crossed"] {
-                text-decoration: line-through;
-            }
+        /* Non-clickable icon labelling the buttons right after it (ex: 🔍 in front of the zoom +/−/⊘
+           buttons), so those buttons don't each have to repeat the same base glyph. */
+        .hud-menu-label {
+            display: inline-block;
+            margin: 0 0 2px 2px;
+            padding: 0 .2em;
+            opacity: .6;
+            cursor: default;
         }
     }
 
@@ -1033,7 +1051,7 @@ article-map {
     width: 100vw;
     height: 100vh;
     text-align: center;
-    font-size: 10vw; /* XX use with the data-fit only? */
+    font-size: 10vw; /* XX use with the sli-fit only? */
     margin-bottom: 100vh;
 
     &.debugged {
@@ -1041,18 +1059,18 @@ article-map {
     }
 }
 
-/* We put the [data-step] to the root to lower down specificity. */
+/* We put the [sli-step] to the root to lower down specificity. */
 /* So that the user does not have to use important when re-writing rules (or when using Animate.css). */
-[data-step] {
-    /* &:not([data-step-shown]) { */
+[sli-step] {
+    /* &:not([sli-step-shown]) { */
     animation: fade-in .5s forwards;
 
     &.step-hidden {
         animation: fade-out .3s forwards;
     }
 
-    &[data-step-shown]:not([data-step-shown='0']):not([data-step-shown='false']) {
-        /* This is also specified under `[data-step]` and not like `[data-step]:not([data-step-shown])` to reduce specificity. */
+    &[sli-step-shown]:not([sli-step-shown='0']):not([sli-step-shown='false']) {
+        /* This is also specified under `[sli-step]` and not like `[sli-step]:not([sli-step-shown])` to reduce specificity. */
         animation: unset;
     }
 }

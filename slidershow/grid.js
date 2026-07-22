@@ -990,15 +990,15 @@ class GridController {
 
     /**
      * Serialize frames for the clipboard, stripping the live transient state (inline position `style`,
-     * `data-preloaded`, generated `data-templated` children) so a pasted clone loads its preview from
+     * `sli-preloaded`, generated `sli-templated` children) so a pasted clone loads its preview from
      * scratch instead of inheriting a "already positioned & preloaded" corpse that never renders.
      * @param {Frame[]} frames
      * @returns {string[]}
      */
     _serialize(frames) {
         return frames.map(f => {
-            const $c = f.$frame.clone().removeAttr("style").removeAttr("data-preloaded")
-            $c.find("[data-templated]").remove()
+            const $c = f.$frame.clone().removeAttr("style").removeAttr("sli-preloaded")
+            $c.find("[sli-templated]").remove()
             return $c[0].outerHTML
         })
     }

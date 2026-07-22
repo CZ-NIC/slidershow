@@ -39,12 +39,12 @@ class Export {
                 caption: "Another folder (tiny presentation size)", callback: () =>
                     new $.Zebra_Dialog("Where will the presentation find the media folder?", {
                         title: "The path to the media folder",
-                        default_value: $main.attr("data-path") || $("[name=path]", "#defaults").val() || "./",
+                        default_value: $main.attr("sli-path") || $("[name=path]", "#defaults").val() || "./",
                         type: "prompt",
                         buttons: ["Cancel", {
                             caption: "Ok",
                             default_confirmation: true,
-                            callback: (_, path) => $main.attr("data-path", path) && this.export(false, path)
+                            callback: (_, path) => $main.attr("sli-path", path) && this.export(false, path)
                         }]
                     })
             }, {
@@ -80,8 +80,8 @@ class Export {
         // the very last tag in the head. Which would cover different problems:
         // CSS order, user might want to add another script accessing slidershow properties...
         let $head = $("<div>" + $("head").prop('outerHTML') + "</div>")
-        $head.find("[data-templated]").remove() // remove all dynamically added libraries
-        $head.find("[src^='https://api.mapy.cz'],[href^='https://api.mapy.cz']").remove() // including vendor libraries that does not our honour [data-templated] attr
+        $head.find("[sli-templated]").remove() // remove all dynamically added libraries
+        $head.find("[src^='https://api.mapy.cz'],[href^='https://api.mapy.cz']").remove() // including vendor libraries that does not our honour [sli-templated] attr
 
         // Export the data blob
         const data = `<!DOCTYPE html><html><head>\n${$head[0].innerHTML}</head>\n<body>` + html + "\n</body>\n</html>"
@@ -166,14 +166,14 @@ class Export {
     }
 
     /**
-     * Longest common directory prefix of `frames`' `data-src`/`src` paths (empty if none has a path,
+     * Longest common directory prefix of `frames`' `sli-src`/`src` paths (empty if none has a path,
      * ex. plain filenames or data URLs) – shown as a hint of which folder to pick as the source.
      * @param {Frame[]} frames
      * @returns {string}
      */
     _common_path_hint(frames) {
         const dirs = frames
-            .map(f => String(f.$actor.data("src") || f.$actor.attr("src") || ""))
+            .map(f => String(f.$actor.attr("sli-src") || f.$actor.attr("src") || ""))
             .filter(p => p.includes("/"))
             .map(p => p.slice(0, p.lastIndexOf("/")))
         if (!dirs.length) {
@@ -552,7 +552,7 @@ class Export {
 
     /**
      * The http(s) URL a frame's media can be fetched from, or null when it isn't fetchable over the
-     * network. An absolute `http(s):`/`data:`/`blob:` `data-src`/`src` is used as-is; a relative path
+     * network. An absolute `http(s):`/`data:`/`blob:` `sli-src`/`src` is used as-is; a relative path
      * resolves against the current document when *it* is served over http(s), otherwise against
      * `baseUrl` (the field the dialog offers when the presentation is opened from disk).
      * @param {Frame} frame
@@ -560,7 +560,7 @@ class Export {
      * @returns {?string}
      */
     _frame_http_url(frame, baseUrl = "") {
-        const src = String(frame.$actor.data("src") || frame.$actor.attr("src") || $("source", frame.$actor).attr("src") || "")
+        const src = String(frame.$actor.attr("sli-src") || frame.$actor.attr("src") || $("source", frame.$actor).attr("src") || "")
         if (!src) {
             return null
         }

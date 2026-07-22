@@ -20,16 +20,16 @@ test("Kiosk button starts playback in loop mode", async ({ page }) => {
 
     // Playback started (splash hidden) and loop-presentation is on – reflected in <main> and the hash.
     await expect(page.locator("menu")).toBeHidden()
-    await expect(page.locator("main")).toHaveAttribute("data-loop-presentation", "true")
+    await expect(page.locator("main")).toHaveAttribute("sli-loop-presentation", "true")
     await expect.poll(() => page.url()).toContain("state=loop-presentation")
 })
 
 test("Auto 5 s button starts playback with auto-forward", async ({ page }) => {
     await page.goto(FIXTURE)
-    await page.locator(".play-mode[data-duration='5']").click()
+    await page.locator(".play-mode[sli-duration='5']").click()
 
     await expect(page.locator("menu")).toBeHidden()
-    await expect(page.locator("main")).toHaveAttribute("data-duration", "5")
+    await expect(page.locator("main")).toHaveAttribute("sli-duration", "5")
     await expect.poll(() => page.url()).toContain("duration:5")
 })
 

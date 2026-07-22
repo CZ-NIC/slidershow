@@ -25,12 +25,12 @@ const HOME_PAGE = "https://github.com/CZ-NIC/slidershow/"
  * When exporting: Setting src directly on more than few hundred photos would kill the tab instantanely;
  * hence we use EXPORT_SRC instead. (The browser will not start loading.)
  */
-const EXPORT_SRC = "data-src-replaced"
+const EXPORT_SRC = "sli-src-replaced"
 /**
  * Here we conserve bytes that would come to src. However, having too much media with src would
  * make the browser choke when opening.
  */
-const EXPORT_SRC_BYTES = "data-src-bytes"
+const EXPORT_SRC_BYTES = "sli-src-bytes"
 /**
  * A media file might have this data("read-src"), containing a method.
  * It produces raw bytes. The source is either FileReader for dragged in files or former EXPORT_SRC_BYTES attribute.
@@ -41,41 +41,41 @@ const READ_SRC = "read-src"
 /*
 Private attributes that are not documented in the README because the user should not need them:
 
-* main[data-path] Path to the media folder.
-* [data-src] Public attribute, containing path to disk file or at least its name.
+* main[sli-path] Path to the media folder.
+* [sli-src] Public attribute, containing path to disk file or at least its name.
     Every dragged file will have the file name.
     User might set either file name or full path.
     When exporting, we try to convert the file name to a full path if given by the user.
 * data("read-src") See READ_SRC.
-* video[data-autoplay-prevented]=1 Replaces native `autoplay` parameter.
-* [data-src-bytes] Stored raw bytes, see EXPORT_SRC_BYTES.
-* [data-src-replaced] See EXPORT_SRC.
+* video[sli-autoplay-prevented]=1 Replaces native `autoplay` parameter.
+* [sli-src-bytes] Stored raw bytes, see EXPORT_SRC_BYTES.
+* [sli-src-replaced] See EXPORT_SRC.
 * <frame-preview> Contents is a preview of a frame. Attribute [data-ref] corresponds to the frame.index.
-* [data-templated] This element was inserted only temporarily throught a template (ex: footer in an article or a <head> vendor script). Should not be exported.
-* [data-preloaded] The frame has already been preloaded.
-* img[data-thumb-shown] The full-quality src is still loading in the background; src currently holds the data-thumb preview.
-* data("step-original") Temporarily change [data-step] value.
+* [sli-templated] This element was inserted only temporarily throught a template (ex: footer in an article or a <head> vendor script). Should not be exported.
+* [sli-preloaded] The frame has already been preloaded.
+* img[sli-thumb-shown] The full-quality src is still loading in the background; src currently holds the sli-thumb preview.
+* data("step-original") Temporarily change [sli-step] value.
 * .step-shown Frame step index has greater value so we see this element.
 * .step-hidden Frame step index has lower value so we do not see this element.
 * .step-not-yet-visible Auxiliary window highlights not-yet-seen elements.
 * <img-temp-animation-step> Tags that help distinguish image zoom step from the image step.
 * Img with wzoom:
-*   [data-wzoom] Wzoom active
+*   [sli-wzoom] Wzoom active
 *   trigger("zoom.slidershow") new position
 *   data("wzoom_get_ratio") screen aware ratio
 *   data("wzoom_resize_off") event destructor
 *   $(window).on("resize.wzoom")
 * Actor event "actor.slidershow" – on ex: rotate change.
-    If the event has a data- attribute associated, it happens in the frame.refresh_actor.
+    If the event has a sli- attribute associated, it happens in the frame.refresh_actor.
     Otherwise, it gets emitted at the point of actor change (ex: video mute operation).
 * Frame video event namespace .slidershow-video
 */
 
-// var variables that a hacky user might wish to change. Might become data-attributes in the future.
+// var variables that a hacky user might wish to change. Might become sli-attributes in the future.
 /** power consuming */
 var READ_EXIF = true
 var ROUTE_TIMEOUT = 1000
-/** When having both `src` and `data-src`, export `<img src>` rather than `<img data-src>`
+/** When having both `src` and `sli-src`, export `<img src>` rather than `<img sli-src>`
     When exporting hundreds of media files, setting the src attribute would prevent the HTML being opened → default false.
     However, for a smaller number, it is nicer to have the src present
     for the raw HTML backwards compatibility for the case slideRshow stopped working. */
@@ -88,7 +88,7 @@ var PRELOAD_BACKWARD = 20
 /** Max concurrent full-quality media downloads (the expensive ones). They are the flood risk on a real server,
     so they are throttled and served in order of distance from the current frame. */
 var ORIGINAL_CONCURRENCY = 4
-/** Max concurrent thumbnail (`data-thumb`) loads. Cheap, so a generous limit – kept only to avoid the browser's
+/** Max concurrent thumbnail (`sli-thumb`) loads. Cheap, so a generous limit – kept only to avoid the browser's
     per-host connection pool filling up with previews and stalling the current frame's original. */
 var THUMB_CONCURRENCY = 8
 
@@ -125,7 +125,7 @@ const PROP_NONSCALAR = {
 // For the media, infer the property from the CSS, not from the DOM.
 const PROP_CALLBACKS = {
     // We infer the rotation from a step.
-    // The user clicks rotate left, the actor has no data-rotate set
+    // The user clicks rotate left, the actor has no sli-rotate set
     // but the step rotated it. We return deg.
     "rotate": $el => {
         // computed `rotate` is "none" for a never-rotated element -> parseFloat gives NaN,
@@ -210,10 +210,10 @@ function docname() {
 
 /**
  * Return closest prop, defined in the step or DOM.
- * Ex: prop("rotate", img) -> checks current step, then img[data-rotate],
- *  then article[data-rotate], then sections[data-rotate], then main[data-rotate]
- * (Zero aware, you can safely set `data-prop=0`.)
- * @param {string} property Ex: for "data-start" use just "start"
+ * Ex: prop("rotate", img) -> checks current step, then img[sli-rotate],
+ *  then article[sli-rotate], then sections[sli-rotate], then main[sli-rotate]
+ * (Zero aware, you can safely set `sli-prop=0`.)
+ * @param {string} property Ex: for "sli-start" use just "start"
  * @param {JQuery} $el What element to check the prop of.
  * @param {any} def Custom default value if not set in DOM or via defProperty. If null, the PROP_DEFAULT default value is used.
  * @param {?string} defProperty Name of a property whose value should be used as a default.
@@ -223,15 +223,15 @@ function docname() {
 /**
  * Invalidate the prop() memoization. O(1) (just bumps a generation counter), so callers over-invalidate
  * freely: bumping too often only lowers the cache hit-rate, it can never return a stale value. Call it
- * right after writing any `data-*` attribute that prop() resolves (rotate, duration, tag-names, …), and
+ * right after writing any `sli-*` attribute that prop() resolves (rotate, duration, tag-names, …), and
  * after structural DOM changes (reset/regroup) that could move which ancestor a lookup resolves to.
  */
 function prop_invalidate() { _propGen++ }
 
 /**
  * Drop the memoized prop() lookups of a single element (its whole property map). Use this instead of the
- * global prop_invalidate() when only one element's own `data-*` changed and no ancestor moved – ex. an async
- * EXIF write sets `data-datetime` on one leaf actor, so bumping the global generation (and losing every other
+ * global prop_invalidate() when only one element's own `sli-*` changed and no ancestor moved – ex. an async
+ * EXIF write sets `sli-datetime` on one leaf actor, so bumping the global generation (and losing every other
  * frame's cache during a bulk import) is wasteful. Safe because actors are leaves: nothing resolves through them.
  * @param {Element} el
  */
@@ -250,7 +250,7 @@ function prop(property, $el, def = null, defProperty = null, css = false) {
     // Memoize the closest()+data() DOM walk (a single goToFrame does dozens of prop() reads, ex.
     // positionFrames reads the constant `spread-frames` once per frame). Never cache a live-CSS read
     // (css=true with a PROP_CALLBACKS entry depends on computed style, not the DOM) nor a multi/zero
-    // element set. Any data-* write bumps _propGen via prop_invalidate(), dropping the whole cache.
+    // element set. Any sli-* write bumps _propGen via prop_invalidate(), dropping the whole cache.
     const el = ($el.length === 1 && !(css && PROP_CALLBACKS[property])) ? $el[0] : null
     if (el) {
         const hit = _propCache.get(el)?.get(property)
@@ -270,18 +270,19 @@ function prop(property, $el, def = null, defProperty = null, css = false) {
 }
 
 function _prop_resolve(property, $el, def, defProperty) {
-    // Why .removeDate? Because the DOM might have changed.
-    // User did it or we set up main.duration by the auto-forward button. And the .data value is cached.
-    // We do not read the attr because we need the conversion that happens when jQuery fetches data from attr.
-    // For ex: step-points which need to be converted to an array.
-    const v = $el.closest(`[data-${property}]`).removeData(property).data(property)
+    const $found = $el.closest(`[sli-${property}]`)
+    let v = $found.length ? $found.attr(`sli-${property}`) : undefined
+    if (v !== undefined && PROP_NONSCALAR[property]) {
+        // ex: step-points, video-points - array-valued attributes, stored as JSON in the DOM
+        v = JSON.parse(v)
+    }
     switch (v) {
-        case "false": // <main data-start='false'> -> false
+        case "false": // <main sli-start='false'> -> false
             return false
         case "":
-        // mere presence of an attribute resolves to true: <main data-start>
-        // (unfortunately undistinguishable from `<main data-start=''>` both in Chrome and FF)
-        case "true": // <main data-start='true'> -> true
+        // mere presence of an attribute resolves to true: <main sli-start>
+        // (unfortunately undistinguishable from `<main sli-start=''>` both in Chrome and FF)
+        case "true": // <main sli-start='true'> -> true
             return true;
         case undefined:
             if (defProperty) {
@@ -290,7 +291,7 @@ function _prop_resolve(property, $el, def, defProperty) {
             return def !== null ? def : PROP_DEFAULT[property]
         default:
             const numeric_only = /^[-+]?\d*\.?\d+$/
-            if (numeric_only.test(v)) { // <main data-start='0'> -> Boolean(Number(0)) === false
+            if (numeric_only.test(v)) { // <main sli-start='0'> -> Boolean(Number(0)) === false
                 return parseFloat(v)
             } else {
                 return v

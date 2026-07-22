@@ -44,13 +44,13 @@ class Playback {
         this.bg_tasks = []
 
         /** @type {Set<Frame>} Currently-preloaded frames, kept incrementally by Frame.preload()/unload()
-         * so navigation doesn't need an O(n) `[data-preloaded]` scan across the whole deck every step. */
+         * so navigation doesn't need an O(n) `[sli-preloaded]` scan across the whole deck every step. */
         this.preloaded = new Set()
 
         /** @type {Semaphore} Throttles full-quality media downloads and serves them nearest-frame-first,
          * so a real server is not flooded and the current frame's original is never stuck behind neighbours. */
         this.original_loader = new Semaphore(ORIGINAL_CONCURRENCY)
-        /** @type {Semaphore} Throttles the cheap `data-thumb` previews (generous limit). */
+        /** @type {Semaphore} Throttles the cheap `sli-thumb` previews (generous limit). */
         this.thumb_loader = new Semaphore(THUMB_CONCURRENCY)
 
         /** Preloading tasks background worker */
@@ -72,7 +72,7 @@ class Playback {
         this.debug = false
         this.tagging_mode = false
         this.editing_mode = false
-        // On mobile the authored pan/zoom "flyover" (data-step-points) is disabled by default – just the plain
+        // On mobile the authored pan/zoom "flyover" (sli-step-points) is disabled by default – just the plain
         // full-screen photo, swipeable/pinch-zoomable, no automatic camera movement.
         this.step_disabled = this.isMobileMode
         /** @type {number[]} Tags to show alone (OR – a frame matches if it carries any of them); empty = no filter. Affects both the grid and normal navigation. */
@@ -80,11 +80,11 @@ class Playback {
 
         // Tag names are document-wide (unlike per-file tags, which are already restored per-frame via
         // Frame.check_tag()), so restore them once here – but only if this document doesn't already
-        // carry its own data-tag-names (ex. a previously exported/saved file), which must win.
-        if (!$main.attr("data-tag-names")) {
+        // carry its own sli-tag-names (ex. a previously exported/saved file), which must win.
+        if (!$main.attr("sli-tag-names")) {
             const savedNames = localStorage.getItem("TAG-NAMES: " + docname())
             if (savedNames) {
-                $main.attr("data-tag-names", savedNames)
+                $main.attr("sli-tag-names", savedNames)
             }
         }
 
@@ -471,9 +471,9 @@ class Playback {
         let index = this.index + count
         if (index >= this.$articles.length) {
             // Loop mode: a single step past the last frame wraps back to the first (kiosk / exhibition
-            // playback). prop("loop-presentation") reads <main data-loop-presentation> – authorable,
+            // playback). prop("loop-presentation") reads <main sli-loop-presentation> – authorable,
             // hash-settable (#&state=loop-presentation), togglable at runtime. (The scope-narrower
-            // data-loop is unrelated – that loops images *within* a frame.)
+            // sli-loop is unrelated – that loops images *within* a frame.)
             // Only for count == 1; a multi-frame jump keeps the old clamp below.
             if (count === 1 && prop("loop-presentation", $main)) {
                 index = 0
@@ -696,7 +696,7 @@ class Playback {
             // Enter the frame
             const duration = frame.enter()
             if (!duration && this.moving && frame.video_finished) {
-                // even if data-duration=0, when a video plays, always go to the next frame
+                // even if sli-duration=0, when a video plays, always go to the next frame
                 frame.video_finished.then(() => this.tryGoNext())
             } else { // go to the next frame after duration passes
                 this.waitAndGo(duration)

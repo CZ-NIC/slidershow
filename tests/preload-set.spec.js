@@ -9,8 +9,8 @@ test.beforeEach(async ({ page }) => {
     await expect.poll(() => page.url()).toContain("#1")
 })
 
-test("playback.preloaded stays in sync with the [data-preloaded] attribute across navigation", async ({ page }) => {
-    const attrPreloadedCount = () => page.evaluate(() => $("[data-preloaded]").length)
+test("playback.preloaded stays in sync with the [sli-preloaded] attribute across navigation", async ({ page }) => {
+    const attrPreloadedCount = () => page.evaluate(() => $("[sli-preloaded]").length)
     const setSize = () => page.evaluate(() => playback.preloaded.size)
 
     await expect.poll(setSize).toBeGreaterThan(0)
@@ -28,7 +28,7 @@ test("unload() removes the frame from playback.preloaded; preload() (incl. the a
 
     await page.evaluate(() => playback.frame.unload())
     expect(await isTracked()).toBe(false)
-    expect(await page.evaluate(() => playback.frame.$frame.attr("data-preloaded"))).toBeUndefined()
+    expect(await page.evaluate(() => playback.frame.$frame.attr("sli-preloaded"))).toBeUndefined()
 
     await page.evaluate(() => playback.frame.preload())
     expect(await isTracked()).toBe(true)
@@ -50,5 +50,5 @@ test("duplicating a frame and navigating around it doesn't crash the preload/unl
     await page.evaluate(() => playback.previousFrame())
     await page.waitForTimeout(200)
 
-    expect(await page.evaluate(() => playback.preloaded.size)).toBe(await page.evaluate(() => $("[data-preloaded]").length))
+    expect(await page.evaluate(() => playback.preloaded.size)).toBe(await page.evaluate(() => $("[sli-preloaded]").length))
 })

@@ -45,35 +45,35 @@ Generate a presentation from the sheet with [slidershow-builder](https://github.
   * [Organizing](#organizing)
 - [Structure](#structure)
   * [Frame `<article>`](#frame-article)
-      - [`data-rotate`](#data-rotate)
-      - [`data-duration`](#data-duration)
-      - [`data-loop-presentation`](#data-loop-presentation)
-      - [`data-transition-duration`](#data-transition-duration)
-      - [`data-spread-frames`](#data-spread-frames)
-      - [`data-x`, `data-y`](#data-x-data-y)
-      - [`data-loop`](#data-loop)
+      - [`sli-rotate`](#sli-rotate)
+      - [`sli-duration`](#sli-duration)
+      - [`sli-loop-presentation`](#sli-loop-presentation)
+      - [`sli-transition-duration`](#sli-transition-duration)
+      - [`sli-spread-frames`](#sli-spread-frames)
+      - [`sli-x`, `sli-y`](#sli-x-sli-y)
+      - [`sli-loop`](#sli-loop)
       - [`id`](#id)
       - [`<!-- presenter's notes -->`](#---presenters-notes---)
   * [Frame content](#frame-content)
-      - [`data-step`](#data-step)
+      - [`sli-step`](#sli-step)
         * [Step styling](#step-styling)
-      - [`data-step-class`](#data-step-class)
-      - [`data-step-shown`](#data-step-shown)
-      - [`data-step-li`](#data-step-li)
-      - [`data-step-duration`](#data-step-duration)
-      - [`data-step-transition-duration`](#data-step-transition-duration)
+      - [`sli-step-class`](#sli-step-class)
+      - [`sli-step-shown`](#sli-step-shown)
+      - [`sli-step-li`](#sli-step-li)
+      - [`sli-step-duration`](#sli-step-duration)
+      - [`sli-step-transition-duration`](#sli-step-transition-duration)
     + [`<img>`](#img)
       - [Exif info](#exif-info)
       - [Zoomable](#zoomable)
-        * [`data-step-points`](#data-step-points)
+        * [`sli-step-points`](#sli-step-points)
       - [Panoramatic images](#panoramatic-images)
       - [Preload](#preload)
-      - [Thumbnail preview (`data-thumb`)](#thumbnail-preview-data-thumb)
+      - [Thumbnail preview (`sli-thumb`)](#thumbnail-preview-sli-thumb)
     + [`<video>`](#video)
-      - [`data-datetime`](#data-datetime)
-      - [`data-playback-rate`](#data-playback-rate)
-      - [`data-video`](#data-video)
-      - [`data-video-points`](#data-video-points)
+      - [`sli-datetime`](#sli-datetime)
+      - [`sli-playback-rate`](#sli-playback-rate)
+      - [`sli-video`](#sli-video)
+      - [`sli-video-points`](#sli-video-points)
     + [Text](#text)
   * [Map](#map)
     + [`<article-map>` frame](#article-map-frame)
@@ -98,7 +98,7 @@ There is a varienty of keyboard shortcuts. Click the menu button in the top righ
 
 ## Start
 
-The `<menu>` is displayed before the presentation starts, unless the `<main>` has the `data-start` attribute.
+The `<menu>` is displayed before the presentation starts, unless the `<main>` has the `sli-start` attribute.
 
 When a presentation is loaded, the splash shows a short summary of what is loaded (frames / videos / sections) and, next to the big ▶ Start button, quick play-mode buttons:
 
@@ -150,21 +150,21 @@ Tags can be named through the "Name tags…" button/command (<kbd>Alt+Shift+T</k
 Put the presentation content to the `<main>` tag which contain `<article>` tags (~ frames).
 
 To control the presentation flow, we use many attributes. These are resolved in the following way:
-* `<div data-attribute>` → true
-* `<div data-attribute=''>` → true
-* `<div data-attribute='true'>` → true
-* `<div data-attribute='false'>` → false
-* `<div data-attribute='1'>` → 1 (also true)
-* `<div data-attribute='0'>` → 0 (also false)
-* `<div data-attribute='value'>` → value
+* `<div sli-attribute>` → true
+* `<div sli-attribute=''>` → true
+* `<div sli-attribute='true'>` → true
+* `<div sli-attribute='false'>` → false
+* `<div sli-attribute='1'>` → 1 (also true)
+* `<div sli-attribute='0'>` → 0 (also false)
+* `<div sli-attribute='value'>` → value
 * `<div>` → default
 
 An element affected by an attribute searches for it amongst its own or ancestors' attributes.
 
 ```html
-<main data-attribute="1" >
+<main sli-attribute="1" >
     <img /> <!-- → value=1 -->
-    <img data-attribute="2" />  <!-- → value=2 -->
+    <img sli-attribute="2" />  <!-- → value=2 -->
 </main>
 ```
 
@@ -178,35 +178,35 @@ Every frame is represented by an `<article>` tag.
 
 Which contains arbitrary HTML code, such as images or videos (by default, one per slide). Use control attributes:
 
-### `data-duration`
+### `sli-duration`
 (default `0`) How many seconds will a frame step last. By default, indefinitely (waiting for a user action).
 
 ```html
-<article data-duration="0.5">Short frame</article>
+<article sli-duration="0.5">Short frame</article>
 <article>You have to click to get further</article>
-<article data-duration="0.5">Short frame</article>
+<article sli-duration="0.5">Short frame</article>
 ```
 Note a video frame is an exception: will hold till the video finishes and then change frame.
 
 Auto-forward can also be set live with <kbd>Shift+Alt+f</kbd>, and a thin **countdown bar** at the bottom edge (toggle <kbd>Shift+c</kbd>, off by default) shows how long until the next frame.
 
-### `data-loop-presentation`
-(default off, set on `<main>`) When the presentation reaches its last frame, loop back to the first one instead of stopping – for kiosk / exhibition playback (pair it with `data-duration` for a hands-free loop). Toggle live with <kbd>Shift+L</kbd>, or use the **🔁 Kiosk** splash button. The narrower-scoped [`data-loop`](#data-loop) is a different feature – it loops several images *within* one frame.
+### `sli-loop-presentation`
+(default off, set on `<main>`) When the presentation reaches its last frame, loop back to the first one instead of stopping – for kiosk / exhibition playback (pair it with `sli-duration` for a hands-free loop). Toggle live with <kbd>Shift+L</kbd>, or use the **🔁 Kiosk** splash button. The narrower-scoped [`sli-loop`](#sli-loop) is a different feature – it loops several images *within* one frame.
 
-### `data-transition-duration`
+### `sli-transition-duration`
 (default `0`) How many seconds will it take to change a frame.
 
-### `data-spread-frames`
+### `sli-spread-frames`
 (default `spiral`) A viewport stands for a chessboard field. This is how the frame are positioned in the chessboard.
 * `true=spiral`
 * `diagonal`
-### `data-x`, `data-y`
-Valid only for `data-spread-frames=dialogal`. Overrides the default position. Attention, do not let the frames share the same position.
+### `sli-x`, `sli-y`
+Valid only for `sli-spread-frames=dialogal`. Overrides the default position. Attention, do not let the frames share the same position.
 
-### `data-loop`
+### `sli-loop`
 If present, images in the body will rapidly loop, creating a funny animation. (Currenly allowed only `true` value for an infitite loop.)
 ```html
-<article data-loop>
+<article sli-loop>
     <img src="pic1.jpg" />
     <img src="pic2.jpg" />
 </article>
@@ -225,11 +225,11 @@ Standard HTML ID serves for navigation.
     <article id=my_frame>...</article>
 </section>
 ```
-### `data-tag`
-Set by the tagging feature (see [Organizing](#organizing)) on the frame's `<img>`/`<video>`, not hand-authored. Space-separated list of digit tokens, e.g. `data-tag="1 2"` for a frame in both tag 1 and tag 2.
+### `sli-tag`
+Set by the tagging feature (see [Organizing](#organizing)) on the frame's `<img>`/`<video>`, not hand-authored. Space-separated list of digit tokens, e.g. `sli-tag="1 2"` for a frame in both tag 1 and tag 2.
 
-### `data-tag-names`
-On `<main>`: comma-separated display names for tags, position = digit (`data-tag-names="rodiče,vedoucí"` names tag 1 "rodiče" and tag 2 "vedoucí"). Digits past the list still work, shown as bare numbers.
+### `sli-tag-names`
+On `<main>`: comma-separated display names for tags, position = digit (`sli-tag-names="rodiče,vedoucí"` names tag 1 "rodiče" and tag 2 "vedoucí"). Digits past the list still work, shown as bare numbers.
 
 ### `<!-- presenter's notes -->`
 You may use HTML comments just before the frame or as the first frame child. Markdown syntax is supported. These will be displayed in the auxiliary window while presenting.
@@ -254,11 +254,11 @@ Any HTML content is accepted.
 
 A tag have following attributes:
 
-#### `data-rotate`
+#### `sli-rotate`
 
 **(number in degrees)** The content might easily be rotated. Use buttons in the menu to rotate live.
 
-#### `data-step`
+#### `sli-step`
 This element is not initially displayed but gradually appears as the user progresses through the presentation. If the value is not set, it will receive the next available unfilled number. If two elements share the same number, they will appear (or disappear) simultaneously. The numbers do not need to be assigned successively; you can skip values.
 
 The property is not inherited, it concerns this particular element only. In gains `.step-shown` or `.step-hidden` class.
@@ -266,34 +266,34 @@ The property is not inherited, it concerns this particular element only. In gain
 A basic example:
 
 ```html
-<article data-duration=1>
+<article sli-duration=1>
     <p>Lorem ipsum</p>
-    <img data-step src="..."> <!-- displayed at step 1 -->
+    <img sli-step src="..."> <!-- displayed at step 1 -->
     <p>dolor sit amet</p>
-    <img data-step src="..."> <!-- displayed at step 2 -->
-    <p data-step>consectetur adipiscing</p>  <!-- displayed at step 3 -->
+    <img sli-step src="..."> <!-- displayed at step 2 -->
+    <p sli-step>consectetur adipiscing</p>  <!-- displayed at step 3 -->
 </article>
 ```
 
 Steps work in a very intuitive way.
 
 ```html
-<article data-step-li>
+<article sli-step-li>
     <h1>Seen from the beginning</h1>
     <ul>
         <li>step 2</li>
         <li>step 3</li>
-        <li data-step="1">step 1</li>
+        <li sli-step="1">step 1</li>
         <li>step 6</li>
-        <li data-step="4">step 4</li>
+        <li sli-step="4">step 4</li>
         <li>step 7</li>
     </ul>
-    <p data-step>step 8</p>
-    <p data-step="100">step last</p> <!-- you can skip numbers -->
-    <p data-step="1">step 1 (too)</p>
-    <p data-step="5">step 5</p>
-    <p data-step>step 9</p>
-    <p data-step="5">step 5 (too)</p>
+    <p sli-step>step 8</p>
+    <p sli-step="100">step last</p> <!-- you can skip numbers -->
+    <p sli-step="1">step 1 (too)</p>
+    <p sli-step="5">step 5</p>
+    <p sli-step>step 9</p>
+    <p sli-step="5">step 5 (too)</p>
     <p>seen from the beginning</p>
 </article>
 ```
@@ -303,7 +303,7 @@ By default, the animation is fade in/out. It was made easy to change it. Example
 
 ```html
 <style>
-    [data-step] {
+    [sli-step] {
         /* all steps appear with a blue flash */
         animation-name: blue-flash;
     }
@@ -320,40 +320,40 @@ By default, the animation is fade in/out. It was made easy to change it. Example
 </style>
 ```
 
- #### `data-step-class`
- Any contained elements with [`[data-step]`](#data-step) will have this class set. Ignored when having [`[data-step-shown]`](#data-step-shown) set. Example using [Animate.css](https://animate.style/):
+ #### `sli-step-class`
+ Any contained elements with [`[sli-step]`](#sli-step) will have this class set. Ignored when having [`[sli-step-shown]`](#sli-step-shown) set. Example using [Animate.css](https://animate.style/):
 
 ```html
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css" />
-<article data-step-li>
-    <ul data-step-class="animate__animated animate__backInDown">
+<article sli-step-li>
+    <ul sli-step-class="animate__animated animate__backInDown">
         <li>I will fall from the top</li>
         <li>Me too</li>
     </ul>
 </article>
 ```
 
-#### `data-step-shown`
-Any contained elements with [`[data-step]`](#data-step) will not be hidden automatically. Instead of being shown, they receive the class given by the attribute. Supresses [`[data-step-class]`](#data-step-class).
+#### `sli-step-shown`
+Any contained elements with [`[sli-step]`](#sli-step) will not be hidden automatically. Instead of being shown, they receive the class given by the attribute. Supresses [`[sli-step-class]`](#sli-step-class).
 
 ```html
 <style>
     .my-class {font-weight: bold;}
 </style>
-<article data-step-li>
+<article sli-step-li>
     <ul>
         <li>Will be shown.</li>
-        <li data-step-shown="my-class">Still visible. Becomes bold at step 2.</li>
+        <li sli-step-shown="my-class">Still visible. Becomes bold at step 2.</li>
     </ul>
 </article>
 ```
 
-#### `data-step-li`
-Every contained `<li>` element is taken as having the `data-step` attribute (see also: [`data-step`](#data-step)). They are not initially displayed but appears gradually as the user progresses through the presentation.
+#### `sli-step-li`
+Every contained `<li>` element is taken as having the `sli-step` attribute (see also: [`sli-step`](#sli-step)). They are not initially displayed but appears gradually as the user progresses through the presentation.
 
 ```html
-<article data-duration=1>
-    <ul data-step-li>
+<article sli-duration=1>
+    <ul sli-step-li>
         <li>Lorem</li> <!-- displayed at step 1 -->
         <li>ipsum</li> <!-- displayed at step 2 -->
         <li>dolor</li> <!-- displayed at step 3 -->
@@ -365,21 +365,21 @@ Every contained `<li>` element is taken as having the `data-step` attribute (see
 </article>
 ```
 
-#### `data-step-duration`
+#### `sli-step-duration`
 
-How many seconds will a frame step last. By default, it takes [`data-duration`](#data-duration).
+How many seconds will a frame step last. By default, it takes [`sli-duration`](#sli-duration).
 
-#### `data-step-transition-duration`
+#### `sli-step-transition-duration`
 
-How many seconds will it take to change to an image zoom step. By default, it takes [`data-transition-duration`](#data-transition-duration).
+How many seconds will it take to change to an image zoom step. By default, it takes [`sli-transition-duration`](#sli-transition-duration).
 
 ### `<img>`
 
 #### Exif info
 We try to fetch Exif data for images.
-* `data-device`: maker and model
-* `data-datetime`: picture time stamp (or fallback to file modification time)
-* `data-gps`: point on the map (HUD map will be automatically displayed in the corner)
+* `sli-device`: maker and model
+* `sli-datetime`: picture time stamp (or fallback to file modification time)
+* `sli-gps`: point on the map (HUD map will be automatically displayed in the corner)
 
 However, this is a non-trivial task since the browser protects your photos privacy. This will work for images you drag and drop inside, images from the web (with the permitive CORS policy). Reading the Exif of your local images you just mention in the document will work only with the browser [CORS disabled](https://stackoverflow.com/questions/4819060/allow-google-chrome-to-use-xmlhttprequest-to-load-a-url-from-a-local-file) – do that only if you know what are you doing.
 
@@ -387,17 +387,17 @@ However, this is a non-trivial task since the browser protects your photos priva
 
 Zoomable on click/mouse wheel or a button from menu. You can zoom either an image or a video. Use <kbd>arrows</kbd> to crawl over the picture when zoomed. Even multiple arrows work at once. If you need the arrows to control the video playthrough, use <kbd>Ctrl+arrows</kbd> (works for both Firefox and Chrome).
 
-##### `data-step-points`
+##### `sli-step-points`
 
 Array of points an image should pass. The first is the initial image position. Works for the image itself or any contained image.
 
-Point: `[left = 0, top = 0, scale = 1, transition_duration = data-step-transition-duration | data-transition-duration, duration = data-step-duration | data-duration, data-rotate ]`
+Point: `[left = 0, top = 0, scale = 1, transition_duration = sli-step-transition-duration | sli-transition-duration, duration = sli-step-duration | sli-duration, sli-rotate ]`
 
 In this example, the image starts at `[100, 10, 2]`, then zooms out `[]` (instantly, no delay), then goes slowly (note the delay parameter) to `[150,10,3,3]`. Next, while using the default `transition_duration` (note the `null` -> becomes `1.5`), we set `duration` to 0.5 second for this step only `[200,10,4,null,.5]`.
 
 ```html
-<article data-transition-duration=1.5>
-    <img data-step-points="[[100,10,2], [], [150,10,3,3], [200,10,4,null,1] , [250,10,5] , [300,10,6] , [350,10,7]]" src="..."/>
+<article sli-transition-duration=1.5>
+    <img sli-step-points="[[100,10,2], [], [150,10,3,3], [200,10,4,null,1] , [250,10,5] , [300,10,6] , [350,10,7]]" src="..."/>
 </article>
 ```
 
@@ -406,7 +406,7 @@ Position `0,0` is at the image centre. Its real dimension is taken into account 
 Every image in the sections slowly zooms out from the center. (Images in header and footer are ignored.)
 
 ```html
-<section data-step-points="[[0,0,15,5], [0,0,1,5]]">
+<section sli-step-points="[[0,0,15,5], [0,0,1,5]]">
     <article><img src="..."/></article>
     <article><img src="..."/></article>
     <article><img src="..."/></article>
@@ -415,31 +415,31 @@ Every image in the sections slowly zooms out from the center. (Images in header 
 
 #### Panoramatic images
 
-When an image is much longer than the screen, we show it slowly first before resizing it to fit the screen. This will delay the `<article>`'s `data-duration`. It starts when the image proportion width / height > `data-panorama-threshold=2`.
+When an image is much longer than the screen, we show it slowly first before resizing it to fit the screen. This will delay the `<article>`'s `sli-duration`. It starts when the image proportion width / height > `sli-panorama-threshold=2`.
 
 #### Preload
-When having thousands of images, your browser may choke. Use `data-src` instead of `src` as a preload.
+When having thousands of images, your browser may choke. Use `sli-src` instead of `src` as a preload.
 
 ```html
-<img data-src="flower.jpg" /> <!-- becomes <img src="flower.jpg"> when needed -->
+<img sli-src="flower.jpg" /> <!-- becomes <img src="flower.jpg"> when needed -->
 ```
 
-A generator may not even know the file type. Put `data-src` directly on an empty `<article>` and the right element is created from the file extension.
+A generator may not even know the file type. Put `sli-src` directly on an empty `<article>` and the right element is created from the file extension.
 
 ```html
-<article data-src="flower.jpg"></article> <!-- becomes <article><img data-src="flower.jpg"></article> -->
-<article data-src="clip.mp4"></article> <!-- becomes <article><video data-src="clip.mp4"></article> -->
+<article sli-src="flower.jpg"></article> <!-- becomes <article><img sli-src="flower.jpg"></article> -->
+<article sli-src="clip.mp4"></article> <!-- becomes <article><video sli-src="clip.mp4"></article> -->
 ```
 
-Attributes like `data-datetime` are inherited from the `<article>` too, so a generator can put them directly there without knowing whether it will become an `<img>` or `<video>`:
+Attributes like `sli-datetime` are inherited from the `<article>` too, so a generator can put them directly there without knowing whether it will become an `<img>` or `<video>`:
 
 ```html
-<article data-src="foto.jpg" data-datetime="2024-01-02T10:00:00"></article>
+<article sli-src="foto.jpg" sli-datetime="2024-01-02T10:00:00"></article>
 ```
 
-#### Thumbnail preview (`data-thumb`)
+#### Thumbnail preview (`sli-thumb`)
 
-If your originals are large (multi-MB photos over a slow connection), let SlideRshow show a small preview first and swap in the full file only once it has fully downloaded. Set `data-thumb` on `<main>` (or a `<section>`, or a single `<img>`/`<video>`) to a template resolved against that element's `data-src`:
+If your originals are large (multi-MB photos over a slow connection), let SlideRshow show a small preview first and swap in the full file only once it has fully downloaded. Set `sli-thumb` on `<main>` (or a `<section>`, or a single `<img>`/`<video>`) to a template resolved against that element's `sli-src`:
 
 * `{dir}` – directory of the original (`photos/2024/`)
 * `{file}` – full original file name (`flower.jpg`)
@@ -447,32 +447,32 @@ If your originals are large (multi-MB photos over a slow connection), let SlideR
 * `{ext}` – original extension (`jpg`)
 
 ```html
-<main data-thumb="thumbs/{name}.webp"> <!-- same folder tree, different name/extension -->
+<main sli-thumb="thumbs/{name}.webp"> <!-- same folder tree, different name/extension -->
 ```
 
-You only prepare the thumbnails yourself (ex: with `ffmpeg`/`imagemagick`) – SlideRshow never generates them. If a thumbnail is missing or fails to load for a particular file, that file is silently loaded the usual way, no error is shown. A `data-thumb` without any `{}` placeholder is used verbatim, so you may also override it on a single element for an irregular file:
+You only prepare the thumbnails yourself (ex: with `ffmpeg`/`imagemagick`) – SlideRshow never generates them. If a thumbnail is missing or fails to load for a particular file, that file is silently loaded the usual way, no error is shown. A `sli-thumb` without any `{}` placeholder is used verbatim, so you may also override it on a single element for an irregular file:
 
 ```html
-<img data-src="photos/oddball.jpg" data-thumb="thumbs/oddball-special.jpg" />
+<img sli-src="photos/oddball.jpg" sli-thumb="thumbs/oddball-special.jpg" />
 ```
 
 The grid/ribbon overview (<kbd>Alt+G</kbd>/<kbd>Alt+J</kbd>) uses the thumbnail exclusively and never downloads the full file just to show a preview.
 
-#### Fallback source (`data-fallback`)
+#### Fallback source (`sli-fallback`)
 
-Some formats do not play in every browser (ex: HEIC/HEIF photos are decoded by Safari but not by Chrome on Windows). Set `data-fallback` – same placeholder syntax and inheritance as `data-thumb` – to a pre-converted alternative that is loaded automatically if `data-src` fails to load or decode:
-
-```html
-<main data-fallback="converted/{name}.jpg">
-```
-
-Several space-separated templates may be given – useful when a single `data-fallback` set high up (ex: on `<main>`) has to cover both photos and videos, which convert to different containers/extensions. Each candidate is tried in order; the first that actually loads/decodes wins:
+Some formats do not play in every browser (ex: HEIC/HEIF photos are decoded by Safari but not by Chrome on Windows). Set `sli-fallback` – same placeholder syntax and inheritance as `sli-thumb` – to a pre-converted alternative that is loaded automatically if `sli-src` fails to load or decode:
 
 ```html
-<main data-fallback="converted/{name}.jpg converted/{name}.mp4">
+<main sli-fallback="converted/{name}.jpg">
 ```
 
-You prepare the alternative file(s) yourself; SlideRshow never converts them. If none of the candidates loads (or `data-fallback` is empty/missing), a toast warns about the unsupported file for the frame currently being viewed (a visible thumbnail, if any, stays on screen).
+Several space-separated templates may be given – useful when a single `sli-fallback` set high up (ex: on `<main>`) has to cover both photos and videos, which convert to different containers/extensions. Each candidate is tried in order; the first that actually loads/decodes wins:
+
+```html
+<main sli-fallback="converted/{name}.jpg converted/{name}.mp4">
+```
+
+You prepare the alternative file(s) yourself; SlideRshow never converts them. If none of the candidates loads (or `sli-fallback` is empty/missing), a toast warns about the unsupported file for the frame currently being viewed (a visible thumbnail, if any, stays on screen).
 
 ### `<video>`
 
@@ -488,10 +488,10 @@ You prepare the alternative file(s) yourself; SlideRshow never converts them. If
 * The `<video>` tag benefits from standard attributes like `loop`, `muted`, `autoplay` and `controls` (so that controls are visible). In Chromium based browsers, only `muted` video respects `autoplay` so we recommend using `controls` too so that you may start the video with the <kbd>Space</kbd>.
 * When a new frame appears, first video gets focus. Whether `autoplay` is present, it starts playing. Keys like <kbd>Space</kbd>, <kbd>Left</kbd>, <kbd>Right</kbd> stop working for frame switching to avoid interfering with the video controls.
 
-#### `data-datetime`
-File modification time if available. Like `data-thumb`, it inherits from ancestors (`<article>`, `<section>`, `<main>`) – the closest element wins, so it may be set once on an `<article>` even without a nested `<img>`/`<video>`.
+#### `sli-datetime`
+File modification time if available. Like `sli-thumb`, it inherits from ancestors (`<article>`, `<section>`, `<main>`) – the closest element wins, so it may be set once on an `<article>` even without a nested `<img>`/`<video>`.
 
-#### `data-playback-rate`
+#### `sli-playback-rate`
 The speed of the video.
 
 Tip: Can be adjusted by <kbd>Numpad +/-</kbd> while presenting (see menu – <kbd>Esc</kbd>).
@@ -504,11 +504,11 @@ Tip: Can be adjusted by <kbd>Numpad +/-</kbd> while presenting (see menu – <kb
 </article>
 ```
 
-#### `data-video`
+#### `sli-video`
 (default `'autoplay controls'`) All `<video>` tags inherits its value as attributes (`autoplay controls muted loop`). Tip: toggle muted by <kbd>Alt+M</kbd> while presenting.
 
 ```html
-<article data-video="autoplay muted">
+<article sli-video="autoplay muted">
     <video> <!-- becomes <video autoplay muted> -->
         <source src="my_video.mp4#t=8,10" type="video/mp4">
     </video>
@@ -517,14 +517,14 @@ Tip: Can be adjusted by <kbd>Numpad +/-</kbd> while presenting (see menu – <kb
     <video src="my_video.mp4"> <!-- becomes <video autoplay controls> because that is the default --></video>
 </article>
 <article>
-    <video data-video='muted' src="my_video.mp4"> <!-- becomes <video muted> --></video>
+    <video sli-video='muted' src="my_video.mp4"> <!-- becomes <video muted> --></video>
 </article>
 <article>
     <video muted src="my_video.mp4"> <!-- becomes <video autoplay controls muted> --></video>
 </article>
 ```
 
-#### `data-video-cut`
+#### `sli-video-cut`
 
 Browsers allow you to specify the [playback range](https://developer.mozilla.org/en-US/docs/Web/Media/Audio_and_video_delivery#specifying_playback_range) by `#t=[START],[STOP]` URL suffix. Should you wish to change the value dynamically, you may set it as video-cut.
 
@@ -532,7 +532,7 @@ Ex: `<video src="myvideo.mp4#t=10></video>` will start playing at time 10 s.
 
 Use the property panel (<kbd>Alt+p</kbd>) to help you with.
 
-#### `data-video-points`
+#### `sli-video-points`
 
 Array of events that happen during video playthrough. The format is: `[startTime, rule, rule...]`.
 
@@ -543,7 +543,7 @@ The first item is the `startTime` when other rules happen. Rules are following:
 * `mute` – Toggles to muted sound.
 * `unmute` – Unmutes sound.
 * `pause` – Video stops.
-* `point:[data-step-point]` – Zoom to a point. This is defined by a standard [data-step-point](#data-step-points). Ex: `[4, "goto:2.9", "point:[100,100,5]"]` means: At the time 4 s, jump back to time 2.9 s and zoom to a given point.
+* `point:[sli-step-point]` – Zoom to a point. This is defined by a standard [sli-step-point](#sli-step-points). Ex: `[4, "goto:2.9", "point:[100,100,5]"]` means: At the time 4 s, jump back to time 2.9 s and zoom to a given point.
 
 Use the property panel (<kbd>Alt+p</kbd>) to help you with creating video points.
 
@@ -551,7 +551,7 @@ Use the property panel (<kbd>Alt+p</kbd>) to help you with creating video points
 
 You can place an arbitrary content inside an `<article>`.
 
-* `data-fit=auto`
+* `sli-fit=auto`
     * `true|false`: Fit the text size to the screen width.
     * `auto`: Fit if there is no tag inside an `<article>`
 
@@ -559,30 +559,30 @@ You can place an arbitrary content inside an `<article>`.
 
 These are map-related attributes which helps you to display the HUD/fullscreen map.
 
-* `data-places`: Delimited by comma. Ex: "Prague, Brno"
-* `data-map-zoom`: Zoom as given by the [Mapy.cz API](https://api.mapy.cz/doc/SMap.html) (world 1, country 5, street 13)
-* `data-gps`: Single point, longitude and latitude, comma delimited.
+* `sli-places`: Delimited by comma. Ex: "Prague, Brno"
+* `sli-map-zoom`: Zoom as given by the [Mapy.cz API](https://api.mapy.cz/doc/SMap.html) (world 1, country 5, street 13)
+* `sli-gps`: Single point, longitude and latitude, comma delimited.
     ```html
     <!-- these are equivalent -->
-    <img data-gps='50.0884647, 14.4707590' />
-    <img data-places='Prague' />
+    <img sli-gps='50.0884647, 14.4707590' />
+    <img sli-places='Prague' />
     ```
-* `data-map-animate=true`: Change the center point directly (`false`) or in a few steps (`true`).
-* `data-map-geometry-show=false`: Route amongst the places. If a single place is given, we take the place from the last time.
+* `sli-map-animate=true`: Change the center point directly (`false`) or in a few steps (`true`).
+* `sli-map-geometry-show=false`: Route amongst the places. If a single place is given, we take the place from the last time.
     * `false` No route shown.
     * `route|true` Route is calculated amongst the places.
     * `line` Only line is marked amongst the places.
     ```html
     <!-- Full route is calculated and shown between Prague and Brno, then between Brno and Pardubice. -->
-    <article-map data-duration="0" data-places="Prague" data-map-geometry-show="true">
-        <article-map data-places="Brno"></article-map>
-        <article-map data-places="Pardubice"></article-map>
+    <article-map sli-duration="0" sli-places="Prague" sli-map-geometry-show="true">
+        <article-map sli-places="Brno"></article-map>
+        <article-map sli-places="Pardubice"></article-map>
     </article-map>
     ```
-* `data-map-geometry-criterion=''`: empty or `car_fast`, `car_fast_traffic`, `car_short`, `foot_fast`, `foot_hiking`, `bike_road`, `bike_mountain`,
-* `data-map-markers-show=false`: Show marker of a point.
-* `data-map-geometry-clear=true`: Clear all route and drawings before displaying.
-* `data-map-markers-clear=true`: Clear all point markers. (Or keep them visible all.)
+* `sli-map-geometry-criterion=''`: empty or `car_fast`, `car_fast_traffic`, `car_short`, `foot_fast`, `foot_hiking`, `bike_road`, `bike_mountain`,
+* `sli-map-markers-show=false`: Show marker of a point.
+* `sli-map-geometry-clear=true`: Clear all route and drawings before displaying.
+* `sli-map-markers-clear=true`: Clear all point markers. (Or keep them visible all.)
 
 
 ### `<article-map>` frame
@@ -593,9 +593,9 @@ Normally any map command will incur a small HUD map in the corder to appear. Sho
 You may nest `<article-map>` tags easily which causes the map to change.
 
 ```html
-<article-map data-duration="0" data-places="Prague, Brno">
-    <article-map data-duration="0" data-places="Paris"></article-map>
-    <article-map data-duration="0.3" data-places="London"></article-map>
+<article-map sli-duration="0" sli-places="Prague, Brno">
+    <article-map sli-duration="0" sli-places="Paris"></article-map>
+    <article-map sli-duration="0.3" sli-places="London"></article-map>
 </article-map>
 ```
 
@@ -617,7 +617,7 @@ if matches:=re.findall('<trkpt lat="([^"]+)" lon="([^"]+)">', Path(FILENAME).rea
     step = round(len(matches)/(FRAME_COUNT-2))
     limited = [matches[0]] + matches[::step][1:-1] + [matches[-1]]
     # convert coordinates to frames
-    html = "\n".join([f'<article-map data-gps="{",".join((x[1], x[0]))}">{tag_end}' for x in limited])
+    html = "\n".join([f'<article-map sli-gps="{",".join((x[1], x[0]))}">{tag_end}' for x in limited])
     # nest all under the first tag
     html = re.sub(tag_end, "", html, 1) + tag_end
     print(html)
@@ -627,9 +627,9 @@ if matches:=re.findall('<trkpt lat="([^"]+)" lon="([^"]+)">', Path(FILENAME).rea
 These `<article>` tags might be encapsuled into (nested) `<section>` groups. A `<section>` has the same attributes as an `<article>`.
 
 ```html
-<section data-duration='0.5'>
+<section sli-duration='0.5'>
     <article>Short frame (inherits 0.5)</article>
-    <article data-duration='0'>You have to click to get further.</article>
+    <article sli-duration='0'>You have to click to get further.</article>
     <article>Short frame (inherits 0.5)</article>
 </section>
 ```
@@ -637,7 +637,7 @@ These `<article>` tags might be encapsuled into (nested) `<section>` groups. A `
 As the ultimate default the `<main>` tag may be used.
 
 ```html
-<main data-duration='0.5'>
+<main sli-duration='0.5'>
     <article>Short frame (inherits 0.5)</article>
 </main>
 ```

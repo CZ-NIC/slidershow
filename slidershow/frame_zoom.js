@@ -101,7 +101,7 @@ class FrameZoom {
                 }
             }
         })
-        // Why correcting viewport? When having data-step-points and calling `zoom_set` from `prepare`,
+        // Why correcting viewport? When having sli-step-points and calling `zoom_set` from `prepare`,
         // the frame is not at the viewport yet, thus the values are wrong. Such image seem to work
         // but whenever manually zoomed, it vanishes out of the screen.
         // Besides, we should center the image to a parent. However, we do not want to wrap it,
@@ -134,7 +134,7 @@ class FrameZoom {
             })
             .data("wzoom_resize_off", () => $(window).off("resize.wzoom", refresh_viewport))
             // zooming modifiable from the outside
-            .attr("data-wzoom", true)
+            .attr("sli-wzoom", true)
             .data("wzoom", wzoom)
 
         if (image) {// we have zoomed in, do not playback further
@@ -222,7 +222,7 @@ class FrameZoom {
     // destruct zooming while leaving the frame
     destroy() {
         this._allowKeys = false
-        $("[data-wzoom]", this.frame.$frame).each((_, el) => {
+        $("[sli-wzoom]", this.frame.$frame).each((_, el) => {
             const $el = $(el)
             // Maybe no more needed as this method got into .left().
             // setTimeout(() => { // we have to timeout - wzoom bug, has to finish before it can be destroyed
@@ -232,7 +232,7 @@ class FrameZoom {
                 .data("wzoom", null)
                 .data("wzoom_get_ratio", null)
                 .data("wzoom_resize_off", null)
-                .attr("data-wzoom", null)
+                .attr("sli-wzoom", null)
             this.destroy_keys()
         })
     }
@@ -286,7 +286,7 @@ class FrameZoom {
 
         // rotation
         if (rotate || prop("rotate", $el, null, null, true) !== null) { // set new rotation or unset rotation
-            $el.attr("data-rotate", rotate)
+            $el.attr("sli-rotate", rotate)
             prop_invalidate()
             this.frame.add_effect(r =>
                 $el.animate({ rotate: rotate + "deg" }, transition_duration * 1000, "linear",
@@ -295,15 +295,15 @@ class FrameZoom {
                 // We are not able to distinguish, whether the rotation is set to 0 or undefined. We assume it is undefined.
                 // The good side:
                 // 1. Import images and export
-                // 2. Check the HTML, they have no data-rotate attribute.
+                // 2. Check the HTML, they have no sli-rotate attribute.
                 // 3. If they had, opening the exported file and rotating their section
-                // 4. Would have no effect. As their superfluous data-rotate=0 would prevail.
+                // 4. Would have no effect. As their superfluous sli-rotate=0 would prevail.
                 //
                 // The bad side:
                 // 1. We set image rotation to 0
                 // 2. We set its section rotation to 90
                 // 3. The image should not be affected but it is.
-                $el.removeAttr("data-rotate")
+                $el.removeAttr("sli-rotate")
                 prop_invalidate()
             }
         }

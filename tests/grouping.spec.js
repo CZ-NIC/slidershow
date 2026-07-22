@@ -25,39 +25,39 @@ test("group by tags wraps leftover untagged frames (loose under <main>) into the
     expect(sections.sort()).toEqual([1, 2]) // the tagged section (2 frames) + the untagged catch-all (1)
 })
 
-test("group by tags names the section after the tag's name, keeping the tag digit in data-name", async ({ page }) => {
+test("group by tags names the section after the tag's name, keeping the tag digit in sli-name", async ({ page }) => {
     await page.evaluate(() => {
-        $main.attr("data-tag-names", "rodice")
+        $main.attr("sli-tag-names", "rodice")
         playback.$articles.toArray().map(el => $(el).data("frame"))[0].set_tag(1)
     })
     await page.evaluate(() => playback.section_controller.group("tags"))
 
     const section = await page.evaluate(() => {
-        const el = $("main > section[data-name='1']")[0]
-        return { name: el.dataset.name, title: el.dataset.title }
+        const el = $("main > section[sli-name='1']")[0]
+        return { name: el.getAttribute('sli-name'), title: el.getAttribute('sli-title') }
     })
     expect(section).toEqual({ name: "1", title: "rodice" })
 
     const label = await page.evaluate(() =>
-        playback.section_controller.getSectionName($("main > section[data-name='1']")))
+        playback.section_controller.getSectionName($("main > section[sli-name='1']")))
     expect(label).toBe("rodice (1)")
 })
 
 test("renaming a tag and re-grouping refreshes the section's title, keeping the same section", async ({ page }) => {
     await page.evaluate(() => {
-        $main.attr("data-tag-names", "rodice")
+        $main.attr("sli-tag-names", "rodice")
         playback.$articles.toArray().map(el => $(el).data("frame"))[0].set_tag(1)
     })
     await page.evaluate(() => playback.section_controller.group("tags"))
     const before = await page.evaluate(() => $("main > section").length)
 
-    await page.evaluate(() => $main.attr("data-tag-names", "rodina"))
+    await page.evaluate(() => $main.attr("sli-tag-names", "rodina"))
     await page.evaluate(() => playback.section_controller.group("tags"))
 
     const after = await page.evaluate(() => $("main > section").length)
     expect(after).toBe(before) // same section reused, not a second one created
 
-    const title = await page.evaluate(() => $("main > section[data-name='1']")[0].dataset.title)
+    const title = await page.evaluate(() => $("main > section[sli-name='1']")[0].getAttribute('sli-title'))
     expect(title).toBe("rodina")
 })
 
@@ -70,7 +70,7 @@ test("group by tags orders the resulting sections by tag number", async ({ page 
     })
     await page.evaluate(() => playback.section_controller.group("tags"))
 
-    const names = await page.evaluate(() => $("main > section").toArray().map(el => el.dataset.name))
+    const names = await page.evaluate(() => $("main > section").toArray().map(el => el.getAttribute("sli-name")))
     expect(names).toEqual(["1", "2", "3"])
 })
 
@@ -82,8 +82,8 @@ test("group by tags puts the untagged catch-all after the numbered sections", as
     })
     await page.evaluate(() => playback.section_controller.group("tags"))
 
-    const names = await page.evaluate(() => $("main > section").toArray().map(el => el.dataset.name))
-    expect(names).toEqual(["1", "2", undefined]) // numeric first, the data-untagged catch-all last
+    const names = await page.evaluate(() => $("main > section").toArray().map(el => el.getAttribute("sli-name")))
+    expect(names).toEqual(["1", "2", null]) // numeric first, the sli-untagged catch-all last
 })
 
 test("untagAll clears every tag inside <main> and is undoable", async ({ page }) => {
@@ -92,13 +92,13 @@ test("untagAll clears every tag inside <main> and is undoable", async ({ page })
         f[0].set_tag(1)
         f[1].set_tag(2)
     })
-    expect(await page.evaluate(() => $("main [data-tag]").length)).toBe(2)
+    expect(await page.evaluate(() => $("main [sli-tag]").length)).toBe(2)
 
     await page.evaluate(() => playback.section_controller.untagAll($main))
-    expect(await page.evaluate(() => $("main [data-tag]").length)).toBe(0)
+    expect(await page.evaluate(() => $("main [sli-tag]").length)).toBe(0)
 
     await page.evaluate(() => playback.changes.undo())
-    expect(await page.evaluate(() => $("main [data-tag]").length)).toBe(2)
+    expect(await page.evaluate(() => $("main [sli-tag]").length)).toBe(2)
 })
 
 test("grid 'Presentation' header shows both section and frame counts", async ({ page }) => {

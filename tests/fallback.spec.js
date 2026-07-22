@@ -3,7 +3,7 @@ const path = require("path")
 
 const FIXTURE = "file://" + path.resolve(__dirname, "fixtures/fallback.html")
 
-test("get_fallback_src() resolves a space-separated data-fallback into an ordered candidate list", async ({ page }) => {
+test("get_fallback_src() resolves a space-separated sli-fallback into an ordered candidate list", async ({ page }) => {
     await page.goto(FIXTURE)
     await expect(page.locator("#start")).toBeVisible()
 
@@ -11,7 +11,7 @@ test("get_fallback_src() resolves a space-separated data-fallback into an ordere
     expect(candidates).toEqual(["does-not-exist-broken-original.jpg", "exif.jpeg"])
 })
 
-test("a broken original falls through data-fallback candidates in order, using the first that actually loads", async ({ page }) => {
+test("a broken original falls through sli-fallback candidates in order, using the first that actually loads", async ({ page }) => {
     await page.goto(FIXTURE)
     await page.locator("#start").click()
     await expect.poll(() => page.url()).toContain("#1")

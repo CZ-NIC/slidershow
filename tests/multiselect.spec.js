@@ -12,9 +12,9 @@ test.beforeEach(async ({ page }) => {
     await page.locator("#start").click()
     await expect.poll(() => page.url()).toContain("#1")
 
-    // six frames in a single section, each identifiable by its data-src (0.jpg … 5.jpg)
+    // six frames in a single section, each identifiable by its sli-src (0.jpg … 5.jpg)
     await page.evaluate(() => {
-        const frame = n => $("<article/>").append($("<img/>", { src: "exif.jpeg", "data-src": n + ".jpg" }))
+        const frame = n => $("<article/>").append($("<img/>", { src: "exif.jpeg", "sli-src": n + ".jpg" }))
         $main.empty()
         const $s = $("<section/>").appendTo($main)
         for (let i = 0; i < 6; i++) frame(i).appendTo($s)
@@ -32,7 +32,7 @@ const filenames = page => page.evaluate(() =>
 const selection = page => page.evaluate(() =>
     [...playback.hud.grid.selection].sort((a, b) => a - b))
 const tagOf = (page, i) => page.evaluate(i =>
-    $(playback.$articles[i]).data("frame").$actor.attr("data-tag"), i)
+    $(playback.$articles[i]).data("frame").$actor.attr("sli-tag"), i)
 
 test("Shift-extend selects an inclusive range and shrinks back toward the anchor", async ({ page }) => {
     await page.evaluate(() => playback.goToFrame(1)) // cursor + anchor at index 1

@@ -46,7 +46,7 @@ class Hud {
         /** @type {Array<{time: string, text: string}>} Bounded history of info()/ok() notifications. */
         this.info_history = []
 
-        /** @type {Map<Frame, string>} Cached lightweight `data-thumb` preview HTML, keyed by the (stable)
+        /** @type {Map<Frame, string>} Cached lightweight `sli-thumb` preview HTML, keyed by the (stable)
          * Frame object so it survives reorder/regroup. Lets a grid scrolled back over already-seen frames
          * skip the clone + image-probe in assureThumbnail. Cleared on reset() (structural/media changes). */
         this.previewCache = new Map()
@@ -415,9 +415,9 @@ class Hud {
                 // We might ex. keep PageDown hit while scrolling down grid. That way, we scroll 1000 frames / 5 sec, without setTimeout like 400 frames.
                 if (!$thumbnail[0].isConnected) return
 
-                // When a data-thumb is configured, use it instead of the full-quality file – the grid may
+                // When a sli-thumb is configured, use it instead of the full-quality file – the grid may
                 // show hundreds of previews at once and should never force-download large originals.
-                // The cheap data-thumb HTML is memoized (previewCache), so scrolling back over a frame does
+                // The cheap sli-thumb HTML is memoized (previewCache), so scrolling back over a frame does
                 // not re-clone its subtree and re-probe the thumb image every time it re-enters the grid.
                 let html = this.previewCache.get(frame)
                 if (html === undefined) {
@@ -560,10 +560,10 @@ class Hud {
         const $actor = frame.$actor
 
         this.$hud_filename.html(frame.get_filename($actor) || "?")
-        this.$hud_device.text($actor.data("device") || "")
+        this.$hud_device.text($actor.attr("sli-device") || "")
         this.$hud_datetime.text(prop("datetime", $actor) || "")
         // display the map button only if map was previously blocked by user
-        this.$hud_gps.html($actor.data("gps") ? "🗺" : "")
+        this.$hud_gps.html($actor.attr("sli-gps") ? "🗺" : "")
         this.tag(frame)
     }
 
@@ -798,7 +798,7 @@ class Hud {
         const props = ["duration", "transition-duration", "step-li", "step-duration", "step-class", "step-shown", "step-transition-duration"]
         $props
             .append(props.map(p => pp.input_ancestored(p, $frame)).flat())
-        // XX data-step could be implemented for any focused element
+        // XX sli-step could be implemented for any focused element
     }
 
     async fetch_help() {
@@ -816,7 +816,7 @@ class Hud {
             this.fetch_help()
             text = "Loading docs, try again"
         } else {
-            const real_name = "data-" + property
+            const real_name = "sli-" + property
             const rr = short ? `#+ \`${real_name}\`\\n\\n?([\\s\\S]*?)(?=\\n)` : `#+ \`${real_name}\`\\n\\n?([\\s\\S]*?)(?=\\n#)`
             const r = new RegExp(rr, "m")
 

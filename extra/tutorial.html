@@ -8,7 +8,7 @@
 </head>
 
 <body>
-    <main data-start data-transition-duration="0.5">
+    <main sli-start sli-transition-duration="0.5">
         <div class="centered-frames">
             <section>
                 <!-- Initial thoughts -->
@@ -29,7 +29,7 @@
                 </article>
 
                 <!-- Photo -->
-                <div data-duration="0.5">
+                <div sli-duration="0.5">
                     <article>
                         <img src="https://upload.wikimedia.org/wikipedia/commons/4/40/Cimrman_autobusta.jpg" />
                     </article>
@@ -55,11 +55,11 @@
                 </article>
 
                 <article>
-                    Or you can set manually the points to zoom in on a photo<span data-step>&nbsp;(including
+                    Or you can set manually the points to zoom in on a photo<span sli-step>&nbsp;(including
                         rotation)</span>.
                 </article>
                 <article>
-                    <img data-step-points="[[127,-82,5],[-134,263.7,5],[0,0,1],[156.7,286.4,5,null,null,-180],[-134,-60,5],[-106,-134,10],[150,-81,12, null, null, 100],[0,0,1],[-38,-216,5]]"
+                    <img sli-step-points="[[127,-82,5],[-134,263.7,5],[0,0,1],[156.7,286.4,5,null,null,-180],[-134,-60,5],[-106,-134,10],[150,-81,12, null, null, 100],[0,0,1],[-38,-216,5]]"
                         src="https://upload.wikimedia.org/wikipedia/commons/8/82/SevenWondersOfTheWorld.jpg" />
                 </article>
 
@@ -69,11 +69,11 @@
                         The photo geo information starts the HUD map in the corner.
                     </article>
                     <article>
-                        <img data-places="London Tower bridge"
+                        <img sli-places="London Tower bridge"
                             src="https://upload.wikimedia.org/wikipedia/commons/thumb/a/a5/Cmglee_Tower_Bridge_tall_ship.jpg/1200px-Cmglee_Tower_Bridge_tall_ship.jpg" />
                     </article>
                     <article>
-                        <img data-places="Paris Eiffel tower"
+                        <img sli-places="Paris Eiffel tower"
                             src="https://upload.wikimedia.org/wikipedia/commons/thumb/4/4b/La_Tour_Eiffel_vue_de_la_Tour_Saint-Jacques%2C_Paris_ao%C3%BBt_2014_%282%29.jpg/1200px-La_Tour_Eiffel_vue_de_la_Tour_Saint-Jacques%2C_Paris_ao%C3%BBt_2014_%282%29.jpg" />
                     </article>
                 </section>
@@ -83,24 +83,24 @@
                 <article>
                     Map can be on fullscreen, too.
                 </article>
-                <article-map data-duration="2" data-places="Prague" data-map-zoom="8">
-                    <article-map data-places="Plzeň"></article-map>
-                    <article-map data-places="Brno"></article-map>
+                <article-map sli-duration="2" sli-places="Prague" sli-map-zoom="8">
+                    <article-map sli-places="Plzeň"></article-map>
+                    <article-map sli-places="Brno"></article-map>
                 </article-map>
 
                 <article>Convert a GPX route to the frames.</article>
-                <article-map data-map-animate="false" data-map-geometry-show data-map-geometry-criterion="foot_hiking"
-                    data-map-geometry-clear="false" data-duration="0.5" data-map-zoom="14"
-                    data-gps="14.429827,50.079700">
+                <article-map sli-map-animate="false" sli-map-geometry-show sli-map-geometry-criterion="foot_hiking"
+                    sli-map-geometry-clear="false" sli-duration="0.5" sli-map-zoom="14"
+                    sli-gps="14.429827,50.079700">
                     <!-- Some cool places in Prague -->
-                    <article-map data-gps="14.421194,50.081234"></article-map>
-                    <article-map data-gps="14.417969,50.077591"></article-map>
-                    <article-map data-gps="14.419263,50.075694"></article-map>
-                    <article-map data-gps="14.416451,50.072460"></article-map>
-                    <article-map data-gps="14.415032,50.066745"></article-map>
-                    <article-map data-gps="14.418455,50.061556"></article-map>
-                    <article-map data-gps="14.416981,50.052962"></article-map>
-                    <article-map data-gps="14.410405,50.040836"></article-map>
+                    <article-map sli-gps="14.421194,50.081234"></article-map>
+                    <article-map sli-gps="14.417969,50.077591"></article-map>
+                    <article-map sli-gps="14.419263,50.075694"></article-map>
+                    <article-map sli-gps="14.416451,50.072460"></article-map>
+                    <article-map sli-gps="14.415032,50.066745"></article-map>
+                    <article-map sli-gps="14.418455,50.061556"></article-map>
+                    <article-map sli-gps="14.416981,50.052962"></article-map>
+                    <article-map sli-gps="14.410405,50.040836"></article-map>
                 </article-map>
             </section>
 
@@ -116,19 +116,19 @@
                         src="https://upload.wikimedia.org/wikipedia/commons/a/aa/IberianIbexFight.webm#t=7,10"></video>
                 </article>
                 <article>Or change the speed.</article>
-                <article data-playback-rate="3"><video
+                <article sli-playback-rate="3"><video
                         src="https://upload.wikimedia.org/wikipedia/commons/a/aa/IberianIbexFight.webm"></video>
                 </article>
 
 
                 <article>
                     <p>
-                    Or use <a href="https://github.com/CZ-NIC/slidershow/#data-video-points"><code>data-video-points</code></a> to cut the video just the way you wish to.
+                    Or use <a href="https://github.com/CZ-NIC/slidershow/#sli-video-points"><code>sli-video-points</code></a> to cut the video just the way you wish to.
                     <br>
                     This includes playing just chosen portion of the video, or zooming to a point.
                     </p>
                 </article>
-                <article data-video-points='[[0,"goto:2.9"], [4,"goto:2.9","point:[-206.3,204.7,2]"], [4,"goto:2.9","point:[-206.3,204.7,3.4]"], [4, "goto:2.9", "rate:.5", "point:[34.2,0,3.4,null,null,-65]"], [4, "goto:9"]]'><video
+                <article sli-video-points='[[0,"goto:2.9"], [4,"goto:2.9","point:[-206.3,204.7,2]"], [4,"goto:2.9","point:[-206.3,204.7,3.4]"], [4, "goto:2.9", "rate:.5", "point:[34.2,0,3.4,null,null,-65]"], [4, "goto:9"]]'><video
                         src="https://upload.wikimedia.org/wikipedia/commons/a/aa/IberianIbexFight.webm"></video>
                 </article>
 
@@ -140,24 +140,24 @@
         <article>
             <p>You have seen some cool features.
                 <br />Check the presentation source code with <kbd>Ctrl+U</kbd>.
-                <br /><span data-step>Cool and clean, isn't it?</span>
+                <br /><span sli-step>Cool and clean, isn't it?</span>
             </p>
         </article>
 
-        <article data-step-duration="0">
+        <article sli-step-duration="0">
             <p>Remember the <kbd>Esc</kbd> menu? There are many things you can do...</p>
-            <ul data-step-li data-step-duration="1">
+            <ul sli-step-li sli-step-duration="1">
                 <li>See the thumbnail ribbon (<kbd>j</kbd>)</li>
-                <li>See the thumbnail grid (<kbd>g</kbd>) <span data-step>(import or reorder frames by dragging
+                <li>See the thumbnail grid (<kbd>g</kbd>) <span sli-step>(import or reorder frames by dragging
                         around)</span></li>
                 <li>Launch an auxiliary window to be displayed on a second monitor during the presentation
-                    <span data-step>(so that you know what is the next frame)</span>
+                    <span sli-step>(so that you know what is the next frame)</span>
                 </li>
                 <li>Start tagging mode to help you organize the photos for a better presentations</li>
             </ul>
-            <p data-step>Bookmark the <a href="https://cz-nic.github.io/slidershow/slidershow.html">SlideRshow</a> to
+            <p sli-step>Bookmark the <a href="https://cz-nic.github.io/slidershow/slidershow.html">SlideRshow</a> to
                 build a smooth presentation.</p>
-            <p data-step>Good bye!</p>
+            <p sli-step>Good bye!</p>
         </article>
     </main>
 </body>

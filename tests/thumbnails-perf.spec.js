@@ -27,7 +27,7 @@ test("makeThumbnailsImportable only (re)initializes elements that aren't draggab
     expect(newlyInitialized).toBe(0)
 })
 
-test("assureThumbnail memoizes the data-thumb preview per frame and clears it on reset", async ({ page }) => {
+test("assureThumbnail memoizes the sli-thumb preview per frame and clears it on reset", async ({ page }) => {
     const result = await page.evaluate(async () => {
         const frame = $(playback.$articles[0]).data("frame")
         let builds = 0

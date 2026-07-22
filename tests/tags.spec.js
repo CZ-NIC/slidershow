@@ -11,10 +11,10 @@ test.beforeEach(async ({ page }) => {
 
 test("set_tag toggles multi-valued tags, clears on 0, persists to localStorage, undo/redo", async ({ page }) => {
     await page.evaluate(() => playback.frame.set_tag(1))
-    expect(await page.evaluate(() => playback.frame.$actor.attr("data-tag"))).toBe("1")
+    expect(await page.evaluate(() => playback.frame.$actor.attr("sli-tag"))).toBe("1")
 
     await page.evaluate(() => playback.frame.set_tag(2))
-    expect(await page.evaluate(() => playback.frame.$actor.attr("data-tag"))).toBe("1 2")
+    expect(await page.evaluate(() => playback.frame.$actor.attr("sli-tag"))).toBe("1 2")
     expect(await page.evaluate(() => playback.frame.get_tags())).toEqual([1, 2])
 
     const filename = await page.evaluate(() => playback.frame.get_filename())
@@ -22,21 +22,21 @@ test("set_tag toggles multi-valued tags, clears on 0, persists to localStorage, 
 
     // toggle 1 off again
     await page.evaluate(() => playback.frame.set_tag(1))
-    expect(await page.evaluate(() => playback.frame.$actor.attr("data-tag"))).toBe("2")
+    expect(await page.evaluate(() => playback.frame.$actor.attr("sli-tag"))).toBe("2")
 
     await page.evaluate(() => playback.changes.undo())
-    expect(await page.evaluate(() => playback.frame.$actor.attr("data-tag"))).toBe("1 2")
+    expect(await page.evaluate(() => playback.frame.$actor.attr("sli-tag"))).toBe("1 2")
 
     await page.evaluate(() => playback.changes.redo())
-    expect(await page.evaluate(() => playback.frame.$actor.attr("data-tag"))).toBe("2")
+    expect(await page.evaluate(() => playback.frame.$actor.attr("sli-tag"))).toBe("2")
 
     // 0/null clears all
     await page.evaluate(() => playback.frame.set_tag(null))
-    expect(await page.evaluate(() => playback.frame.$actor.attr("data-tag"))).toBeUndefined()
+    expect(await page.evaluate(() => playback.frame.$actor.attr("sli-tag"))).toBeUndefined()
     expect(await page.evaluate(f => localStorage.getItem("TAG: " + f), filename)).toBeNull()
 })
 
-test("text frames (no media) are taggable too – data-tag lands on the article itself", async ({ page }) => {
+test("text frames (no media) are taggable too – sli-tag lands on the article itself", async ({ page }) => {
     await page.evaluate(() => {
         $main.empty()
         $("<section/>").append($("<article/>").html("<h1>Intro</h1><p>text only</p>")).appendTo($main)
@@ -45,11 +45,11 @@ test("text frames (no media) are taggable too – data-tag lands on the article 
         playback.frame = $f.data("frame"); playback.$current = $f; playback.index = 0
     })
     await page.evaluate(() => playback.frame.set_tag(2))
-    expect(await page.evaluate(() => playback.frame.$frame.attr("data-tag"))).toBe("2")
+    expect(await page.evaluate(() => playback.frame.$frame.attr("sli-tag"))).toBe("2")
     expect(await page.evaluate(() => playback.frame.get_tags())).toEqual([2])
 
     await page.evaluate(() => playback.frame.set_tag(2)) // toggle off
-    expect(await page.evaluate(() => playback.frame.$frame.attr("data-tag"))).toBeUndefined()
+    expect(await page.evaluate(() => playback.frame.$frame.attr("sli-tag"))).toBeUndefined()
 })
 
 test("tag names dialog resolves digits to names in the HUD", async ({ page }) => {
@@ -58,7 +58,7 @@ test("tag names dialog resolves digits to names in the HUD", async ({ page }) =>
     await inputs.nth(0).fill("rodiče")
     await inputs.nth(1).fill("vedoucí")
     await page.getByRole("link", { name: "Ok" }).click()
-    expect(await page.evaluate(() => $main.attr("data-tag-names"))).toBe("rodiče,vedoucí")
+    expect(await page.evaluate(() => $main.attr("sli-tag-names"))).toBe("rodiče,vedoucí")
 
     await page.evaluate(() => playback.frame.set_tag(2))
     expect(await page.evaluate(() => playback.frame.tag_display())).toBe("vedoucí")
@@ -79,7 +79,7 @@ test("group by tags uses the first token and notifies about multi-tagged frames"
     }, filenames)
 
     await page.evaluate(() => playback.section_controller.group("tags"))
-    const sectionNames = await page.$$eval("section", els => els.map(e => e.dataset.name))
+    const sectionNames = await page.$$eval("section", els => els.map(e => e.getAttribute("sli-name")))
     expect(sectionNames.sort()).toEqual(["1", "2"])
 
     await expect(page.locator(".ZebraDialog", { hasText: "have more than one tag" })).toBeVisible()
@@ -95,7 +95,7 @@ test("Name tags dialog: first input is focused, Enter confirms, commas/slashes a
     await page.keyboard.press("Enter")
     const warning = page.locator(".ZebraDialog", { hasText: "Remove" })
     await expect(warning).toBeVisible()
-    expect(await page.evaluate(() => $main.attr("data-tag-names"))).toBeUndefined()
+    expect(await page.evaluate(() => $main.attr("sli-tag-names"))).toBeUndefined()
     await warning.getByRole("link", { name: "Ok" }).click() // dismiss the warning
     await expect(warning).not.toBeVisible() // let its close animation finish before reopening
 
@@ -105,7 +105,7 @@ test("Name tags dialog: first input is focused, Enter confirms, commas/slashes a
     await page.locator(".ZebraDialog:visible .tag-names-list input").first().fill("rodina")
     await page.keyboard.press("Enter")
     await expect(page.locator(".ZebraDialog:visible")).toHaveCount(0)
-    expect(await page.evaluate(() => $main.attr("data-tag-names"))).toBe("rodina")
+    expect(await page.evaluate(() => $main.attr("sli-tag-names"))).toBe("rodina")
 })
 
 test("Name tags dialog shows the frame count carrying each tag next to its input", async ({ page }) => {
@@ -130,12 +130,12 @@ test("tag names persist to localStorage keyed by document name and restore on a 
     const key = await page.evaluate(() => "TAG-NAMES: " + docname())
     expect(await page.evaluate(k => localStorage.getItem(k), key)).toBe("rodina")
 
-    // simulate a crash/reload of the very same (unsaved) presentation: data-tag-names is gone from the
+    // simulate a crash/reload of the very same (unsaved) presentation: sli-tag-names is gone from the
     // fresh DOM, but the boot-time restore in Playback's constructor should bring it back from localStorage
     await page.reload()
     await page.locator("#start").click()
     await expect.poll(() => page.url()).toContain("#1")
-    expect(await page.evaluate(() => $main.attr("data-tag-names"))).toBe("rodina")
+    expect(await page.evaluate(() => $main.attr("sli-tag-names"))).toBe("rodina")
 })
 
 test("Filter by tag dialog: first checkbox is focused and Enter confirms (with whatever is checked)", async ({ page }) => {

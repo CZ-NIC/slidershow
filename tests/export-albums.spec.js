@@ -8,7 +8,7 @@ test.beforeEach(async ({ page }) => {
     await page.locator("#start").click()
     await expect.poll(() => page.url()).toContain("#1")
     await page.evaluate(() => {
-        $main.attr("data-tag-names", "rodice,vedouci")
+        $main.attr("sli-tag-names", "rodice,vedouci")
         prop_invalidate() // the real "Name tags" dialog does this; tag_names() reads the memoized prop()
         const frames = playback.$articles.toArray().map(el => $(el).data("frame"))
         frames[0].set_tag(1) // one.jpg -> rodice
@@ -237,7 +237,7 @@ test("collect_albums also exports unnamed tags into a tag-<digit> folder, includ
 test("_frame_http_url: absolute http used as-is, relative needs a base URL on a file:// presentation", async ({ page }) => {
     const urls = await page.evaluate(() => {
         const frame = $(playback.$articles[0]).data("frame")
-        const set = v => frame.$actor.data("src", v)
+        const set = v => frame.$actor.attr("sli-src", v)
         set("http://example.com/pics/one.jpg")
         const absolute = menu.export._frame_http_url(frame, "")
         set("sub/one.jpg")
@@ -256,10 +256,10 @@ test("export_albums fetches over http when a frame has no in-memory File", async
         await root.remove({ recursive: true }).catch(() => { })
         window.showDirectoryPicker = async () => navigator.storage.getDirectory()
 
-        // three.jpg: no stashed File, only an absolute http data-src → must be fetched, never a source folder
+        // three.jpg: no stashed File, only an absolute http sli-src → must be fetched, never a source folder
         const frames = playback.$articles.toArray().map(el => $(el).data("frame"))
         frames[2].$actor.removeData("file")
-        frames[2].$actor.data("src", "http://example.com/three.jpg")
+        frames[2].$actor.attr("sli-src", "http://example.com/three.jpg")
         window.__fetched = []
         window.fetch = async (url) => {
             window.__fetched.push(String(url))
@@ -300,7 +300,7 @@ test("_validate_albums flags a reserved name, a path separator, and a name colli
 
 test("export_albums_dialog refuses to proceed when an album name is reserved/colliding", async ({ page }) => {
     await page.evaluate(() => {
-        $main.attr("data-tag-names", "vsechny,vedouci") // tag 1 named "vsechny" – reserved
+        $main.attr("sli-tag-names", "vsechny,vedouci") // tag 1 named "vsechny" – reserved
         prop_invalidate() // tag_names() reads the memoized prop(); the real dialog invalidates after a write
     })
     await page.evaluate(() => menu.export.export_albums_dialog())

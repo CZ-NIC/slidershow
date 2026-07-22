@@ -60,7 +60,7 @@ loadjQuery(() => {
     */
     const stop_videos = () => {
         console.log("Stopping videos", $("video[autoplay]").length)
-        $("video[autoplay]").removeAttr("autoplay").attr("data-autoplay-prevented", 1).each(function () { this.pause() })
+        $("video[autoplay]").removeAttr("autoplay").attr("sli-autoplay-prevented", 1).each(function () { this.pause() })
     }
 
     const load_launch = () => {
@@ -94,7 +94,7 @@ function loadjQuery(callback) {
         return callback()
     }
     // Allow using $ in the body without the need of load blocks.
-    document.write('<script data-templated=1 src="https://code.jquery.com/jquery-3.7.1.min.js" integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo=" crossorigin="anonymous"></script>')
+    document.write('<script sli-templated=1 src="https://code.jquery.com/jquery-3.7.1.min.js" integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo=" crossorigin="anonymous"></script>')
     // The written <script> may not be in the DOM synchronously (document.write from an external script feeds the
     // parser's input stream), so querying it here can race and return null. Poll for jQuery instead.
     const wait_for_jquery = () => window.jQuery ? callback() : setTimeout(wait_for_jquery, 10)
@@ -114,7 +114,7 @@ function loadScript(attrs) {
         Object.entries({ ...defaults, ...attrs }).forEach(([k, v]) => script[k] = v)
         script.onload = resolve
         script.onerror = reject
-        script.setAttribute('data-templated', '1')
+        script.setAttribute('sli-templated', '1')
         document.head.appendChild(script)
     })
 }
@@ -124,7 +124,7 @@ function loadStyle(url) {
         const link = document.createElement("link")
         link.href = url
         link.rel = "stylesheet"
-        link.setAttribute('data-templated', '1')
+        link.setAttribute('sli-templated', '1')
         link.onload = resolve
         link.onerror = reject
         document.head.appendChild(link)
@@ -185,8 +185,8 @@ function get_menu() {
             Start presenting<br />
             <button id="start">&#9654;</button>
             <div id="play-modes">
-                <button class="play-mode" data-duration="5" title="Auto-forward, 5 s per frame">&#9201; 5&nbsp;s</button>
-                <button class="play-mode" data-duration="10" title="Auto-forward, 10 s per frame">&#9201; 10&nbsp;s</button>
+                <button class="play-mode" sli-duration="5" title="Auto-forward, 5 s per frame">&#9201; 5&nbsp;s</button>
+                <button class="play-mode" sli-duration="10" title="Auto-forward, 10 s per frame">&#9201; 10&nbsp;s</button>
                 <button class="play-mode" data-kiosk title="Auto-forward and loop – exhibition / kiosk mode">&#128257; Kiosk</button>
             </div>
             <div id="content-summary"></div>

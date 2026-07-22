@@ -59,13 +59,13 @@ class Menu {
         })
 
         // Quick play-mode buttons – launch straight into auto-forward (or kiosk = auto + loop) without
-        // opening the properties panel. They set data-duration / data-loop-presentation on <main> (where prop() ends its
+        // opening the properties panel. They set sli-duration / sli-loop-presentation on <main> (where prop() ends its
         // walk, same as the in-show "Set auto-forward" command and the `duration`/`loop` hash keys), then start.
         $(".play-mode", this.$menu).on("click", e => {
             const $b = $(e.currentTarget)
-            $main.attr("data-duration", Number($b.data("duration")) || 5)
+            $main.attr("sli-duration", Number($b.attr("sli-duration")) || 5)
             if ($b.is("[data-kiosk]")) {
-                $main.attr("data-loop-presentation", "true")
+                $main.attr("sli-loop-presentation", "true")
             }
             prop_invalidate()
             this.start_playback()
@@ -87,7 +87,7 @@ class Menu {
             if (el.tagName === "VIDEO" || $(el).find("video").length) {
                 return true
             }
-            const src = el.getAttribute("data-src") || $(el).find("[data-src]").attr("data-src") || ""
+            const src = el.getAttribute("sli-src") || $(el).find("[sli-src]").attr("sli-src") || ""
             return VIDEO_EXTENSIONS.includes(src.split(/[?#]/)[0].split(".").pop().toLowerCase())
         }).length
         const sections = $("main section").length

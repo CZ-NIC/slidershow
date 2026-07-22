@@ -34,14 +34,14 @@ test("prop() walks element → article → section → main with type coercion",
     })
 })
 
-test("prop() memoizes within a generation; prop_invalidate() makes a later data-* write visible", async ({ page }) => {
+test("prop() memoizes within a generation; prop_invalidate() makes a later sli-* write visible", async ({ page }) => {
     await page.goto(FIXTURE)
     await expect(page.locator("#start")).toBeVisible()
 
     const r = await page.evaluate(() => {
         const $a1 = $("#a1")
         const first = prop("duration", $a1)   // 1, now memoized for this generation
-        $a1.attr("data-duration", 5)           // raw attribute write, deliberately without invalidating
+        $a1.attr("sli-duration", 5)           // raw attribute write, deliberately without invalidating
         const stale = prop("duration", $a1)   // served from cache -> proves the memo is actually live
         prop_invalidate()
         const fresh = prop("duration", $a1)   // re-read from the DOM -> 5
@@ -58,7 +58,7 @@ test("navigating (goToFrame) invalidates the prop() cache", async ({ page }) => 
     const r = await page.evaluate(() => {
         const $a1 = $("#a1")
         const before = prop("duration", $a1)  // cached
-        $a1.attr("data-duration", 9)
+        $a1.attr("sli-duration", 9)
         playback.goToFrame(playback.index)     // a normal navigation must drop stale lookups
         return { before, afterNav: prop("duration", $a1) }
     })
@@ -72,8 +72,8 @@ test("rotate written on <main> is visible after refresh_actor (its invalidation 
 
     const r = await page.evaluate(() => {
         const $a3 = $("#a3")
-        const before = prop("rotate", $a3)         // walks to <main data-rotate=90> -> 90, cached
-        $main.attr("data-rotate", 180)
+        const before = prop("rotate", $a3)         // walks to <main sli-rotate=90> -> 90, cached
+        $main.attr("sli-rotate", 180)
         playback.frame.refresh_actor("rotate")     // the real rotate path bumps the cache here
         return { before, after: prop("rotate", $a3) }
     })

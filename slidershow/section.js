@@ -14,7 +14,7 @@ class SectionController {
      * section directly contains subsections, otherwise just the frame count.
      */
     getSectionName($section, fallbackLabel = "Section") {
-        const title = $section.data("title") || $section.data("name")
+        const title = $section.attr("sli-title") || $section.attr("sli-name")
         // Sections: only the direct subsections (the outline at this level). Frames: the TOTAL all the way
         // down (every frame in every nested subsection), so a header answers "how big is this group".
         const sectionCount = this.getDirectSections($section).length
@@ -50,7 +50,7 @@ class SectionController {
      * @returns {JQuery<HTMLElement>} Frames "directly" inside $section at this logical level – seeing
      * through transparent <div> wrappers (layout/shared-duration groups) but NOT descending into nested
      * <section>s (those own their frames). Mirror of getDirectSections; use it for section-level ops
-     * (regroup, navigation) so a frame wrapped in a <div data-duration> is not overlooked.
+     * (regroup, navigation) so a frame wrapped in a <div sli-duration> is not overlooked.
      */
     getDirectFrames($section) {
         return $section.find(FRAME_TAGS).filter((_, el) => $(el).parentsUntil($section, "section").length === 0)
@@ -96,7 +96,7 @@ class SectionController {
         const formData = new FormData($("#defaults")[0])
         formData.delete('path') // path does not belong to <section>
         const $section = $("<section/>", Object.fromEntries(Array.from(formData)
-            .map(([key, value]) => [`data-${key}`, value])
+            .map(([key, value]) => [`sli-${key}`, value])
             .filter(([key, value]) => value !== '')))
             .appendTo($main)
         pl.changes.undoable("Insert new section",
@@ -277,7 +277,7 @@ class SectionController {
                 sectionsBefore = this.getDirectSections($main).toArray()
                     .map(el => ({ el, prev: el.previousElementSibling }))
                 /** @type {JQuery} Catch-all for frames without a group key; reused across regroups so it never duplicates. */
-                let $looseSection = this.getDirectSections($main).filter("[data-untagged]").first()
+                let $looseSection = this.getDirectSections($main).filter("[sli-untagged]").first()
                 $frames.each((_, el) => {
                     const $frame = $(el)
                     /** @type {Frame} */
@@ -302,7 +302,7 @@ class SectionController {
                         // scattered there after a regroup; now they all land in one place.
                         redos.push(this.redoForMoving($frame))
                         if (!$looseSection.length) {
-                            $looseSection = $("<section/>", { "data-untagged": "", "data-title": "untagged" }).appendTo($main)
+                            $looseSection = $("<section/>", { "sli-untagged": "", "sli-title": "untagged" }).appendTo($main)
                             added.push($looseSection)
                         }
                         $frame.appendTo($looseSection)
@@ -312,18 +312,18 @@ class SectionController {
 
                     // find or create section to put the frame to (to its end)
                     // quoted + escaped: a hand-authored tag may contain spaces or quotes
-                    let $section = $(`section[data-name="${String(name).replaceAll('\\', '\\\\').replaceAll('"', '\\"')}"]`)
+                    let $section = $(`section[sli-name="${String(name).replaceAll('\\', '\\\\').replaceAll('"', '\\"')}"]`)
                     if (!$section.length) {
-                        $section = $("<section/>", { "data-name": name }).prependTo($main)
+                        $section = $("<section/>", { "sli-name": name }).prependTo($main)
                         added.push($section)
                     }
-                    // data-title is the resolved display label (ex. a tag's name) at grouping time, kept
-                    // separate from data-name (the stable key sections are matched/reused by) – renaming
-                    // a tag later only refreshes data-title on the next regroup, data-name never changes.
+                    // sli-title is the resolved display label (ex. a tag's name) at grouping time, kept
+                    // separate from sli-name (the stable key sections are matched/reused by) – renaming
+                    // a tag later only refreshes sli-title on the next regroup, sli-name never changes.
                     if (title) {
-                        $section.attr("data-title", title)
+                        $section.attr("sli-title", title)
                     } else {
-                        $section.removeAttr("data-title")
+                        $section.removeAttr("sli-title")
                     }
                     $frame.appendTo($section)
                 })
@@ -357,16 +357,16 @@ class SectionController {
 
     /**
      * @param {HTMLElement} section
-     * @returns {number} Numeric sort key from a section's data-name (a tag number). Non-numeric names
+     * @returns {number} Numeric sort key from a section's sli-name (a tag number). Non-numeric names
      * (ex. the nameless untagged catch-all) sort to the end.
      */
     _tagSortKey(section) {
-        const n = parseFloat($(section).attr("data-name"))
+        const n = parseFloat($(section).attr("sli-name"))
         return isNaN(n) ? Infinity : n
     }
 
     /**
-     * Sort sections inside <main> alphabetically by their data-name attribute
+     * Sort sections inside <main> alphabetically by their sli-name attribute
      */
     sortSections(order = "asc") {
         const pl = this.playback
@@ -377,10 +377,10 @@ class SectionController {
                 // Save original order for undo
                 originalOrder = this.getDirectSections($main).map((_, el) => el).get()
 
-                // Sort sections alphabetically by data-name
+                // Sort sections alphabetically by sli-name
                 const sorted = originalOrder.slice().sort((a, b) => {
-                    const nameA = ($(a).attr("data-name") || "").toLowerCase()
-                    const nameB = ($(b).attr("data-name") || "").toLowerCase()
+                    const nameA = ($(a).attr("sli-name") || "").toLowerCase()
+                    const nameB = ($(b).attr("sli-name") || "").toLowerCase()
                     return order === "asc"
                         ? nameA.localeCompare(nameB)
                         : nameB.localeCompare(nameA)

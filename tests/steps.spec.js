@@ -3,7 +3,7 @@ const path = require("path")
 
 const FIXTURE = "file://" + path.resolve(__dirname, "fixtures/steps.html")
 
-test("data-step elements appear one by one, then navigation leaves the frame", async ({ page }) => {
+test("sli-step elements appear one by one, then navigation leaves the frame", async ({ page }) => {
     await page.goto(FIXTURE)
     await page.locator("#start").click()
     await expect.poll(() => page.url()).toContain("#1")

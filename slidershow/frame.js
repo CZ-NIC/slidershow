@@ -65,7 +65,7 @@ class Frame {
         this.video_finished = null
 
         /** @type {Array<HTMLElement|Function>} Which elements are to be showed progressivelly.
-         * They are grouped by the same data-set: [ [data-step=2, 2], [4], [5,5,5], [12]]
+         * They are grouped by the same data-set: [ [sli-step=2, 2], [4], [5,5,5], [12]]
          */
         this.steps = []
         /** Element in this.steps that is going to be shown in the next step. Elements with lower index are already shown. */
@@ -123,7 +123,7 @@ class Frame {
 
     /**
      * Return closest prop, defined in the DOM.
-     * (Zero aware, you can safely set `data-prop=0`.)
+     * (Zero aware, you can safely set `sli-prop=0`.)
      * @param {string} property
      * @param {JQuery|null} $actor What element to check the prop of. If null, frame is checked.
      * @param {any} def Custom default value if not set in DOM (when PROP_DEFAULT default value is not desirable).
@@ -163,7 +163,7 @@ class Frame {
 
         // Insert templated header and footer
         // If such template exists, insert it to the current frame if needed (it does not yet contain it)
-        const check = (tag, method) => $($("template")[0]?.content).find(tag).clone().attr("data-templated", 1)[method](this.$frame.not(`:has(${tag})`))
+        const check = (tag, method) => $($("template")[0]?.content).find(tag).clone().attr("sli-templated", 1)[method](this.$frame.not(`:has(${tag})`))
         check("header", "prependTo")
         check("footer", "appendTo")
 
@@ -209,18 +209,18 @@ class Frame {
     }
 
     /**
-     * Sort elements to be stepped through. Some of them might have `data-step=number` (which we honour),
-     * those with `data-step` are to be filled around.
+     * Sort elements to be stepped through. Some of them might have `sli-step=number` (which we honour),
+     * those with `sli-step` are to be filled around.
      *
      * @param {?Frame} last_frame
      */
     steps_prepare(last_frame = null) {
         // Prepare the elements eligible for being step through
-        const $steppable = $("[data-step]", this.$frame)
-            // [data-step-li] affects all <li>
+        const $steppable = $("[sli-step]", this.$frame)
+            // [sli-step-li] affects all <li>
             .add($("li", this.$frame)
                 .filter((_, el) => this.prop("step-li", $(el))))
-            // [data-step-points] affects all <img>
+            // [sli-step-points] affects all <img>
             .add(this.getImagesWithStepPoints()
                 .map((_, el) => {
                     // generate multiple steps (dummy <img-temp-animation-step>) for points
@@ -242,29 +242,29 @@ class Frame {
                     }
                 }))
 
-        // Finalize [data-step]
+        // Finalize [sli-step]
         let index = 0
         let [last_step, pointer] = [null, null]
         this.steps = []
         $steppable
-            .attr("data-step", function (_, step) {
+            .attr("sli-step", function (_, step) {
                 // Conserve the original.
                 // Why null? This helps to restore the value through .attr later, having .attr(..., undefined) would be same as reading.
                 $(this).data("step-original", step === undefined ? null : step)
                 // adds a class, unless step-shown is set
                 $(this).addClass(prop("step-shown", $(this)) ? null : prop("step-class", $(this)))
-                if (step === '' || step === undefined) { // this element has not its data-step set yet
-                    while ($steppable.filter(`[data-step=${++index}]`).length) {
+                if (step === '' || step === undefined) { // this element has not its sli-step set yet
+                    while ($steppable.filter(`[sli-step=${++index}]`).length) {
                         // find first free position
                     }
                     step = index
                 }
                 return step
             })
-            .sort((a, b) => $(a).data("step") - $(b).data("step"))
+            .sort((a, b) => Number($(a).attr("sli-step")) - Number($(b).attr("sli-step")))
             .map((_, el) => {
                 const $el = $(el)
-                const step = $el.data("step")
+                const step = Number($el.attr("sli-step"))
                 if (step > last_step) {
                     pointer = []
                     this.steps.push(pointer)
@@ -377,27 +377,27 @@ class Frame {
      *  Preload media; for the case of several thousands file, the perfomarce is important.
      *
      * * data("read-src"): If present, this is the method to re-read the dragged media from the disk.
-     * * data-src: Optional attribute for <img>, <video>, holds the original file name.
-     * * data-thumb: Optional inherited template for a lightweight preview, shown while data-src downloads. See Frame.get_thumb_src.
+     * * sli-src: Optional attribute for <img>, <video>, holds the original file name.
+     * * sli-thumb: Optional inherited template for a lightweight preview, shown while sli-src downloads. See Frame.get_thumb_src.
      *
      * @returns {Promise} Fulfilled when src loaded from the memory.
      */
     async preload() {
         const $frame = this.$frame
-        if ($frame.attr("data-preloaded")) {
+        if ($frame.attr("sli-preloaded")) {
             // When we call playback.reset() (ex: after frame duplication, which clones the attribute along
-            // with the DOM but gets a brand new Frame object), we get here with data-preloaded already true
+            // with the DOM but gets a brand new Frame object), we get here with sli-preloaded already true
             // but this particular Frame instance possibly never added to playback.preloaded yet – fix that up.
             this.playback.preloaded.add(this)
             return [this.loaded] // might be already done (or might be still running when preload called twice at the same moment)
         }
-        $frame.attr("data-preloaded", 1) // prevent another preload
+        $frame.attr("sli-preloaded", 1) // prevent another preload
         this.playback.preloaded.add(this)
 
         // Process media
-        const loaded = $frame.find("img[data-src], video[data-src]").map((_, el) => {
+        const loaded = $frame.find("img[sli-src], video[sli-src]").map((_, el) => {
             const $el = $(el)
-            if ($el.attr("src") && !$el.attr("data-thumb-shown")) { // src already fully set, nothing to do
+            if ($el.attr("src") && !$el.attr("sli-thumb-shown")) { // src already fully set, nothing to do
                 return null
             }
             return Frame._load_media($el, el, this)
@@ -426,7 +426,7 @@ class Frame {
     }
 
     /**
-     * Load a single <img>/<video> `src`, showing the inherited `data-thumb` preview first (if it resolves
+     * Load a single <img>/<video> `src`, showing the inherited `sli-thumb` preview first (if it resolves
      * to a working URL) so the frame is not blank while the full-quality file downloads.
      *
      * The expensive full-quality fetches are throttled through `playback.original_loader` and the cheap thumbnails
@@ -439,7 +439,7 @@ class Frame {
      * @returns {Promise}
      */
     static async _load_media($el, el, frame = null) {
-        const src = (await $el.data(READ_SRC)?.(true)) || $el.data("src")
+        const src = (await $el.data(READ_SRC)?.(true)) || $el.attr("sli-src")
         if (!src) { // no place to set the src from
             return null
         }
@@ -463,7 +463,7 @@ class Frame {
                 const release = await gate(playback?.thumb_loader)
                 try {
                     if (await Frame.probe_image(thumb) && !full_shown) {
-                        $el.attr("src", thumb).attr("data-thumb-shown", 1)
+                        $el.attr("src", thumb).attr("sli-thumb-shown", 1)
                     }
                 } finally {
                     release()
@@ -482,7 +482,7 @@ class Frame {
                         }
                         throw e
                     }
-                    if (!final_src) { // browser could not decode the original (ex: HEIC/HEIF) – try data-fallback candidates in order
+                    if (!final_src) { // browser could not decode the original (ex: HEIC/HEIF) – try sli-fallback candidates in order
                         for (const fallback of Frame.get_fallback_src($el)) {
                             if (await Frame.probe_image(fallback)) {
                                 final_src = fallback
@@ -492,7 +492,7 @@ class Frame {
                     }
                     if (final_src) {
                         full_shown = true
-                        $el.attr("src", final_src).removeAttr("data-thumb-shown") // instant cache hit, no second request
+                        $el.attr("src", final_src).removeAttr("sli-thumb-shown") // instant cache hit, no second request
                         // Wait for the visible element too – `loaded` must not resolve while it still displays the thumbnail
                         // (Chrome keeps el.complete false for a moment even on a cache hit, which made Frame.exif bail out).
                         await new Promise(r => { el.onload = r; el.onerror = r })
@@ -553,7 +553,7 @@ class Frame {
                 el.src = src
                 loaded = await await_load()
             }
-            if (!loaded) { // browser could not load/decode the file – try data-fallback candidates in order
+            if (!loaded) { // browser could not load/decode the file – try sli-fallback candidates in order
                 let ok = false
                 for (const fallback of Frame.get_fallback_src($el)) {
                     el.src = fallback
@@ -572,9 +572,9 @@ class Frame {
     }
 
     /**
-     * Resolve the thumbnail URL for a media element from the inherited `data-thumb` template.
-     * Placeholders (derived from the element's data-src): {dir} {file} {name} {ext}.
-     * A template without placeholders (ex: set directly on one <img data-thumb="...">) is used verbatim,
+     * Resolve the thumbnail URL for a media element from the inherited `sli-thumb` template.
+     * Placeholders (derived from the element's sli-src): {dir} {file} {name} {ext}.
+     * A template without placeholders (ex: set directly on one <img sli-thumb="...">) is used verbatim,
      * which lets a single attribute act both as a presentation-wide convention and a per-file override.
      * @param {JQuery} $el
      * @returns {?string}
@@ -585,17 +585,17 @@ class Frame {
     }
 
     /**
-     * Resolve the fallback URL candidate(s) for a media element from the inherited `data-fallback`
-     * template, used when the browser fails to load/decode `data-src` (ex: HEIC/HEIF photos Chrome
-     * cannot render). Same placeholder syntax as `data-thumb` – see get_thumb_src().
+     * Resolve the fallback URL candidate(s) for a media element from the inherited `sli-fallback`
+     * template, used when the browser fails to load/decode `sli-src` (ex: HEIC/HEIF photos Chrome
+     * cannot render). Same placeholder syntax as `sli-thumb` – see get_thumb_src().
      *
      * Several space-separated templates may be given, ex: `"{dir}{file}.jpg {dir}{file}.mp4"` — tried
      * in order by the caller (see load()), first one that actually loads/decodes wins. Useful when
-     * `data-fallback` is set high up (ex: on `<main>`) for a presentation mixing photos and videos: the
+     * `sli-fallback` is set high up (ex: on `<main>`) for a presentation mixing photos and videos: the
      * two need differently-named (and differently-typed) replacement files, so a single candidate could
      * not cover both, but the caller does not need to know which one applies to a given file.
      * @param {JQuery} $el
-     * @returns {string[]} Empty when data-fallback is not set.
+     * @returns {string[]} Empty when sli-fallback is not set.
      */
     static get_fallback_src($el) {
         const template = prop("fallback", $el, "")
@@ -605,15 +605,15 @@ class Frame {
     }
 
     /**
-     * Substitutes {dir}/{file}/{name}/{ext} (derived from the element's data-src) into one template.
-     * A template without placeholders (ex: set directly on one <img data-thumb="...">) is used verbatim,
+     * Substitutes {dir}/{file}/{name}/{ext} (derived from the element's sli-src) into one template.
+     * A template without placeholders (ex: set directly on one <img sli-thumb="...">) is used verbatim,
      * which lets a single attribute act both as a presentation-wide convention and a per-file override.
      * @param {string} template
      * @param {JQuery} $el
      * @returns {?string}
      */
     static _resolve_placeholders(template, $el) {
-        const src = $el.data("src")
+        const src = $el.attr("sli-src")
         if (!template || !src) {
             return null
         }
@@ -645,7 +645,7 @@ class Frame {
      * Like probe_image(), but downloads through Frame._fetch_with_progress() first (reporting progress
      * via `onProgress`) so the HUD spinner can show a percentage – falls back to the plain, progress-less
      * probe_image() when progress-tracked fetching is not possible (file://, no Content-Length, network
-     * error) or when the fetched bytes turn out undecodable (ex: HEIC/HEIF – the caller's data-fallback
+     * error) or when the fetched bytes turn out undecodable (ex: HEIC/HEIF – the caller's sli-fallback
      * loop then takes over).
      * @param {JQuery} $el
      * @param {string} src
@@ -722,21 +722,21 @@ class Frame {
     /**
      * Opposite of this.preload()
      * Functionality should be partially duplicated finalize_frames (due to performance reasons).
-     * Somewhere the duplication has no sense, like putting video[data-autoplay-prevented]
+     * Somewhere the duplication has no sense, like putting video[sli-autoplay-prevented]
      *  which is removed in finalize_frames (export might not use slidershow and hence be rendered as an errant argument)
      *  but here is added on the contrary.
      *  (We do not want the video to autoplay when re-preloaded while going backwards in the presentation.)
      */
     unload() {
         const $frame = this.$frame
-        $frame.removeAttr("data-preloaded")
+        $frame.removeAttr("sli-preloaded")
         this.playback.preloaded.delete(this)
 
         // The frame is no more loaded
         this.loaded = new Promise(r => this._loaded = r)
 
-        // Remove src if data can be retrieved from the memory data(READ_SRC) or the attribute data-src
-        $frame.find("img[data-src], video[data-src]").map((_, el) => Frame.unload_media($(el)))
+        // Remove src if data can be retrieved from the memory data(READ_SRC) or the attribute sli-src
+        $frame.find("img[sli-src], video[sli-src]").map((_, el) => Frame.unload_media($(el)))
 
         // XX Not used right now and missing in the global unload.
         // const md = this.$frame.data("md")
@@ -748,17 +748,17 @@ class Frame {
     /** If there is a place the `[src]` can be re-read, delete it. */
     static unload_media($el, $el_original = null) {
         $el.data("progress-abort")?.abort() // cancel Frame._fetch_with_progress() if it is still in flight
-        if ($el.attr("data-thumb-shown")) {
+        if ($el.attr("sli-thumb-shown")) {
             // The full-quality file never finished loading; drop the thumbnail too so a future preload() starts over
             // instead of finding a (thumbnail) `src` already present and skipping the load.
-            $el.removeAttr("src data-thumb-shown")
+            $el.removeAttr("src sli-thumb-shown")
         } else if (($el_original || $el).data(READ_SRC) || $el.data("src") && $el.data("src") === $el.attr("src")
             || $el.attr("src")?.startsWith("blob:")) {
             URL.revokeObjectURL($el.attr("src")) // for the case this is a blob URL (FrameFactory reader, or Frame._fetch_with_progress())
             $el.removeAttr("src")
         }
         if ($el.is("video") && $el.attr("autoplay")) {
-            $el.removeAttr("autoplay").attr("data-autoplay-prevented", 1)
+            $el.removeAttr("autoplay").attr("sli-autoplay-prevented", 1)
         }
     }
 
@@ -774,16 +774,16 @@ class Frame {
      */
     static async finalize_frames($contents, $articles, keep_raw = false, path = "", callback = null) {
         // batch execute operations otherwise done in methods like `unload` or `left`
-        $("video[data-autoplay-prevented]", $contents).removeAttr("data-autoplay-prevented").attr("autoplay", "")
-        $("[data-wzoom]", $contents).removeAttr("data-wzoom")
-        const $frames = $contents.find(FRAME_SELECTOR).removeAttr("data-preloaded")
-        $frames.find("[data-templated]").remove()
+        $("video[sli-autoplay-prevented]", $contents).removeAttr("sli-autoplay-prevented").attr("autoplay", "")
+        $("[sli-wzoom]", $contents).removeAttr("sli-wzoom")
+        const $frames = $contents.find(FRAME_SELECTOR).removeAttr("sli-preloaded")
+        $frames.find("[sli-templated]").remove()
         Frame.unmake_editable($frames)
-        Frame._clean_step($frames.find("[data-step]"))
+        Frame._clean_step($frames.find("[sli-step]"))
 
         // handling media
-        const $originals = $articles.find("img[data-src], video[data-src]")
-        const $media = $frames.find("img[data-src], video[data-src]")
+        const $originals = $articles.find("img[sli-src], video[sli-src]")
+        const $media = $frames.find("img[sli-src], video[sli-src]")
         let $frame = null
         for (let index = 0; index < $media.length; index++) {
             // process the media files one by one (we cannot use map since it would ignore `await reader()`)
@@ -800,11 +800,11 @@ class Frame {
 
             // summarize attributes
             const reader = $el_original.data(READ_SRC)
-            let data_src = $el.data("src")
+            let data_src = $el.attr("sli-src")
             if (reader && !data_src.includes("/")) {
-                // Store full path to data-src.
+                // Store full path to sli-src.
                 // Dragged in files did not receive an absolute path from the system.
-                data_src = $el.attr("data-src", path + data_src).attr("data-src")
+                data_src = $el.attr("sli-src", path + data_src).attr("sli-src")
             }
             const attr_src = $el.attr("src")
 
@@ -813,12 +813,12 @@ class Frame {
                 case reader && keep_raw && PREFER_SRC_EXPORT:  // reader to src
                     $el.attr(EXPORT_SRC, await reader())
                     break
-                case reader && keep_raw && !PREFER_SRC_EXPORT:  // reader to data-src-bytes
+                case reader && keep_raw && !PREFER_SRC_EXPORT:  // reader to sli-src-bytes
                     $el.attr(EXPORT_SRC_BYTES, await reader())
                     break
                 case reader && !keep_raw && PREFER_SRC_EXPORT:
-                case !attr_src && data_src && PREFER_SRC_EXPORT:  // move data-src to src
-                    $el.attr(EXPORT_SRC, data_src).removeAttr("data-src")
+                case !attr_src && data_src && PREFER_SRC_EXPORT:  // move sli-src to src
+                    $el.attr(EXPORT_SRC, data_src).removeAttr("sli-src")
                     break
             }
         }
@@ -829,15 +829,15 @@ class Frame {
     }
 
     /**
-     * A generator may not know the file type of a medium. An `<article data-src>` (no `<img>`/`<video>` inside)
-     * gets an `<img data-src>` or `<video data-src>` child created by the file extension.
+     * A generator may not know the file type of a medium. An `<article sli-src>` (no `<img>`/`<video>` inside)
+     * gets an `<img sli-src>` or `<video sli-src>` child created by the file extension.
      * Must run before the Frame objects are created – Frame stores its $actor at construction.
      */
     static mediaConvert() {
-        $main.find(FRAME_TAGS).filter("[data-src]:not(:has(img,video))").each((_, el) => {
-            const ext = el.getAttribute("data-src").split(/[?#]/)[0].split(".").pop().toLowerCase()
-            $("<" + (VIDEO_EXTENSIONS.includes(ext) ? "video" : "img") + "/>", { "data-src": el.getAttribute("data-src") }).prependTo(el)
-            el.removeAttribute("data-src")
+        $main.find(FRAME_TAGS).filter("[sli-src]:not(:has(img,video))").each((_, el) => {
+            const ext = el.getAttribute("sli-src").split(/[?#]/)[0].split(".").pop().toLowerCase()
+            $("<" + (VIDEO_EXTENSIONS.includes(ext) ? "video" : "img") + "/>", { "sli-src": el.getAttribute("sli-src") }).prependTo(el)
+            el.removeAttribute("sli-src")
         })
     }
 
@@ -847,7 +847,7 @@ class Frame {
     static videoInit($articles) {
         $articles.find("video").each(function () {
             const $el = $(this)
-            const attributes = prop("video", $el).replace("autoplay", "data-autoplay-prevented").split(" ") || [] // ex: ["muted", "autoplay"]
+            const attributes = prop("video", $el).replace("autoplay", "sli-autoplay-prevented").split(" ") || [] // ex: ["muted", "autoplay"]
             attributes.forEach((k, v) => this[k] = true) // ex: video.muted = true
             // Following line has so more effect since it was already set by JS. However, for the readability
             // we display the attributes in the DOM too. We could skip the JS for the attribute 'controls'
@@ -858,7 +858,7 @@ class Frame {
             if ($el[0].hasAttribute("autoplay")) {
                 // While doing an export and preloading frame, it might start playing
                 // or sometimes a video in a presentation starts playing after load. Prevent this.
-                $el.removeAttr("autoplay").attr("data-autoplay-prevented", 1)
+                $el.removeAttr("autoplay").attr("sli-autoplay-prevented", 1)
             }
         })
     }
@@ -968,8 +968,8 @@ class Frame {
 
         hud.discreet_info(this.get_filename().split("#")[1])
 
-        if ($actor.attr("data-autoplay-prevented")) {
-            $actor.removeAttr("data-autoplay-prevented").attr("autoplay", "")
+        if ($actor.attr("sli-autoplay-prevented")) {
+            $actor.removeAttr("sli-autoplay-prevented").attr("autoplay", "")
         }
 
         if ($actor.attr("autoplay")) {
@@ -1090,7 +1090,7 @@ class Frame {
     */
 
     clean_steps() {
-        Frame._clean_step($("[data-step]", this.$frame))
+        Frame._clean_step($("[sli-step]", this.$frame))
         this.steps = []
         // These images might have been zoomed by a step.
         // Either when we suddenly jumped to another frame (without completing steps one by one) or when there is an image with a single step.
@@ -1106,7 +1106,7 @@ class Frame {
      * @returns
      */
     step_process($els, shown, immediate = false) {
-        // separate standard frame jQuery elements and img[data-step-animation] elements
+        // separate standard frame jQuery elements and img[sli-step-animation] elements
         const [$tags, $animations] = [$els.not("img-temp-animation-step"), $els.filter("img-temp-animation-step")]
 
         // evaluate step duration, either from usual tags or from an img zoom animation step point
@@ -1134,9 +1134,9 @@ class Frame {
         } else {
             // Why checking `:animated` when there is default CSS animation?
             // User could change the animation wrongly:
-            // [data-step] { animation-name: fadeIn; }
+            // [sli-step] { animation-name: fadeIn; }
             // Instead of:
-            // [data-step].step-shown { animation-name: fadeIn; }
+            // [sli-step].step-shown { animation-name: fadeIn; }
             // Which would cause when going a step back the element to already being faded in
             // and animationend never triggered.
             $usual.map((_, el) => $(el).is(":animated") ?
@@ -1147,12 +1147,12 @@ class Frame {
     }
 
     /**
-     * @returns The data-step attribute of an element displayed in the current step.
+     * @returns The sli-step attribute of an element displayed in the current step.
      *  This differs from this.step_index (which corresponds to the actual number of user-produced steps)
-     *  because data-step do not have to be continuous.
+     *  because sli-step do not have to be continuous.
      */
     get_step() {
-        return $(this.steps[this.step_index - 1]?.[0]).data("step")
+        return Number($(this.steps[this.step_index - 1]?.[0]).attr("sli-step"))
     }
 
     /**
@@ -1197,7 +1197,7 @@ class Frame {
     left() {
         this.loop_interval?.stop()
         this.$actor.finish() // remove the panorama effect
-        this.$frame.find("[data-templated]").remove()
+        this.$frame.find("[sli-templated]").remove()
         this.clean_steps()
         this.zoom.destroy()
     }
@@ -1208,7 +1208,7 @@ class Frame {
      */
     static _clean_step($el) {
         $el
-            .attr("data-step", function () {
+            .attr("sli-step", function () {
                 return $(this).data("step-original")
             })
             .removeData("step-original")
@@ -1310,8 +1310,8 @@ class Frame {
             $clone.addClass("video-thumbnail")
         }
         $clone.find("video").removeAttr("autoplay controls") // even if the main $actor in not video, disable all the videos
-        $clone.find("[data-templated]").remove()
-        $clone.find("[data-step]").show() // ignore frame steps
+        $clone.find("[sli-templated]").remove()
+        $clone.find("[sli-step]").show() // ignore frame steps
         if (suppress_step_animation) {
             Frame._clean_step($clone)
             $clone.addClass("prevent-animation-important")
@@ -1331,12 +1331,12 @@ class Frame {
         // context.drawImage(video, 0, 0, video.videoWidth, video.videoHeight)
         // return $("<article/>", { "class": "video-thumbnail" }).append($canvas)
 
-        // Remove data-preloaded attribute for the case it is there
-        return $clone.removeAttr("data-preloaded").prop("outerHTML")
+        // Remove sli-preloaded attribute for the case it is there
+        return $clone.removeAttr("sli-preloaded").prop("outerHTML")
     }
 
     /**
-     * Lightweight grid/ribbon preview built from the `data-thumb` image alone – it never triggers
+     * Lightweight grid/ribbon preview built from the `sli-thumb` image alone – it never triggers
      * (or waits for) a full-quality preload, so browsing thousands of large photos in the grid stays cheap.
      * @returns {Promise<?string>} HTML, or null when there is no usable thumbnail (caller should fall back to preload() + get_preview()).
      */
@@ -1350,8 +1350,8 @@ class Frame {
         }
 
         const $clone = this.$frame.clone().removeAttr("style")
-        $clone.find("[data-templated]").remove()
-        $clone.find("[data-step]").show() // ignore frame steps
+        $clone.find("[sli-templated]").remove()
+        $clone.find("[sli-step]").show() // ignore frame steps
         Frame._clean_step($clone)
         $clone.addClass("prevent-animation-important")
 
@@ -1360,9 +1360,9 @@ class Frame {
             $clone.addClass("video-thumbnail")
             $("<img/>", { src: thumb, class: $actor.attr("class") }).replaceAll($actor)
         } else {
-            $actor.removeAttr("data-src").attr("src", thumb)
+            $actor.removeAttr("sli-src").attr("src", thumb)
         }
-        return $clone.removeAttr("data-preloaded").prop("outerHTML")
+        return $clone.removeAttr("sli-preloaded").prop("outerHTML")
     }
 
     /**
@@ -1399,13 +1399,13 @@ class Frame {
 
     /**
      * Base file name without the directory. Or empty string when there is no media inside.
-     * There might be base64 data in the real src, hence we prefer the data-src
+     * There might be base64 data in the real src, hence we prefer the sli-src
      * @param {?JQuery} $actor
      * @returns {String}
      */
     get_filename($actor = null) {
         $actor = $actor || this.$actor
-        return ($actor.data("src") || $actor.attr("src") || $("source", $actor).attr("src"))?.split("/").pop() || ""
+        return ($actor.attr("sli-src") || $actor.attr("src") || $("source", $actor).attr("src"))?.split("/").pop() || ""
     }
 
     get_position() {
@@ -1425,16 +1425,16 @@ class Frame {
     check_tag() {
         const name = this.get_filename()
         if (!name) {
-            return // a text frame has no filename to key localStorage by; its data-tag travels in the document
+            return // a text frame has no filename to key localStorage by; its sli-tag travels in the document
         }
         const tag = localStorage.getItem("TAG: " + name)
         if (tag) {
-            this._tagTarget().attr("data-tag", tag)
+            this._tagTarget().attr("sli-tag", tag)
         }
     }
 
     /**
-     * Where `data-tag` lives: the media actor when there is one, otherwise the frame itself – so text
+     * Where `sli-tag` lives: the media actor when there is one, otherwise the frame itself – so text
      * frames (no `<img>`/`<video>`) are taggable too. Their tag rides along in the exported document; only
      * localStorage persistence is skipped for them (no filename to key by).
      * @returns {JQuery}
@@ -1444,17 +1444,17 @@ class Frame {
     }
 
     /**
-     * Currently set tags (`data-tag` is a space-separated token list of digits).
+     * Currently set tags (`sli-tag` is a space-separated token list of digits).
      * @param {?JQuery} $actor
      * @returns {number[]}
      */
     get_tags($actor = null) {
         $actor = $actor || this._tagTarget()
-        return ($actor.attr("data-tag") || "").split(/\s+/).filter(Boolean).map(Number)
+        return ($actor.attr("sli-tag") || "").split(/\s+/).filter(Boolean).map(Number)
     }
 
     /**
-     * Tag names, position = digit 1, 2, … (`<main data-tag-names="rodiče,vedoucí">`). Defaults to
+     * Tag names, position = digit 1, 2, … (`<main sli-tag-names="rodiče,vedoucí">`). Defaults to
      * `$main` rather than the frame's own `$actor` – it's document-wide, not per-frame, and `$actor` is
      * an empty jQuery on the splashscreen's dummy frame (before the first goToFrame), which would
      * otherwise make prop()'s upward walk find nothing.
@@ -1508,7 +1508,7 @@ class Frame {
     }
 
     /**
-     * Persist a tag token list to `data-tag` + localStorage and refresh the frame's badge. Not undoable
+     * Persist a tag token list to `sli-tag` + localStorage and refresh the frame's badge. Not undoable
      * on its own – callers (set_tag, bulk untag) wrap it in a `changes.undoable`.
      * @param {number[]} tokens
      */
@@ -1518,10 +1518,10 @@ class Frame {
         const value = tokens.join(" ")
         if (value) {
             if (name) localStorage.setItem("TAG: " + name, value)
-            $target.attr("data-tag", value)
+            $target.attr("sli-tag", value)
         } else {
             if (name) localStorage.removeItem("TAG: " + name)
-            $target.removeAttr("data-tag")
+            $target.removeAttr("sli-tag")
         }
         this.playback.hud.tag(this)
     }
@@ -1543,11 +1543,11 @@ class Frame {
             const make = exif.Make
             const model = exif.Model
             if (make && model) {
-                attrs["data-device"] = `${make} ${model}`
+                attrs["sli-device"] = `${make} ${model}`
             }
 
             const dateTime = exif.DateTimeOriginal?.replace(/^(\d{4}):(\d{2}):(\d{2})/, '$1-$2-$3').replace(/ /g, "T")
-            if (dateTime) { attrs["data-datetime"] = dateTime }
+            if (dateTime) { attrs["sli-datetime"] = dateTime }
 
             // convert GPS
             const { GPSLatitude: _lat, GPSLongitude: _lon, GPSLatitudeRef: _latRef, GPSLongitudeRef: _lonRef } = exif
@@ -1555,16 +1555,16 @@ class Frame {
                 const latitude = Frame._convertDMSToDD(_lat[0], _lat[1], _lat[2], _latRef)
                 const longitude = Frame._convertDMSToDD(_lon[0], _lon[1], _lon[2], _lonRef)
                 if (longitude && latitude) {
-                    attrs["data-gps"] = `${longitude}, ${latitude}`
+                    attrs["sli-gps"] = `${longitude}, ${latitude}`
                 }
             } catch (e) {
                 ; // no gps info
             }
 
             $el.attr(attrs).data("exif-done", 1)
-            // EXIF resolves async; if it wrote data-datetime, drop this actor's memoized prop() lookups so a
+            // EXIF resolves async; if it wrote sli-datetime, drop this actor's memoized prop() lookups so a
             // stale (pre-EXIF) value isn't served. Per-element (not global) to keep a bulk import's cache warm.
-            if (attrs["data-datetime"]) { prop_invalidate_el(el) }
+            if (attrs["sli-datetime"]) { prop_invalidate_el(el) }
             callback?.()
         }
 

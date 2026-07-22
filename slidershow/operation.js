@@ -239,12 +239,12 @@ class Operation {
     }
 
     /**
-     * Column of number+name inputs (`<main data-tag-names="rodiče,vedoucí">`), undoable. Rows cover every
+     * Column of number+name inputs (`<main sli-tag-names="rodiče,vedoucí">`), undoable. Rows cover every
      * currently used tag and every already-named tag, so a name is never silently dropped.
      */
     _nameTagsDialog() {
         const pl = this.playback
-        const existing = ($main.attr("data-tag-names") || "").split(",")
+        const existing = ($main.attr("sli-tag-names") || "").split(",")
         const counts = this._tagCounts()
         const maxTag = Math.max(9, existing.length, ...this._usedTags())
         const $list = $("<div/>", { class: "tag-names-list" })
@@ -262,7 +262,7 @@ class Operation {
             while (names.length && !names[names.length - 1]) {
                 names.pop() // trim trailing empty rows
             }
-            // / \ and , break the comma-joined data-tag-names storage; : & and + break the #hash=state
+            // / \ and , break the comma-joined sli-tag-names storage; : & and + break the #hash=state
             // encoding (tag-names:a+b, key:value pairs split on ":", entries split on "&"/",").
             const invalid = names.filter(n => /[/\\,:&+]/.test(n))
             if (invalid.length) {
@@ -270,20 +270,20 @@ class Operation {
                 return
             }
             const value = names.join(",")
-            const before = $main.attr("data-tag-names") || ""
+            const before = $main.attr("sli-tag-names") || ""
             const key = "TAG-NAMES: " + docname()
             pl.changes.undoable("Name tags",
                 () => {
-                    $main.attr("data-tag-names", value)
+                    $main.attr("sli-tag-names", value)
                     value ? localStorage.setItem(key, value) : localStorage.removeItem(key)
                     prop_invalidate()
                 },
                 () => {
                     if (before) {
-                        $main.attr("data-tag-names", before)
+                        $main.attr("sli-tag-names", before)
                         localStorage.setItem(key, before)
                     } else {
-                        $main.removeAttr("data-tag-names")
+                        $main.removeAttr("sli-tag-names")
                         localStorage.removeItem(key)
                     }
                     prop_invalidate()
@@ -421,7 +421,7 @@ class Operation {
                                 // If playback was moving, no icon would be displayed.
                                 // If not, this icon will be replaced by pl.play_pause internally.
                                 pl.hud.playback_icon(`▶`)
-                                $main.attr("data-duration", parseFloat(seconds))
+                                $main.attr("sli-duration", parseFloat(seconds))
                                 pl.goNext()
                             }
                         }]
@@ -438,14 +438,14 @@ class Operation {
 
     generalInit() {
         const pl = this.playback
-        return this._group("General", null,
+        const group = this._group("General", null,
             [
                 ["m", "🗺", "Toggle hud map", () => pl.hud_map.toggle(true), "not-video mobile"],
                 ["i", "ℹ", "Toggle file info", () => $("#hud-fileinfo").toggle(), "mobile"],
-                ["z", "🔍", "Photo or video zoom (cycle)", () => zoom()],
-                ["Shift+z", "🔍", "Photo or video little zoom in", () => zoom(true), "magnify-little"],
-                ["Shift+x", "🔎", "Photo or video little zoom out", () => zoom(-1), "magnify-little"],
-                ["Shift+Alt+z", "🔎", "Zoom out", () => zoom(false), "crossed"],
+                ["z", "⤢", "Photo or video zoom (cycle)", () => zoom()],
+                ["Shift+z", "+", "Photo or video little zoom in", () => zoom(true), "magnify-little"],
+                ["Shift+x", "−", "Photo or video little zoom out", () => zoom(-1), "magnify-little"],
+                ["Shift+Alt+z", "⊘", "Zoom out", () => zoom(false)],
                 ["Alt+g", "⇗", "Go to frame", () => {
                     new $.Zebra_Dialog(`You are now at ${pl.frame.slide_index + 1} / ${pl.slide_count}`, {
                         title: "Go to slide number",
@@ -457,19 +457,26 @@ class Operation {
                         }]
                     })
                 }],
-                // Sets the same `data-rotate` property the Properties panel would set on <main> – every
+                // Sets the same `sli-rotate` property the Properties panel would set on <main> – every
                 // frame's actor inherits it (prop() cascade) and rotates itself the same way "Rotate right
                 // 90°" rotates a single photo, zoom-compensated. Refresh the current one right away; frames
                 // navigated to afterwards pick it up on their own via Frame.prepare() → refresh_actor().
                 ["Alt+r", "🔄", "Rotate whole view 90°", () => {
-                    const old = Number($main.attr("data-rotate")) || 0
-                    $main.attr("data-rotate", (old + 90) % 360)
+                    const old = Number($main.attr("sli-rotate")) || 0
+                    $main.attr("sli-rotate", (old + 90) % 360)
                     pl.frame.refresh_actor("rotate")
                 }, "mobile"],
             ],
             [
                 ["Notification history", () => pl.hud.show_notification_history(), () => true, "Notification history"],
             ]).disable()
+
+        // Non-interactive label - the four zoom buttons ("z"/"Shift+z"/"Shift+x"/"Shift+Alt+z") drop
+        // the repeated 🔍 glyph in favor of one shared lens icon in front of the group.
+        $("<span/>", { class: "hud-menu-label", text: "🔍", "aria-hidden": "true" })
+            .insertBefore($(`[data-hotkey-group="General"] [data-hotkey="z"]`, pl.hud.$hud_menu))
+
+        return group
 
         function zoom(little) {
             const wzoom = pl.frame.$actor?.data("wzoom")
@@ -516,7 +523,7 @@ class Operation {
         function rotate(deg) {
             const old = prop("rotate", act(), null, null, true)
             const val = old + deg
-            act().attr("data-rotate", val % 360)
+            act().attr("sli-rotate", val % 360)
             pl.frame.refresh_actor("rotate", old)
         }
     }
@@ -601,13 +608,13 @@ class Operation {
             [
                 ["Ctrl+Alt+z", "⟲", "Undo change", () => pl.changes.undo(), "undo"],
                 ["Ctrl+Alt+Shift+z", "⟳", "Redo change", () => pl.changes.redo(), "redo"],
-                ["j", "&#127895;", "Thumbnails", () => pl.hud.toggle_thumbnails()],
-                ["g", "&#119584;", "Grid", () => pl.hud.toggle_grid()],
-                ["Alt+p", "&#127920;", "Properties", () => pl.hud.toggle_properties()],
-                ["Ctrl+Alt+s", "&#128095;", "Steps", () => pl.toggle_steps()],
+                ["j", "🎞️", "Thumbnails", () => pl.hud.toggle_thumbnails()],
+                ["g", "▦", "Grid", () => pl.hud.toggle_grid()],
+                ["Alt+p", "⚙️", "Properties", () => pl.hud.toggle_properties()],
+                ["Ctrl+Alt+s", "👣", "Steps", () => pl.toggle_steps()],
                 ["Shift+l", "&#128257;", "Loop presentation", () => {
                     const on = !prop("loop-presentation", $main)
-                    $main.attr("data-loop-presentation", on ? "true" : "false")
+                    $main.attr("sli-loop-presentation", on ? "true" : "false")
                     prop_invalidate()
                     pl.hud.info(`Loop presentation ${on ? "enabled" : "disabled."}`)
                     pl.session.store()

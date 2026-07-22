@@ -18,7 +18,10 @@ class PropertyPanel {
      * @returns
      */
     input_ancestored(p, $el, type = "text", name = "") {
-        const original = $el.data(p)
+        let original = $el.attr(`sli-${p}`)
+        if (original !== undefined && PROP_NONSCALAR[p]) {
+            original = JSON.parse(original)
+        }
         const element_property = this.input(
             p, $el, name, original, type,
             prop(p, $el.parent()),
@@ -27,11 +30,9 @@ class PropertyPanel {
                 // v is undefined when we undo a change and the original value was undefined
                 //  (and not converted to the empty string via <input> value)
                 if (v === "" || v === undefined) {
-                    $el.removeAttr(`data-${p}`)
-                    $el.removeData(p)
+                    $el.removeAttr(`sli-${p}`)
                 } else {
-                    $el.attr(`data-${p}`, v)
-                    $el.data(p, PROP_NONSCALAR[p] ? JSON.parse(v) : v)
+                    $el.attr(`sli-${p}`, v)
                 }
             })
 

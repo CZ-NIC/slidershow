@@ -8,7 +8,7 @@ class PropertyPanelPoints {
     /**
      * Step-points GUI
      * @param {Playback} pl
-     * @param {HTMLElement|JQuery} input <input> for a [data-step-points] element
+     * @param {HTMLElement|JQuery} input <input> for a [sli-step-points] element
      * @param {boolean} videoStep This is a video-step, not a step-point
      */
     constructor(pl, input, videoStep = false) {
