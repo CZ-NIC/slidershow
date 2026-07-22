@@ -81,6 +81,64 @@ menu {
         }
     }
 
+    #play-modes {
+        margin-top: 12px;
+        display: flex;
+        gap: 8px;
+        justify-content: center;
+        flex-wrap: wrap;
+
+        .play-mode {
+            font-size: 0.7em;
+            padding: 4px 12px;
+            border: 1px solid var(--base);
+            border-radius: 5px;
+            background: transparent;
+            color: var(--base);
+            cursor: pointer;
+
+            &:hover {
+                background-color: var(--soft-highlight);
+            }
+        }
+    }
+
+    #content-summary {
+        margin-top: 12px;
+        font-size: 0.6em;
+        opacity: 0.6;
+    }
+
+    #recent-panel {
+        margin-top: 15px;
+        font-size: 0.55em;
+        text-align: left;
+
+        .recent-title {
+            opacity: 0.6;
+            margin-bottom: 4px;
+        }
+
+        a {
+            display: block;
+            color: var(--base);
+            text-decoration: none;
+            padding: 2px 0;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+
+            &:hover {
+                color: var(--highlight);
+            }
+
+            .recent-meta {
+                opacity: 0.5;
+                margin-left: 6px;
+            }
+        }
+    }
+
     #menu-hint {
         position: absolute;
         bottom: 4%;
@@ -280,6 +338,28 @@ frame-preview {
             font-size: 11px;
             color: #0fa;
             white-space: nowrap;
+        }
+    }
+
+    /* Countdown-to-next bar – a thin fill pinned to the bottom edge, only rendered while toggled on. */
+    #hud-progress {
+        display: none;
+        position: fixed;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        height: 4px;
+        z-index: 2;
+        pointer-events: none;
+
+        &.on {
+            display: block;
+        }
+
+        #hud-progress-bar {
+            width: 0;
+            height: 100%;
+            background-color: var(--highlight);
         }
     }
 

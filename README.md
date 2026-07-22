@@ -47,6 +47,7 @@ Generate a presentation from the sheet with [slidershow-builder](https://github.
   * [Frame `<article>`](#frame-article)
       - [`data-rotate`](#data-rotate)
       - [`data-duration`](#data-duration)
+      - [`data-repeat`](#data-repeat)
       - [`data-transition-duration`](#data-transition-duration)
       - [`data-spread-frames`](#data-spread-frames)
       - [`data-x`, `data-y`](#data-x-data-y)
@@ -98,6 +99,15 @@ There is a varienty of keyboard shortcuts. Click the menu button in the top righ
 ## Start
 
 The `<menu>` is displayed before the presentation starts, unless the `<main>` has the `data-start` attribute.
+
+When a presentation is loaded, the splash shows a short summary of what is loaded (frames / videos / sections) and, next to the big ▶ Start button, quick play-mode buttons:
+
+* **⏱ 5 s** / **⏱ 10 s** – start straight into auto-forward with that per-frame duration.
+* **🔁 Kiosk** – auto-forward **and** repeat (loop back to the first frame at the end) – exhibition / kiosk mode.
+
+The last few presentations you opened are listed under "Recent" so you can jump back to them.
+
+Most viewing options can also be preset from the URL hash so you can hand out a ready-to-run link, e.g. `presentation.html#1&state=duration:5,repeat,progress` starts at frame 1, auto-forwards every 5 s, repeats at the end and shows the countdown bar. Available `state=` flags include `duration:<s>`, `repeat`, `progress`, `thumbnails`, `grid`, `properties`, `no-steps`, `editing`, `tagging`.
 
 ## Thumbnails ribbon and grid
 
@@ -177,6 +187,11 @@ Which contains arbitrary HTML code, such as images or videos (by default, one pe
 <article data-duration="0.5">Short frame</article>
 ```
 Note a video frame is an exception: will hold till the video finishes and then change frame.
+
+Auto-forward can also be set live with <kbd>Shift+Alt+f</kbd>, and a thin **countdown bar** at the bottom edge (toggle <kbd>Shift+c</kbd>, off by default) shows how long until the next frame.
+
+### `data-repeat`
+(default off, set on `<main>`) When the presentation reaches its last frame, wrap back to the first one instead of stopping – for kiosk / exhibition playback (pair it with `data-duration` for a hands-free loop). Toggle live with <kbd>Shift+L</kbd>, or use the **🔁 Kiosk** splash button. (Not to be confused with [`data-loop`](#data-loop), which loops several images *within* one frame.)
 
 ### `data-transition-duration`
 (default `0`) How many seconds will it take to change a frame.

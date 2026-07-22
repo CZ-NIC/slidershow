@@ -285,6 +285,10 @@ class Playback {
             this.hud.playback_icon(moving ? (this.frame?.getDuration() ? "▶" : "") : "&#9612;&#9612;")
             if (moving) {
                 this.moving_timeout.start()
+                // Resume restarts the timeout with its previous delay – keep the countdown bar in step.
+                this.hud.progress_start(this.moving_timeout._delay)
+            } else {
+                this.hud.progress_reset() // pausing freezes here; don't let the bar keep filling
             }
         }
         this.moving = moving
@@ -417,12 +421,14 @@ class Playback {
         if (this.moving && duration) {
             await this.frame.loaded
             await Promise.all(this.frame.effects)
+            this.hud.progress_start(duration * 1000)
             return this.moving_timeout.start(duration * 1000)
         }
     }
 
     doNotWaitAndGo() {
         this.moving_timeout.stop()
+        this.hud.progress_reset()
         this.promise.aborted = true
     }
 
@@ -463,12 +469,20 @@ class Playback {
 
     nextFrame(count = 1) {
         let index = this.index + count
-        if (count > 1 && index >= this.$articles.length) {
-            // why letting out of range for count == 1?
-            // When in grid view, we must jump on the existing frame.
-            // When not, we try to get out of the range, so that we see 'swiping' effect that this frame does not exist.
-            // Setting the existing frame here would mean no action triggered when hitting LeftArrow being in the beginning.
-            index = this.$articles.length - 1
+        if (index >= this.$articles.length) {
+            // Repeat mode: a single step past the last frame wraps back to the first (kiosk / exhibition
+            // playback). prop("repeat") reads <main data-repeat> – authorable, hash-settable (#&state=repeat),
+            // togglable at runtime. (data-loop is unrelated – that loops images *within* a frame.)
+            // Only for count == 1; a multi-frame jump keeps the old clamp below.
+            if (count === 1 && prop("repeat", $main)) {
+                index = 0
+            } else if (count > 1) {
+                // why letting out of range for count == 1?
+                // When in grid view, we must jump on the existing frame.
+                // When not, we try to get out of the range, so that we see 'swiping' effect that this frame does not exist.
+                // Setting the existing frame here would mean no action triggered when hitting LeftArrow being in the beginning.
+                index = this.$articles.length - 1
+            }
         }
         this.goToFrame(index, true) // tag_filter (if any) is enforced centrally in goToFrame
     }

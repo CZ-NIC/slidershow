@@ -110,6 +110,7 @@ const PROP_DEFAULT = {
     "fit": "auto",
     "panorama-threshold": 2,
     "start": false,
+    "repeat": false,
     "spread-frames": "spiral",
     "step-shown": false,
     "rotate": 0,

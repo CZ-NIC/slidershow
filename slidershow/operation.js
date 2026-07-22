@@ -605,6 +605,14 @@ class Operation {
                 ["g", "&#119584;", "Grid", () => pl.hud.toggle_grid()],
                 ["Alt+p", "&#127920;", "Properties", () => pl.hud.toggle_properties()],
                 ["Ctrl+Alt+s", "&#128095;", "Steps", () => pl.toggle_steps()],
+                ["Shift+l", "&#128257;", "Repeat (loop presentation)", () => {
+                    const on = !prop("repeat", $main)
+                    $main.attr("data-repeat", on ? "true" : "false")
+                    prop_invalidate()
+                    pl.hud.info(`Repeat ${on ? "enabled" : "disabled."}`)
+                    pl.session.store()
+                }],
+                ["Shift+c", "&#9203;", "Countdown bar", () => pl.hud.toggle_progress()],
                 ["Alt+e", "&#9998;", "Editing mode", () => {
                     pl.editing_mode = !pl.editing_mode
                     // when there will be interfering shortcuts like numbers, we have retag the previous shortcuts

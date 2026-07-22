@@ -71,6 +71,12 @@ class Hud {
         this.$hud_loading_percent = $("<span/>").appendTo(this.$hud_loading)
         this._loading_timer = undefined
 
+        // Countdown-to-next bar (auto-forward). Off by default; toggled via "Countdown bar" (Shift+c),
+        // hash-settable (#&state=progress). A pure CSS-transition fill – progress_start() animates the
+        // inner bar 0→100% over the auto-forward duration, progress_reset() clears it on every navigation.
+        this.$hud_progress = $("#hud-progress")
+        this.$hud_progress_bar = $("#hud-progress-bar")
+
         this.$hud_hideable
             .hide()
             .on("mouseenter", () => this.$playback_icon.html("☰") && this.playback_icon_interval.freeze()) // icon will not disappear on hover
@@ -228,6 +234,35 @@ class Hud {
         }
         this.playback.operation.properties.toggle(on)
         this.playback.session.store()
+    }
+    toggle_progress() {
+        this.$hud_progress.toggleClass("on")
+        if (!this.progress_visible) {
+            this.progress_reset()
+        }
+        this.playback.hud.info(`Countdown bar ${this.progress_visible ? "enabled" : "disabled."}`)
+        this.playback.session.store()
+    }
+
+    /** Animate the countdown bar 0→100% over `ms`, matching the pending auto-forward timeout.
+     * No-op unless the bar is toggled on. */
+    progress_start(ms) {
+        if (!this.progress_visible || !ms) {
+            return
+        }
+        const bar = this.$hud_progress_bar
+        bar.css({ transition: "none", width: "0%" })
+        bar[0].offsetWidth // force reflow so the reset width takes before the animated one
+        bar.css({ transition: `width ${ms}ms linear`, width: "100%" })
+    }
+
+    /** Clear the countdown bar (navigation moved on, or auto-forward paused/stopped). */
+    progress_reset() {
+        this.$hud_progress_bar.css({ transition: "none", width: "0%" })
+    }
+
+    get progress_visible() {
+        return this.$hud_progress.hasClass("on")
     }
     get thumbnails_visible() {
         return this.$hud_thumbnails.is(":visible")

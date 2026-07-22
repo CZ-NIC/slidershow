@@ -167,6 +167,7 @@ function get_menu() {
         <div id="hud-thumbnails"></div>
         <div id="hud-grid"></div>
         <div id="control-icons"></div>
+        <div id="hud-progress"><div id="hud-progress-bar"></div></div>
         <div id="mobile-nav">
             <button data-role="prev" title="Previous">&#9665;</button>
             <button data-role="grid" title="Grid overview">&#9638;</button>
@@ -178,10 +179,17 @@ function get_menu() {
     <menu>
         <div>
             <h1>SlideRshow</h1>
+            <div id="recent-panel"></div>
         </div>
         <div id='start-wrapper'>
             Start presenting<br />
             <button id="start">&#9654;</button>
+            <div id="play-modes">
+                <button class="play-mode" data-duration="5" title="Auto-forward, 5 s per frame">&#9201; 5&nbsp;s</button>
+                <button class="play-mode" data-duration="10" title="Auto-forward, 10 s per frame">&#9201; 10&nbsp;s</button>
+                <button class="play-mode" data-kiosk title="Auto-forward and loop – exhibition / kiosk mode">&#128257; Kiosk</button>
+            </div>
+            <div id="content-summary"></div>
             </div>
 
         <div>
@@ -204,6 +212,6 @@ function get_menu() {
                 </form>
             </details>
         </div>
-        <div id="menu-hint">Press <kbd>F1</kbd> for keyboard shortcuts</div>
+        <div id="menu-hint">In the show press <kbd>/</kbd> for the command palette · <kbd>Esc</kbd> for this menu</div>
     </menu>`)
 }

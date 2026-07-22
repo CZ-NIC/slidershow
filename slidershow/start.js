@@ -57,9 +57,97 @@ class Menu {
         const $file = $("#file").change(() => {
             this.appendFiles([...$file[0].files])
         })
+
+        // Quick play-mode buttons – launch straight into auto-forward (or kiosk = auto + loop) without
+        // opening the properties panel. They set data-duration / data-repeat on <main> (where prop() ends its
+        // walk, same as the in-show "Set auto-forward" command and the `duration`/`loop` hash keys), then start.
+        $(".play-mode", this.$menu).on("click", e => {
+            const $b = $(e.currentTarget)
+            $main.attr("data-duration", Number($b.data("duration")) || 5)
+            if ($b.is("[data-kiosk]")) {
+                $main.attr("data-repeat", "true")
+            }
+            prop_invalidate()
+            this.start_playback()
+        })
+
+        this.refresh_summary()
+        this.refresh_recent()
+    }
+
+    /** Human-readable count of the loaded presentation, so a fresh drop (or a reopened file) is visibly
+     * confirmed on the splash instead of a bare Start button. */
+    refresh_summary() {
+        const $frames = $(FRAME_SELECTOR)
+        const $summary = $("#content-summary")
+        if (!$frames.length) {
+            return $summary.empty()
+        }
+        const videos = $frames.filter((_, el) => {
+            if (el.tagName === "VIDEO" || $(el).find("video").length) {
+                return true
+            }
+            const src = el.getAttribute("data-src") || $(el).find("[data-src]").attr("data-src") || ""
+            return VIDEO_EXTENSIONS.includes(src.split(/[?#]/)[0].split(".").pop().toLowerCase())
+        }).length
+        const sections = $("main section").length
+        const plural = (n, w) => `${n} ${w}${n === 1 ? "" : "s"}`
+        const parts = [plural($frames.length, "frame")]
+        if (videos) {
+            parts.push(plural(videos, "video"))
+        }
+        if (sections > 1) {
+            parts.push(plural(sections, "section"))
+        }
+        $summary.text(parts.join(" · "))
+    }
+
+    /** localStorage key holding the recent-presentations list (newest first). */
+    static get RECENT_KEY() { return "slidershow-recent" }
+    static get RECENT_MAX() { return 8 }
+
+    _recent_load() {
+        try {
+            return JSON.parse(localStorage.getItem(Menu.RECENT_KEY)) || []
+        } catch (e) {
+            return []
+        }
+    }
+
+    /** Remember the currently loaded presentation so it can be reopened from the splash next time.
+     * Keyed by path (hash dropped → reopens clean); no-op when there is nothing loaded. */
+    record_recent() {
+        const frames = $(FRAME_SELECTOR).length
+        if (!frames) {
+            return
+        }
+        const url = location.pathname + location.search
+        const entry = { url, name: document.title || docname(), frames, time: new Date().toISOString() }
+        const list = this._recent_load().filter(e => e.url !== url)
+        list.unshift(entry)
+        try {
+            localStorage.setItem(Menu.RECENT_KEY, JSON.stringify(list.slice(0, Menu.RECENT_MAX)))
+        } catch (e) { /* private mode / quota – recents are a convenience, ignore */ }
+    }
+
+    /** Render the recent-presentations list on the splash. Skips the entry for the current document. */
+    refresh_recent() {
+        const here = location.pathname + location.search
+        const list = this._recent_load().filter(e => e.url && e.url !== here)
+        const $panel = $("#recent-panel").empty()
+        if (!list.length) {
+            return
+        }
+        $("<div/>", { class: "recent-title", text: "Recent" }).appendTo($panel)
+        list.forEach(e => {
+            const $a = $("<a/>", { href: e.url, title: e.url, text: e.name || e.url })
+            $("<span/>", { class: "recent-meta", text: `${e.frames}` }).appendTo($a)
+            $a.appendTo($panel)
+        })
     }
 
     start_playback() {
+        this.record_recent() // remember this presentation for the splash's "Recent" list next time
         this.$menu.hide()
         this.playback.start()
         this.shortcuts.forEach(s => s.disable())

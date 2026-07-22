@@ -57,6 +57,18 @@ class Session {
                     $main.attr("data-tag-names", (value || "").split("+").join(","))
                     prop_invalidate()
                     break;
+                case "repeat":
+                    // Wrap from the last frame back to the first (kiosk playback). Sets the same
+                    // <main data-repeat> the toggle command and the menu "Kiosk" button write.
+                    $main.attr("data-repeat", "true")
+                    prop_invalidate()
+                    break;
+                case "progress":
+                    // Countdown-to-next bar. Off by default; presetting it from the hash mirrors thumbnails/grid.
+                    if (!pl.hud.progress_visible) {
+                        pl.hud.toggle_progress()
+                    }
+                    break;
                 case "no-steps":
                     pl.step_disabled = true
                     break
@@ -92,6 +104,8 @@ class Session {
 
         const duration = $main.attr("data-duration")
         const state = [
+            prop("repeat", $main) ? "repeat" : "",
+            this.playback.hud.progress_visible ? "progress" : "",
             this.playback.editing_mode ? "editing" : "",
             this.playback.tagging_mode ? "tagging" : "",
             this.playback.tag_filter.length ? `tag-filter:${this.playback.tag_filter.join("+")}` : "",
