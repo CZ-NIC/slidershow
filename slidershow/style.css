@@ -141,6 +141,11 @@ menu {
                 opacity: 0.5;
                 margin-left: 6px;
             }
+
+            &.recent-session-only {
+                opacity: 0.35;
+                font-style: italic;
+            }
         }
     }
 

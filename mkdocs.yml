@@ -1,0 +1,64 @@
+site_name: "SlideRshow"
+site_description: "Browser-based media presenter — photos, videos and maps, with no build step."
+repo_name: CZ-NIC/slidershow
+repo_url: https://github.com/CZ-NIC/slidershow
+# App is served from the gh-pages root (slidershow.html); the docs live under /docs/.
+site_url: https://cz-nic.github.io/slidershow/docs/
+docs_dir: docs
+
+theme:
+  name: "material"
+  features:
+    - navigation.expand
+    - navigation.sections
+    - content.code.copy
+    - toc.follow
+  palette:
+    - scheme: default
+      toggle:
+        icon: material/weather-night
+        name: Switch to dark mode
+    - scheme: slate
+      toggle:
+        icon: material/weather-sunny
+        name: Switch to light mode
+
+extra_javascript:
+  - https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js
+
+plugins:
+  - search
+
+markdown_extensions:
+  - pymdownx.highlight:
+      anchor_linenums: true
+      use_pygments: true
+      linenums: false
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - admonition
+  - pymdownx.details
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+  - pymdownx.keys
+  - tables
+  - footnotes
+  - toc:
+      permalink: true
+
+nav:
+  - Home: index.md
+  - Playback:
+      - Controls & start: playback.md
+      - Organizing & tagging: organizing.md
+  - Structure:
+      - Frames & sections: structure.md
+      - Steps: steps.md
+      - Images: images.md
+      - Video: video.md
+      - Text & maps: text-maps.md
+      - Styling: styling.md
+  - Troubleshooting: troubleshooting.md

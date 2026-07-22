@@ -1,6 +1,7 @@
 *.jpg
 *.mp4
 node_modules
+/site
 /test-results
 /playwright-report
 *.tmp.html

@@ -1,0 +1,46 @@
+# Deploys GitHub Pages: the app at the root (slidershow.html, extra/ …) plus the
+# built documentation under /docs/.
+#
+# INACTIVE until you switch the repo's Pages source to "GitHub Actions"
+# (Settings → Pages → Build and deployment → Source: GitHub Actions).
+# While Pages is still "Deploy from a branch", this workflow builds but does not publish.
+name: docs
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build-deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.x"
+      - run: pip install -r docs/requirements.txt
+      # The whole repo is the site root today (app served at /slidershow.html),
+      # so mirror it, then build the docs into the /docs/ subpath.
+      - name: Assemble site
+        run: |
+          mkdir -p _site
+          rsync -a --exclude='.git' --exclude='node_modules' --exclude='_site' ./ _site/
+          mkdocs build -d _site/docs
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+      - id: deployment
+        uses: actions/deploy-pages@v4

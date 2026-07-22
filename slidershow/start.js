@@ -104,14 +104,33 @@ class Menu {
 
     /** localStorage key holding the recent-presentations list (newest first). */
     static get RECENT_KEY() { return "slidershow-recent" }
+    static get RECENT_SESSION_KEY() { return "slidershow-recent-session" }
     static get RECENT_MAX() { return 8 }
 
-    _recent_load() {
+    static _local_storage_available() {
         try {
-            return JSON.parse(localStorage.getItem(Menu.RECENT_KEY)) || []
+            const test = "__test__"
+            localStorage.setItem(test, test)
+            localStorage.removeItem(test)
+            return true
         } catch (e) {
-            return []
+            return false
         }
+    }
+
+    _recent_load() {
+        const list = []
+        try {
+            const local = JSON.parse(localStorage.getItem(Menu.RECENT_KEY)) || []
+            list.push(...local.map(e => ({ ...e, storage: "local" })))
+        } catch (e) { /* ignore */ }
+
+        try {
+            const session = JSON.parse(sessionStorage.getItem(Menu.RECENT_SESSION_KEY)) || []
+            list.push(...session.map(e => ({ ...e, storage: "session" })))
+        } catch (e) { /* ignore */ }
+
+        return list.sort((a, b) => new Date(b.time) - new Date(a.time))
     }
 
     /** Remember the currently loaded presentation so it can be reopened from the splash next time.
@@ -123,11 +142,17 @@ class Menu {
         }
         const url = location.pathname + location.search
         const entry = { url, name: document.title || docname(), frames, time: new Date().toISOString() }
-        const list = this._recent_load().filter(e => e.url !== url)
-        list.unshift(entry)
+
+        // Try localStorage first; fall back to sessionStorage if localStorage unavailable (file://, private mode)
+        const useLocal = Menu._local_storage_available()
+        const key = useLocal ? Menu.RECENT_KEY : Menu.RECENT_SESSION_KEY
+        const storage = useLocal ? localStorage : sessionStorage
+
         try {
-            localStorage.setItem(Menu.RECENT_KEY, JSON.stringify(list.slice(0, Menu.RECENT_MAX)))
-        } catch (e) { /* private mode / quota – recents are a convenience, ignore */ }
+            const list = (JSON.parse(storage.getItem(key)) || []).filter(e => e.url !== url)
+            list.unshift(entry)
+            storage.setItem(key, JSON.stringify(list.slice(0, Menu.RECENT_MAX)))
+        } catch (e) { /* quota or other error – recents are a convenience, ignore */ }
     }
 
     /** Render the recent-presentations list on the splash. Skips the entry for the current document. */
@@ -143,7 +168,12 @@ class Menu {
         }
         list.forEach(e => {
             const $a = $("<a/>", { href: e.url, title: e.url, text: e.name || e.url })
-            $("<span/>", { class: "recent-meta", text: `${e.frames}` }).appendTo($a)
+            if (e.storage === "session") {
+                $a.addClass("recent-session-only")
+                $("<span/>", { class: "recent-meta", text: "—" }).appendTo($a)
+            } else {
+                $("<span/>", { class: "recent-meta", text: `${e.frames}` }).appendTo($a)
+            }
             $a.appendTo($panel)
         })
     }
