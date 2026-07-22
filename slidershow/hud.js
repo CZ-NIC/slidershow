@@ -240,7 +240,9 @@ class Hud {
         if (!this.progress_visible) {
             this.progress_reset()
         }
-        this.playback.hud.info(`Countdown bar ${this.progress_visible ? "enabled" : "disabled."}`)
+        this.playback.hud.info(this.progress_visible
+            ? "Countdown bar enabled – shows the time left until the auto-forward advances (set it with Shift+Alt+f)."
+            : "Countdown bar disabled.")
         this.playback.session.store()
     }
 

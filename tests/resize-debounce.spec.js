@@ -26,3 +26,14 @@ test("window resize is debounced: a burst of resize events triggers goToFrame on
     await page.waitForTimeout(300)
     expect(await page.evaluate(() => window.__goToFrameCalls)).toBe(1)
 })
+
+test("a resize while still on the menu (before any frame is entered) does not throw", async ({ page }) => {
+    const errors = []
+    page.on("pageerror", e => errors.push(e.message))
+
+    await page.goto(FIXTURE) // stay on the splash – no #start click, no frame entered yet
+    await page.evaluate(() => window.dispatchEvent(new Event("resize")))
+    await page.waitForTimeout(300)
+
+    expect(errors).toEqual([])
+})

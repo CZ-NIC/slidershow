@@ -212,6 +212,6 @@ function get_menu() {
                 </form>
             </details>
         </div>
-        <div id="menu-hint">In the show press <kbd>/</kbd> for the command palette · <kbd>Esc</kbd> for this menu</div>
+        <div id="menu-hint">In the show press <kbd>/</kbd> for the command palette · <kbd>Esc</kbd> for menu</div>
     </menu>`)
 }

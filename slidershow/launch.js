@@ -161,7 +161,9 @@ function main() {
     let resize_timer
     $(window).on("resize", () => {
         clearTimeout(resize_timer)
-        resize_timer = setTimeout(() => menu?.playback.goToFrame(menu?.playback.index), 150)
+        // Only reposition once a frame is actually being presented – a resize on the menu (right after
+        // loading a presentation) would otherwise call goToFrame with no current frame yet.
+        resize_timer = setTimeout(() => menu?.playback.frame && menu.playback.goToFrame(menu.playback.index), 150)
     })
 
     // Restore on hash

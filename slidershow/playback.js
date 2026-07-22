@@ -639,7 +639,9 @@ class Playback {
 
         this.$current = $current
         if (!sameFrame) {
-            lastFrame.leave()
+            // lastFrame can be undefined when goToFrame runs before any frame was entered – e.g. the
+            // resize handler (launch.js) fires while still on the menu, right after loading a presentation.
+            lastFrame?.leave()
         }
         if (!next) {  // we failed to go to the intended frame
             this.shake()
