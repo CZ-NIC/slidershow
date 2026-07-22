@@ -3,9 +3,9 @@ const path = require("path")
 
 const FIXTURE = "file://" + path.resolve(__dirname, "fixtures/basic.html")
 
-test("repeat wraps from the last frame back to the first", async ({ page }) => {
-    // Start on the last frame (basic.html has 3) with repeat preset from the hash.
-    await page.goto(FIXTURE + "#3&state=repeat")
+test("loop-presentation wraps from the last frame back to the first", async ({ page }) => {
+    // Start on the last frame (basic.html has 3) with loop-presentation preset from the hash.
+    await page.goto(FIXTURE + "#3&state=loop-presentation")
     await page.locator("#start").click()
     await expect.poll(() => page.url()).toContain("#3")
 
@@ -14,14 +14,14 @@ test("repeat wraps from the last frame back to the first", async ({ page }) => {
     await expect.poll(() => page.url()).toContain("#1")
 })
 
-test("Kiosk button starts playback in repeat mode", async ({ page }) => {
+test("Kiosk button starts playback in loop mode", async ({ page }) => {
     await page.goto(FIXTURE)
     await page.locator(".play-mode[data-kiosk]").click()
 
-    // Playback started (splash hidden) and repeat is on – reflected in <main> and the hash.
+    // Playback started (splash hidden) and loop-presentation is on – reflected in <main> and the hash.
     await expect(page.locator("menu")).toBeHidden()
-    await expect(page.locator("main")).toHaveAttribute("data-repeat", "true")
-    await expect.poll(() => page.url()).toContain("state=repeat")
+    await expect(page.locator("main")).toHaveAttribute("data-loop-presentation", "true")
+    await expect.poll(() => page.url()).toContain("state=loop-presentation")
 })
 
 test("Auto 5 s button starts playback with auto-forward", async ({ page }) => {

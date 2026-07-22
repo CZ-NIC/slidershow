@@ -59,13 +59,13 @@ class Menu {
         })
 
         // Quick play-mode buttons – launch straight into auto-forward (or kiosk = auto + loop) without
-        // opening the properties panel. They set data-duration / data-repeat on <main> (where prop() ends its
+        // opening the properties panel. They set data-duration / data-loop-presentation on <main> (where prop() ends its
         // walk, same as the in-show "Set auto-forward" command and the `duration`/`loop` hash keys), then start.
         $(".play-mode", this.$menu).on("click", e => {
             const $b = $(e.currentTarget)
             $main.attr("data-duration", Number($b.data("duration")) || 5)
             if ($b.is("[data-kiosk]")) {
-                $main.attr("data-repeat", "true")
+                $main.attr("data-loop-presentation", "true")
             }
             prop_invalidate()
             this.start_playback()
@@ -135,10 +135,12 @@ class Menu {
         const here = location.pathname + location.search
         const list = this._recent_load().filter(e => e.url && e.url !== here)
         const $panel = $("#recent-panel").empty()
+        // Always render the heading (with a muted placeholder when empty) so the feature is discoverable.
+        $("<div/>", { class: "recent-title", text: "Recent" }).appendTo($panel)
         if (!list.length) {
+            $("<div/>", { class: "recent-empty", text: "Presentations you open show up here" }).appendTo($panel)
             return
         }
-        $("<div/>", { class: "recent-title", text: "Recent" }).appendTo($panel)
         list.forEach(e => {
             const $a = $("<a/>", { href: e.url, title: e.url, text: e.name || e.url })
             $("<span/>", { class: "recent-meta", text: `${e.frames}` }).appendTo($a)

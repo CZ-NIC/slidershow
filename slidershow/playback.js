@@ -470,11 +470,12 @@ class Playback {
     nextFrame(count = 1) {
         let index = this.index + count
         if (index >= this.$articles.length) {
-            // Repeat mode: a single step past the last frame wraps back to the first (kiosk / exhibition
-            // playback). prop("repeat") reads <main data-repeat> – authorable, hash-settable (#&state=repeat),
-            // togglable at runtime. (data-loop is unrelated – that loops images *within* a frame.)
+            // Loop mode: a single step past the last frame wraps back to the first (kiosk / exhibition
+            // playback). prop("loop-presentation") reads <main data-loop-presentation> – authorable,
+            // hash-settable (#&state=loop-presentation), togglable at runtime. (The scope-narrower
+            // data-loop is unrelated – that loops images *within* a frame.)
             // Only for count == 1; a multi-frame jump keeps the old clamp below.
-            if (count === 1 && prop("repeat", $main)) {
+            if (count === 1 && prop("loop-presentation", $main)) {
                 index = 0
             } else if (count > 1) {
                 // why letting out of range for count == 1?

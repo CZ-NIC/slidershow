@@ -57,10 +57,10 @@ class Session {
                     $main.attr("data-tag-names", (value || "").split("+").join(","))
                     prop_invalidate()
                     break;
-                case "repeat":
+                case "loop-presentation":
                     // Wrap from the last frame back to the first (kiosk playback). Sets the same
-                    // <main data-repeat> the toggle command and the menu "Kiosk" button write.
-                    $main.attr("data-repeat", "true")
+                    // <main data-loop-presentation> the toggle command and the menu "Kiosk" button write.
+                    $main.attr("data-loop-presentation", "true")
                     prop_invalidate()
                     break;
                 case "progress":
@@ -104,7 +104,7 @@ class Session {
 
         const duration = $main.attr("data-duration")
         const state = [
-            prop("repeat", $main) ? "repeat" : "",
+            prop("loop-presentation", $main) ? "loop-presentation" : "",
             this.playback.hud.progress_visible ? "progress" : "",
             this.playback.editing_mode ? "editing" : "",
             this.playback.tagging_mode ? "tagging" : "",

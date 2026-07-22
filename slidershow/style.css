@@ -119,6 +119,11 @@ menu {
             margin-bottom: 4px;
         }
 
+        .recent-empty {
+            opacity: 0.35;
+            font-style: italic;
+        }
+
         a {
             display: block;
             color: var(--base);
