@@ -1,3 +1,9 @@
+/** How long (ms) a single grid thumbnail fetch may sit in flight before Hud._checkStuckGridFrames() treats
+ * it as possibly hung (ex: a stalled connection – Frame._fetch_with_progress has no timeout of its own)
+ * and folds it into the "⚠ Retry" badge. Nothing is aborted automatically; the fetch keeps running until
+ * the user actually clicks the badge. */
+const GRID_STUCK_MS = 12000
+
 class Hud {
 
     /**
@@ -27,9 +33,15 @@ class Hud {
         this.$hud_grid_loading_percent = this.$hud_grid_loading.find("span")
         this._grid_loading_pending = 0
         this._grid_loading_total = 0
-        /** @type {Set<Frame>} Frames whose grid thumbnail failed outright – both the sli-thumb probe (if
-         * any) and the full-quality fallback. Offered a bulk retry via the "⚠ Retry N frames" badge. */
+        /** @type {Set<Frame>} Frames whose grid thumbnail failed outright (both the sli-thumb probe, if
+         * any, and the full-quality fallback) or whose fetch has been in flight suspiciously long (see
+         * _checkStuckGridFrames). Offered a bulk retry via the "⚠ Retry N frames" badge. */
         this._grid_failed = new Set()
+        /** @type {Map<HTMLElement, {frame: Frame, since: number}>} One entry per in-flight grid thumbnail
+         * fetch, keyed by its <frame-preview> element (unique per attempt, so a retried fetch never
+         * collides with the stale entry of the hung attempt it replaced). Read by _checkStuckGridFrames(). */
+        this._grid_pending_since = new Map()
+        this._grid_stuck_check = new Interval(() => this._checkStuckGridFrames(), GRID_STUCK_MS / 4)
         this.$hud_grid_retry = $("#hud-grid-retry").on("click", () => this._retryGridFrames())
         this.$hud_selection = $("#hud-selection")
         // "N frames selected" badge shown while a grid selection exists; its buttons proxy the grid clipboard.
@@ -236,14 +248,16 @@ class Hud {
     toggle_grid() {
         let on = false
         this.$hud_grid.toggle()
-        if (this.grid_visible && this.playback.frame) {
-            // when restoring session from the hash, frame is not ready yet
+        // this.playback.frame is never falsy (it defaults to a dummy Frame with no .index) – check .index
+        // to tell whether the frame has actually been entered yet (session restore from the hash).
+        const frameReady = this.playback.frame?.index !== undefined
+        if (this.grid_visible && frameReady) {
             on = true
             this.display_grid(true)
         } else {
             // even that the frame was focused, it was not yet prepared and entered
             this.grid.clearSelection() // the selection is a grid-only convenience; drop it on leaving the grid
-            if (this.playback.frame) {
+            if (frameReady) {
                 this.playback.goToFrame(this.playback.frame.index, false, true)
             }
             this._updateGridStatusRow() // outstanding fetches (if any) keep running, just no longer shown
@@ -395,7 +409,7 @@ class Hud {
         // Empty grid → a faint always-there hint that teaches the multi-select affordance.
         if (!n && !clipN) {
             this.$hud_selection.attr("data-mode", "hint").css("display", "flex")
-                .find(".sel-count").text("Select frames — Shift/Ctrl-click or drag a box, or Space")
+                .find(".sel-count").html("Select frames — <kbd>Shift</kbd>/<kbd>Ctrl-click</kbd> or drag a box, or <kbd>Space</kbd>")
             return
         }
 
@@ -449,6 +463,7 @@ class Hud {
             const isGrid = $container.is(this.$hud_grid)
             if (isGrid) {
                 this._gridLoadingDelta(1)
+                this._grid_pending_since.set($thumbnail[0], { frame, since: Date.now() })
             }
 
             setTimeout(async () => {
@@ -503,6 +518,7 @@ class Hud {
                 } finally {
                     if (isGrid) {
                         this._gridLoadingDelta(-1)
+                        this._grid_pending_since.delete($thumbnail[0])
                     }
                 }
             }, 1)
@@ -568,8 +584,30 @@ class Hud {
     }
 
     /**
-     * Bulk-retry every grid thumbnail whose full-quality fetch failed outright (see assureThumbnail()) –
-     * drops each frame back to a clean, unloaded state and re-triggers its thumbnail load from scratch.
+     * Fold any grid thumbnail fetch that's been in flight longer than GRID_STUCK_MS into `_grid_failed`,
+     * so it's covered by the same "⚠ Retry N frames" badge as a genuine failure – covers a fetch hung on
+     * a stalled connection (Frame._fetch_with_progress has no timeout, so it would otherwise never
+     * resolve nor reject and the spinner/percentage would stay stuck forever). Never aborts anything
+     * itself; the fetch is only actually cancelled once the user clicks the badge (_retryGridFrames()).
+     */
+    _checkStuckGridFrames() {
+        const now = Date.now()
+        let changed = false
+        for (const { frame, since } of this._grid_pending_since.values()) {
+            if (now - since > GRID_STUCK_MS && !this._grid_failed.has(frame)) {
+                this._grid_failed.add(frame)
+                changed = true
+            }
+        }
+        if (changed) {
+            this._updateGridRetryBadge()
+        }
+    }
+
+    /**
+     * Bulk-retry every grid thumbnail whose full-quality fetch failed outright or was flagged as stuck
+     * (see assureThumbnail() and _checkStuckGridFrames()) – drops each frame back to a clean, unloaded
+     * state (aborting its fetch if still in flight) and re-triggers its thumbnail load from scratch.
      */
     _retryGridFrames() {
         const frames = [...this._grid_failed]

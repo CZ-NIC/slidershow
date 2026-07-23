@@ -620,7 +620,11 @@ class Playback {
         const lastFrame = $last.data("frame")
 
         /** @type {Frame} */
-        const frame = this.frame = $current.data("frame")
+        const frame = $current.data("frame")
+        if (!frame) { // no article to land on (ex. called with an out-of-range index before any frame was entered)
+            return
+        }
+        this.frame = frame
         this.index = frame.index
 
         // Change location hash

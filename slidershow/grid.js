@@ -1105,9 +1105,16 @@ class GridController {
             () => snap.forEach(({ f, before }) => f.write_tags(before)))
     }
 
-    /** Delete every selected frame as one undoable, then land the cursor on a surviving frame. */
+    /** Delete every selected frame as one undoable, then land the cursor on a surviving frame.
+     * When the cursor is pinned on a section (paste target) instead of a frame, delete that section. */
     deleteSelection() {
         const pl = this.pl
+        if (this.pasteTarget && !this.hasSelection()) {
+            pl.section_controller.deleteSection(this.pasteTarget)
+            this.pasteTarget = null
+            this._syncSelectionClass()
+            return
+        }
         const frames = this.selectedFrames()
         if (frames.length === 1) {
             frames[0].delete()

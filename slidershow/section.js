@@ -189,6 +189,11 @@ class SectionController {
 
     deleteSection($section) {
         const pl = this.playback
+        if ($section.is("main")) {
+            // <main> is the presentation root, not a removable element – "delete" on it clears its
+            // content (direct children) instead of detaching the section itself.
+            return this.clearSection($section)
+        }
         // Every frame that disappears with the section – recursively, incl. nested subsections and
         // div-wrapped frames – so the post-delete navigation lands on a frame that still exists.
         const $frames = $section.find(FRAME_TAGS)
@@ -208,6 +213,25 @@ class SectionController {
                         $(pl.$articles[pl.frame.index] ?? pl.$articles[pl.$articles.length - 1]).data("frame")
                         : pl.frame)
                         .index)
+            })
+    }
+
+    /** Detach every direct child of $section (used for <main>, where "delete" can't remove the
+     * section itself – see deleteSection). */
+    clearSection($section) {
+        const pl = this.playback
+        const $children = $section.children()
+        if (!$children.length) {
+            pl.hud.info("Already empty")
+            return
+        }
+
+        pl.changes.undoable(`Clear ${this.getSectionName($section, "Presentation")}`,
+            () => $children.detach(),
+            () => $children.appendTo($section),
+            () => {
+                pl.reset()
+                pl.goToFrame(0)
             })
     }
 

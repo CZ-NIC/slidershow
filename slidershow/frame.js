@@ -88,10 +88,14 @@ class Frame {
          * @type {Promise} Fulfilled on all media loaded.
         */
         // Apart from all the standard media loaded we await the signal from .preload method that all re-srced media are loaded.
+        // "error" must be awaited too, not just the success event – a plain <img src> (one baked into the
+        // HTML outright, never templated through sli-src/_load_media) that fails to load only ever fires
+        // "error", so listening for "load" alone left this (and so frame.loaded, and so any grid thumbnail
+        // awaiting it) pending forever once such an image 404s/errors out.
         this.loaded = Promise.all([
             new Promise(r => this._loaded = r),
-            ...this.$frame.find("img").map((_, el) => el.complete || new Promise(r => $(el).one("load", r))),
-            ...this.$frame.find("video").map((_, el) => el.readyState >= 2 || new Promise(r => $(el).one("loadeddata", r)))
+            ...this.$frame.find("img").map((_, el) => el.complete || new Promise(r => $(el).one("load error", r))),
+            ...this.$frame.find("video").map((_, el) => el.readyState >= 2 || new Promise(r => $(el).one("loadeddata error", r)))
         ])
     }
 

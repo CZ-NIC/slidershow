@@ -1,10 +1,22 @@
 // Load all needed JS + CSS resources. User has nothing to specify in the HEAD.
 // We cannot use module as this would launch CORS blocking when using locally without server.
 
+// Offline export (see Export.export, "Make offline-safe"): the exported <html sli-offline> carries every
+// vendor/local script+style verbatim in #sli-offline-assets, keyed by URL (vendor) or bare filename (local,
+// since DIR is then unknown/irrelevant). loadScript/loadStyle/loadjQuery below consult it before ever
+// touching the network. Leaflet is deliberately never in that map – maps stay online-only (tile server
+// needs network anyway), so it always falls through to the normal CDN fetch, offline or not.
+const OFFLINE = document.documentElement.hasAttribute("sli-offline")
+const OFFLINE_ASSETS = OFFLINE ? JSON.parse(document.getElementById("sli-offline-assets").textContent) : null
+const JQUERY_SRC = "https://code.jquery.com/jquery-3.7.1.min.js"
+
 // What is current directory
 //  User might use local: <script src="../slidershow/slidershow.js"></script>
 //  As well as: <script src="https://cdn.jsdelivr.net/gh/CZ-NIC/slidershow@latest/slidershow/slidershow.js"></script>
-const DIR = document.querySelector("script[src$='slidershow.js']").getAttribute("src").replace(/\/slidershow.js$/, "") + "/";
+//  When offline-inlined, this very script has no `src` at all – DIR stays "" and local lookups fall
+//  back to bare filenames, matching how they're keyed in OFFLINE_ASSETS.
+const SELF_SCRIPT = document.querySelector("script[src$='slidershow.js']")
+const DIR = SELF_SCRIPT ? SELF_SCRIPT.getAttribute("src").replace(/\/slidershow.js$/, "") + "/" : ""
 const MAP_ENABLE = !location.hash.includes("map-disabled")
 
 // NOTE fetch these constants from URL/UI too
@@ -86,22 +98,63 @@ loadjQuery(() => {
     }
 
     // wait for all scripts to load
-    Promise.all(vendor.concat(local)).then(() => load_launch() )
+    Promise.all(vendor.concat(local)).then(() => {
+        // WebHotkeys normally self-registers by reading its own `?register` query param off
+        // `document.currentScript.src` – offline export replaces `src` with a `data:` URL (see
+        // offline_data_url) whose content can't safely carry that query, so it never self-registers there.
+        // Harmless/redundant otherwise: this only fires when the normal path somehow left it unset.
+        // `WebHotkeys` (the class) is a bare identifier, not `window.WebHotkeys` – classic <script>s share
+        // one top-level lexical scope, but a class/const/let declaration never becomes a window property.
+        if (!window.webHotkeys && typeof WebHotkeys !== "undefined") {
+            window.webHotkeys = new WebHotkeys()
+        }
+        load_launch()
+    })
 })
 
 function loadjQuery(callback) {
     if (window.jQuery) { // do not re-load jQuery if already loaded in the head before
         return callback()
     }
+    if (OFFLINE_ASSETS && JQUERY_SRC in OFFLINE_ASSETS) {
+        const script = document.createElement('script')
+        script.src = offline_data_url(OFFLINE_ASSETS[JQUERY_SRC])
+        script.setAttribute('sli-templated', '1')
+        script.onload = callback
+        document.head.appendChild(script)
+        return
+    }
     // Allow using $ in the body without the need of load blocks.
-    document.write('<script sli-templated=1 src="https://code.jquery.com/jquery-3.7.1.min.js" integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo=" crossorigin="anonymous"></script>')
+    document.write(`<script sli-templated=1 src="${JQUERY_SRC}" integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo=" crossorigin="anonymous"></script>`)
     // The written <script> may not be in the DOM synchronously (document.write from an external script feeds the
     // parser's input stream), so querying it here can race and return null. Poll for jQuery instead.
     const wait_for_jquery = () => window.jQuery ? callback() : setTimeout(wait_for_jquery, 10)
     wait_for_jquery()
 }
 
+/**
+ * A `data:` URL standing in for a fetched script/style's `text` (offline export – see OFFLINE_ASSETS
+ * above), so the element needs no network fetch yet still has a real, non-empty `src`/`href` – unlike a
+ * plain inline `<script>`/`<style>`, which some vendor code doesn't tolerate (WebHotkeys reads
+ * `document.currentScript.src` to detect its own load parameters; a data: URL keeps that a valid, if
+ * query-less, URL instead of throwing on `new URL("")`). Anything the original URL's own query/fragment
+ * was used for is handled separately (see the WebHotkeys fallback in slidershow.js's loader) – it can't
+ * be appended here, as browsers treat a data: URL's query as literal script/style text, not metadata.
+ * @param {string} text
+ * @param {string} mime
+ * @returns {string}
+ */
+function offline_data_url(text, mime = "text/javascript") {
+    return `data:${mime};charset=utf-8,${encodeURIComponent(text)}`
+}
+
+/**
+ * @param {{src: string, [key: string]: *}} attrs
+ */
 function loadScript(attrs) {
+    if (OFFLINE_ASSETS && attrs.src in OFFLINE_ASSETS) {
+        attrs = { ...attrs, src: offline_data_url(OFFLINE_ASSETS[attrs.src]) }
+    }
     return new Promise((resolve, reject) => {
         const script = document.createElement('script')
         // Without this, an uncaught error anywhere in a script loaded from a different origin (ex: the app's
@@ -120,6 +173,13 @@ function loadScript(attrs) {
 }
 
 function loadStyle(url) {
+    if (OFFLINE_ASSETS && url in OFFLINE_ASSETS) {
+        const style = document.createElement('style')
+        style.textContent = OFFLINE_ASSETS[url]
+        style.setAttribute('sli-templated', '1')
+        document.head.appendChild(style)
+        return Promise.resolve()
+    }
     return new Promise((resolve, reject) => {
         const link = document.createElement("link")
         link.href = url

@@ -9,6 +9,7 @@ declare global {
         showSaveFilePicker?: (options?: any) => Promise<any>
         showDirectoryPicker?: (options?: any) => Promise<any>
         jQuery: JQueryStatic
+        webHotkeys: WebHotkeys
     }
 
     // TS's lib.dom.d.ts doesn't yet know about the File System Access API's permission methods.
