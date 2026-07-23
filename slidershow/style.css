@@ -997,6 +997,23 @@ frame-preview {
                 }
             }
 
+            /* Per-tile spinner, shown while this thumbnail's own preview is still being fetched
+               (assureThumbnail() in hud.js toggles the class once the HTML lands). Small ring centered
+               over the tile, independent of the aggregate #hud-grid-loading percentage above the grid. */
+            &.loading::after {
+                content: '';
+                position: absolute;
+                top: 50%;
+                left: 50%;
+                width: 20px;
+                height: 20px;
+                margin: -10px 0 0 -10px;
+                border: 3px solid color-mix(in srgb, var(--bg-dark) 20%, transparent);
+                border-top-color: var(--indicator-progress);
+                border-radius: 50%;
+                animation: hud-spin .8s linear infinite;
+            }
+
             /* Multi-selection (grid only). The cursor frame is `.current`; the other chosen frames are
                `.selected`. A tinted fill + inset ring reads clearly even under the .current corner marks. */
             &.selected {

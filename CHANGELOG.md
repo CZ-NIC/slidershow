@@ -1,6 +1,7 @@
 # CHANGELOG
 
 ## 1.0.0 (unreleased)
+* feat (grid): each thumbnail still waiting on its own preview fetch now shows a small per-tile spinner, in addition to the existing aggregate spinner+percentage above the grid
 * fix (grid): toggling the grid (ex. via `&state=grid` in the hash) before the first frame had been entered threw `Cannot read properties of undefined (reading 'index')` – `Hud.toggle_grid()` treated `playback.frame` as ready whenever it was truthy, but it's never falsy (it defaults to a dummy `Frame` with no `.index`); it now checks `.index` instead, and `Playback.goToFrame()` no-ops instead of crashing if it still can't resolve a frame
 * fix (grid): pressing <kbd>Delete</kbd> while the cursor was pinned on a section's ribbon (paste target) deleted the last-focused frame instead of the section
 * fix (grid): "delete" on the top-level "Presentation" ribbon (or <kbd>Delete</kbd> pinned there) detached `<main>` itself, wiping the whole presentation – it now clears the presentation's content instead, keeping `<main>` intact

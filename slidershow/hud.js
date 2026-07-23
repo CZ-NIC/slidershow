@@ -458,7 +458,7 @@ class Hud {
         let $thumbnail = this.getThumbnail(frame, $container)
         if (!$thumbnail.length) { // this thumbnail does not exist yet
             // go to frame
-            $thumbnail = $("<frame-preview/>", { html: "...", "data-ref": frame.index })
+            $thumbnail = $("<frame-preview/>", { "data-ref": frame.index, class: "loading" })
 
             const isGrid = $container.is(this.$hud_grid)
             if (isGrid) {
@@ -493,7 +493,7 @@ class Hud {
                         if (!$thumbnail[0].isConnected) return // could have been removed while awaiting
                     }
 
-                    $thumbnail.html(html)
+                    $thumbnail.removeClass("loading").html(html)
                     if (!$thumbnail.text().trim()) {
                         // Strange bug. When having just a full-stretched image in the frame, vertical scrollbar appeared unless font-size or line-height were zero.
                         // When I copied full HTML, no scrollbar was visible, albeit I found no single difference in the DevTools.
