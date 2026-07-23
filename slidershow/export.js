@@ -51,6 +51,8 @@ class Export {
                 // XX estimate the size and how many photos could not be packed (not being dropped previously)
                 // XX fix: if imported with a path, those file will not be exported with src=data
                 caption: "Pack into one file (huge RAM + disk demand)", callback: () => this.export(true)
+            }, {
+                caption: "Export tags to folders instead…", callback: () => this.export_tags_dialog()
             }]
         })
     }
@@ -109,28 +111,61 @@ class Export {
     }
 
     download(data) {
-        const blob = new Blob([data], { type: "text/plain" })
+        this._trigger_download(new Blob([data], { type: "text/plain" }), this.playback.session.docname)
+    }
+
+    /**
+     * @param {Blob} blob
+     * @param {string} filename
+     */
+    _trigger_download(blob, filename) {
         const url = URL.createObjectURL(blob)
         const link = document.createElement("a")
         link.href = url
-        link.download = this.playback.session.docname
+        link.download = filename
         document.body.appendChild(link)
         link.click()
         URL.revokeObjectURL(url)
         document.body.removeChild(link)
     }
 
-    // --- Album export (one folder per named tag + a "vsechny" folder with everything) ---
+    /**
+     * @param {string} filename
+     * @param {string} text
+     * @param {string} type
+     */
+    _download_text(filename, text, type = "text/plain") {
+        this._trigger_download(new Blob([text], { type }), filename)
+    }
 
     /**
-     * @typedef {{tag: number, name: string, frames: Frame[]}} Album
+     * Browsers without `showDirectoryPicker` (Firefox) can't copy media into folders, but the tag
+     * lists themselves are cheap to produce from `groups` alone – no copying involved.
+     * @param {TagGroup[]} groups
+     */
+    _download_manifest(groups) {
+        const manifest = Object.fromEntries(groups.map(g => [g.name, g.frames.map(f => f.get_filename())]))
+        this._download_text("tags.json", JSON.stringify(manifest, null, 2), "application/json")
+    }
+
+    /**
+     * @param {TagGroup[]} groups
+     */
+    _download_txts(groups) {
+        groups.forEach(g => this._download_text(`${g.name}.txt`, g.frames.map(f => f.get_filename()).join("\n")))
+    }
+
+    // --- Tag export (one folder per named tag) ---
+
+    /**
+     * @typedef {{tag: number, name: string, frames: Frame[]}} TagGroup
      */
 
     /**
-     * @returns {Album[]} One entry per tag in use, ascending. Named tags use their name as the folder;
+     * @returns {TagGroup[]} One entry per tag in use, ascending. Named tags use their name as the folder;
      * unnamed tags fall back to `tag-<digit>` (so tagging without naming still exports something useful).
      */
-    collect_albums() {
+    collect_tag_groups() {
         const pl = this.playback
         const names = pl.frame.tag_names()
         /** @type {Map<number, Frame[]>} */
@@ -150,13 +185,13 @@ class Export {
     }
 
     /**
-     * @param {Album[]} albums
-     * @returns {Frame[]} Every frame belonging to at least one album, deduplicated (→ the "vsechny" folder).
+     * @param {TagGroup[]} groups
+     * @returns {Frame[]} Every frame belonging to at least one tag group, deduplicated.
      */
-    union_frames(albums) {
+    union_frames(groups) {
         const seen = new Set()
         const result = []
-        albums.forEach(a => a.frames.forEach(f => {
+        groups.forEach(a => a.frames.forEach(f => {
             if (!seen.has(f)) {
                 seen.add(f)
                 result.push(f)
@@ -189,29 +224,26 @@ class Export {
     }
 
     /**
-     * Guards against album names that would corrupt the export: two tags sharing a name (or a tag
-     * named "vsechny", the reserved catch-all folder) end up copied into the very same folder – later
-     * files silently overwrite earlier ones and `alba.json`/`<album>.txt` collapse to the last one
-     * written, since both are keyed by name. A `/` or `\` would also make `getDirectoryHandle(name,
-     * {create:true})` throw mid-export (an unhandled rejection, not a dialog).
-     * @param {Album[]} albums
-     * @returns {string[]} Human-readable problems, empty if `albums` are all export-safe.
+     * Guards against tag names that would corrupt the export: two tags sharing a name end up copied
+     * into the very same folder – later files silently overwrite earlier ones and
+     * `tags.json`/`<tag>.txt` collapse to the last one written, since both are keyed by name. A `/`
+     * or `\` would also make `getDirectoryHandle(name, {create:true})` throw mid-export (an unhandled
+     * rejection, not a dialog).
+     * @param {TagGroup[]} groups
+     * @returns {string[]} Human-readable problems, empty if `groups` are all export-safe.
      */
-    _validate_albums(albums) {
+    _validate_tag_groups(groups) {
         const problems = []
         const seenNames = new Map()
-        for (const album of albums) {
-            if (album.name.toLowerCase() === "vsechny") {
-                problems.push(`Tag name "${album.name}" is reserved (used for the "vsechny" folder) – rename it.`)
+        for (const group of groups) {
+            if (/[/\\]/.test(group.name)) {
+                problems.push(`Tag name "${group.name}" contains a path separator – rename it.`)
             }
-            if (/[/\\]/.test(album.name)) {
-                problems.push(`Tag name "${album.name}" contains a path separator – rename it.`)
-            }
-            const key = album.name.toLowerCase()
+            const key = group.name.toLowerCase()
             if (seenNames.has(key)) {
-                problems.push(`Tags named "${seenNames.get(key)}" and "${album.name}" would collide into the same folder – rename one.`)
+                problems.push(`Tags named "${seenNames.get(key)}" and "${group.name}" would collide into the same folder – rename one.`)
             } else {
-                seenNames.set(key, album.name)
+                seenNames.set(key, group.name)
             }
         }
         return problems
@@ -219,27 +251,36 @@ class Export {
 
     /**
      * Entry point for Ctrl+Shift+S: browser-support check, named-tags/validation checks, then a summary
-     * dialog (per-album counts, a source-folder hint if some files aren't in memory) with an "Export" button.
+     * dialog (per-tag counts, a source-folder hint if some files aren't in memory) with an "Export" button.
      */
-    export_albums_dialog() {
-        if (!window.showDirectoryPicker) {
-            this.playback.hud.ok("Export albums",
-                "Exporting to folders works only in Chrome/Edge.<br>"
-                + "Your tags are saved inside the presentation – export it with <kbd>Ctrl+S</kbd>, "
-                + "open the exported file in Chrome, and run this again (<kbd>Ctrl+Shift+S</kbd>).")
+    export_tags_dialog() {
+        const groups = this.collect_tag_groups()
+        if (!groups.length) {
+            this.playback.hud.ok("Export tags", "No tags used yet. Tag some frames first (Alt+T, then a digit).")
             return
         }
-        const albums = this.collect_albums()
-        if (!albums.length) {
-            this.playback.hud.ok("Export albums", "No tags used yet. Tag some frames first (Alt+T, then a digit).")
-            return
-        }
-        const problems = this._validate_albums(albums)
+        const problems = this._validate_tag_groups(groups)
         if (problems.length) {
-            this.playback.hud.ok("Export albums", `Fix tag names before exporting:<br>${problems.join("<br>")}`)
+            this.playback.hud.ok("Export tags", `Fix tag names before exporting:<br>${problems.join("<br>")}`)
             return
         }
-        const allFrames = this.union_frames(albums)
+        if (!window.showDirectoryPicker) {
+            new $.Zebra_Dialog({
+                message: "Exporting media to folders works only in Chrome/Edge.<br>"
+                    + "Your tags are saved inside the presentation – export it with <kbd>Ctrl+S</kbd>, "
+                    + "open the exported file in Chrome, and run this again (<kbd>Ctrl+Shift+S</kbd>).<br><br>"
+                    + "Meanwhile, you can still grab just the tag lists below (no photos).",
+                title: "Export tags",
+                type: "information",
+                buttons: [
+                    "Cancel",
+                    { caption: "Download tags.json", callback: () => this._download_manifest(groups) },
+                    { caption: "Download .txt files", callback: () => this._download_txts(groups) }
+                ]
+            })
+            return
+        }
+        const allFrames = this.union_frames(groups)
         // A relative-path frame on a file:// presentation isn't fetchable on its own, but becomes so once
         // the user supplies a base URL – offer that field instead of forcing a source folder for it.
         const baseCandidates = allFrames.filter(f =>
@@ -265,9 +306,9 @@ class Export {
             ? `Total size: unknown (${unknownCount} file(s) not in memory)`
             : `Total size: ${formatBytes(knownBytes)}` + (unknownCount ? ` (+ ${unknownCount} file(s) of unknown size)` : "")
 
-        const rows = [...albums.map(a => ({ name: a.name, count: a.frames.length })), { name: "vsechny", count: allFrames.length }]
+        const rows = groups.map(a => ({ name: a.name, count: a.frames.length }))
             .map(({ name, count }) => `<tr><td>${this._esc(name)}</td><td>${count}</td></tr>`).join("")
-        const summary = `<table class="album-summary">${rows}</table>${sizeLine}<br>`
+        const summary = `<table class="tag-summary">${rows}</table>${sizeLine}<br>`
             + (baseCandidates.length
                 ? `<br>${baseCandidates.length} file(s) are referenced by a relative path – give the base URL below to download them over http.`
                 : "")
@@ -277,28 +318,33 @@ class Export {
                 + (pathHint ? `<br>Hint: their path looks like <code>${this._esc(pathHint)}/…</code> – pick that folder, or a parent of it.` : "")
                 : "")
 
-        const $extra = $("<div/>", { class: "album-export-extra" })
+        const $extra = $("<div/>", { class: "tag-export-extra" })
         let $baseInput = null
         if (baseCandidates.length) {
             $baseInput = $("<input/>", {
                 type: "text",
-                value: localStorage.getItem("ALBUM-BASE-URL") || "",
+                value: localStorage.getItem("TAG-EXPORT-BASE-URL") || "",
                 placeholder: "https://example.com/photos/",
                 style: "width:100%"
             })
             $("<label/>").append(document.createTextNode("Base URL: "), $baseInput).appendTo($extra)
         }
+        const $writeJson = $("<input/>", { type: "checkbox", checked: true })
+        const $writeTxt = $("<input/>", { type: "checkbox", checked: true })
+        $("<label/>").append($writeJson, " Write tags.json").appendTo($extra)
+        $("<label/>").append($writeTxt, " Write a <tag>.txt file per tag").appendTo($extra)
 
         new $.Zebra_Dialog({
             message: summary,
             source: { inline: $extra },
-            title: "Export albums to folders",
+            title: "Export tags to folders",
             type: "question",
             buttons: [
                 "Cancel",
+                { caption: "Export as single file instead…", callback: () => this.export_dialog() },
                 ...(missingFrames.length ? [{
                     caption: "Change source folder…",
-                    callback: () => this._change_source_dir_handle().then(() => this.export_albums_dialog())
+                    callback: () => this._change_source_dir_handle().then(() => this.export_tags_dialog())
                 }] : []),
                 {
                     caption: "Export",
@@ -306,9 +352,9 @@ class Export {
                     callback: () => {
                         const baseUrl = $baseInput ? String($baseInput.val()).trim() : ""
                         if (baseUrl) {
-                            localStorage.setItem("ALBUM-BASE-URL", baseUrl)
+                            localStorage.setItem("TAG-EXPORT-BASE-URL", baseUrl)
                         }
-                        this.export_albums(albums, allFrames, baseUrl)
+                        this.export_tags(groups, allFrames, baseUrl, $writeJson.prop("checked"), $writeTxt.prop("checked"))
                     }
                 }
             ]
@@ -325,11 +371,13 @@ class Export {
     }
 
     /**
-     * @param {Album[]} albums
+     * @param {TagGroup[]} groups
      * @param {Frame[]} allFrames
      * @param {string} baseUrl Base URL for relative-path frames on a file:// presentation (empty otherwise).
+     * @param {boolean} writeJson Whether to write a combined `tags.json` alongside the folders.
+     * @param {boolean} writeTxt Whether to write one `<tag>.txt` per tag alongside the folders.
      */
-    async export_albums(albums, allFrames, baseUrl = "") {
+    async export_tags(groups, allFrames, baseUrl = "", writeJson = true, writeTxt = true) {
         let sourceIndex = null
         if (allFrames.some(f => this._frame_needs_source(f, baseUrl))) {
             const sourceDir = await this._get_source_dir_handle()
@@ -341,15 +389,18 @@ class Export {
 
         let targetDir
         try {
-            targetDir = await window.showDirectoryPicker({ mode: "readwrite", id: "slidershow-albums-target", startIn: "pictures" })
+            targetDir = await window.showDirectoryPicker({ mode: "readwrite", id: "slidershow-tags-target", startIn: "pictures" })
         } catch (e) {
             return // user cancelled the target folder picker
         }
 
-        const folderNames = ["vsechny", ...albums.map(a => a.name)]
-        // Loose files from a previous export (alba.json, <album>.txt) must abort too, not just the
+        const folderNames = groups.map(a => a.name)
+        // Loose files from a previous export (tags.json, <tag>.txt) must abort too, not just the
         // subfolders – otherwise they're silently overwritten by the fresh run.
-        const fileNames = ["alba.json", ...albums.map(a => `${a.name}.txt`)]
+        const fileNames = [
+            ...(writeJson ? ["tags.json"] : []),
+            ...(writeTxt ? groups.map(a => `${a.name}.txt`) : []),
+        ]
         const conflicts = []
         for (const name of folderNames) {
             const exists = await targetDir.getDirectoryHandle(name).then(() => true, () => false)
@@ -364,7 +415,7 @@ class Export {
             }
         }
         if (conflicts.length) {
-            this.playback.hud.ok("Export albums", `Target folder already contains: ${conflicts.join(", ")}. Pick an empty folder.`)
+            this.playback.hud.ok("Export tags", `Target folder already contains: ${conflicts.join(", ")}. Pick an empty folder.`)
             return
         }
 
@@ -374,23 +425,28 @@ class Export {
         /** @type {Object<string, {copiedNames: string[], missing: string[]}>} */
         const results = {}
 
-        dirHandles["vsechny"] = await targetDir.getDirectoryHandle("vsechny", { create: true })
-        results["vsechny"] = await this._copy_frames(allFrames, dirHandles["vsechny"], sourceIndex, semaphore, baseUrl)
-
-        for (const album of albums) {
-            dirHandles[album.name] = await targetDir.getDirectoryHandle(album.name, { create: true })
-            results[album.name] = await this._copy_frames(album.frames, dirHandles[album.name], sourceIndex, semaphore, baseUrl)
+        for (const group of groups) {
+            dirHandles[group.name] = await targetDir.getDirectoryHandle(group.name, { create: true })
+            results[group.name] = await this._copy_frames(group.frames, dirHandles[group.name], sourceIndex, semaphore, baseUrl)
         }
 
-        await this._write_alba(targetDir, results)
-        this._show_export_summary(targetDir, albums, allFrames, dirHandles, results, semaphore, baseUrl)
+        await this._write_manifest(targetDir, results, writeJson, writeTxt)
+        this._show_export_summary(targetDir, groups, dirHandles, results, semaphore, baseUrl, writeJson, writeTxt)
     }
 
-    async _write_alba(targetDir, results) {
-        const alba = Object.fromEntries(Object.entries(results).map(([name, r]) => [name, r.copiedNames]))
-        await this._write_text(targetDir, "alba.json", JSON.stringify(alba, null, 2))
-        for (const [name, r] of Object.entries(results)) {
-            if (name !== "vsechny") {
+    /**
+     * @param {FileSystemDirectoryHandle} targetDir
+     * @param {Object<string, {copiedNames: string[], missing: string[]}>} results
+     * @param {boolean} writeJson
+     * @param {boolean} writeTxt
+     */
+    async _write_manifest(targetDir, results, writeJson = true, writeTxt = true) {
+        if (writeJson) {
+            const manifest = Object.fromEntries(Object.entries(results).map(([name, r]) => [name, r.copiedNames]))
+            await this._write_text(targetDir, "tags.json", JSON.stringify(manifest, null, 2))
+        }
+        if (writeTxt) {
+            for (const [name, r] of Object.entries(results)) {
                 await this._write_text(targetDir, `${name}.txt`, r.copiedNames.join("\n"))
             }
         }
@@ -398,22 +454,23 @@ class Export {
 
     /**
      * @param {FileSystemDirectoryHandle} targetDir
-     * @param {Album[]} albums
-     * @param {Frame[]} allFrames
+     * @param {TagGroup[]} groups
      * @param {Object<string, FileSystemDirectoryHandle>} dirHandles
      * @param {Object<string, {copiedNames: string[], missing: string[]}>} results
      * @param {Semaphore} semaphore
      * @param {string} baseUrl
+     * @param {boolean} writeJson
+     * @param {boolean} writeTxt
      */
-    _show_export_summary(targetDir, albums, allFrames, dirHandles, results, semaphore, baseUrl = "") {
+    _show_export_summary(targetDir, groups, dirHandles, results, semaphore, baseUrl = "", writeJson = true, writeTxt = true) {
         const summary = Object.entries(results)
             .map(([name, r]) => `${name}: ${r.copiedNames.length} copied` + (r.missing.length ? `, ${r.missing.length} missing` : ""))
             .join("<br>")
         this.playback.hud._pushHistory(summary)
 
-        const missingCount = results["vsechny"].missing.length
+        const missingCount = Object.values(results).reduce((sum, r) => sum + r.missing.length, 0)
         new $.Zebra_Dialog(summary, {
-            title: "Album export finished",
+            title: "Tag export finished",
             type: missingCount ? "question" : "information",
             buttons: missingCount ? [{ caption: "Done" }, {
                 caption: "Change source folder & retry",
@@ -424,7 +481,7 @@ class Export {
                     }
                     const sourceIndex = await this._build_source_index(sourceDir)
                     for (const [name, dirHandle] of Object.entries(dirHandles)) {
-                        const frames = (name === "vsechny" ? allFrames : albums.find(a => a.name === name).frames)
+                        const frames = groups.find(a => a.name === name).frames
                             .filter(f => results[name].missing.includes(f.get_filename()))
                         if (!frames.length) {
                             continue
@@ -433,8 +490,8 @@ class Export {
                         results[name].copiedNames.push(...retried.copiedNames)
                         results[name].missing = retried.missing
                     }
-                    await this._write_alba(targetDir, results)
-                    this._show_export_summary(targetDir, albums, allFrames, dirHandles, results, semaphore, baseUrl)
+                    await this._write_manifest(targetDir, results, writeJson, writeTxt)
+                    this._show_export_summary(targetDir, groups, dirHandles, results, semaphore, baseUrl, writeJson, writeTxt)
                 }
             }] : false
         })
@@ -476,7 +533,7 @@ class Export {
     }
 
     /**
-     * Basename collision within one album folder → `_2`, `_3`, … suffix, never a silent overwrite.
+     * Basename collision within one tag's folder → `_2`, `_3`, … suffix, never a silent overwrite.
      */
     _unique_name(usedNames, filename) {
         let name = filename
@@ -672,7 +729,7 @@ class Export {
      */
     _open_handle_db() {
         return new Promise((resolve, reject) => {
-            const req = indexedDB.open("slidershow-albums", 1)
+            const req = indexedDB.open("slidershow-tag-export", 1)
             req.onupgradeneeded = () => req.result.createObjectStore("handles")
             req.onsuccess = () => resolve(req.result)
             req.onerror = () => reject(req.error)

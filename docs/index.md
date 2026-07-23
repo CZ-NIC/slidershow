@@ -47,7 +47,7 @@ Generate a presentation from a sheet with [slidershow-builder](https://github.co
 ## Where to go next
 
 * [Playback – controls & start](playback.md) – keyboard shortcuts, splash quick-play modes, URL-hash presets.
-* [Organizing & tagging](organizing.md) – thumbnails, grid multi-selection, tagging and album export.
+* [Organizing & tagging](organizing.md) – thumbnails, grid multi-selection, tagging and tag export to albums.
 * [Structure](structure.md) – the `<main>`/`<section>`/`<article>` model and how `sli-*` attributes resolve.
 
 ## License

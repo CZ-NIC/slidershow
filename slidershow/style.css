@@ -798,9 +798,12 @@ frame-preview {
 
             section-controller {
                 display: flex;
-                align-items: center;
+                align-items: flex-start; // the title sits on row 1's line, not centered across rows 1+2
                 padding: 4px 8px;
                 margin: 10px;
+                /* Subsections indent further with each nesting level, so how deep a subsection sits is
+                   visible at a glance – see GridController._assureSection, which sets --depth. */
+                margin-left: calc(10px + var(--depth, 0) * 24px);
 
                 /* the "Presentation" (main) controller is always the grid's first row – give it enough
                    clearance from #control-icons (fixed at top:3vh right:3vw) so its own hover-menu/arrow
@@ -811,6 +814,12 @@ frame-preview {
 
                 &.dragging-target {
                     box-shadow: inset 0px 0px 5px 0px var(--highlight);
+                }
+
+                /* pinned via a plain click as the Ctrl+V destination – see GridController.togglePasteTarget */
+                &.paste-target {
+                    outline: 2px dashed var(--highlight);
+                    outline-offset: 2px;
                 }
 
                 .section-title {
@@ -837,14 +846,25 @@ frame-preview {
 
                 .section-menus {
                     display: flex;
-                    gap: 8px;
-                    align-items: center;
+                    flex-direction: column;
+                    gap: 4px;
                     opacity: 0;
                     transition: opacity 0.15s;
                 }
 
                 &:hover .section-menus {
                     opacity: 1;
+                }
+
+                .section-menu-row {
+                    display: flex;
+                    gap: 8px;
+                    align-items: center;
+                }
+
+                .section-menu-row-label {
+                    opacity: .6;
+                    font-size: 90%;
                 }
 
                 .section-menu {
@@ -1037,6 +1057,22 @@ frame-preview {
                 height: unset;
                 box-shadow: unset;
                 z-index: 10;
+
+                /* dragging a multi-selection: badge on the clone shows how many frames travel along */
+                .drag-count {
+                    position: absolute;
+                    top: -10px;
+                    right: -10px;
+                    background-color: var(--highlight);
+                    color: var(--base);
+                    border-radius: 50%;
+                    min-width: 24px;
+                    height: 24px;
+                    line-height: 24px;
+                    text-align: center;
+                    font-size: 150%;
+                    font-weight: bold;
+                }
             }
         }
     }
@@ -1277,7 +1313,7 @@ article-map {
     }
 }
 
-.album-summary {
+.tag-summary {
     margin: 0 auto .5em;
     text-align: left;
 

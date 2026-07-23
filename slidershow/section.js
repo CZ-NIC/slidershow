@@ -366,16 +366,18 @@ class SectionController {
     }
 
     /**
-     * Sort sections inside <main> alphabetically by their sli-name attribute
+     * Sort $section's direct subsections alphabetically by their sli-name attribute
+     * @param {string} order "asc" or "desc"
+     * @param {JQuery} $section A <section> or <main> whose direct subsections get sorted; defaults to <main>.
      */
-    sortSections(order = "asc") {
+    sortSections(order = "asc", $section = $main) {
         const pl = this.playback
 
         let originalOrder
         pl.changes.undoable(`Sort sections alphabetically`,
             () => {
                 // Save original order for undo
-                originalOrder = this.getDirectSections($main).map((_, el) => el).get()
+                originalOrder = this.getDirectSections($section).map((_, el) => el).get()
 
                 // Sort sections alphabetically by sli-name
                 const sorted = originalOrder.slice().sort((a, b) => {

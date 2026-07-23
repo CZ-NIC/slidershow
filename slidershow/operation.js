@@ -487,7 +487,11 @@ class Operation {
         return group
 
         function zoom(little) {
-            const wzoom = pl.frame.$actor?.data("wzoom")
+            const $actor = pl.frame.$actor
+            if (!$actor?.length) {
+                return
+            }
+            const wzoom = pl.frame.zoom.init($actor)
             if (little === true) {
                 wzoom.zoomUp()
             } else if (little === -1) {
@@ -555,8 +559,8 @@ class Operation {
         const g = () => pl.hud.grid
         return this._group("Grid", [
             ["Enter", "Enter the frame (hides the grid)", () => this.playback.hud.toggle_grid()],
-            // Escape clears the selection first (only then, on a second press, toggles the menu)
-            ["Escape", "Clear selection / menu", () => g().hasSelection() ? g().clearSelection() : pl.hud.toggleMenu()],
+            // Escape drops the clipboard/selection first (only then, on a second press, toggles the menu)
+            ["Escape", "Clear selection / menu", () => g().hasSelection() || g().clipboard ? g().clearClipboardOrSelection() : pl.hud.toggleMenu()],
 
             // Ctrl+Arrow – move the whole selection (or the cursor frame alone) as one block
             ["Ctrl+ArrowUp", "Move selection up", () => g().moveSelection("up")],
@@ -574,6 +578,7 @@ class Operation {
             // free to move on with plain arrows, so a scattered pick can be built by Space+arrows alone)
             ["Space", "Toggle frame in selection", () => g().toggleSelect()],
             ["Ctrl+Space", "Toggle frame in selection", () => g().toggleSelect()],
+            ["Ctrl+a", "Select all", () => g().selectAll()],
             ["Delete", "Delete selection", () => g().deleteSelection()],
 
             // Clipboard – both the Ctrl+letter and the classic Insert/Delete styles
@@ -585,13 +590,13 @@ class Operation {
             ["Shift+Insert", "Paste selection", () => g().paste()],
 
             // plain Arrow – move the cursor, KEEPING the selection (Escape clears it)
-            ["ArrowUp", "Go up", () => g().moveCursor(() => pl.goToFrame(g().getFrameIndexInNextRow(-1)))],
-            ["ArrowDown", "Go down", () => g().moveCursor(() => pl.goToFrame(g().getFrameIndexInNextRow(1)))],
+            ["ArrowUp", "Go up", () => g().moveCursor(() => g().getFrameIndexInNextRow(-1))],
+            ["ArrowDown", "Go down", () => g().moveCursor(() => g().getFrameIndexInNextRow(1))],
             ["ArrowLeft", "Go left", () => g().moveCursor(() => pl.previousFrame())], // normally, left arrow triggers next step but this would block the grid, we need next frame
             ["ArrowRight", "Go right", () => g().moveCursor(() => pl.nextFrame())],
 
-            ["PageUp", "Page up", () => g().moveCursor(() => pl.goToFrame(g().getFrameIndexInNextPage(-1)))],
-            ["PageDown", "Page down", () => g().moveCursor(() => pl.goToFrame(g().getFrameIndexInNextPage(1)))],
+            ["PageUp", "Page up", () => g().moveCursor(() => g().getFrameIndexInNextPage(-1))],
+            ["PageDown", "Page down", () => g().moveCursor(() => g().getFrameIndexInNextPage(1))],
         ],
             [
                 ["Alt+?", "✥", "Navigation help", () =>
@@ -664,7 +669,7 @@ class Operation {
             ["Alt+m", "🧰", "Show splashscreen", () => menu.stop_playback()],
             ["Alt+w", "&#127916;", "Auxiliary window", () => menu.aux_window.open()],
             ['Ctrl+s', "&#128190;", "Export", () => menu.export.export_dialog()],
-            ['Ctrl+Shift+s', "&#128193;", "Export albums to folders…", () => menu.export.export_albums_dialog()],
+            ['Ctrl+Shift+s', "&#128193;", "Export tags to folders…", () => menu.export.export_tags_dialog()],
             ['F1', "&#9432;", "Help", () => menu.help()],
         ])
     }

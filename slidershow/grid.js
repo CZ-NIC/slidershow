@@ -36,6 +36,24 @@ class GridController {
          * sanitized frames a copy-paste clones; `frames` the live originals a cut-paste moves (and, for a
          * cut, the ones painted with the `cut` class). */
         this.clipboard = null
+        /** @type {?JQuery} A section/main ribbon clicked (or arrow-key-navigated onto) to pin the paste
+         * destination – lets Ctrl+V target an empty section, which has no frame of its own to act as the
+         * usual cursor-frame anchor. While set, it also doubles as the keyboard cursor's position (see
+         * _currentPos) so Up/Down/PageUp/PageDown keep working from the ribbon instead of getting stuck.
+         * Cleared by any cursor move onto a frame. */
+        this.pasteTarget = null
+        /** @type {?number} The column Up/Down/PageUp/PageDown last aimed for – kept across calls (even
+         * across a landing on a shorter row, or on an empty-section ribbon with no column of its own) so
+         * repeated vertical moves stay in the same visual column instead of drifting to whatever the
+         * previous (possibly clamped) row happened to land on. Reset on any non-vertical cursor move. */
+        this.preferredCol = null
+    }
+
+    /** Pin `$section` (a <section> or <main>, via its section-controller ribbon) as the next paste's
+     * destination – the frames get prepended into it. Click the same ribbon again to unpin. */
+    togglePasteTarget($section) {
+        this.pasteTarget = this.pasteTarget?.is($section) ? null : $section
+        this._syncSelectionClass()
     }
 
     /**
@@ -158,7 +176,7 @@ class GridController {
                 pl.section_controller.untagAll($section)
                 break
             case "sort-sections":
-                pl.section_controller.sortSections(param)
+                pl.section_controller.sortSections(param, $section)
                 break
             case "flatten-subsections":
                 pl.section_controller.flattenSubsections($section)
@@ -260,7 +278,7 @@ class GridController {
                 $(menu).find("button").each((_, btn) => addCmd(`${group} ${$(btn).text()}`, btn))
             })
 
-            $sc.find("> button").each((_, btn) => {
+            $sc.find(".section-menu-row > button").each((_, btn) => {
 
                 return addCmd($(btn).text(), btn)
             }
@@ -271,64 +289,87 @@ class GridController {
     }
 
 
+    // Row 1 (subsection ops + container-level misc) sits level with the title – it's the first line of
+    // .section-menus, which is a flex sibling of .section-title. Row 2 (own-frame ops) is a second line
+    // below it. Shared by <main> and <section> alike – both can hold subsections and loose frames at once.
+    // Only the row-1 tail differs: a section can be deleted, the presentation can't; only the presentation
+    // shows the tag-filter.
+    _subsectionMenuRow = `<span class="section-menu-row-label">subsection</span>
+                            <div class="section-menu">
+                                <span title="Insert a new empty subsection">add ▾</span>
+                                <div class="dropdown">
+                                    <button data-role='add-subsection' data-param='before' title="Insert a new empty subsection at the very beginning">to the begginning</button>
+                                    <button data-role='add-subsection' data-param='after' title="Insert a new empty subsection at the very end">to the end</button>
+                                </div>
+                            </div>
+                            <div class="section-menu">
+                                <span title="Reorder the direct subsections alphabetically by name">sort ▾</span>
+                                <div class="dropdown">
+                                    <button data-role='sort-sections' data-param='desc' title="Sort subsections Z → A">by name ⇓</button>
+                                    <button data-role='sort-sections' data-param='asc' title="Sort subsections A → Z">by name ⇑</button>
+                                </div>
+                            </div>
+                            <button data-role='flatten-subsections' title="Remove the subsection wrappers, keeping their frames in place (opposite of delete)">flatten</button>`
+
+    _frameMenuRow = `<div class="section-menu-row">
+                            <span class="section-menu-row-label">frames</span>
+                            <div class="section-menu">
+                                <span title="Insert a new frame here">add ▾</span>
+                                <div class="dropdown">
+                                    <button data-role='import' title="Pick a file to import as a new frame">media</button>
+                                    <button data-role='new-frame' title="Insert a new blank text frame">text</button>
+                                </div>
+                            </div>
+                            <div class="section-menu">
+                                <span title="Reorder the direct frames">order ▾</span>
+                                <div class="dropdown">
+                                    <button data-role='name-desc' title="Sort frames Z → A by filename">by name ⇓</button>
+                                    <button data-role='name-asc' title="Sort frames A → Z by filename">by name ⇑</button>
+                                    <button data-role='date-desc' title="Sort frames newest → oldest">by date ⇓</button>
+                                    <button data-role='date-asc' title="Sort frames oldest → newest">by date ⇑</button>
+                                </div>
+                            </div>
+                            <div class="section-menu">
+                                <span title="Split the direct frames into new subsections">regroup ▾</span>
+                                <div class="dropdown">
+                                    <button data-role='regroup' data-param='hours' title="Group frames sharing the same hour into their own subsection">by hours</button>
+                                    <button data-role='regroup' data-param='days' title="Group frames sharing the same day into their own subsection">by days</button>
+                                    <button data-role='regroup' data-param='weeks' title="Group frames sharing the same week into their own subsection">by weeks</button>
+                                    <button data-role='regroup' data-param='months' title="Group frames sharing the same month into their own subsection">by months</button>
+                                    <button data-role='regroup' data-param='years' title="Group frames sharing the same year into their own subsection">by years</button>
+                                    <button data-role='regroup' data-param='tags' title="Group frames by their tag into their own subsection">by tags</button>
+                                </div>
+                            </div>
+                        </div>`
+
     _menuOfMainTemplate = `<div class="section-menus">
-                        <div class="section-menu">
-                            <span>add subsection ▾</span>
-                            <div class="dropdown">
-                                <button data-role='add-subsection' data-param='before'>to the begginning</button>
-                                <button data-role='add-subsection' data-param='after'>to the end</button>
+                        <div class="section-menu-row">
+                            ${this._subsectionMenuRow}
+                            <button data-role='untag-all' title="Clear every tag from all frames inside, recursively">untag all</button>
+                            <div class="section-menu tag-filter-menu">
+                                <span title="Show only frames carrying the checked tag(s)">filter by tag ▾</span>
+                                <div class="dropdown tag-filter-dropdown"></div>
                             </div>
                         </div>
-                        <div class="section-menu">
-                            <span>sort ▾</span>
-                            <div class="dropdown">
-                                <button data-role='sort-sections' data-param='desc'>by name ⇓</button>
-                                <button data-role='sort-sections' data-param='asc'>by name ⇑</button>
-                            </div>
-                        </div>
-                        <button data-role='flatten-subsections'>flatten subsections</button>
-                        <button data-role='untag-all'>untag all</button>
-                        <div class="section-menu tag-filter-menu">
-                            <span>filter by tag ▾</span>
-                            <div class="dropdown tag-filter-dropdown"></div>
-                        </div>
+                        ${this._frameMenuRow}
                     </div>`
 
     _sectionMenuTemplate = `<div class="section-menus">
-                        <div class="section-menu">
-                                <span>order ▾</span>
-                                <div class="dropdown">
-                                    <button data-role='name-desc'>by name ⇓</button>
-                                    <button data-role='name-asc'>by name ⇑</button>
-                                    <button data-role='date-desc'>by date ⇓</button>
-                                    <button data-role='date-asc'>by date ⇑</button>
-                                </div>
-                            </div>
-                            <div class="section-menu">
-                                <span>add ▾</span>
-                                <div class="dropdown">
-                                    <button data-role='import'>media</button>
-                                    <button data-role='new-frame'>text</button>
-                                    <!-- subsection? -->
-                                </div>
-                            </div>
-                            <div class="section-menu">
-                                <span>regroup ▾</span>
-                                <div class="dropdown">
-                                    <button data-role='regroup' data-param='hours'>by hours</button>
-                                    <button data-role='regroup' data-param='days'>by days</button>
-                                    <button data-role='regroup' data-param='weeks'>by weeks</button>
-                                    <button data-role='regroup' data-param='months'>by months</button>
-                                    <button data-role='regroup' data-param='years'>by years</button>
-                                    <button data-role='regroup' data-param='tags'>by tags</button>
-                                </div>
-                            </div>
-                            <button data-role='untag-all'>untag all</button>
-                            <button data-role='delete'>delete</button></div>`
+                        <div class="section-menu-row">
+                            ${this._subsectionMenuRow}
+                            <button data-role='untag-all' title="Clear every tag from all frames inside, recursively">untag all</button>
+                            <button data-role='delete' title="Delete this section AND everything inside it – all its frames and subsections">delete</button>
+                        </div>
+                        ${this._frameMenuRow}
+                    </div>`
 
-    /** <frame-preview> index in this.$framesSections
-    */
+    /** <frame-preview> index in this.$framesSections – or, while a ribbon is pinned as the paste target
+     * (see pasteTarget), that ribbon's own index, so the keyboard cursor can keep moving relative to it
+     * instead of the real (unchanged) current frame it was pinned from. */
     _currentPos() {
+        if (this.pasteTarget) {
+            return this.$framesSections.index(this.pasteTarget[0])
+        }
         return this.$framesSections.index(this.pl.frame.$frame)
     }
 
@@ -338,38 +379,73 @@ class GridController {
         return !!el && ["ARTICLE", "ARTICLE-MAP"].includes(el.tagName)
     }
 
+    /** @param {HTMLElement} el @returns {boolean} A section/main ribbon with no frame anywhere inside it
+     * (recursively) – the only grid positions with no frame of their own to land the cursor on. Arrow
+     * navigation still needs to be able to stop here (see getFrameIndexInNextRow) so Ctrl+V has a way to
+     * target a freshly inserted empty subsection without reaching for the mouse. */
+    _isEmptySection(el) {
+        return ["SECTION", "MAIN"].includes(el.tagName) && $(el).find(FRAME_SELECTOR).length === 0
+    }
+
     /**
      * @param {HTMLElement} el
-     * @returns {boolean} A frame living loose under <main>, in no <section> at all (possibly inside a plain
-     * layout <div>). Its logical home is <main> – the "Presentation" ribbon – not any section.
+     * @returns {boolean} A frame living loose in its nearest section/main – not inside one of that
+     * container's own subsections (possibly inside a plain layout <div>) – while that container DOES have
+     * subsections. Only then does it need a "Loose frames" cue; a section with no subsections at all has
+     * nothing for its own frames to look separated from.
      */
     _isOrphan(el) {
-        return this._isFrameEl(el) && !$(el).closest("section").length
+        if (!this._isFrameEl(el)) return false
+        const $container = $(el).closest("section, main")
+        const sc = this.pl.section_controller
+        return sc.getDirectSections($container).length > 0 && sc.getDirectFrames($container).is(el)
     }
 
     /**
      * @param {number} i Index into this.$framesSections
-     * @returns {boolean} This position starts a run of orphan frames that directly follows an in-section
-     * frame – the exact spot where, without a cue, orphans look "glued" to the previous section. (A run
-     * right after the <main>/<section> ribbon needs no extra cue; the ribbon already heads it.)
+     * @returns {boolean} This position starts a run of orphan frames that directly follows either an
+     * in-section frame or a *different* section's ribbon (ex. an empty subsection just inserted before
+     * it) – the spots where, without a cue, orphans look "glued" to whatever came right before them. A run
+     * right after this frame's OWN container's ribbon needs no extra cue; that ribbon already heads it.
      */
     _orphanRunStart(i) {
-        return this._isOrphan(this.$framesSections[i]) && this._isFrameEl(this.$framesSections[i - 1]) && !this._isOrphan(this.$framesSections[i - 1])
+        const el = this.$framesSections[i]
+        const prev = this.$framesSections[i - 1]
+        if (!this._isOrphan(el) || !prev) return false
+        if (!this._isFrameEl(prev)) {
+            return prev !== $(el).closest("section, main")[0] // some other (sub)section's ribbon, not ours
+        }
+        return !this._isOrphan(prev)
     }
 
+    /**
+     * Besides colMap, also builds `this.rowOf`: a visual row number per this.$framesSections index, used by
+     * getFrameIndexInNextRow to jump by exactly one row regardless of how many thumbnails are in it. A row
+     * is either a run of thumbnails (0..columns-1, wrapping or cut short by the next boundary) or a single
+     * empty-section ribbon (its own dedicated, landable row – see _isEmptySection). A non-empty ribbon gets
+     * no row of its own: it is not a landing spot, so it just tags along with whatever row preceded it,
+     * while still resetting the column so the frames after it start a fresh row.
+     */
     _buildColMap() {
         const colMap = []
+        const rowOf = []
         let col = 0
+        let row = -1
         this.$framesSections.each((i, el) => {
             if (["SECTION", "MAIN"].includes(el.tagName)) {
                 col = 0
                 colMap[i] = null
+                if (this._isEmptySection(el)) row++
+                rowOf[i] = row
             } else {
                 if (this._orphanRunStart(i)) col = 0 // break onto a fresh row under the loose-frames divider
+                if (col === 0) row++
                 colMap[i] = col
+                rowOf[i] = row
                 col = (col + 1) % this.columns
             }
         })
+        this.rowOf = rowOf
         return colMap
     }
 
@@ -462,7 +538,8 @@ class GridController {
     _assureOrphanDivider($thumb, fsIndex) {
         if (fsIndex == null || !this._orphanRunStart(fsIndex)) return
         if ($thumb[0].previousElementSibling?.classList.contains("grid-orphan-divider")) return // already there
-        $("<div/>", { class: "grid-orphan-divider", text: "Loose frames — outside any section" })
+        const isMain = $(this.$framesSections[fsIndex]).closest("section, main").is("main")
+        $("<div/>", { class: "grid-orphan-divider", text: isMain ? "Loose frames — outside any section" : "Loose frames — outside any subsection" })
             .data("fsIndex", fsIndex)
             .insertBefore($thumb)
     }
@@ -535,7 +612,8 @@ class GridController {
      * @param {boolean} prepend
      */
     _assureSection(currentSection, prepend = false) {
-        const $sc = $(`<section-controller>
+        const depth = $(currentSection).parents("section").length // 0 for a top-level section, 1+ for a subsection
+        const $sc = $(`<section-controller style="--depth: ${depth}">
                         <span class="section-title">${this.pl.section_controller.getSectionName($(currentSection))}</span>
                         ${this._sectionMenuTemplate}
                     </section-controller>`)
@@ -624,7 +702,7 @@ class GridController {
     /**
      * Returns the frame index after moving by one page up/down.
      * @param {number} direction 1 = down, -1 = up
-     * @returns {number}
+     * @returns {number|HTMLElement|null}
      */
     getFrameIndexInNextPage(direction) {
         const containerHeight = this.$container[0].clientHeight
@@ -637,35 +715,43 @@ class GridController {
     }
 
     /**
-     * Returns the frame index of the thumbnail that is visually rows above/below the given frame index.
+     * Returns the frame index of the thumbnail that is visually rows above/below the given frame index –
+     * or, if that row is an empty section's ribbon (nothing else to land on), the section element itself.
+     * Jumps by exactly one row even when the target row has fewer thumbnails than the current column –
+     * it clamps to the row's last thumbnail instead of continuing to search further rows for an exact
+     * column match. The aimed-for column is sticky (see preferredCol): it keeps being pursued across
+     * repeated calls even though a short row or an empty-section stop couldn't satisfy it, so e.g. landing
+     * on an empty section (2 rows above a row of 5) and continuing down twice more lands back on the 3rd
+     * thumbnail rather than getting stuck at whatever narrower column the empty row implied.
      * @param {number} rows Positive for down, negative for up
+     * @returns {number|HTMLElement|null}
      */
     getFrameIndexInNextRow(rows) {
         const pos = this._currentPos()
         if (pos === -1) return null
 
-        const currentCol = this.colMap[pos]
-        const direction = rows > 0 ? 1 : -1
-        let i = pos + direction
-        let crossedRows = 0
+        const desiredCol = this.preferredCol ?? this.colMap[pos]
+        this.preferredCol = desiredCol
+        const targetRow = this.rowOf[pos] + rows
 
-        while (i >= 0 && i < this.colMap.length) {
+        if (targetRow < 0) return 0
+        if (targetRow > this.rowOf[this.rowOf.length - 1]) return this.pl.$articles.length - 1
+
+        let ribbon = null, best = null
+        for (let i = 0; i < this.rowOf.length; i++) {
+            if (this.rowOf[i] !== targetRow) continue
             const col = this.colMap[i]
-
             if (col === null) {
-                crossedRows++
-            } else {
-                if (direction > 0 && col < this.colMap[i - 1]) crossedRows++
-                if (direction < 0 && col > this.colMap[i + 1]) crossedRows++
-
-                if (crossedRows >= Math.abs(rows) && col === currentCol) {
-                    return $(this.$framesSections[i]).data("frame")?.index ?? null
-                }
+                ribbon = this.$framesSections[i] // a non-empty ribbon never gets its own row (see _buildColMap)
+                continue
             }
-
-            i += direction
+            if (col <= desiredCol) best = i
+            if (col >= desiredCol) break // first column reaching (or clamped past) the desired one – nearest match
         }
-        return direction > 0 ? this.pl.$articles.length - 1 : 0
+        if (ribbon) {
+            return this._isEmptySection(ribbon) ? ribbon : null
+        }
+        return best != null ? $(this.$framesSections[best]).data("frame")?.index ?? null : null
     }
 
     // ---- Multi-selection ---------------------------------------------------------------------------
@@ -682,6 +768,33 @@ class GridController {
     /** Drop the whole selection (and its anchor) and repaint. */
     clearSelection() {
         this.selection.clear()
+        this.anchor = null
+        this.pasteTarget = null
+        this._syncSelectionClass()
+    }
+
+    /**
+     * The "✖ clear" action: if a cut/copy clipboard is active, drop it first (so cut/copied frames
+     * un-grey without also losing the selection) – only a second call, once the clipboard is already
+     * empty, clears the selection itself.
+     */
+    clearClipboardOrSelection() {
+        if (this.clipboard) {
+            this.clipboard = null
+            this._syncSelectionClass()
+        } else {
+            this.clearSelection()
+        }
+    }
+
+    /** Select every filter-visible frame (Ctrl+A). */
+    selectAll() {
+        this.selection.clear()
+        this.pl.$articles.each((i, el) => {
+            if (this.pl.frame_matches_filter($(el).data("frame"))) {
+                this.selection.add(i)
+            }
+        })
         this.anchor = null
         this._syncSelectionClass()
     }
@@ -717,6 +830,7 @@ class GridController {
             this.selection.add(index)
         }
         this.anchor = index
+        this.pasteTarget = null
         this._syncSelectionClass()
     }
 
@@ -724,22 +838,55 @@ class GridController {
      * Plain cursor move (arrow without a modifier): move the cursor but KEEP the selection, and re-anchor
      * to the new cursor so a following Shift+arrow extends from here. Keeping the selection lets you build a
      * scattered pick with just Space+arrows – Escape (or a plain click) is what clears it.
-     * @param {function} navFn Performs the actual navigation (goToFrame / next-prevFrame).
+     * @param {function} navFn Either performs the navigation itself (previousFrame/nextFrame do that
+     * internally and return undefined), or returns where to go: a frame index, or – when the target row is
+     * an empty section with no frame inside it to land on – its section/main element, pinned as the paste
+     * target instead (see togglePasteTarget) so Ctrl+V still has somewhere to go without a mouse click.
      */
     moveCursor(navFn) {
-        navFn()
+        const target = navFn()
+        if (target instanceof HTMLElement) {
+            this.pasteTarget = $(target)
+            this._syncSelectionClass()
+            this._scrollToSection(this.pasteTarget)
+            return
+        }
+        if (typeof target === "number") {
+            this.pl.goToFrame(target)
+        } else {
+            // navFn performed its own (non-vertical, ex. previousFrame/nextFrame) move – forget the
+            // remembered column so the next Up/Down starts fresh from wherever this actually landed.
+            this.preferredCol = null
+        }
         this.anchor = this.pl.index
+        this.pasteTarget = null
         this._syncSelectionClass()
+    }
+
+    /** Scroll the pinned section's ribbon into view if it is currently rendered but off-screen (a no-op
+     * if it fell outside the grid's lazily-loaded window – same best-effort as _scrollToCurrentFrame). */
+    _scrollToSection($section) {
+        setTimeout(() => {
+            const el = this.$container.children("section-controller")
+                .filter((_, e) => $(e).data("section") === $section[0]).get(0)
+            if (!el) return
+            const rect = el.getBoundingClientRect()
+            if (rect.top < 0 || rect.bottom > document.documentElement.clientHeight) {
+                el.scrollIntoView({ block: "center" })
+            }
+        }, 1)
     }
 
     /**
      * Shift+arrow: stretch/shrink the selection from the anchor to `targetIndex` and move the cursor there.
      * A whole "Shift+Up adds the row above" falls out for free – the row's frames sit in the contiguous
      * index range between anchor and target.
-     * @param {?number} targetIndex
+     * @param {?number|HTMLElement} targetIndex
      */
     extendTo(targetIndex) {
-        if (targetIndex == null || targetIndex < 0 || targetIndex >= this.pl.$articles.length) {
+        // An empty section has no frame to add to the selection – ignore it (getFrameIndexInNextRow may
+        // return its element instead of an index when the target row is such a section).
+        if (typeof targetIndex !== "number" || targetIndex < 0 || targetIndex >= this.pl.$articles.length) {
             return
         }
         if (this.anchor === null) {
@@ -747,6 +894,7 @@ class GridController {
         }
         this._selectRange(this.anchor, targetIndex)
         this.pl.goToFrame(targetIndex)
+        this.pasteTarget = null
         this._syncSelectionClass()
     }
 
@@ -763,6 +911,9 @@ class GridController {
             $(el).toggleClass("selected", this.selection.has(ref))
                 .toggleClass("cut", !!clip?.cut && clipSet.has(ref))
                 .toggleClass("copied", !!clip && !clip.cut && clipSet.has(ref))
+        })
+        this.$container.children("section-controller").each((_, el) => {
+            $(el).toggleClass("paste-target", !!this.pasteTarget?.is($(el).data("section")))
         })
         this.hud.refresh_selection_info()
     }
@@ -1025,7 +1176,8 @@ class GridController {
         this._syncSelectionClass()
     }
 
-    /** Insert the clipboard just after the current cursor frame – cloning on copy, moving on cut. */
+    /** Insert the clipboard just after the current cursor frame (or, if a section ribbon is pinned via
+     * togglePasteTarget, as that section's first frames) – cloning on copy, moving on cut. */
     paste() {
         const pl = this.pl
         const clip = this.clipboard
@@ -1033,21 +1185,23 @@ class GridController {
             pl.shake()
             return
         }
+        const target = this.pasteTarget
         const $cursor = pl.frame.$frame
 
         if (clip.cut) {
             const frames = clip.frames.filter(f => f.$frame.parent().length) // still in the DOM
-            if (!frames.length || frames.some(f => f.index === pl.index)) {
+            if (!frames.length || (!target && frames.some(f => f.index === pl.index))) {
                 pl.shake() // nothing to move, or pasting onto one of the cut frames itself
                 return
             }
             const $frames = $(frames.map(f => f.$frame[0]))
             this.clipboard = null // cleared before the move so _relocate's repaint drops the "cut" marks
-            this._relocate(`Move ${frames.length} frames`, $frames, () => $cursor.after($frames), frames)
+            this._relocate(`Move ${frames.length} frames`, $frames,
+                () => target ? target.prepend($frames) : $cursor.after($frames), frames)
         } else {
             /** @type {JQuery[]} Fresh clones – matches the array-of-jQuery shape SectionController.importFrames expects. */
             const $new = clip.html.map(h => $(h))
-            pl.section_controller.importFrames($new, $cursor, false) // inserted after the cursor, undoable
+            pl.section_controller.importFrames($new, target ?? $cursor, target ? "prepend" : false)
             this.selection = new Set($new.map($f => $f.data("frame")?.index).filter(i => i != null))
             this.anchor = null
             this._syncSelectionClass()

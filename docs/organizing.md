@@ -24,7 +24,7 @@ The selection is a grid-only convenience; it is never saved into the presentatio
 
 While presenting, you may appraise an auxiliary window on the second monitor that shows you the next frame and presenting notes. Start it with <kbd>Alt+W</kbd>.
 
-## Tagging & albums
+## Tagging
 
 Start tagging mode with <kbd>Alt+T</kbd>. Use the Numpad to tag the images – think of a tag as a number that corresponds to one of your categories. A photo may carry several tags at once: hitting a digit again toggles that tag off, <kbd>0</kbd> clears all of them. Text frames (with no photo/video) can be tagged too – their tag rides along in the exported document. Then in the menu, hit <kbd>Alt+Shift+G</kbd> to group the images into `<section>`s according to tags. The resulting sections come out ordered by tag number (1, 2, 3…), with every untagged photo gathered into a single catch-all section at the end. Export with <kbd>Ctrl+S</kbd>. Sorted & ready!
 
@@ -40,11 +40,11 @@ Tags can be named through the "Name tags…" button/command (<kbd>Alt+Shift+T</k
 
 ### Filtering by tag
 
-"Filter by tag…" (command palette, tagging group) shows only frames carrying any of the checked tags – a non-destructive preview of one or several albums at once. It applies both to the grid overview and to normal navigation (next/previous frame skip over hidden ones). A small icon appears next to the frame counter while a filter is active; click it to clear the filter, or reopen "Filter by tag…" to change the selection.
+"Filter by tag…" (command palette, tagging group) shows only frames carrying any of the checked tags – a non-destructive preview of one or several tags at once. It applies both to the grid overview and to normal navigation (next/previous frame skip over hidden ones). A small icon appears next to the frame counter while a filter is active; click it to clear the filter, or reopen "Filter by tag…" to change the selection.
 
-### Exporting albums to folders
+### Exporting tags to album folders
 
-"Export albums to folders…" (<kbd>Ctrl+Shift+S</kbd>, Chrome/Edge only) exports one folder per tag — named tags use their name, unnamed ones a `tag-<digit>` folder — plus a `vsechny` folder with everything, alongside an `alba.json` and one `<album>.txt` per album. Handy to prepare per-person, overlapping albums (e.g. "everyone" / "parents" / "leaders") for dragging into a photo-sharing upload. The dialog previews a per-tag count table and the total size. Photos are read from the in-memory file (if dropped in), fetched over http(s) (if the presentation — or the given "Base URL" — is on the web), or, failing both, from a source folder you pick (searched recursively). Firefox can't write folders; export the presentation with <kbd>Ctrl+S</kbd> (your tags are saved inside it) and re-run this in Chrome.
+"Export tags to folders…" (<kbd>Ctrl+Shift+S</kbd>, Chrome/Edge only) exports one folder per tag — named tags use their name, unnamed ones a `tag-<digit>` folder — alongside a `tags.json` and one `<tag>.txt` per tag. Handy to prepare per-person, overlapping tags (e.g. "everyone" / "parents" / "leaders") for dragging into a photo-sharing upload. The dialog previews a per-tag count table and the total size. Photos are read from the in-memory file (if dropped in), fetched over http(s) (if the presentation — or the given "Base URL" — is on the web), or, failing both, from a source folder you pick (searched recursively). Firefox can't write folders; export the presentation with <kbd>Ctrl+S</kbd> (your tags are saved inside it) and re-run this in Chrome.
 
 !!! note "How tags are stored"
     The tag is stored in the browser ([local storage](https://developer.mozilla.org/en-US/docs/Web/API/Window/localStorage)) by the file name so that you do not lose the information at a sudden crash. However, in case you import another photo with the same name, it will inherit the tag from the clashing file.

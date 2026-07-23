@@ -90,7 +90,7 @@ Standard HTML ID serves for navigation.
 ```
 
 ### `sli-tag`
-Set by the [tagging feature](organizing.md#tagging-albums) on the frame's `<img>`/`<video>`, not hand-authored. Space-separated list of digit tokens, e.g. `sli-tag="1 2"` for a frame in both tag 1 and tag 2.
+Set by the [tagging feature](organizing.md#tagging) on the frame's `<img>`/`<video>`, not hand-authored. Space-separated list of digit tokens, e.g. `sli-tag="1 2"` for a frame in both tag 1 and tag 2.
 
 ### `sli-tag-names`
 On `<main>`: comma-separated display names for tags, position = digit (`sli-tag-names="rodiče,vedoucí"` names tag 1 "rodiče" and tag 2 "vedoucí"). Digits past the list still work, shown as bare numbers.

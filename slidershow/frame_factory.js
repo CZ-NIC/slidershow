@@ -67,7 +67,7 @@ class FrameFactory {
 
     static _read(data, $el) {
         $el
-            .data("file", data) // raw File, so an album export can stream it without re-reading the disk
+            .data("file", data) // raw File, so a tag export can stream it without re-reading the disk
             .data(READ_SRC, (prefer_blob = false) => {
                 return new Promise(resolve => {
                     if (prefer_blob) { // shorter but needed to revoke the URL manually

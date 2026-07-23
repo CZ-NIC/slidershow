@@ -40,7 +40,7 @@ class Hud {
                 case "cut": g.cutSelection(); break
                 case "paste": g.paste(); break
                 case "delete": g.deleteSelection(); break
-                case "clear": g.clearSelection(); break
+                case "clear": g.clearClipboardOrSelection(); break
             }
         })
         this.$hud_properties = $("#hud-properties").hide() // by default off
@@ -323,6 +323,14 @@ class Hud {
             .on("dblclick", "frame-preview", () => this.toggle_grid())
             // grid section buttons
             .on("click", "section-controller button", e => this.grid.sectionMenuAction($($(e.target.closest("section-controller")).data("section")), e.target.dataset.role, e.target.dataset.param))
+            // clicking the ribbon itself (not its buttons) pins/unpins it as the Ctrl+V destination –
+            // lets an empty section (with no frame of its own to anchor the cursor) receive a paste
+            .on("click", "section-controller", e => {
+                if (e.target.closest("button, input, a, .tag-filter-dropdown")) {
+                    return
+                }
+                this.grid.togglePasteTarget($($(e.currentTarget).data("section")))
+            })
             // tag filter dropdown – checking/unchecking applies the filter immediately
             .on("change", ".tag-filter-dropdown input[type=checkbox]", e => {
                 const checked = $(e.currentTarget).closest(".tag-filter-dropdown").find("input:checked").map((_, el) => Number($(el).val())).get()
@@ -620,7 +628,16 @@ class Hud {
         })
             .draggable({  // re-order thumbnails by dragging
                 containment: "parent",
-                helper: "clone",
+                helper: (event) => {
+                    const $el = $(event.target).closest("frame-preview, section-controller")
+                    const $clone = $el.clone()
+                    const ref = Number($el.attr("data-ref"))
+                    const multi = $el.is("frame-preview") && this.grid_visible && this.grid.selection.has(ref) && this.grid.selection.size > 1
+                    if (multi) {
+                        $clone.append($("<span>").addClass("drag-count").text(this.grid.selection.size))
+                    }
+                    return $clone
+                },
                 snapTolerance: 30,
                 scroll: scroll,
                 drag: (_, ui) => {
