@@ -13,7 +13,7 @@ However, this is a non-trivial task since the browser protects your photos' priv
 
 Zoomable on click / mouse wheel or via a button from the menu. You can zoom either an image or a video. Use <kbd>arrows</kbd> to crawl over the picture when zoomed. Even multiple arrows work at once. If you need the arrows to control the video playthrough, use <kbd>Ctrl+arrows</kbd> (works for both Firefox and Chrome).
 
-<!-- MEDIA: zoom.webm — wheel-zoom into a photo, arrow-crawl around it. Generate via Playwright once demo photos provided. -->
+<video autoplay controls muted loop playsinline width="640" src="../assets/zoom.webm" title="Wheel-zooming into a photo and arrow-crawling around it"></video>
 
 ### `sli-step-points`
 
@@ -31,7 +31,7 @@ In this example, the image starts at `[100, 10, 2]`, then zooms out `[]` (instan
 
 Position `0,0` is at the image centre. Its real dimension is taken into account so the value remains stable while changing the browser size (different displays). We recommend using the property panel (<kbd>Alt+P</kbd>) to determine the coordinates.
 
-<!-- MEDIA: step-points.webm — open property panel (Alt+P), click to compose a couple of zoom points, play them back. Generate via Playwright once demo photos provided. -->
+<video autoplay controls muted loop playsinline width="640" src="../assets/step-points.webm" title="Composing sli-step-points in the property panel and stepping through them"></video>
 
 Every image in the sections slowly zooms out from the centre. (Images in header and footer are ignored.)
 
@@ -86,7 +86,7 @@ You prepare the thumbnails yourself (e.g. with `ffmpeg`/`imagemagick`) – Slide
 <img sli-src="photos/oddball.jpg" sli-thumb="thumbs/oddball-special.jpg" />
 ```
 
-The grid/ribbon overview (<kbd>Alt+G</kbd>/<kbd>Alt+J</kbd>) uses the thumbnail exclusively and never downloads the full file just to show a preview.
+The grid/ribbon overview (<kbd>g</kbd>/<kbd>j</kbd>) uses the thumbnail exclusively and never downloads the full file just to show a preview.
 
 ## Fallback source (`sli-fallback`)
 

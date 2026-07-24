@@ -202,14 +202,16 @@ test("export summary offers Change source folder & retry when files are missing,
 
     await expect.poll(() => page.locator(".ZebraDialog").last().textContent()).not.toContain("missing")
 
-    const copied = await page.evaluate(async () => {
+    // The writable's close() may still be settling the OPFS swap file (ex: "three.jpg.crswap") on a
+    // slower/busier machine – poll instead of reading the listing the instant export_tags() resolves.
+    const listCopied = () => page.evaluate(async () => {
         const root = await navigator.storage.getDirectory()
         const vedouci = await (await root.getDirectoryHandle("target")).getDirectoryHandle("vedouci")
         const names = []
         for await (const name of vedouci.keys()) names.push(name)
         return names.sort()
     })
-    expect(copied).toEqual(["three.jpg", "two.jpg"])
+    await expect.poll(listCopied).toEqual(["three.jpg", "two.jpg"])
 })
 
 test("collect_tag_groups also exports unnamed tags into a tag-<digit> folder", async ({ page }) => {

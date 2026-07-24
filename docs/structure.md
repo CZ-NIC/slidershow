@@ -2,7 +2,47 @@
 
 Put the presentation content into the `<main>` tag, which contains `<article>` tags (~ frames).
 
-<!-- MEDIA: structure diagram — main > section > article > img. A mermaid graph or a PNG. Can be authored now, no photos needed. -->
+```mermaid
+graph TD
+    main["&lt;main&gt;<br/>top-level container"]
+    section1["&lt;section&gt;<br/>group 1"]
+    section2["&lt;section&gt;<br/>group 2"]
+    
+    article1["&lt;article&gt;<br/>frame 1"]
+    article2["&lt;article&gt;<br/>frame 2"]
+    article3["&lt;article&gt;<br/>frame 3"]
+    article4["&lt;article&gt;<br/>frame 4"]
+    
+    img1["&lt;img&gt; or &lt;video&gt;<br/>media"]
+    img2["&lt;img&gt; or &lt;video&gt;<br/>media"]
+    img3["&lt;img&gt; or &lt;video&gt;<br/>media"]
+    img4["&lt;img&gt; or &lt;video&gt;<br/>media"]
+    
+    main --> section1
+    main --> section2
+    main -.-> article3["&lt;article&gt;<br/>loose frame"]
+    
+    section1 --> article1
+    section1 --> article2
+    section2 --> article4
+    
+    article1 --> img1
+    article2 --> img2
+    article4 --> img4
+    article3 --> img3
+    
+    style main fill:#e1f5ff
+    style section1 fill:#b3e5fc
+    style section2 fill:#b3e5fc
+    style article1 fill:#81d4fa
+    style article2 fill:#81d4fa
+    style article3 fill:#81d4fa
+    style article4 fill:#81d4fa
+    style img1 fill:#4fc3f7
+    style img2 fill:#4fc3f7
+    style img3 fill:#4fc3f7
+    style img4 fill:#4fc3f7
+```
 
 ## How attributes resolve
 

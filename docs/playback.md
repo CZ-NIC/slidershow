@@ -21,7 +21,7 @@ When a presentation is loaded, the splash shows a short summary of what is loade
 
 The last few presentations you opened are listed under "Recent" so you can jump back to them.
 
-<!-- MEDIA: start-splash.png — the menu splash with summary + quick-play buttons + Recent list. Static screenshot via Playwright once demo photos provided. -->
+![The menu splash with summary, quick-play buttons and Recent list](assets/start-splash.png)
 
 ### URL-hash presets
 

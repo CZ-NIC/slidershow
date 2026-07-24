@@ -2,9 +2,17 @@
 
 ## Thumbnails ribbon and grid
 
-While presenting, press <kbd>Alt+J</kbd> to display the thumbnail ribbon or <kbd>Alt+G</kbd> to see the full grid. There, you can easily sort the frames. Either move them one by one or sort a whole section (by EXIF date or file names). Import new images just by dragging them in.
+While presenting, press <kbd>j</kbd> to display the thumbnail ribbon or <kbd>g</kbd> to see the full grid. There, you can easily sort the frames. Either move them one by one or sort a whole section (by EXIF date or file names). Import new images just by dragging them in.
 
-<!-- MEDIA: grid-overview.webm — open grid (Alt+G), drag a frame, sort a section by date. Generate via Playwright once demo photos provided. -->
+<video autoplay controls muted loop playsinline width="640" src="../assets/grid-overview.webm" title="Opening the grid and dragging a thumbnail to reorder it"></video>
+
+**Reordering thumbnails.** Click and drag a tile to move it, or use Ctrl+Arrow to shift the whole selection as a block.
+
+<video autoplay controls muted loop playsinline width="640" src="../assets/grid-sort.webm" title="Sorting a whole section by EXIF date via the grid ribbon's order ▾ menu"></video>
+
+**Sorting by EXIF date or file names.** Each section's ribbon menu has an "order ▾" button for bulk sorting without hand-dragging.
+
+<video autoplay controls muted loop playsinline width="640" src="../assets/grid-import.webm" title="Dragging new photos straight onto the grid to import them"></video>
 
 ### Multi-selection
 
@@ -16,7 +24,11 @@ The grid supports a file-manager style multi-selection – the current (highligh
 - <kbd>Ctrl+Arrow</kbd> moves the whole selection as one block (a single undoable), even across sections, and is symmetric – <kbd>Ctrl+Down</kbd> then <kbd>Ctrl+Up</kbd> returns to the exact layout. Dragging a selected thumbnail moves the whole selection. With nothing selected it moves just the current frame, as before.
 - With the selection in place: a digit tags every selected frame at once (bulk-consistent: if they all already carry the tag, it is removed from all), <kbd>0</kbd> untags them, <kbd>Delete</kbd> removes them, and <kbd>Ctrl+C</kbd>/<kbd>Ctrl+X</kbd>/<kbd>Ctrl+V</kbd> (or the classic <kbd>Ctrl+Insert</kbd> / <kbd>Shift+Delete</kbd> / <kbd>Shift+Insert</kbd>) copy / cut / paste them after the cursor – each as one undoable step.
 
-<!-- MEDIA: multiselect.webm — Space+arrows to build a scattered pick, then Ctrl+Arrow to move the block. Generate via Playwright once demo photos provided. -->
+<video autoplay controls muted loop playsinline width="640" src="../assets/multiselect-scatter.webm" title="Space+arrows building a scattered multi-selection"></video>
+
+**Building a scattered selection.** Use Space to toggle frames in and out, combined with arrow keys to move the cursor without losing the selection.
+
+<video autoplay controls muted loop playsinline width="640" src="../assets/multiselect-move.webm" title="Shift+Arrow extending a range, Ctrl+Arrow moving the whole block"></video>
 
 The selection is a grid-only convenience; it is never saved into the presentation nor exported.
 
@@ -28,7 +40,7 @@ While presenting, you may appraise an auxiliary window on the second monitor tha
 
 Start tagging mode with <kbd>Alt+T</kbd>. Use the Numpad to tag the images – think of a tag as a number that corresponds to one of your categories. A photo may carry several tags at once: hitting a digit again toggles that tag off, <kbd>0</kbd> clears all of them. Text frames (with no photo/video) can be tagged too – their tag rides along in the exported document. Then in the menu, hit <kbd>Alt+Shift+G</kbd> to group the images into `<section>`s according to tags. The resulting sections come out ordered by tag number (1, 2, 3…), with every untagged photo gathered into a single catch-all section at the end. Export with <kbd>Ctrl+S</kbd>. Sorted & ready!
 
-<!-- MEDIA: tagging.webm — Alt+T, tag photos with numpad, Alt+Shift+G to group into sections, export. THE key "aha" clip. Generate via Playwright once demo photos provided. -->
+<video autoplay controls muted loop playsinline width="640" src="../assets/tagging.webm" title="Tagging photos, grouping them into sections by tag, and exporting"></video>
 
 To wipe tags again, the grid ribbon has an "untag all" button on each section and on the whole presentation, clearing the tags of every frame inside in one undoable step.
 
@@ -50,4 +62,4 @@ Tags can be named through the "Name tags…" button/command (<kbd>Alt+Shift+T</k
     The tag is stored in the browser ([local storage](https://developer.mozilla.org/en-US/docs/Web/API/Window/localStorage)) by the file name so that you do not lose the information at a sudden crash. However, in case you import another photo with the same name, it will inherit the tag from the clashing file.
 
 !!! note "How grouping works"
-    It iterates over all the frames and, if they are not already in a section having the same name (tag), it creates such a section. A frame with several tags is grouped only by the first one (with a notice); so at the first grouping, frames keep their former order in the new sections. The second time, they get appended to the section's end. You can easily re-order by date etc. in the grid view (<kbd>Alt+G</kbd>).
+    It iterates over all the frames and, if they are not already in a section having the same name (tag), it creates such a section. A frame with several tags is grouped only by the first one (with a notice); so at the first grouping, frames keep their former order in the new sections. The second time, they get appended to the section's end. You can easily re-order by date etc. in the grid view (<kbd>g</kbd>).

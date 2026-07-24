@@ -17,7 +17,9 @@ test("playback.preloaded stays in sync with the [sli-preloaded] attribute across
     expect(await setSize()).toBe(await attrPreloadedCount())
 
     await page.evaluate(() => playback.nextFrame())
-    await page.waitForTimeout(200) // background preload/unload bookkeeping runs async
+    // background preload/unload bookkeeping runs async – poll instead of a fixed wait, since how long it
+    // actually takes varies with machine load (a flat timeout was too tight on slower CI runners)
+    await expect.poll(async () => await setSize() === await attrPreloadedCount()).toBe(true)
     expect(await setSize()).toBe(await attrPreloadedCount())
 })
 
@@ -48,7 +50,10 @@ test("duplicating a frame and navigating around it doesn't crash the preload/unl
 
     await page.evaluate(() => playback.nextFrame())
     await page.evaluate(() => playback.previousFrame())
-    await page.waitForTimeout(200)
+    // see the "stays in sync" test above re: polling instead of a fixed wait
+    const setSize = () => page.evaluate(() => playback.preloaded.size)
+    const attrPreloadedCount = () => page.evaluate(() => $("[sli-preloaded]").length)
+    await expect.poll(async () => await setSize() === await attrPreloadedCount()).toBe(true)
 
-    expect(await page.evaluate(() => playback.preloaded.size)).toBe(await page.evaluate(() => $("[sli-preloaded]").length))
+    expect(await setSize()).toBe(await attrPreloadedCount())
 })
