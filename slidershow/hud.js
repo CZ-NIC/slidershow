@@ -247,8 +247,12 @@ class Hud {
     }
 
     toggle_grid() {
-        let on = false
         this.$hud_grid.toggle()
+        // Hotkeys must track visibility alone – tying them to frameReady too left the grid's own
+        // hotkeys (Up/Down, Shift+Arrow, …) permanently disabled whenever the grid was restored open
+        // from the hash before the first frame was entered, since nothing re-toggled them once the
+        // frame became ready afterwards.
+        const on = this.grid_visible
         // The main view's own #hud-loading/#hud-retry (Hud.loading()) are fixed to the viewport center –
         // meaningless (and confusing, landing on top of some unrelated tile) while the grid covers it, since
         // the grid already has its own per-tile and aggregate loading indicators.
@@ -256,8 +260,7 @@ class Hud {
         // this.playback.frame is never falsy (it defaults to a dummy Frame with no .index) – check .index
         // to tell whether the frame has actually been entered yet (session restore from the hash).
         const frameReady = this.playback.frame?.index !== undefined
-        if (this.grid_visible && frameReady) {
-            on = true
+        if (on && frameReady) {
             this.display_grid(true)
         } else {
             // even that the frame was focused, it was not yet prepared and entered

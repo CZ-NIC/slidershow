@@ -158,10 +158,10 @@ class GridController {
                 order((frame1, frame2) => frame1.get_filename().localeCompare(frame2.get_filename()))
                 break
             case "date-desc":
-                order((frame1, frame2) => (frame2.$actor ? prop("datetime", frame2.$actor) : undefined) < (frame1.$actor ? prop("datetime", frame1.$actor) : undefined) ? 1 : -1)
+                order((frame1, frame2) => (frame1.$actor ? prop("datetime", frame1.$actor) : undefined) < (frame2.$actor ? prop("datetime", frame2.$actor) : undefined) ? 1 : -1)
                 break
             case "date-asc":
-                order((frame1, frame2) => (frame1.$actor ? prop("datetime", frame1.$actor) : undefined) < (frame2.$actor ? prop("datetime", frame2.$actor) : undefined) ? 1 : -1)
+                order((frame1, frame2) => (frame2.$actor ? prop("datetime", frame2.$actor) : undefined) < (frame1.$actor ? prop("datetime", frame1.$actor) : undefined) ? 1 : -1)
                 break
             case "new-frame":
                 pl.section_controller.insertNewFrame(rightPlace())

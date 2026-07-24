@@ -15,3 +15,14 @@ test("toggling the grid before the first frame is entered does not crash goToFra
 
     expect(errors).toEqual([])
 })
+
+test("restoring &state=grid from the hash before the first frame is entered still leaves the grid's own hotkeys enabled once it is", async ({ page }) => {
+    // state=start skips the splash screen, so the grid restore (session.js restore_state's "grid" case)
+    // runs while playback.frame is still the dummy pre-boot Frame – the exact race that left Hud.toggle_grid()
+    // computing "on" as false forever after (see CHANGELOG "that same .index-readiness check...").
+    await page.goto(FIXTURE + "#1&state=start,grid")
+    await expect.poll(() => page.evaluate(() => typeof playback !== "undefined" && playback.frame?.index !== undefined)).toBe(true)
+
+    expect(await page.evaluate(() => playback.hud.grid_visible)).toBe(true)
+    expect(await page.evaluate(() => playback.operation.grid.some(h => h.enabled))).toBe(true)
+})
