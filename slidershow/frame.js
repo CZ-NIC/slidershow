@@ -1351,9 +1351,16 @@ class Frame {
     /**
      * Lightweight grid/ribbon preview built from the `sli-thumb` image alone – it never triggers
      * (or waits for) a full-quality preload, so browsing thousands of large photos in the grid stays cheap.
+     * @param {Function} [onProgress] Called with an integer percent (0-100) as the thumbnail's bytes arrive
+     *  (see Frame._fetch_with_progress) – omit when the caller has no use for it (ex: a memoized re-render).
+     * @param {Function} [onStart] Called once the concurrency limiter below actually hands this probe a
+     *  slot – a big grid can queue far more thumbnails than `THUMB_CONCURRENCY` lets run at once, so most
+     *  of a tile's "loading" time is spent merely waiting in line, not fetching; callers tracking how long
+     *  a fetch has been genuinely in flight (ex: the grid's stuck-fetch detector) should (re)start their
+     *  clock here instead of from whenever the tile was first queued.
      * @returns {Promise<?string>} HTML, or null when there is no usable thumbnail (caller should fall back to preload() + get_preview()).
      */
-    async get_preview_thumb() {
+    async get_preview_thumb(onProgress, onStart) {
         if (!this.$actor.length) {
             return null
         }
@@ -1366,9 +1373,16 @@ class Frame {
         // at once), which over http(s) floods the browser's per-host connection pool and starves them all.
         const distance = Math.abs(this.index - this.playback.index)
         const release = distance > 0 ? await this.playback.thumb_loader.acquire(() => distance) : () => { }
+        onStart?.()
         let ok
         try {
-            ok = await Frame.probe_image(thumb)
+            // A detached, throwaway $el – probe_image_with_progress only needs it to stash its
+            // AbortController on; unlike the frame's own full-quality fetch this thumbnail probe isn't
+            // tied to the frame's lifecycle (Frame.unload_media() never targets it), which is fine since
+            // it's short-lived and was never cancellable before either.
+            ok = onProgress
+                ? !!(await Frame.probe_image_with_progress($("<img/>"), thumb, onProgress))
+                : await Frame.probe_image(thumb)
         } finally {
             release()
         }

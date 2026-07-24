@@ -349,7 +349,14 @@ frame-preview {
         }
     }
 
-    /* Loading spinner, shown (via .active) while the current frame's full-quality media is still downloading. */
+    /* Loading spinner, shown (via .active) while the current frame's full-quality media is still downloading.
+       Fixed to the viewport center, so hidden outright while the grid is open (see Hud.toggle_grid()) –
+       otherwise it landed on top of some unrelated tile, looking like it belonged to that tile's own load. */
+    &.grid-open #hud-loading,
+    &.grid-open #hud-retry {
+        display: none !important;
+    }
+
     #hud-loading {
         display: none;
         position: fixed;
@@ -603,7 +610,7 @@ frame-preview {
         border: 2px solid color-mix(in srgb, var(--surface-white) 30%, transparent);
         border-top-color: var(--indicator-progress);
         border-radius: 50%;
-        pointer-events: none;
+        cursor: pointer;
         animation: hud-spin .8s linear infinite;
 
         &.active {
@@ -621,6 +628,36 @@ frame-preview {
             font-size: 50%;
             color: var(--indicator-progress);
             white-space: nowrap;
+        }
+    }
+
+    /* Plain list of every grid thumbnail fetch currently in flight (queued or actually downloading),
+       toggled by clicking #hud-grid-loading itself – see Hud._toggleGridLoadingFiles(). */
+    #hud-grid-loading-files {
+        display: none;
+        position: absolute;
+        top: 100%;
+        left: 50%;
+        transform: translateX(-50%);
+        margin-top: .5em;
+        max-height: 40vh;
+        max-width: 60vw;
+        overflow-y: auto;
+        padding: .5em .8em;
+        border-radius: .5em;
+        background-color: color-mix(in srgb, var(--bg-dark) 75%, transparent);
+        box-shadow: 0 2px 8px color-mix(in srgb, var(--bg-dark) 40%, transparent);
+        font-size: 80%;
+        white-space: nowrap;
+        text-align: left;
+
+        &.active {
+            display: block;
+        }
+
+        .empty {
+            opacity: .6;
+            text-align: center;
         }
     }
 
@@ -999,7 +1036,10 @@ frame-preview {
 
             /* Per-tile spinner, shown while this thumbnail's own preview is still being fetched
                (assureThumbnail() in hud.js toggles the class once the HTML lands). Small ring centered
-               over the tile, independent of the aggregate #hud-grid-loading percentage above the grid. */
+               over the tile, independent of the aggregate #hud-grid-loading percentage above the grid.
+               Neutral/grey while merely queued behind THUMB_CONCURRENCY's concurrent slots (nothing is
+               downloading yet, so a percentage would be meaningless); switches to the active color once
+               ".fetching" lands (assureThumbnail()'s onStart, or immediately for the fallback path). */
             &.loading::after {
                 content: '';
                 position: absolute;
@@ -1009,9 +1049,33 @@ frame-preview {
                 height: 20px;
                 margin: -10px 0 0 -10px;
                 border: 3px solid color-mix(in srgb, var(--bg-dark) 20%, transparent);
-                border-top-color: var(--indicator-progress);
+                border-top-color: color-mix(in srgb, var(--bg-dark) 45%, transparent);
                 border-radius: 50%;
                 animation: hud-spin .8s linear infinite;
+            }
+
+            &.loading.fetching::after {
+                border-top-color: var(--indicator-progress);
+            }
+
+            /* Buffered/download percentage (see assureThumbnail() in hud.js). Empty text collapses to
+               nothing. Unlike #hud-loading's span, this one needs no counter-rotation: the ring above is a
+               ::after on this same element, not an ancestor of this span, so nothing here is actually being
+               spun in the first place – adding a counter-spin would just rotate the text for no reason
+               (and desync into upside-down at random, since nothing here it's meant to cancel out). */
+            .loading-percent {
+                display: none;
+            }
+
+            &.loading .loading-percent {
+                display: block;
+                position: absolute;
+                top: 50%;
+                left: 50%;
+                translate: -50% 16px;
+                font-size: 11px;
+                color: var(--indicator-progress);
+                white-space: nowrap;
             }
 
             /* Multi-selection (grid only). The cursor frame is `.current`; the other chosen frames are

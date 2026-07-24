@@ -1,7 +1,11 @@
 # CHANGELOG
 
 ## 1.0.0 (unreleased)
-* feat (grid): each thumbnail still waiting on its own preview fetch now shows a small per-tile spinner, in addition to the existing aggregate spinner+percentage above the grid
+* feat (grid): each thumbnail still waiting on its own preview fetch now shows a small per-tile spinner with its own buffered/download percentage, in addition to the existing aggregate spinner+percentage above the grid – works for both the normal `sli-thumb` probe and the full-quality fallback. A tile's ring is grey while merely queued behind `THUMB_CONCURRENCY`'s concurrent slots and turns to the active color once it actually starts downloading
+* feat (grid): clicking the aggregate spinner+percentage badge above the grid toggles a plain list of every file currently loading (queued or in flight)
+* fix (grid): a tile's spinner could keep spinning forever if its own thumbnail fetch threw (now caught and cleared) – most visible when leaving to the main view mid-fetch and coming back
+* fix (grid): on a large presentation (hundreds of frames) with a slow connection, most of a tile's "loading" time is spent queued behind `THUMB_CONCURRENCY`'s 8 concurrent slots, not actually fetching – the stuck-fetch detector was timing that queue wait too, so dozens of tiles that were merely waiting their turn got wrongly folded into "⚠ Retry N frames" and never got a chance to show their own percentage; it now restarts each tile's clock once it actually gets a fetch slot
+* fix (grid): the main view's own loading spinner/retry button (fixed to the viewport center) stayed visible while the grid was open, landing on top of some unrelated tile and looking like it belonged to it – now hidden whenever the grid is open
 * fix (grid): toggling the grid (ex. via `&state=grid` in the hash) before the first frame had been entered threw `Cannot read properties of undefined (reading 'index')` – `Hud.toggle_grid()` treated `playback.frame` as ready whenever it was truthy, but it's never falsy (it defaults to a dummy `Frame` with no `.index`); it now checks `.index` instead, and `Playback.goToFrame()` no-ops instead of crashing if it still can't resolve a frame
 * fix (grid): pressing <kbd>Delete</kbd> while the cursor was pinned on a section's ribbon (paste target) deleted the last-focused frame instead of the section
 * fix (grid): "delete" on the top-level "Presentation" ribbon (or <kbd>Delete</kbd> pinned there) detached `<main>` itself, wiping the whole presentation – it now clears the presentation's content instead, keeping `<main>` intact

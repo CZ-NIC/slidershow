@@ -216,8 +216,9 @@ function get_menu() {
         </div>
         <div id="hud-properties"></div>
         <div id="hud-grid-status">
-            <div id="hud-grid-loading"><span></span></div>
+            <div id="hud-grid-loading" title="Click to list the files currently loading"><span></span></div>
             <span id="hud-grid-retry" title="Retry loading these files"></span>
+            <div id="hud-grid-loading-files"></div>
         </div>
         <div id="hud-selection" style="display:none">
             <button data-sel="clear" title="Clear selection (Escape)">&#10006;</button>

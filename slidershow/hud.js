@@ -29,8 +29,9 @@ class Hud {
         this.grid = new GridController(this.playback, this, this.$hud_grid)
         // Spinner + percentage / retry badge, own row just below #hud-selection – see _updateGridStatusRow().
         this.$hud_grid_status = $("#hud-grid-status")
-        this.$hud_grid_loading = $("#hud-grid-loading")
+        this.$hud_grid_loading = $("#hud-grid-loading").on("click", () => this._toggleGridLoadingFiles())
         this.$hud_grid_loading_percent = this.$hud_grid_loading.find("span")
+        this.$hud_grid_loading_files = $("#hud-grid-loading-files")
         this._grid_loading_pending = 0
         this._grid_loading_total = 0
         /** @type {Set<Frame>} Frames whose grid thumbnail failed outright (both the sli-thumb probe, if
@@ -248,6 +249,10 @@ class Hud {
     toggle_grid() {
         let on = false
         this.$hud_grid.toggle()
+        // The main view's own #hud-loading/#hud-retry (Hud.loading()) are fixed to the viewport center –
+        // meaningless (and confusing, landing on top of some unrelated tile) while the grid covers it, since
+        // the grid already has its own per-tile and aggregate loading indicators.
+        $("#hud").toggleClass("grid-open", this.grid_visible)
         // this.playback.frame is never falsy (it defaults to a dummy Frame with no .index) – check .index
         // to tell whether the frame has actually been entered yet (session restore from the hash).
         const frameReady = this.playback.frame?.index !== undefined
@@ -459,6 +464,7 @@ class Hud {
         if (!$thumbnail.length) { // this thumbnail does not exist yet
             // go to frame
             $thumbnail = $("<frame-preview/>", { "data-ref": frame.index, class: "loading" })
+                .append($("<span/>", { class: "loading-percent" }))
 
             const isGrid = $container.is(this.$hud_grid)
             if (isGrid) {
@@ -478,10 +484,42 @@ class Hud {
                     // not re-clone its subtree and re-probe the thumb image every time it re-enters the grid.
                     let html = this.previewCache.get(frame)
                     if (html === undefined) {
-                        html = await frame.get_preview_thumb()
+                        const $percent = $thumbnail.find(".loading-percent")
+                        html = await frame.get_preview_thumb(
+                            percent => $percent.text(percent + "%"),
+                            // A big grid can queue far more tiles than THUMB_CONCURRENCY runs at once (see
+                            // get_preview_thumb's jsdoc) – restart this tile's "pending since" clock once it
+                            // actually gets a fetch slot, so _checkStuckGridFrames measures genuine in-flight
+                            // hangs instead of flagging tiles that were merely still waiting in the queue, and
+                            // switch the ring from the neutral "queued" color to the active "fetching" one.
+                            () => {
+                                if (isGrid) this._grid_pending_since.set($thumbnail[0], { frame, since: Date.now() })
+                                $thumbnail.addClass("fetching")
+                            }
+                        )
                         if (html === null) {
+                            $percent.text("") // sli-thumb probe (if any) may have left a stale percent behind
+                            $thumbnail.addClass("fetching") // no per-slot start signal for the full-quality fallback; approximate as "started now"
                             frame.preload()
+
+                            // Mirror Hud.loading()'s progress reporting (see there), but onto this tile's own
+                            // ".loading-percent" span instead of the shared main-view one – ".gridtile" is an
+                            // extra namespace tag so .off() below only unbinds this listener, never the main
+                            // view's "slidershow"-namespaced one on the same frame's actor.
+                            const $video = frame.$actor.is("video") ? frame.$actor : null
+                            $video?.on("progress.slidershow.gridtile", () => {
+                                const el = /** @type {HTMLVideoElement} */ ($video[0])
+                                if (el.duration && isFinite(el.duration) && el.buffered.length) {
+                                    $percent.text(Math.round(el.buffered.end(el.buffered.length - 1) / el.duration * 100) + "%")
+                                }
+                            })
+                            const $img = frame.$actor.is("img") ? frame.$actor : null
+                            $img?.on("loadprogress.slidershow.gridtile", (e, percent) => $percent.text(percent + "%"))
+
                             await frame.loaded
+                            $video?.off("progress.slidershow.gridtile")
+                            $img?.off("loadprogress.slidershow.gridtile")
+
                             html = frame.get_preview() // full preview, not cached (depends on live preload state)
                             if (isGrid && frame.load_failed) {
                                 this._grid_failed.add(frame)
@@ -493,7 +531,7 @@ class Hud {
                         if (!$thumbnail[0].isConnected) return // could have been removed while awaiting
                     }
 
-                    $thumbnail.removeClass("loading").html(html)
+                    $thumbnail.removeClass("loading fetching").html(html)
                     if (!$thumbnail.text().trim()) {
                         // Strange bug. When having just a full-stretched image in the frame, vertical scrollbar appeared unless font-size or line-height were zero.
                         // When I copied full HTML, no scrollbar was visible, albeit I found no single difference in the DevTools.
@@ -515,7 +553,13 @@ class Hud {
                     // the scale Infinity and blow the preview out of its cell – fall back to a live frame / the window.
                     const fullWidth = pl.$current.width() || pl.$articles.first().width() || $(window).width()
                     $(":first", $thumbnail).css({ "scale": String($thumbnail.width() / fullWidth) })
+                } catch (e) {
+                    // Whatever went wrong (ex: the same frame's full-quality load rejecting because the main
+                    // view navigated away mid-fetch), never leave the tile spinning forever with no visible
+                    // outcome – drop it back to "not loaded", the user can retry via the grid retry badge.
+                    console.error("Grid thumbnail failed to load", frame, e)
                 } finally {
+                    $thumbnail.removeClass("loading fetching")
                     if (isGrid) {
                         this._gridLoadingDelta(-1)
                         this._grid_pending_since.delete($thumbnail[0])
@@ -558,6 +602,34 @@ class Hud {
             this._grid_loading_total = 0
         }
         this._updateGridStatusRow()
+        this._refreshGridLoadingFiles()
+    }
+
+    /**
+     * Toggle #hud-grid-loading-files, a plain list of every grid thumbnail fetch currently in flight (both
+     * merely queued and actually downloading – see _grid_pending_since), shown/hidden by clicking the
+     * spinner+percentage badge (#hud-grid-loading) itself.
+     */
+    _toggleGridLoadingFiles() {
+        this._grid_loading_files_open = !this._grid_loading_files_open
+        this.$hud_grid_loading_files.toggleClass("active", this._grid_loading_files_open)
+        this._refreshGridLoadingFiles()
+    }
+
+    /**
+     * Repaint #hud-grid-loading-files from `_grid_pending_since` – a no-op while the panel is closed.
+     * Called from _gridLoadingDelta() so the list stays live as fetches start/finish while it's open.
+     */
+    _refreshGridLoadingFiles() {
+        if (!this._grid_loading_files_open) {
+            return
+        }
+        const names = [...this._grid_pending_since.values()].map(({ frame }) => frame.get_filename())
+        this.$hud_grid_loading_files.empty()
+        if (!names.length) {
+            $("<div/>", { class: "empty", text: "—" }).appendTo(this.$hud_grid_loading_files)
+        }
+        names.forEach(name => $("<div/>", { text: name }).appendTo(this.$hud_grid_loading_files))
     }
 
     /**
