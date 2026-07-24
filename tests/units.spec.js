@@ -15,3 +15,119 @@ test("getEndTimeFromURL parses ss, mm:ss and hh:mm:ss media fragments", async ({
     ])
     expect(values).toEqual([20, 90, 3670, undefined])
 })
+
+test("slugify strips illegal filename chars, collapses whitespace, trims separators", async ({ page }) => {
+    await page.goto(FIXTURE)
+    await expect(page.locator("#start")).toBeVisible()
+
+    const values = await page.evaluate(() => [
+        slugify("Dovolená 2019"),
+        slugify("  a/b\\c:d?e  "),
+        slugify("...trim---me..."), // dots trimmed, internal dash-run collapsed
+        slugify('<>:"|?*'), // all illegal → empty
+        slugify(""),
+    ])
+    expect(values).toEqual(["Dovolená-2019", "a-b-c-d-e", "trim-me", "", ""])
+})
+
+test("export_filename follows the presentation name, falls back to docname", async ({ page }) => {
+    await page.goto(FIXTURE)
+    await expect(page.locator("#start")).toBeVisible()
+
+    const result = await page.evaluate(() => {
+        const before = export_filename() // no name yet → docname() fallback (…/basic.html)
+        playback.set_presentation_name("Dovolená 2019")
+        const named = { name: presentation_name(), title: document.title, file: export_filename(), attr: $main.attr("sli-title") }
+        playback.changes.undo() // restores both attr and document.title
+        const undone = { name: presentation_name(), file: export_filename(), attr: $main.attr("sli-title") }
+        return { before, named, undone }
+    })
+
+    expect(result.before).toBe("basic.html")
+    expect(result.named).toEqual({
+        name: "Dovolená 2019", title: "Dovolená 2019", file: "Dovolená-2019.html", attr: "Dovolená 2019",
+    })
+    expect(result.undone.file).toBe("basic.html")
+    expect(result.undone.attr).toBeUndefined()
+})
+
+test("renaming migrates the TAG-NAMES localStorage cache to the new key, undo moves it back", async ({ page }) => {
+    await page.goto(FIXTURE)
+    await expect(page.locator("#start")).toBeVisible()
+
+    const result = await page.evaluate(() => {
+        // Named tags while the presentation was still unnamed → stored under the docname() fallback key.
+        const base = "TAG-NAMES: " + docname()
+        const named = "TAG-NAMES: Tábor 2019"
+        localStorage.setItem(base, "rodiče,vedoucí")
+
+        playback.set_presentation_name("Tábor 2019")
+        const afterRename = { base: localStorage.getItem(base), named: localStorage.getItem(named) }
+
+        playback.changes.undo()
+        const afterUndo = { base: localStorage.getItem(base), named: localStorage.getItem(named) }
+
+        localStorage.removeItem(base)
+        localStorage.removeItem(named)
+        return { afterRename, afterUndo }
+    })
+
+    expect(result.afterRename).toEqual({ base: null, named: "rodiče,vedoucí" })
+    expect(result.afterUndo).toEqual({ base: "rodiče,vedoucí", named: null })
+})
+
+test("grid: clicking the Presentation/Section ribbon title turns it into an editable input", async ({ page }) => {
+    await page.goto(FIXTURE)
+    await page.locator("#start").click()
+    await expect.poll(() => page.url()).toContain("#1")
+    await page.evaluate(() => playback.hud.toggle_grid())
+
+    const $main = page.locator("section-controller[data-role=main] .section-title-name")
+    const $section = page.locator("section-controller:not([data-role=main]) .section-title-name")
+
+    // Untitled main ribbon shows the fallback label; clicking it opens an input prefilled empty.
+    await expect($main).toHaveText("Presentation")
+    await $main.click()
+    await expect($main.locator("input")).toHaveValue("")
+    await expect($main.locator("input")).toHaveAttribute("placeholder", "Presentation")
+    await $main.locator("input").fill("Tábor 2019")
+    await $main.locator("input").press("Enter")
+    await expect($main).toHaveText("Tábor 2019")
+    const afterMain = await page.evaluate(() => ({ attr: $main.attr("sli-title"), title: document.title }))
+    expect(afterMain).toEqual({ attr: "Tábor 2019", title: "Tábor 2019" })
+
+    // Undo restores the fallback label in the ribbon too (Playback.reset() rebuilds the grid).
+    await page.evaluate(() => playback.changes.undo())
+    await expect($main).toHaveText("Presentation")
+
+    // Section ribbon: same click-to-edit, writes sli-title (not sli-name).
+    await expect($section).toHaveText("Section")
+    await $section.click()
+    await $section.locator("input").fill("Highlights")
+    await $section.locator("input").press("Enter")
+    await expect($section).toHaveText("Highlights")
+    const sectionAttr = await page.evaluate(() => $("main > section").attr("sli-title"))
+    expect(sectionAttr).toBe("Highlights")
+
+    // Escape discards without touching the DOM.
+    await $section.click()
+    await $section.locator("input").fill("discarded")
+    await $section.locator("input").press("Escape")
+    await expect($section).toHaveText("Highlights")
+})
+
+test("_photo_date_range returns min–max month from sli-datetime, null when none", async ({ page }) => {
+    await page.goto(FIXTURE)
+    await expect(page.locator("#start")).toBeVisible()
+
+    const result = await page.evaluate(() => {
+        const $a = $("article")
+        const none = menu._photo_date_range($a)
+        $($a[0]).attr("sli-datetime", "2019-08-15T10-00-00")
+        $($a[1]).attr("sli-datetime", "2019-06-02T09-30-00")
+        return { none, range: menu._photo_date_range($a) }
+    })
+
+    expect(result.none).toBeNull()
+    expect(result.range).toEqual({ from: "2019-06", to: "2019-08" })
+})

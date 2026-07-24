@@ -26,6 +26,21 @@ An element affected by an attribute searches for it amongst its own or its ances
 </main>
 ```
 
+## Naming the presentation
+
+Give the whole presentation a name with `sli-title` on `<main>` – the same attribute a `<section>`
+uses for its own display name, one level up. Four places to set it: the field on the splash screen
+(blends in as the "Start presenting" label until hovered/focused), <kbd>Alt+N</kbd> during playback,
+the field at the top of the export dialog (<kbd>Ctrl+S</kbd>), or clicking the "Presentation" title
+directly in the grid overview (<kbd>G</kbd>) – section titles there are click-to-rename the same way.
+The name is mirrored to the document `<title>` (browser tab), shown in the splash **Recent** list, and
+– slugified – becomes the **export filename** (so a presentation named *Dovolená 2019* exports as
+`dovolena-2019.html` instead of the default `slidershow.html`).
+
+```html
+<main sli-title="Dovolená 2019"> … </main>
+```
+
 ## Frame `<article>`
 
 Every frame is represented by an `<article>` tag.

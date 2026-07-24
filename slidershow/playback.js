@@ -82,7 +82,7 @@ class Playback {
         // Frame.check_tag()), so restore them once here – but only if this document doesn't already
         // carry its own sli-tag-names (ex. a previously exported/saved file), which must win.
         if (!$main.attr("sli-tag-names")) {
-            const savedNames = localStorage.getItem("TAG-NAMES: " + docname())
+            const savedNames = localStorage.getItem(tag_names_key())
             if (savedNames) {
                 $main.attr("sli-tag-names", savedNames)
             }
@@ -314,6 +314,50 @@ class Playback {
         if (this.frame?.index) { // the default dummy frame has no index
             this.goToFrame(this.frame.index)
         }
+    }
+
+    /**
+     * Rename the presentation. The name lives in `<main sli-title>` (consistent with `<section
+     * sli-title>`) and is mirrored to `document.title`, so the browser tab, the splash "Recent" list
+     * and the exported `<title>`/filename all follow it. The tag-names localStorage cache is migrated
+     * to the new key too (see `tag_names_key()`), so naming a presentation doesn't orphan it. Routed
+     * through `Changes` for undo + the unsaved-changes guard.
+     * @param {string} name Trimmed presentation name; empty clears it.
+     */
+    set_presentation_name(name) {
+        name = String(name).trim()
+        const old_attr = $main.attr("sli-title") || ""
+        const old_title = document.title
+        if (name === old_attr && name === old_title) {
+            return // no-op – don't push an empty undo step
+        }
+        const apply = (attr, title) => {
+            const from_key = tag_names_key() // key under the current name, before it changes below
+            if (attr) {
+                $main.attr("sli-title", attr)
+            } else {
+                $main.removeAttr("sli-title")
+            }
+            document.title = title
+            // Menu (splash field) and the grid's main ribbon both show the name outside pl.reset()'s
+            // own reach (Menu isn't rebuilt by it; the grid ribbon is, but only if already displayed –
+            // syncing the splash field here regardless costs nothing and covers the common case).
+            this.menu.$presentation_name?.val(attr)
+            const to_key = tag_names_key() // key under the new name
+            if (from_key !== to_key) {
+                try {
+                    const cached = localStorage.getItem(from_key)
+                    if (cached !== null) {
+                        localStorage.setItem(to_key, cached)
+                        localStorage.removeItem(from_key)
+                    }
+                } catch (e) { /* localStorage unavailable (file://, private mode) – cache is best-effort */ }
+            }
+        }
+        this.changes.undoable("Rename presentation",
+            () => apply(name, name),
+            () => apply(old_attr, old_title),
+            () => this.reset()) // rebuilds the grid's main ribbon too, if currently displayed
     }
 
     positionFrames(x1 = null, x2 = null, x3 = null, x4 = null) {

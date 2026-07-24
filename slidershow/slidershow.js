@@ -247,7 +247,7 @@ function get_menu() {
             <div id="recent-panel"></div>
         </div>
         <div id='start-wrapper'>
-            Start presenting<br />
+            <input id="presentation-name" placeholder="Start presenting" title="Name this presentation – click to edit; used as the export filename and shown in the Recent list">
             <button id="start">&#9654;</button>
             <div id="play-modes">
                 <button class="play-mode" sli-duration="5" title="Auto-forward, 5 s per frame">&#9201; 5&nbsp;s</button>

@@ -75,6 +75,31 @@ class Menu {
 
         this.refresh_summary()
         this.refresh_recent()
+
+        // Presentation name: editable on the splash, prefilled with the current name. Routed through
+        // Playback.set_presentation_name (undoable, mirrors to document.title). Only visible once a
+        // presentation is loaded (#start-wrapper is hidden otherwise) – naming nothing is pointless.
+        this.$presentation_name = $("#presentation-name").val(presentation_name())
+            .on("change", e => this.playback.set_presentation_name(String($(e.target).val())))
+    }
+
+    /**
+     * Min–max photo month (`YYYY-MM`) across the frames' `sli-datetime` (set from EXIF or the file's
+     * lastModified), or null when none carry one. Month granularity keeps the splash label compact.
+     * @param {JQuery} $frames
+     * @returns {?{from: string, to: string}}
+     */
+    _photo_date_range($frames) {
+        const months = $frames.map((_, el) => {
+            const dt = String(el.getAttribute("sli-datetime") || $(el).find("[sli-datetime]").attr("sli-datetime") || "")
+            return dt ? dt.slice(0, 7) : null // "YYYY-MM", lexicographically sortable
+        }).get().filter(Boolean).sort()
+        return months.length ? { from: months[0], to: months[months.length - 1] } : null
+    }
+
+    /** "2019-06" or "2019-06 – 2019-08" from a `{from, to}` range (empty when null). */
+    _format_range(range) {
+        return !range ? "" : range.from === range.to ? range.from : `${range.from} – ${range.to}`
     }
 
     /** Human-readable count of the loaded presentation, so a fresh drop (or a reopened file) is visibly
@@ -100,6 +125,10 @@ class Menu {
         }
         if (sections > 1) {
             parts.push(plural(sections, "section"))
+        }
+        const range = this._format_range(this._photo_date_range($frames))
+        if (range) {
+            parts.push(range)
         }
         $summary.text(parts.join(" · "))
     }
@@ -143,7 +172,11 @@ class Menu {
             return
         }
         const url = location.pathname + location.search
-        const entry = { url, name: document.title || docname(), frames, time: new Date().toISOString() }
+        const range = this._photo_date_range($(FRAME_SELECTOR))
+        const entry = {
+            url, frames, name: presentation_name() || docname(), time: new Date().toISOString(),
+            ...(range && { dateFrom: range.from, dateTo: range.to }),
+        }
 
         // Try localStorage first; fall back to sessionStorage if localStorage unavailable (file://, private mode)
         const useLocal = Menu._local_storage_available()
@@ -174,7 +207,10 @@ class Menu {
                 $a.addClass("recent-session-only")
                 $("<span/>", { class: "recent-meta", text: "—" }).appendTo($a)
             } else {
-                $("<span/>", { class: "recent-meta", text: `${e.frames}` }).appendTo($a)
+                // Older entries predate dateFrom/dateTo – guard, they just show the frame count.
+                const range = this._format_range(e.dateFrom ? { from: e.dateFrom, to: e.dateTo } : null)
+                const meta = [`${e.frames} frames`, range].filter(Boolean).join(" · ")
+                $("<span/>", { class: "recent-meta", text: meta }).appendTo($a)
             }
             $a.appendTo($panel)
         })

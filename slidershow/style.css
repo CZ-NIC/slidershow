@@ -83,6 +83,34 @@ menu {
         text-align: center;
     }
 
+    /* Blends in as plain "Start presenting" text (its own placeholder, at full opacity so an unnamed
+       presentation reads exactly like the old static label) until hovered/focused, which reveals the
+       border – the cue that it's actually an editable field, not just a heading. */
+    #presentation-name {
+        display: block;
+        margin: 0 auto 12px;
+        max-width: 100%;
+        width: 320px;
+        padding: 4px 8px;
+        text-align: center;
+        font-size: 1em;
+        border: 1px solid transparent;
+        border-radius: 5px;
+        background: transparent;
+        color: var(--base);
+        transition: border-color .15s, background-color .15s;
+
+        &:hover, &:focus {
+            border-color: var(--base);
+            background-color: var(--soft-highlight);
+        }
+
+        &::placeholder {
+            color: var(--base);
+            opacity: 1;
+        }
+    }
+
     #start {
         width: 100px;
         height: 100px;
@@ -861,6 +889,31 @@ frame-preview {
 
                 .section-title {
                     flex: 1;
+
+                    /* Presentation/section name – click turns it into .section-title-input (see
+                       GridController._makeTitleEditable). */
+                    .section-title-name {
+                        cursor: text;
+                        border-bottom: 1px dashed transparent;
+
+                        &:hover {
+                            border-bottom-color: var(--border-focus);
+                        }
+                    }
+
+                    .section-title-counts {
+                        opacity: .6;
+                        margin-left: .3em;
+                    }
+
+                    .section-title-input {
+                        font: inherit;
+                        color: inherit;
+                        background: var(--bg-menu);
+                        border: 1px solid var(--border-focus);
+                        border-radius: 3px;
+                        padding: 0 .2em;
+                    }
                 }
 
                 .tag-filter-badge {
@@ -1401,6 +1454,19 @@ article-map {
     margin-top: .6em;
     padding-top: .6em;
     border-top: 1px solid var(--border-default);
+}
+
+/* Export dialog (export.js): presentation-name field at the very top – the same identity as the
+   splash field / grid ribbon (Playback.set_presentation_name()), surfaced here since it's what
+   decides the export filename (see export_filename()). */
+.export-name-row {
+    margin-bottom: .8em;
+
+    .export-name {
+        width: 100%;
+        box-sizing: border-box;
+        padding: 4px 8px;
+    }
 }
 
 /* Export dialog (export.js): heading shared by "Export the tiny presentation…" (plain body text) and

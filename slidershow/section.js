@@ -9,20 +9,57 @@ class SectionController {
 
     /**
      * @param {JQuery} $section
-     * @param {string} fallbackLabel Shown instead of a title when the section has none (ex. "Presentation" for <main>).
-     * @returns {string} "‹title or fallback› (‹counts›)" – counts are "N sections, M frames" when the
-     * section directly contains subsections, otherwise just the frame count.
+     * @returns {string} The section's own display title – `sli-title`, falling back to the stable
+     * `sli-name` grouping key (ex. a tag's digit, shown until the tag itself gets a name) – or "" if
+     * neither is set. Kept separate from `getSectionName()` so the grid's inline rename input can be
+     * prefilled with just the editable part, not the fallback/counts baked into the full label.
      */
-    getSectionName($section, fallbackLabel = "Section") {
-        const title = $section.attr("sli-title") || $section.attr("sli-name")
-        // Sections: only the direct subsections (the outline at this level). Frames: the TOTAL all the way
-        // down (every frame in every nested subsection), so a header answers "how big is this group".
+    getSectionTitle($section) {
+        return String($section.attr("sli-title") || $section.attr("sli-name") || "")
+    }
+
+    /**
+     * @param {JQuery} $section
+     * @returns {string} "N sections, M frames" when the section directly contains subsections,
+     * otherwise just the frame count. Sections: only the direct subsections (the outline at this
+     * level). Frames: the TOTAL all the way down (every frame in every nested subsection), so a
+     * header answers "how big is this group".
+     */
+    getSectionCounts($section) {
         const sectionCount = this.getDirectSections($section).length
         const frameCount = this.getTotalFrameCount($section)
-        const counts = sectionCount
+        return sectionCount
             ? `${sectionCount} section${sectionCount === 1 ? "" : "s"}, ${frameCount} frame${frameCount === 1 ? "" : "s"}`
             : String(frameCount)
-        return `${title || fallbackLabel} (${counts})`
+    }
+
+    /**
+     * @param {JQuery} $section
+     * @param {string} fallbackLabel Shown instead of a title when the section has none (ex. "Presentation" for <main>).
+     * @returns {string} "‹title or fallback› (‹counts›)".
+     */
+    getSectionName($section, fallbackLabel = "Section") {
+        return `${this.getSectionTitle($section) || fallbackLabel} (${this.getSectionCounts($section)})`
+    }
+
+    /**
+     * Rename a section's display title (the grid's inline rename input). Writes `sli-title` only –
+     * `sli-name` (the stable key a tag-based section is matched/reused by) is never touched, same rule
+     * a regroup's own title refresh follows (see the `sli-title`/`sli-name` split noted on `group()`).
+     * @param {JQuery} $section
+     * @param {string} name Trimmed new title; empty removes `sli-title` (falls back to `sli-name`/label).
+     */
+    renameSection($section, name) {
+        const pl = this.playback
+        name = String(name).trim()
+        const old = $section.attr("sli-title") || ""
+        if (name === old) {
+            return
+        }
+        pl.changes.undoable(`Rename section ${this.getSectionName($section)}`,
+            () => name ? $section.attr("sli-title", name) : $section.removeAttr("sli-title"),
+            () => old ? $section.attr("sli-title", old) : $section.removeAttr("sli-title"),
+            () => pl.reset())
     }
 
     /**

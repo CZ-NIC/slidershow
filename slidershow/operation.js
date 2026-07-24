@@ -281,7 +281,7 @@ class Operation {
             }
             const value = names.join(",")
             const before = $main.attr("sli-tag-names") || ""
-            const key = "TAG-NAMES: " + docname()
+            const key = tag_names_key()
             pl.changes.undoable("Name tags",
                 () => {
                     $main.attr("sli-tag-names", value)
@@ -668,6 +668,16 @@ class Operation {
             [["/", "?"], "🎨", "Command palette", () => this.playback.hud.palette.focus()],
             ["Alt+m", "🧰", "Show splashscreen", () => menu.stop_playback()],
             ["Alt+w", "&#127916;", "Auxiliary window", () => menu.aux_window.open()],
+            ["Alt+n", "&#9998;", "Rename presentation…", () => new $.Zebra_Dialog("Name this presentation (used as the export filename and shown in Recent):", {
+                title: "Presentation name",
+                type: "prompt",
+                default_value: presentation_name(),
+                buttons: ["Cancel", {
+                    caption: "Ok",
+                    default_confirmation: true,
+                    callback: (_, name) => this.playback.set_presentation_name(name)
+                }]
+            })],
             ['Ctrl+s', "&#128190;", "Export", () => menu.export.export_dialog()],
             ['Ctrl+Shift+s', "&#128193;", "Export tags to folders…", () => menu.export.export_tags_dialog()],
             ['F1', "&#9432;", "Help", () => menu.help()],

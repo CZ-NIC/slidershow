@@ -129,4 +129,9 @@ class Session {
         return docname()
     }
 
+    /** Name for the exported/downloaded file – follows the presentation name (see `export_filename()`). */
+    get export_filename() {
+        return export_filename()
+    }
+
 }

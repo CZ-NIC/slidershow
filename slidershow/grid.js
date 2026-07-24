@@ -551,12 +551,20 @@ class GridController {
      */
     _assureMain(main, prepend = false) {
         const pl = this.pl
+        const sc = pl.section_controller
+        const $main = $(main)
+        const rawTitle = presentation_name()
         const $mc = $(`<section-controller data-role="main">
-                    <span class="section-title">${pl.section_controller.getSectionName($(main), "Presentation")}</span>
+                    <span class="section-title">
+                        <span class="section-title-name">${rawTitle || "Presentation"}</span>
+                        <span class="section-title-counts">(${sc.getSectionCounts($main)})</span>
+                    </span>
                     ${this._tagFilterBadge()}
                     ${this._menuOfMainTemplate}
                 </section-controller>`)
             .data("section", main)
+        this._makeTitleEditable($mc.find(".section-title-name"), rawTitle, "Presentation",
+            name => pl.set_presentation_name(name))
         $mc.find(".tag-filter-badge").on("click", () => pl.set_tag_filter([]))
         this.refreshTagFilterDropdown($mc.find(".tag-filter-dropdown"))
         // Rebuilt on every hover rather than once – tags may have been added/removed directly in the
@@ -612,13 +620,72 @@ class GridController {
      * @param {boolean} prepend
      */
     _assureSection(currentSection, prepend = false) {
-        const depth = $(currentSection).parents("section").length // 0 for a top-level section, 1+ for a subsection
+        const sc = this.pl.section_controller
+        const $section = $(currentSection)
+        const depth = $section.parents("section").length // 0 for a top-level section, 1+ for a subsection
+        const rawTitle = sc.getSectionTitle($section)
         const $sc = $(`<section-controller style="--depth: ${depth}">
-                        <span class="section-title">${this.pl.section_controller.getSectionName($(currentSection))}</span>
+                        <span class="section-title">
+                            <span class="section-title-name">${rawTitle || "Section"}</span>
+                            <span class="section-title-counts">(${sc.getSectionCounts($section)})</span>
+                        </span>
                         ${this._sectionMenuTemplate}
                     </section-controller>`)
             .data("section", currentSection)
+        this._makeTitleEditable($sc.find(".section-title-name"), rawTitle, "Section",
+            name => sc.renameSection($section, name))
         return prepend ? $sc.prependTo(this.$container) : $sc.appendTo(this.$container)
+    }
+
+    /**
+     * Turns `$name` (a ".section-title-name" span showing the current title or `fallback`) into an
+     * inline text input on click – <kbd>Enter</kbd>/blur commits via `onCommit`, <kbd>Escape</kbd> or an
+     * unchanged value discards. Stops the click from bubbling to the delegated "section-controller"
+     * click handler (Hud.init_grid), which would otherwise also pin/unpin this ribbon as the paste
+     * target. Hotkeys are suspended for the duration (`Operation.suspendHotkeys()`, the same mechanism
+     * a Zebra_Dialog uses) – WebHotkeys only special-cases single printable characters while a text
+     * input is focused, so without this, <kbd>Escape</kbd>/digit keys typed into the name would still
+     * fire the grid's own "clear selection"/tagging hotkeys instead of just editing the text. `onCommit`
+     * goes through `Changes.undoable` (see `Playback.set_presentation_name()` /
+     * `SectionController.renameSection()`), whose `do_always` calls `pl.reset()` – that rebuilds the
+     * whole grid, so a successful commit needs no manual DOM patch here; only the discard path does.
+     * @param {JQuery} $name
+     * @param {string} rawValue Current raw title (empty when unset).
+     * @param {string} fallback Placeholder text, and what to restore to on discard when `rawValue` is empty.
+     * @param {(value: string) => void} onCommit
+     */
+    _makeTitleEditable($name, rawValue, fallback, onCommit) {
+        $name.off("click.rename").on("click.rename", e => {
+            e.stopPropagation()
+            if ($name.children("input").length) {
+                return // already editing – let the input handle its own click (cursor placement)
+            }
+            const resumeHotkeys = this.pl.operation.suspendHotkeys()
+            const $input = $("<input/>", { class: "section-title-input", value: rawValue, placeholder: fallback })
+            $name.empty().append($input)
+            const input = /** @type {HTMLInputElement} */ ($input[0])
+            input.focus()
+            input.select()
+            const restore = () => $name.text(rawValue || fallback)
+            $input.on("keydown", ev => {
+                if (ev.key === "Enter") {
+                    ev.preventDefault()
+                    $input[0].blur()
+                } else if (ev.key === "Escape") {
+                    ev.preventDefault()
+                    $input.data("discard", true)
+                    $input[0].blur()
+                }
+            }).on("blur", () => {
+                resumeHotkeys()
+                const value = String($input.val()).trim()
+                if ($input.data("discard") || value === rawValue) {
+                    restore()
+                } else {
+                    onCommit(value)
+                }
+            })
+        })
     }
 
     _bindScroll() {

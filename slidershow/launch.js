@@ -189,8 +189,9 @@ function main() {
 // Common functions
 
 /**
- * The presentation's file name, used to key document-wide localStorage entries (ex. tag names) and as
- * the default download/save-as name.
+ * The presentation's file name: the URL-derived fallback for both the export/save-as name (see
+ * `export_filename()`) and the tag-names localStorage key (see `tag_names_key()`) when the presentation
+ * has no name of its own. Purely URL-based, so it stays stable regardless of the (mutable) name.
  * "http://example.com/" -> example.com
  * "http://example.com/foo" -> foo.html
  * "http://example.com/foo/" -> foo.html
@@ -210,6 +211,56 @@ function docname() {
         name += ".html";
     }
     return name
+}
+
+/**
+ * The presentation's human display name: `<main sli-title>`, else the document `<title>`. Consistent
+ * with `<section sli-title>` (a section's display name) – "sli-title is the display name at any level".
+ * Set via `Playback.set_presentation_name()`, which mirrors it to `document.title`.
+ * @returns {string}
+ */
+function presentation_name() {
+    return String($main.attr("sli-title") || document.title || "").trim()
+}
+
+/**
+ * Filename for downloads/exports: the presentation name slugified + ".html", else `docname()`. So a
+ * named presentation exports as e.g. `dovolena-2019.html` instead of the eternal `slidershow.html`.
+ * @returns {string}
+ */
+function export_filename() {
+    const slug = slugify(presentation_name())
+    return slug ? slug + ".html" : docname()
+}
+
+/**
+ * localStorage key under which this presentation's tag display-names are cached. Prefers the
+ * presentation's own name, so different presentations dropped into the same generic URL (ex.
+ * `slidershow.html`) don't collide on one shared key; falls back to `docname()` when unnamed.
+ * `Playback.set_presentation_name()` migrates the stored entry from the old key to the new one on
+ * rename, so the cache follows the name instead of orphaning.
+ * @returns {string}
+ */
+function tag_names_key() {
+    return "TAG-NAMES: " + (presentation_name() || docname())
+}
+
+/**
+ * A safe, readable filename stem from arbitrary text: replaces characters illegal in a filename with
+ * spaces, collapses whitespace to single dashes, trims stray separators, caps the length. Empty when
+ * the input reduces to nothing (callers fall back to `docname()`).
+ * @param {string} s
+ * @returns {string}
+ */
+function slugify(s) {
+    return String(s)
+        .replace(/[\/\\<>:"|?*\x00-\x1f]+/g, " ") // characters illegal in Windows/Unix filenames
+        .trim()
+        .replace(/\s+/g, "-")
+        .replace(/-{2,}/g, "-")
+        .replace(/^[-.]+/, "")
+        .slice(0, 120)
+        .replace(/[-.]+$/, "") // also clears any separator the slice re-exposed at the end
 }
 
 /**

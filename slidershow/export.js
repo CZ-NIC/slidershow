@@ -175,12 +175,27 @@ class Export {
         return this.app_code === "folder" ? this.export_offline_folder(compact_file, path) : this.export(compact_file, path)
     }
 
+    /**
+     * Editable presentation-name field at the top of the export dialog – the same name as the splash
+     * field / grid ribbon (`Playback.set_presentation_name()`), surfaced here too since it's what
+     * decides the export filename (see `export_filename()`).
+     * @returns {JQuery}
+     */
+    presentation_name_field() {
+        const $input = $("<input/>", {
+            type: "text", value: presentation_name(), placeholder: "Untitled presentation", class: "export-name",
+            title: "Name this presentation – used as the export filename and shown in the splash's Recent list",
+        }).on("change", () => this.playback.set_presentation_name(String($input.val())))
+        return $("<div/>", { class: "export-name-row" }).append($input)
+    }
+
     export_dialog() {
         const dialog = new $.Zebra_Dialog({
             type: false, // no icon – it reserves left padding this already-busy dialog can't spare
             width: 720, // wider than the 450px default – this dialog has grown too tall to also be narrow
             source: {
                 inline: $("<div/>").append(
+                    this.presentation_name_field(),
                     $("<div/>", { class: "dialog-heading", text: "Export the tiny presentation file to the media folder:" }),
                     "<br>",
                     this.file_handler_checkbox(), this.media_paths_radio()
@@ -398,7 +413,7 @@ class Export {
 
     async assure_handler() {
         if (!this.file_handler) {
-            this.file_handler = await window.showSaveFilePicker({suggestedName: this.playback.session.docname}) // ask once for the path – then keep newHandle
+            this.file_handler = await window.showSaveFilePicker({suggestedName: this.playback.session.export_filename}) // ask once for the path – then keep newHandle
         }
         return this.file_handler
     }
@@ -554,7 +569,7 @@ class Export {
         }
 
         const data = `<!DOCTYPE html><html><head>\n${$head[0].innerHTML}</head>\n<body>` + html + "\n</body>\n</html>"
-        await this._write_text(targetDir, this.playback.session.docname, data)
+        await this._write_text(targetDir, this.playback.session.export_filename, data)
         this.playback.hud.info("Offline folder written.")
         this.playback.changes.unblock_unload()
     }
@@ -680,7 +695,7 @@ class Export {
         }
 
         const data = `<!DOCTYPE html><html${inline_wanted ? " sli-offline" : ""}><head>\n${$head[0].innerHTML}</head>\n<body>` + html + "\n</body>\n</html>"
-        await this._write_text(targetDir, this.playback.session.docname, data)
+        await this._write_text(targetDir, this.playback.session.export_filename, data)
 
         const missing = mediaFrames.length - nameByFrame.size
         this.playback.hud.info(missing ? `Media folder written (${missing} file(s) missing).` : "Media folder written.")
@@ -688,7 +703,7 @@ class Export {
     }
 
     download(data) {
-        this._trigger_download(new Blob([data], { type: "text/plain" }), this.playback.session.docname)
+        this._trigger_download(new Blob([data], { type: "text/plain" }), this.playback.session.export_filename)
     }
 
     /**

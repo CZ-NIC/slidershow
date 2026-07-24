@@ -25,7 +25,7 @@ Or embed it on any page with a single tag:
 <script src="https://cdn.jsdelivr.net/gh/CZ-NIC/slidershow@latest/slidershow/slidershow.js"></script>
 ```
 
-Export the ready presentation to a standalone HTML file with <kbd>Ctrl+S</kbd> and edit it at will. To generate a presentation from a sheet, see [slidershow-builder](https://github.com/CZ-NIC/slidershow-builder/).
+Name the presentation on the splash screen (or with <kbd>Alt+N</kbd>) and export it to a standalone HTML file with <kbd>Ctrl+S</kbd> – the name becomes the export filename – then edit it at will. To generate a presentation from a sheet, see [slidershow-builder](https://github.com/CZ-NIC/slidershow-builder/).
 
 ## Documentation
 
