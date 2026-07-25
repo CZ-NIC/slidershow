@@ -29,8 +29,8 @@ class Menu {
         // The splash screen is laid out for a wide desktop window (three side-by-side columns) and is
         // useless clutter on a phone when there is already a presentation to show – skip straight to it.
         // (With no frames yet, the append-files panel is the only thing to do, so the splash stays.)
-        const [, stateParam] = window.location.hash.substring(1).split("&")
-        const startFromHash = stateParam && stateParam.includes("start")
+        const [, paramsPart] = window.location.hash.substring(1).split("?")
+        const startFromHash = paramsPart && new URLSearchParams(paramsPart).has("start")
         if (prop("start", $main) || startFromHash || (pl.isMobileMode && $(FRAME_SELECTOR).length)) {
             this.start_playback()
         }
@@ -263,6 +263,10 @@ class Menu {
         this.$start_wrapper.show()
         this.$start.focus()
         this.playback.reset()
+        // Preload eagerly: goToFrame only guarantees the current+following frame synchronously,
+        // the rest queue as background tasks that a later navigation can wipe before they run,
+        // leaving a newly appended frame blank until the user revisits it.
+        $frames.forEach($frame => $frame.data("frame")?.preload())
         this.start_playback()
         return true
     }

@@ -18,7 +18,7 @@ test("set_tag toggles multi-valued tags, clears on 0, persists to localStorage, 
     expect(await page.evaluate(() => playback.frame.get_tags())).toEqual([1, 2])
 
     const filename = await page.evaluate(() => playback.frame.get_filename())
-    expect(await page.evaluate(f => localStorage.getItem("TAG: " + f), filename)).toBe("1 2")
+    expect(await page.evaluate(f => localStorage.getItem("sli:tag:" + f), filename)).toBe("1 2")
 
     // toggle 1 off again
     await page.evaluate(() => playback.frame.set_tag(1))
@@ -33,7 +33,7 @@ test("set_tag toggles multi-valued tags, clears on 0, persists to localStorage, 
     // 0/null clears all
     await page.evaluate(() => playback.frame.set_tag(null))
     expect(await page.evaluate(() => playback.frame.$actor.attr("sli-tag"))).toBeUndefined()
-    expect(await page.evaluate(f => localStorage.getItem("TAG: " + f), filename)).toBeNull()
+    expect(await page.evaluate(f => localStorage.getItem("sli:tag:" + f), filename)).toBeNull()
 })
 
 test("text frames (no media) are taggable too – sli-tag lands on the article itself", async ({ page }) => {

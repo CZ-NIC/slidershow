@@ -57,6 +57,7 @@
 * feat: grid dynamic loading, powerful grouping, etc.
 
 ### Fixes
+* fix (append): a frame dropped onto "Append frames" could render blank (image never gets `src`) until you navigated away and back – newly appended frames are now preloaded eagerly instead of relying solely on the background preload queue, which a later navigation could wipe before it got to them
 * fix: EXIF metadata (date, camera, GPS) show in the HUD already on the first visit of a frame, not only after returning to it
 * fix: video end time `mm:ss` in a media fragment was read as `hh:mm` (60× longer)
 * fix: panning the map (shown via <kbd>m</kbd>) before the first GPS frame threw an error
