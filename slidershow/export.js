@@ -253,7 +253,7 @@ class Export {
      * data URI or path reference).
      * @param {boolean} compact_file
      * @param {string} path
-     * @returns {Promise<{$contents: JQuery, $head: JQuery}>}
+     * @returns {Promise<{$contents: JQuery, $head: JQuery, inlineStats: ?InlineStats}>}
      */
     async _build_export_contents(compact_file, path) {
         // Why to wrap the body inside a div? jQuery seems to handle such fundamental tags differently.
@@ -265,7 +265,12 @@ class Export {
         $contents.find("*").removeAttr("style")
         $contents.find("> #map, > #map-hud, > #map-wrapper, > #hud, > #preblink-prevention, > menu, > .ZebraDialog, > .ZebraDialogBackdrop").remove()
         await Frame.finalize_frames($contents, this.playback.$articles, compact_file, path, this.menu.display_progress(this.playback.$articles.length))
-        if (!compact_file) {
+        let inlineStats = null
+        if (compact_file) {
+            // "Export all to a single file": drag-dropped media already carry their bytes by now, but
+            // server-hosted media referenced by a path still don't – fetch and inline those too.
+            inlineStats = await this._inline_referenced_media($contents)
+        } else {
             this._rewrite_media_paths($contents, this.media_paths)
         }
 
@@ -280,7 +285,7 @@ class Export {
         $head.find("[sli-templated]").remove() // remove all dynamically added libraries
         $head.find("[src^='https://api.mapy.cz'],[href^='https://api.mapy.cz']").remove() // including vendor libraries that does not our honour [sli-templated] attr
 
-        return { $contents, $head }
+        return { $contents, $head, inlineStats }
     }
 
     /**
@@ -294,11 +299,143 @@ class Export {
     /**
      * @param {boolean} compact_file
      * @param {string} path
-     * @returns {Promise<{html: string, $head: JQuery}>}
+     * @returns {Promise<{html: string, $head: JQuery, inlineStats: ?InlineStats}>}
      */
     async _build_export_parts(compact_file, path) {
-        const { $contents, $head } = await this._build_export_contents(compact_file, path)
-        return { html: this._serialize_contents($contents), $head }
+        const { $contents, $head, inlineStats } = await this._build_export_contents(compact_file, path)
+        return { html: this._serialize_contents($contents), $head, inlineStats }
+    }
+
+    /**
+     * @typedef {{embedded: number, failed: number, failedNames: string[]}} InlineStats
+     */
+
+    /**
+     * "Export all to a single file" only: fetch every photo/video still referenced by a path (server-
+     * hosted media that carries no in-memory bytes) and inline it as a data URI, so the one exported file
+     * is genuinely self-contained. Drag-dropped media already carry their bytes by now (`EXPORT_SRC_BYTES`,
+     * set by `Frame.finalize_frames`) and are skipped. Media that can't be fetched – a relative path on a
+     * `file://` presentation, a cross-origin URL blocked by CORS, a 404 – is left referencing its path and
+     * counted, so the caller can report how many actually made it in. This is the only way Firefox (which
+     * has no folder export – `showDirectoryPicker` is Chrome/Edge-only) can bundle server media at all.
+     *
+     * The bytes go into `EXPORT_SRC_BYTES` (not straight into `src`), mirroring the drag-dropped path, so
+     * the exported file lazy-loads each medium through the `READ_SRC` reader `launch.js` restores – a big
+     * video then doesn't block a fluent walkthrough. Any stale `src` left on the copied element (a path a
+     * live/preloaded frame had already loaded) is stripped, or the browser would fetch it over the network
+     * and shadow the inlined bytes.
+     * @param {JQuery} $contents
+     * @returns {Promise<InlineStats>}
+     */
+    async _inline_referenced_media($contents) {
+        const $media = $contents.find("img[sli-src], video[sli-src]")
+            .filter((_, el) => !el.hasAttribute(EXPORT_SRC_BYTES) && !el.hasAttribute(EXPORT_SRC))
+        let embedded = 0
+        const failedNames = []
+        const semaphore = new Semaphore(4)
+        // A separate progress ring from finalize_frames' (that one has already finished counting frames
+        // by now) – fetching the bytes is the actually-slow, network-bound part, so it gets its own.
+        const progress = $media.length ? this.menu.display_progress($media.length) : null
+        await Promise.all($media.toArray().map(async el => {
+            const release = await semaphore.acquire()
+            try {
+                const $el = $(el)
+                const src = $el.attr("sli-src")
+                if (/^data:/i.test(src || "")) {
+                    return // already inline – nothing to fetch, and not a failure to report
+                }
+                const url = this._inline_url(src)
+                if (!url) {
+                    failedNames.push(this._basename(src))
+                    return
+                }
+                const dataUrl = await this._fetch_data_url(url)
+                $el.attr(EXPORT_SRC_BYTES, dataUrl).removeAttr("src")
+                embedded++
+            } catch (e) {
+                failedNames.push(this._basename($(el).attr("sli-src")))
+            } finally {
+                release()
+                progress?.()
+            }
+        }))
+        return { embedded, failed: failedNames.length, failedNames }
+    }
+
+    /**
+     * The URL a path-referenced medium can be fetched from for inlining, or null when it can't be:
+     * absolute `http(s):`/`blob:` are used as-is; a relative path resolves against this page only when the
+     * page itself is served over http(s) (a `file://` presentation has no address to resolve against, so
+     * such a medium simply can't be fetched). An already-inline `data:` URI is treated as un-fetchable
+     * too – it needs no inlining, so the caller counts it as "left as a link" rather than re-embedding it.
+     * @param {string} src
+     * @returns {?string}
+     */
+    _inline_url(src) {
+        if (!src || /^data:/i.test(src)) {
+            return null
+        }
+        if (/^(https?:|blob:)/i.test(src)) {
+            return src
+        }
+        if (!/^https?:$/i.test(location.protocol)) {
+            return null
+        }
+        try {
+            return new URL(src, document.baseURI).href
+        } catch (e) {
+            return null
+        }
+    }
+
+    /**
+     * Fetches `url` and returns its bytes as a `data:` URI. Rejects on a non-ok response so the caller
+     * counts it as a failed inline rather than embedding an error page's bytes.
+     * @param {string} url
+     * @returns {Promise<string>}
+     */
+    async _fetch_data_url(url) {
+        const resp = await fetch(url)
+        if (!resp.ok) {
+            throw new Error(`${url}: HTTP ${resp.status}`)
+        }
+        const blob = await resp.blob()
+        return await new Promise((resolve, reject) => {
+            const reader = new FileReader()
+            reader.onload = () => resolve(String(reader.result))
+            reader.onerror = () => reject(reader.error)
+            reader.readAsDataURL(blob)
+        })
+    }
+
+    /**
+     * @param {string} [src]
+     * @returns {string}
+     */
+    _basename(src) {
+        return src ? src.split(/[?#]/)[0].split("/").pop() || src : "(no source)"
+    }
+
+    /**
+     * After a single-file export, tell the user how much media was inlined – and, more importantly, name
+     * what couldn't be (so a partly-referenced export isn't mistaken for a self-contained one).
+     * @param {?InlineStats} stats
+     */
+    _report_inline_stats(stats) {
+        if (!stats || (!stats.embedded && !stats.failed)) {
+            return
+        }
+        if (!stats.failed) {
+            this.playback.hud.info(`Embedded ${stats.embedded} media file(s) into the export.`)
+            return
+        }
+        const shown = stats.failedNames.slice(0, 10).map(n => this._esc(n)).join("<br>")
+        const more = stats.failedNames.length > 10 ? `<br>… and ${stats.failedNames.length - 10} more` : ""
+        this.playback.hud.ok("Export – some media kept as links",
+            `Embedded ${stats.embedded} media file(s) into the export.<br>`
+            + `${stats.failed} couldn't be fetched and were left as links `
+            + `(a relative path from a file:// presentation, or a cross-origin URL):`
+            + `<br><small>${shown}${more}</small>`)
     }
 
     /**
@@ -377,7 +514,7 @@ class Export {
     }
 
     async export(compact_file = false, path = "") {
-        const { html, $head } = await this._build_export_parts(compact_file, path)
+        const { html, $head, inlineStats } = await this._build_export_parts(compact_file, path)
         if (!html.length) {
             this.playback.hud.ok("Export failed", "Cannot export a single file – too big.")
             return
@@ -406,6 +543,8 @@ class Export {
         } else {
             this.download(data)
         }
+
+        this._report_inline_stats(inlineStats)
 
         // Changes saved, allow leaving
         this.playback.changes.unblock_unload()
@@ -457,8 +596,10 @@ class Export {
     /**
      * Every vendor/local script or style currently loaded dynamically (marked `sli-templated` by
      * slidershow.js's loader), ready to be fetched again and embedded/copied for an offline export.
-     * Leaflet is deliberately excluded – maps stay online-only (the tile server needs network anyway,
-     * see PLAN.md item 6), so bundling the library itself would buy nothing.
+     * Leaflet IS included: the map's *tiles* stay online-only (the tile server needs network regardless),
+     * but the library itself must be bundled – it loads by default (`MAP_ENABLE`), and a failed network
+     * load of it aborts the whole boot (`Promise.all` in slidershow.js rejects), so an offline export
+     * without it just shows a black screen. Bundled, the app boots offline and the map merely lacks tiles.
      * @returns {{url: string, key: string, isLocal: boolean}[]} `key` is the bare filename for the
      * app's own local files (matches how DIR-less offline loading looks them up) or the full URL for
      * vendor libraries. `url`/`el.src`/`el.href` are always browser-resolved absolute URLs, but the
@@ -471,7 +612,7 @@ class Export {
         return $("script[sli-templated], link[sli-templated]").toArray()
             .map(el => /** @type {HTMLScriptElement|HTMLLinkElement} */(el))
             .map(el => "src" in el ? el.src : el.href)
-            .filter(url => url && !/unpkg\.com\/leaflet/i.test(url))
+            .filter(url => url)
             .map(url => url.startsWith(dir)
                 ? { url, key: url.slice(dir.length), isLocal: true }
                 : { url, key: url, isLocal: false })
@@ -555,7 +696,7 @@ class Export {
             return // user cancelled
         }
 
-        const { html, $head } = await this._build_export_parts(compact_file, path)
+        const { html, $head, inlineStats } = await this._build_export_parts(compact_file, path)
         if (!html.length) {
             this.playback.hud.ok("Export failed", "Cannot export a single file – too big.")
             return
@@ -571,6 +712,7 @@ class Export {
         const data = `<!DOCTYPE html><html><head>\n${$head[0].innerHTML}</head>\n<body>` + html + "\n</body>\n</html>"
         await this._write_text(targetDir, this.playback.session.export_filename, data)
         this.playback.hud.info("Offline folder written.")
+        this._report_inline_stats(inlineStats)
         this.playback.changes.unblock_unload()
     }
 

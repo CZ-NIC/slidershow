@@ -4,8 +4,10 @@
 // Offline export (see Export.export, "Make offline-safe"): the exported <html sli-offline> carries every
 // vendor/local script+style verbatim in #sli-offline-assets, keyed by URL (vendor) or bare filename (local,
 // since DIR is then unknown/irrelevant). loadScript/loadStyle/loadjQuery below consult it before ever
-// touching the network. Leaflet is deliberately never in that map – maps stay online-only (tile server
-// needs network anyway), so it always falls through to the normal CDN fetch, offline or not.
+// touching the network. Leaflet is bundled too: only the map *tiles* stay online-only (the tile server
+// needs network regardless), but the library itself loads by default (MAP_ENABLE) and a failed network
+// load of it would reject the boot Promise.all below and blank the whole app – so it's embedded/copied
+// like every other vendor lib, and offline the map simply has no tiles.
 const OFFLINE = document.documentElement.hasAttribute("sli-offline")
 const OFFLINE_ASSETS = OFFLINE ? JSON.parse(document.getElementById("sli-offline-assets").textContent) : null
 const JQUERY_SRC = "https://code.jquery.com/jquery-3.7.1.min.js"
@@ -125,7 +127,13 @@ function loadjQuery(callback) {
         return
     }
     // Allow using $ in the body without the need of load blocks.
-    document.write(`<script sli-templated=1 src="${JQUERY_SRC}" integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo=" crossorigin="anonymous"></script>`)
+    // SRI + crossorigin belong only to the real https CDN src. A "folder" offline export rewrites
+    // JQUERY_SRC to a local relative path (vendor/…); there, crossorigin turns the load into a CORS
+    // request the file:// origin blocks outright (and the CDN hash wouldn't match a re-served copy anyway).
+    const sri = /^https?:/.test(JQUERY_SRC)
+        ? ` integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo=" crossorigin="anonymous"`
+        : ""
+    document.write(`<script sli-templated=1 src="${JQUERY_SRC}"${sri}></script>`)
     // The written <script> may not be in the DOM synchronously (document.write from an external script feeds the
     // parser's input stream), so querying it here can race and return null. Poll for jQuery instead.
     const wait_for_jquery = () => window.jQuery ? callback() : setTimeout(wait_for_jquery, 10)
@@ -155,6 +163,18 @@ function loadScript(attrs) {
     if (OFFLINE_ASSETS && attrs.src in OFFLINE_ASSETS) {
         attrs = { ...attrs, src: offline_data_url(OFFLINE_ASSETS[attrs.src]) }
     }
+    // Only a real http(s) src carries SRI/crossorigin/referrerpolicy. A "folder" offline export rewrites
+    // vendor srcs to local relative paths (vendor/…) but leaves those attributes on the vendor entry; an
+    // inline offline export turns the src into a data: URL. On either, crossorigin/SRI would turn the load
+    // into a CORS request the file:// origin blocks (or an SRI hash that can't match a data: URL), so strip
+    // them unless the src really is http(s).
+    const isHttp = /^https?:/.test(attrs.src)
+    if (!isHttp) {
+        attrs = { ...attrs }
+        delete attrs.integrity
+        delete attrs.crossOrigin
+        delete attrs.referrerpolicy
+    }
     return new Promise((resolve, reject) => {
         const script = document.createElement('script')
         // Without this, an uncaught error anywhere in a script loaded from a different origin (ex: the app's
@@ -163,7 +183,7 @@ function loadScript(attrs) {
         // CORS headers needed for the browser to disclose the real error once the tag is marked crossorigin.
         // Only applied to http(s) sources: on file:// (local dev via presenter.html/tutorial_local.html), marking
         // a same-origin/local script crossorigin turns it into a CORS request, which the browser always blocks.
-        const defaults = /^https?:/.test(attrs.src) ? { crossOrigin: "anonymous" } : {}
+        const defaults = isHttp ? { crossOrigin: "anonymous" } : {}
         Object.entries({ ...defaults, ...attrs }).forEach(([k, v]) => script[k] = v)
         script.onload = resolve
         script.onerror = reject
