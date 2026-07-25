@@ -5,7 +5,7 @@ const FIXTURE = "file://" + path.resolve(__dirname, "fixtures/basic.html")
 
 test("loop-presentation wraps from the last frame back to the first", async ({ page }) => {
     // Start on the last frame (basic.html has 3) with loop-presentation preset from the hash.
-    await page.goto(FIXTURE + "#3&state=loop-presentation")
+    await page.goto(FIXTURE + "#3?loop-presentation")
     await page.locator("#start").click()
     await expect.poll(() => page.url()).toContain("#3")
 
@@ -21,7 +21,7 @@ test("Kiosk button starts playback in loop mode", async ({ page }) => {
     // Playback started (splash hidden) and loop-presentation is on – reflected in <main> and the hash.
     await expect(page.locator("menu")).toBeHidden()
     await expect(page.locator("main")).toHaveAttribute("sli-loop-presentation", "true")
-    await expect.poll(() => page.url()).toContain("state=loop-presentation")
+    await expect.poll(() => page.url()).toContain("loop-presentation")
 })
 
 test("Auto 5 s button starts playback with auto-forward", async ({ page }) => {
@@ -30,11 +30,11 @@ test("Auto 5 s button starts playback with auto-forward", async ({ page }) => {
 
     await expect(page.locator("menu")).toBeHidden()
     await expect(page.locator("main")).toHaveAttribute("sli-duration", "5")
-    await expect.poll(() => page.url()).toContain("duration:5")
+    await expect.poll(() => page.url()).toContain("duration=5")
 })
 
 test("countdown bar shows when preset from the hash", async ({ page }) => {
-    await page.goto(FIXTURE + "#1&state=progress")
+    await page.goto(FIXTURE + "#1?progress")
     await page.locator("#start").click()
     await expect(page.locator("#hud-progress")).toHaveClass(/\bon\b/)
 })

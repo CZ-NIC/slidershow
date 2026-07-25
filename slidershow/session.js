@@ -6,16 +6,20 @@ class Session {
 
     restore(init = false) {
         const pl = this.playback
-        const [index, state] = window.location.hash.substring(1).split("&") // #6&state=thumbnails
-        if (state) {
-            this.restore_state(state)
+        const hash = window.location.hash.substring(1)
+        const [indexPart, paramsPart] = hash.split("?")
+
+        // Parse state from URLSearchParams (e.g., #6?duration=5&progress&editing)
+        if (paramsPart) {
+            this.restore_state(new URLSearchParams(paramsPart))
         }
-        pl.index = Math.min(Math.max(0, Number(index) - 1), pl.$articles.length - 1)
+
+        pl.index = Math.min(Math.max(0, Number(indexPart) - 1), pl.$articles.length - 1)
 
         // a real DOM element ID attribute in hash, not a frame number
         if (isNaN(pl.index)) {  // ex : #foo <section id=foo>
             // Why the reg? For security feeling, leave just signs allowed in the ID attr.
-            let $anchor = $("#" + index.replace(/[^a-zA-Z0-9_\-\.]/g, ''))
+            let $anchor = $("#" + indexPart.replace(/[^a-zA-Z0-9_\-\.]/g, ''))
             pl.goToArticle($anchor.is("section") ? $anchor.find(FRAME_TAGS) : $anchor)
             return
         }
@@ -27,11 +31,13 @@ class Session {
         }
     }
 
-    restore_state(state) {
+    /** @param {URLSearchParams} searchParams */
+    restore_state(searchParams) {
         const pl = this.playback
-        state.split("=")[1].split(",").forEach(entry => {
-            // A key may carry a value: `duration:5`. Plain flags have no `:`.
-            const [key, value] = entry.split(":")
+        let tag_filter_values = []
+
+        // Iterate over all parameters; keys may appear multiple times (e.g. tag-filter=1&tag-filter=2)
+        for (const [key, value] of searchParams) {
             switch (key) {
                 case "duration":
                     // Auto-forward from the hash. Overrides the authored default by
@@ -50,11 +56,14 @@ class Session {
                     pl.operation.tagging.enable()
                     break;
                 case "tag-filter":
-                    pl.tag_filter = (value || "").split("+").filter(Boolean).map(Number)
-                    pl.hud.refresh_tag_filter_icon()
+                    // Collect all tag-filter values (may appear multiple times)
+                    const tagId = Number(value)
+                    if (!isNaN(tagId)) {
+                        tag_filter_values.push(tagId)
+                    }
                     break;
                 case "tag-names":
-                    $main.attr("sli-tag-names", (value || "").split("+").join(","))
+                    $main.attr("sli-tag-names", value)
                     prop_invalidate()
                     break;
                 case "loop-presentation":
@@ -89,7 +98,7 @@ class Session {
                     break;
                 case "map-disabled":
                     // already handled at program start
-                    // NOTE undocumented feature: Append this to file name to disable maps `#&state=map-disabled`
+                    // NOTE undocumented feature: Append this to file name to disable maps `#6?map-disabled`
                     break;
                 case "start":
                     // Hash-triggered autostart flag (actual start happens in Menu constructor to skip splash)
@@ -98,31 +107,63 @@ class Session {
                     console.warn("[slidershow] Unknown hash key:" + key)
                     break;
             }
-        })
+        }
+
+        // Apply collected tag-filter values (replace, don't append)
+        if (tag_filter_values.length) {
+            pl.tag_filter = tag_filter_values
+            pl.hud.refresh_tag_filter_icon()
+        }
     }
 
 
     store() {
         const index = this.playback.index + 1
+        const params = new URLSearchParams()
 
         const duration = $main.attr("sli-duration")
-        const state = [
-            prop("loop-presentation", $main) ? "loop-presentation" : "",
-            this.playback.hud.progress_visible ? "progress" : "",
-            this.playback.editing_mode ? "editing" : "",
-            this.playback.tagging_mode ? "tagging" : "",
-            this.playback.tag_filter.length ? `tag-filter:${this.playback.tag_filter.join("+")}` : "",
-            this.playback.frame.tag_names().length ? `tag-names:${this.playback.frame.tag_names().join("+")}` : "",
-            this.playback.step_disabled ? "no-steps" : "",
-            this.playback.hud.$hud_thumbnails.is(":visible") ? "thumbnails" : "",
-            this.playback.hud.$hud_grid.is(":visible") ? "grid" : "",
-            this.playback.hud.$hud_properties.is(":visible") ? "properties" : "",
-            !MAP_ENABLE ? "map-disabled" : "",
-            duration !== undefined ? `duration:${duration}` : "",
-        ].filter(Boolean).join(",")
+        if (duration !== undefined) {
+            params.set("duration", duration)
+        }
+        if (prop("loop-presentation", $main)) {
+            params.set("loop-presentation", "")
+        }
+        if (this.playback.hud.progress_visible) {
+            params.set("progress", "")
+        }
+        if (this.playback.editing_mode) {
+            params.set("editing", "")
+        }
+        if (this.playback.tagging_mode) {
+            params.set("tagging", "")
+        }
+        if (this.playback.tag_filter.length) {
+            this.playback.tag_filter.forEach(tagId => {
+                params.append("tag-filter", tagId)
+            })
+        }
+        if (this.playback.frame.tag_names().length) {
+            params.set("tag-names", this.playback.frame.tag_names().join(","))
+        }
+        if (this.playback.step_disabled) {
+            params.set("no-steps", "")
+        }
+        if (this.playback.hud.$hud_thumbnails.is(":visible")) {
+            params.set("thumbnails", "")
+        }
+        if (this.playback.hud.$hud_grid.is(":visible")) {
+            params.set("grid", "")
+        }
+        if (this.playback.hud.$hud_properties.is(":visible")) {
+            params.set("properties", "")
+        }
+        if (!MAP_ENABLE) {
+            params.set("map-disabled", "")
+        }
 
+        const paramString = params.toString()
         // update the hash without triggering hashchange event
-        history.replaceState(null, null, document.location.pathname + document.location.search + '#' + index + (state ? `&state=${state}` : ""))
+        history.replaceState(null, null, document.location.pathname + document.location.search + '#' + index + (paramString ? `?${paramString}` : ""))
     }
 
     get docname() {

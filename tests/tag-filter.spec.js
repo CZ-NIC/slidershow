@@ -23,7 +23,7 @@ test("set_tag_filter shows only matching frames in the grid (OR across several t
     let refs = await page.locator("#hud-grid frame-preview").evaluateAll(els => els.map(e => e.dataset.ref))
     expect(refs.sort()).toEqual(["0", "2"])
 
-    await expect.poll(() => page.url()).toContain("tag-filter:1")
+    await expect.poll(() => page.url()).toContain("tag-filter=1")
 
     // OR semantics: adding tag 2 brings frame 1 back too
     await page.evaluate(() => playback.set_tag_filter([1, 2]))
@@ -55,8 +55,8 @@ test("clicking the tag-filter HUD icon clears the filter", async ({ page }) => {
     await expect(page.locator("#hud-tag-filter")).toBeHidden()
 })
 
-test("tag-filter hash key restores the filter (multiple tags, + separated)", async ({ page }) => {
-    await page.goto(FIXTURE + "#1&state=tag-filter:1+2")
+test("tag-filter hash key restores the filter (multiple tags, multiple params)", async ({ page }) => {
+    await page.goto(FIXTURE + "#1?tag-filter=1&tag-filter=2")
     expect(await page.evaluate(() => playback.tag_filter)).toEqual([1, 2])
 })
 
@@ -90,7 +90,7 @@ test("Filter by tag dialog: checked tags apply, Clear filter resets", async ({ p
 test("tag names round-trip through the #hash too, not just localStorage", async ({ page }) => {
     await page.evaluate(() => $main.attr("sli-tag-names", "rodice,vedouci"))
     await page.evaluate(() => playback.session.store())
-    await expect.poll(() => page.url()).toContain("tag-names:rodice+vedouci")
+    await expect.poll(() => page.url()).toContain("tag-names=rodice%2Cvedouci")
 
     // simulate opening that exact URL fresh, with localStorage empty – the hash alone must restore it.
     // A same-document page.goto() (URL differs only by hash) wouldn't actually reload the app, so force

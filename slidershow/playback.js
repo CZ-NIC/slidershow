@@ -516,7 +516,7 @@ class Playback {
         if (index >= this.$articles.length) {
             // Loop mode: a single step past the last frame wraps back to the first (kiosk / exhibition
             // playback). prop("loop-presentation") reads <main sli-loop-presentation> – authorable,
-            // hash-settable (#&state=loop-presentation), togglable at runtime. (The scope-narrower
+            // hash-settable (#?loop-presentation), togglable at runtime. (The scope-narrower
             // sli-loop is unrelated – that loops images *within* a frame.)
             // Only for count == 1; a multi-frame jump keeps the old clamp below.
             if (count === 1 && prop("loop-presentation", $main)) {

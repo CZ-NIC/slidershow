@@ -25,6 +25,6 @@ The last few presentations you opened are listed under "Recent" so you can jump 
 
 ### URL-hash presets
 
-Most viewing options can also be preset from the URL hash so you can hand out a ready-to-run link, e.g. `presentation.html#1&state=duration:5,loop-presentation,progress` starts at frame 1, auto-forwards every 5 s, loops at the end and shows the countdown bar.
+Most viewing options can also be preset from the URL hash so you can hand out a ready-to-run link, e.g. `presentation.html#1?duration=5&loop-presentation&progress` starts at frame 1, auto-forwards every 5 s, loops at the end and shows the countdown bar.
 
-Available `state=` flags include `duration:<s>`, `loop-presentation`, `progress`, `thumbnails`, `grid`, `properties`, `no-steps`, `editing`, `tagging`.
+Available parameters include `duration=<seconds>` (numeric), `loop-presentation`, `progress`, `thumbnails`, `grid`, `properties`, `no-steps`, `editing`, `tagging`, `tag-filter=<id>` (may repeat), `tag-names=<comma-separated>`. Boolean flags like `loop-presentation` may omit a value; `tag-filter` can appear multiple times for multiple tag IDs.

@@ -102,7 +102,7 @@ class Hud {
             .on("click", () => this._retryCurrentFrame())
 
         // Countdown-to-next bar (auto-forward). Off by default; toggled via "Countdown bar" (Shift+c),
-        // hash-settable (#&state=progress). A pure CSS-transition fill – progress_start() animates the
+        // hash-settable (#?progress). A pure CSS-transition fill – progress_start() animates the
         // inner bar 0→100% over the auto-forward duration, progress_reset() clears it on every navigation.
         this.$hud_progress = $("#hud-progress")
         this.$hud_progress_bar = $("#hud-progress-bar")

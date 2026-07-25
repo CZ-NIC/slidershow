@@ -65,8 +65,8 @@ test("offline export (one file) bundles the app's own code and boots with zero n
 
     // map-disabled: maps stay online-only by design (tile server needs network regardless), so leave
     // that out of scope here and disable it the same way a real offline user would
-    // (session.js hash format is "#<index>&state=..."; an empty index defaults to frame 0).
-    await page.goto("file://" + OFFLINE_EXPORTED + "#&state=map-disabled")
+    // (session.js hash format is "#<index>?param=value&..."; an empty index defaults to frame 0).
+    await page.goto("file://" + OFFLINE_EXPORTED + "#?map-disabled")
     await expect(page.locator("#start")).toBeVisible()
     await page.locator("#start").click()
     await expect.poll(() => page.url()).toContain("#1")
