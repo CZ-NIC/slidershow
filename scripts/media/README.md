@@ -20,6 +20,26 @@ node scripts/media/run.js all               # regenerate everything
 
 Each scenario writes straight to `docs/assets/<name>.png` or `.webm`.
 
+## Publishing the media (they are NOT in this repo)
+
+`docs/assets/**` is **git-excluded** here — the binaries would bloat the main repo's history every time a
+clip is regenerated. The generated media lives in a separate public repo, **`CZ-NIC/slidershow-assets`**,
+and the docs embed it via jsdelivr:
+`https://cdn.jsdelivr.net/gh/CZ-NIC/slidershow-assets@main/<name>.webm`.
+
+To publish updated media:
+
+```sh
+# in a clone of CZ-NIC/slidershow-assets (media kept as a single orphan commit)
+cp <slidershow>/docs/assets/*.webm <slidershow>/docs/assets/*.png .
+git add -A && git commit -m "media snapshot" && git push
+# purge jsdelivr's cache for the changed file(s):
+curl https://purge.jsdelivr.net/gh/CZ-NIC/slidershow-assets@main/<name>.webm
+```
+
+When the assets repo grows too big, reset its history instead of accumulating it — a fresh orphan commit
++ `git push --force` drops the old blobs without touching this repo's history; then purge the whole ref.
+
 ## Adding a new scenario
 
 Drop a new file in `scenarios/`, named after its output. No registration needed — `run.js` picks up

@@ -4,7 +4,7 @@
 
 Have you ever wanted to show your friends media from holidays? How cumbersome it was to mix photos and videos? Enough of frame transitions? Dreaming about a fully customisable presentation experience? Presentation file size huge? This HTML-based presenter lets you show your contents just the way you desire. Either launch it and drag the files in, or fully define all the properties.
 
-<video autoplay controls muted loop playsinline width="640" src="assets/hero.webm" title="Dropping photos and videos onto the menu, playing, and zooming in"></video>
+<video autoplay controls muted loop playsinline width="640" src="https://cdn.jsdelivr.net/gh/CZ-NIC/slidershow-assets@main/hero.webm" title="Dropping photos and videos onto the menu, playing, and zooming in"></video>
 
 ## Why SlideRshow?
 

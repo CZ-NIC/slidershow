@@ -249,12 +249,14 @@ class Operation {
     }
 
     /**
-     * Column of number+name inputs (`<main sli-tag-names="rodiče,vedoucí">`), undoable. Rows cover every
+     * Column of number+name inputs (`<main sli-tag-names="rodiče|vedoucí">`), undoable. Rows cover every
      * currently used tag and every already-named tag, so a name is never silently dropped.
+     * Pipe-delimited; backslash-escaped for literal pipes: `name\|with\|pipes | other`.
      */
     _nameTagsDialog() {
         const pl = this.playback
-        const existing = ($main.attr("sli-tag-names") || "").split(",")
+        const tagStr = ($main.attr("sli-tag-names") || "")
+        const existing = tagStr ? parsePipeList(tagStr) : []
         const counts = this._tagCounts()
         const maxTag = Math.max(9, existing.length, ...this._usedTags())
         const $list = $("<div/>", { class: "tag-names-list" })
@@ -272,14 +274,13 @@ class Operation {
             while (names.length && !names[names.length - 1]) {
                 names.pop() // trim trailing empty rows
             }
-            // / \ and , break the comma-joined sli-tag-names storage; : & and + break the #hash=state
-            // encoding (tag-names:a+b, key:value pairs split on ":", entries split on "&"/",").
-            const invalid = names.filter(n => /[/\\,:&+]/.test(n))
+            // : & and + break the #hash=state encoding (key:value pairs split on ":", entries split on "&").
+            const invalid = names.filter(n => /[:&+]/.test(n))
             if (invalid.length) {
-                pl.hud.ok("Name tags", `Remove / \\ , : & or + from: ${invalid.join(", ")}.`)
+                pl.hud.ok("Name tags", `Remove : & or + from: ${invalid.join(", ")}.`)
                 return
             }
-            const value = names.join(",")
+            const value = formatPipeList(names)
             const before = $main.attr("sli-tag-names") || ""
             const key = tag_names_key()
             pl.changes.undoable("Name tags",

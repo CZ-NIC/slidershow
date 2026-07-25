@@ -21,10 +21,10 @@ When a presentation is loaded, the splash shows a short summary of what is loade
 
 The last few presentations you opened are listed under "Recent" so you can jump back to them.
 
-![The menu splash with summary, quick-play buttons and Recent list](assets/start-splash.png)
+![The menu splash with summary, quick-play buttons and Recent list](https://cdn.jsdelivr.net/gh/CZ-NIC/slidershow-assets@main/start-splash.png)
 
 ### URL-hash presets
 
-Most viewing options can also be preset from the URL hash so you can hand out a ready-to-run link, e.g. `presentation.html#1?duration=5&loop-presentation&progress` starts at frame 1, auto-forwards every 5 s, loops at the end and shows the countdown bar.
+Most viewing options can also be preset from the URL hash so you can hand out a ready-to-run link, e.g. `presentation.html#1?duration=5&loop-presentation&progress&start` starts at frame 1, auto-forwards every 5 s, loops at the end, shows the countdown bar, and skips the splash menu.
 
-Available parameters include `duration=<seconds>` (numeric), `loop-presentation`, `progress`, `thumbnails`, `grid`, `properties`, `no-steps`, `editing`, `tagging`, `tag-filter=<id>` (may repeat), `tag-names=<comma-separated>`. Boolean flags like `loop-presentation` may omit a value; `tag-filter` can appear multiple times for multiple tag IDs.
+Available parameters include `duration=<seconds>` (numeric), `loop-presentation`, `progress`, `thumbnails`, `grid`, `properties`, `no-steps`, `editing`, `tagging`, `tag-filter=<id>` (may repeat), `tag-names=<pipe-separated>`, `start`. Boolean flags like `loop-presentation` may omit a value; `tag-filter` and other boolean flags can appear multiple times (for `tag-filter`). `start` skips the splash menu and begins playback immediately.

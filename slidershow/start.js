@@ -134,8 +134,8 @@ class Menu {
     }
 
     /** localStorage key holding the recent-presentations list (newest first). */
-    static get RECENT_KEY() { return "slidershow-recent" }
-    static get RECENT_SESSION_KEY() { return "slidershow-recent-session" }
+    static get RECENT_KEY() { return "sli:recent" }
+    static get RECENT_SESSION_KEY() { return "sli:recent-session" }
     static get RECENT_MAX() { return 8 }
 
     static _local_storage_available() {

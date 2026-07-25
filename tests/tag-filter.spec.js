@@ -88,9 +88,9 @@ test("Filter by tag dialog: checked tags apply, Clear filter resets", async ({ p
 })
 
 test("tag names round-trip through the #hash too, not just localStorage", async ({ page }) => {
-    await page.evaluate(() => $main.attr("sli-tag-names", "rodice,vedouci"))
+    await page.evaluate(() => $main.attr("sli-tag-names", "rodice | vedouci"))
     await page.evaluate(() => playback.session.store())
-    await expect.poll(() => page.url()).toContain("tag-names=rodice%2Cvedouci")
+    await expect.poll(() => page.url()).toContain("tag-names=rodice+%7C+vedouci")
 
     // simulate opening that exact URL fresh, with localStorage empty – the hash alone must restore it.
     // A same-document page.goto() (URL differs only by hash) wouldn't actually reload the app, so force
@@ -99,5 +99,5 @@ test("tag names round-trip through the #hash too, not just localStorage", async 
     await page.reload()
     await page.locator("#start").click()
     await expect.poll(() => page.url()).toContain("#1")
-    expect(await page.evaluate(() => $main.attr("sli-tag-names"))).toBe("rodice,vedouci")
+    expect(await page.evaluate(() => $main.attr("sli-tag-names"))).toBe("rodice | vedouci")
 })

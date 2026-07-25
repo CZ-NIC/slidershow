@@ -350,12 +350,18 @@ class Frame {
             const places = []
             const gps = frame.prop("gps", frame.$actor)
             if (gps) {
-                places.push(Place.from_coordinates(...gps.split(",")))
+                // gps = "50.08, 14.47 | 48.85, 2.35" (pipe-delimited coordinates, each "lat, lon")
+                parsePipeList(gps).forEach(coord => {
+                    const [lat, lon] = coord.split(",").map(s => s.trim())
+                    if (lat && lon) {
+                        places.push(Place.from_coordinates(lat, lon))
+                    }
+                })
             }
 
             const names = frame.prop("places", frame.$actor)
             if (names) {
-                places.push(...names.split(",").map(name => new Place(name)))
+                places.push(...parsePipeList(names).map(name => new Place(name)))
             }
             return places
         }
@@ -1468,7 +1474,7 @@ class Frame {
         if (!name) {
             return // a text frame has no filename to key localStorage by; its sli-tag travels in the document
         }
-        const tag = localStorage.getItem("TAG: " + name)
+        const tag = localStorage.getItem("sli:tag:" + name)
         if (tag) {
             this._tagTarget().attr("sli-tag", tag)
         }
@@ -1495,8 +1501,8 @@ class Frame {
     }
 
     /**
-     * Tag names, position = digit 1, 2, … (`<main sli-tag-names="rodiče,vedoucí">`). Defaults to
-     * `$main` rather than the frame's own `$actor` – it's document-wide, not per-frame, and `$actor` is
+     * Tag names, position = digit 1, 2, … (`<main sli-tag-names="rodiče | vedoucí">`). Pipe-delimited with backslash-escape support.
+     * Defaults to `$main` rather than the frame's own `$actor` – it's document-wide, not per-frame, and `$actor` is
      * an empty jQuery on the splashscreen's dummy frame (before the first goToFrame), which would
      * otherwise make prop()'s upward walk find nothing.
      * @param {?JQuery} $actor
@@ -1505,7 +1511,7 @@ class Frame {
     tag_names($actor = null) {
         $actor = $actor || $main
         const raw = prop("tag-names", $actor, "")
-        return raw ? String(raw).split(",") : []
+        return raw ? parsePipeList(raw) : []
     }
 
     /**
@@ -1558,10 +1564,10 @@ class Frame {
         const $target = this._tagTarget()
         const value = tokens.join(" ")
         if (value) {
-            if (name) localStorage.setItem("TAG: " + name, value)
+            if (name) localStorage.setItem("sli:tag:" + name, value)
             $target.attr("sli-tag", value)
         } else {
-            if (name) localStorage.removeItem("TAG: " + name)
+            if (name) localStorage.removeItem("sli:tag:" + name)
             $target.removeAttr("sli-tag")
         }
         this.playback.hud.tag(this)
@@ -1596,7 +1602,7 @@ class Frame {
                 const latitude = Frame._convertDMSToDD(_lat[0], _lat[1], _lat[2], _latRef)
                 const longitude = Frame._convertDMSToDD(_lon[0], _lon[1], _lon[2], _lonRef)
                 if (longitude && latitude) {
-                    attrs["sli-gps"] = `${longitude}, ${latitude}`
+                    attrs["sli-gps"] = `${latitude}, ${longitude}`
                 }
             } catch (e) {
                 ; // no gps info

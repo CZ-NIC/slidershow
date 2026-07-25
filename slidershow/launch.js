@@ -46,10 +46,6 @@ const READ_SRC = "read-src"
 Private attributes that are not documented in the README because the user should not need them:
 
 * main[sli-path] Path to the media folder.
-* [sli-src] Public attribute, containing path to disk file or at least its name.
-    Every dragged file will have the file name.
-    User might set either file name or full path.
-    When exporting, we try to convert the file name to a full path if given by the user.
 * data("read-src") See READ_SRC.
 * video[sli-autoplay-prevented]=1 Replaces native `autoplay` parameter.
 * [sli-src-bytes] Stored raw bytes, see EXPORT_SRC_BYTES.

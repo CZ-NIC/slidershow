@@ -1,7 +1,7 @@
 let MAP_USE_CACHE = true
 
 class Place {
-    static from_coordinates(longitude = null, latitude = null) {
+    static from_coordinates(latitude = null, longitude = null) {
         const p = new Place(null)
         p.coordinates = { lon: longitude, lat: latitude }
         return p
@@ -17,7 +17,7 @@ class Place {
 
         if (!MAP_USE_CACHE || !this.name) return
 
-        const itemName = "PLACE: " + this.name
+        const itemName = "sli:place:" + this.name
         let cache = {}
 
         try {
@@ -97,7 +97,7 @@ class Place {
 
     cache_self() {
         if (this.name) {
-            localStorage.setItem("PLACE: " + this.name, JSON.stringify(this))
+            localStorage.setItem("sli:place:" + this.name, JSON.stringify(this))
         }
     }
 }

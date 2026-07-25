@@ -11,7 +11,7 @@ Have you ever wanted to show your friends media from holidays? How cumbersome it
 
 ## Why SlideRshow?
 
-* **A media player** that handles photos *and* videos in one ordered playlist, stays stable with 100+ files, and supports video zoom — unlike Nomacs, VLC, Windows Photo Viewer or Google Photos.
+* **A media player** that handles photos *and* videos in one ordered playlist, stays stable with 1000+ files, and supports video zoom — unlike Nomacs, VLC, Windows Photo Viewer or Google Photos.
 * **An organizer** – simply tag photos as you browse them, then regroup them into albums for a screening.
 * **Presentation software** with a ridiculously small file size – you link local or online files instead of copying gigabytes of media onto slides. Plus super easy video trimming.
 
@@ -25,7 +25,11 @@ Or embed it on any page with a single tag:
 <script src="https://cdn.jsdelivr.net/gh/CZ-NIC/slidershow@latest/slidershow/slidershow.js"></script>
 ```
 
-Name the presentation on the splash screen (or with <kbd>Alt+N</kbd>) and export it to a standalone HTML file with <kbd>Ctrl+S</kbd> – the name becomes the export filename – then edit it at will. To generate a presentation from a sheet, see [slidershow-builder](https://github.com/CZ-NIC/slidershow-builder/).
+## Presentation names
+
+Every presentation can have a name, which you set on the splash screen (hover the "Start presenting" label to reveal the editable field), with <kbd>Alt+N</kbd> during playback, via the export dialog (<kbd>Ctrl+S</kbd>), or by clicking the "Presentation" title in the grid overview. The name is stored in the document `<title>` (browser tab) and in the `sli-title` attribute on `<main>`, travels with exported files, and – when you export – the name is slugified to become the filename (e.g. *Dovolená 2019* → `dovolena-2019.html` instead of the generic `slidershow.html`). Several differently-named presentations can coexist under the same URL without their cached tag names interfering with each other.
+
+To generate a presentation from a sheet, see [slidershow-builder](https://github.com/CZ-NIC/slidershow-builder/).
 
 ## Documentation
 

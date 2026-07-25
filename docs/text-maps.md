@@ -12,14 +12,18 @@ You can place arbitrary content inside an `<article>`.
 
 These map-related attributes help you display the HUD / fullscreen map.
 
-* `sli-places`: Delimited by comma. Ex: "Prague, Brno"
+* `sli-places`: Pipe-delimited list of place names. Ex: `"Prague | Brno"`. To include a literal pipe in a place name, escape it with backslash: `"Amsterdam | New\|York | London"`
 * `sli-map-zoom`: Zoom as given by the [Mapy.cz API](https://api.mapy.cz/doc/SMap.html) (world 1, country 5, street 13)
-* `sli-gps`: Single point, longitude and latitude, comma delimited.
+* `sli-gps`: Pipe-delimited list of coordinates (latitude, longitude pairs). Ex: `"50.0884647, 14.4707590 | 48.8566, 2.3522"`. To include a literal pipe, escape it with backslash.
 
     ```html
     <!-- these are equivalent -->
     <img sli-gps='50.0884647, 14.4707590' />
     <img sli-places='Prague' />
+    
+    <!-- Multiple places/coordinates -->
+    <img sli-gps='50.0884647, 14.4707590 | 48.8566, 2.3522' />
+    <img sli-places='Prague | Paris' />
     ```
 
 * `sli-map-animate=true`: Change the centre point directly (`false`) or in a few steps (`true`).
@@ -34,6 +38,9 @@ These map-related attributes help you display the HUD / fullscreen map.
         <article-map sli-places="Brno"></article-map>
         <article-map sli-places="Pardubice"></article-map>
     </article-map>
+    
+    <!-- Or use a single frame with all places pipe-delimited: -->
+    <article-map sli-duration="0" sli-places="Prague | Brno | Pardubice" sli-map-geometry-show="true"></article-map>
     ```
 
 * `sli-map-geometry-criterion=''`: empty or `car_fast`, `car_fast_traffic`, `car_short`, `foot_fast`, `foot_hiking`, `bike_road`, `bike_mountain`
@@ -48,7 +55,7 @@ Normally any map command will cause a small HUD map to appear in the corner. Sho
 You may nest `<article-map>` tags easily, which causes the map to change.
 
 ```html
-<article-map sli-duration="0" sli-places="Prague, Brno">
+<article-map sli-duration="0" sli-places="Prague | Brno">
     <article-map sli-duration="0" sli-places="Paris"></article-map>
     <article-map sli-duration="0.3" sli-places="London"></article-map>
 </article-map>
@@ -64,16 +71,12 @@ You can easily convert a GPX file (exported from map software) into an interacti
 from pathlib import Path
 import re
 FILENAME = "export.gpx"
-FRAME_COUNT = 10
 
 tag_end = "</article-map>"
 if matches:=re.findall('<trkpt lat="([^"]+)" lon="([^"]+)">', Path(FILENAME).read_text()):
-    # limit to frame count but always include the first and the last
-    step = round(len(matches)/(FRAME_COUNT-2))
-    limited = [matches[0]] + matches[::step][1:-1] + [matches[-1]]
-    # convert coordinates to frames
-    html = "\n".join([f'<article-map sli-gps="{",".join((x[1], x[0]))}">{tag_end}' for x in limited])
-    # nest all under the first tag
-    html = re.sub(tag_end, "", html, 1) + tag_end
+    # convert coordinates to pipe-delimited sli-gps
+    # use all points or sample them: limited = matches[::10] for every 10th point
+    coords = " | ".join([f"{x[0]}, {x[1]}" for x in matches])
+    html = f'<article-map sli-gps="{coords}">{tag_end}'
     print(html)
 ```

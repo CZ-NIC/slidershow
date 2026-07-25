@@ -7,7 +7,7 @@ test("tag_names()/collect_tag_groups read sli-tag-names from <main> even before 
     await page.goto(FIXTURE)
     await page.locator("#start").waitFor() // wait for boot, but deliberately don't click – playback.frame is still the dummy pre-boot Frame
     await page.evaluate(() => {
-        $main.attr("sli-tag-names", "rodice,vedouci")
+        $main.attr("sli-tag-names", "rodice | vedouci")
         $(playback.$articles[0]).data("frame").$actor.attr("sli-tag", "1")
     })
 

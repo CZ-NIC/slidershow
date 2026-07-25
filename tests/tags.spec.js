@@ -58,7 +58,7 @@ test("tag names dialog resolves digits to names in the HUD", async ({ page }) =>
     await inputs.nth(0).fill("rodiče")
     await inputs.nth(1).fill("vedoucí")
     await page.getByRole("link", { name: "Ok" }).click()
-    expect(await page.evaluate(() => $main.attr("sli-tag-names"))).toBe("rodiče,vedoucí")
+    expect(await page.evaluate(() => $main.attr("sli-tag-names"))).toBe("rodiče | vedoucí")
 
     await page.evaluate(() => playback.frame.set_tag(2))
     expect(await page.evaluate(() => playback.frame.tag_display())).toBe("vedoucí")
@@ -85,13 +85,13 @@ test("group by tags uses the first token and notifies about multi-tagged frames"
     await expect(page.locator(".ZebraDialog", { hasText: "have more than one tag" })).toBeVisible()
 })
 
-test("Name tags dialog: first input is focused, Enter confirms, commas/slashes are rejected", async ({ page }) => {
+test("Name tags dialog: first input is focused, Enter confirms, URL-unsafe chars are rejected", async ({ page }) => {
     await page.evaluate(() => playback.operation._nameTagsDialog())
     await expect(page.locator(".tag-names-list input").first()).toBeFocused()
 
-    // invalid characters: warned, nothing is saved (the dialog itself still closes on Ok/Enter – the
-    // library has no notion of "stay open, this input was rejected" for custom inline content)
-    await page.locator(".tag-names-list input").first().fill("a/b")
+    // invalid characters: : & + break URL encoding – warned, nothing is saved (the dialog itself still
+    // closes on Ok/Enter – the library has no notion of "stay open, this input was rejected" for custom inline content)
+    await page.locator(".tag-names-list input").first().fill("a:b")
     await page.keyboard.press("Enter")
     const warning = page.locator(".ZebraDialog", { hasText: "Remove" })
     await expect(warning).toBeVisible()

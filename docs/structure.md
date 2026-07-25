@@ -148,7 +148,7 @@ Standard HTML ID serves for navigation.
 Set by the [tagging feature](organizing.md#tagging) on the frame's `<img>`/`<video>`, not hand-authored. Space-separated list of digit tokens, e.g. `sli-tag="1 2"` for a frame in both tag 1 and tag 2.
 
 ### `sli-tag-names`
-On `<main>`: comma-separated display names for tags, position = digit (`sli-tag-names="rodiče,vedoucí"` names tag 1 "rodiče" and tag 2 "vedoucí"). Digits past the list still work, shown as bare numbers.
+On `<main>`: pipe-delimited display names for tags, position = digit (`sli-tag-names="rodiče | vedoucí"` names tag 1 "rodiče" and tag 2 "vedoucí"). Backslash-escape for literal pipes: `sli-tag-names="role\|with\|pipes | other"`. Digits past the list still work, shown as bare numbers.
 
 ### `sli-rotate`
 **(number in degrees)** Any content can easily be rotated. Use the buttons in the menu to rotate live.

@@ -8,7 +8,7 @@ test.beforeEach(async ({ page }) => {
     await page.locator("#start").click()
     await expect.poll(() => page.url()).toContain("#1")
     await page.evaluate(() => {
-        $main.attr("sli-tag-names", "rodice,vedouci")
+        $main.attr("sli-tag-names", "rodice | vedouci")
         prop_invalidate() // the real "Name tags" dialog does this; tag_names() reads the memoized prop()
         const frames = playback.$articles.toArray().map(el => $(el).data("frame"))
         frames[0].set_tag(1) // one.jpg -> rodice
@@ -298,7 +298,7 @@ test("_validate_tag_groups flags a path separator and a name collision", async (
 
 test("export_tags_dialog refuses to proceed when tag names collide", async ({ page }) => {
     await page.evaluate(() => {
-        $main.attr("sli-tag-names", "vedouci,vedouci") // tag 1 and 2 share a name – collision
+        $main.attr("sli-tag-names", "vedouci | vedouci") // tag 1 and 2 share a name – collision
         prop_invalidate() // tag_names() reads the memoized prop(); the real dialog invalidates after a write
     })
     await page.evaluate(() => menu.export.export_tags_dialog())

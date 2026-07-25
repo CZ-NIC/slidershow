@@ -13,7 +13,7 @@ However, this is a non-trivial task since the browser protects your photos' priv
 
 Zoomable on click / mouse wheel or via a button from the menu. You can zoom either an image or a video. Use <kbd>arrows</kbd> to crawl over the picture when zoomed. Even multiple arrows work at once. If you need the arrows to control the video playthrough, use <kbd>Ctrl+arrows</kbd> (works for both Firefox and Chrome).
 
-<video autoplay controls muted loop playsinline width="640" src="../assets/zoom.webm" title="Wheel-zooming into a photo and arrow-crawling around it"></video>
+<video autoplay controls muted loop playsinline width="640" src="https://cdn.jsdelivr.net/gh/CZ-NIC/slidershow-assets@main/zoom.webm" title="Wheel-zooming into a photo and arrow-crawling around it"></video>
 
 ### `sli-step-points`
 
@@ -31,7 +31,7 @@ In this example, the image starts at `[100, 10, 2]`, then zooms out `[]` (instan
 
 Position `0,0` is at the image centre. Its real dimension is taken into account so the value remains stable while changing the browser size (different displays). We recommend using the property panel (<kbd>Alt+P</kbd>) to determine the coordinates.
 
-<video autoplay controls muted loop playsinline width="640" src="../assets/step-points.webm" title="Composing sli-step-points in the property panel and stepping through them"></video>
+<video autoplay controls muted loop playsinline width="640" src="https://cdn.jsdelivr.net/gh/CZ-NIC/slidershow-assets@main/step-points.webm" title="Composing sli-step-points in the property panel and stepping through them"></video>
 
 Every image in the sections slowly zooms out from the centre. (Images in header and footer are ignored.)
 

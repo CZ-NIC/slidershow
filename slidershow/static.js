@@ -220,6 +220,43 @@ function formatBytes(bytes) {
 }
 
 /**
+ * Parse a pipe-delimited list with backslash-escape support. Shared by every `sli-*` list attribute
+ * (tag-names, gps, places). A literal pipe inside an item is written `\|`.
+ * `name\|with\|pipes | other` → [`name|with|pipes`, `other`]
+ * @param {string} str
+ * @returns {string[]}
+ */
+function parsePipeList(str) {
+    const result = []
+    let current = ""
+    for (let i = 0; i < str.length; i++) {
+        if (str[i] === "\\" && str[i + 1] === "|") {
+            current += "|"
+            i++ // skip the escaped pipe
+        } else if (str[i] === "|") {
+            result.push(current.trim())
+            current = ""
+        } else {
+            current += str[i]
+        }
+    }
+    if (current.trim()) {
+        result.push(current.trim())
+    }
+    return result.filter(Boolean)
+}
+
+/**
+ * Format an array as a pipe-delimited string, backslash-escaping literal pipes. Inverse of {@link parsePipeList}.
+ * [`name|with|pipes`, `other`] → `name\|with\|pipes | other`
+ * @param {string[]} arr
+ * @returns {string}
+ */
+function formatPipeList(arr) {
+    return arr.map(item => item.replace(/\|/g, "\\|")).join(" | ")
+}
+
+/**
  * This works well however the video stop ~ 100 ms later than the endtime.
  *
  * HTMLMediaElement endtime to seconds

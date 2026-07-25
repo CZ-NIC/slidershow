@@ -61,7 +61,7 @@ Example: `<video src="myvideo.mp4#t=10"></video>` will start playing at time 10 
 
 Use the property panel (<kbd>Alt+P</kbd>) to help you.
 
-<video autoplay controls muted loop playsinline width="640" src="../assets/video-cut.webm" title="Trimming a clip's playback range via the sli-video-cut property panel field"></video>
+<video autoplay controls muted loop playsinline width="640" src="https://cdn.jsdelivr.net/gh/CZ-NIC/slidershow-assets@main/video-cut.webm" title="Trimming a clip's playback range via the sli-video-cut property panel field"></video>
 
 ## `sli-video-points`
 

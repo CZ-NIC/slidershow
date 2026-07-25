@@ -1,5 +1,6 @@
 /** Real, copyright-free demo photos/videos to drop into the app for docs media generation.
- * Source folder is outside the repo (personal Downloads) – only the generated docs/assets/* output gets committed. */
+ * Source folder is outside the repo (personal Downloads); the generated docs/assets/* output is NOT committed here
+ * (it is git-excluded) – it lives in the separate public CZ-NIC/slidershow-assets repo, served to the docs via jsdelivr. */
 const path = require("path")
 const fs = require("fs")
 

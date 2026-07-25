@@ -923,7 +923,7 @@ class Export {
         if (baseCandidates.length) {
             $baseInput = $("<input/>", {
                 type: "text",
-                value: localStorage.getItem("TAG-EXPORT-BASE-URL") || "",
+                value: localStorage.getItem("sli:export-base-url") || "",
                 placeholder: "https://example.com/photos/",
                 style: "width:100%"
             })
@@ -952,7 +952,7 @@ class Export {
                     callback: () => {
                         const baseUrl = $baseInput ? String($baseInput.val()).trim() : ""
                         if (baseUrl) {
-                            localStorage.setItem("TAG-EXPORT-BASE-URL", baseUrl)
+                            localStorage.setItem("sli:export-base-url", baseUrl)
                         }
                         this.export_tags(groups, allFrames, baseUrl, $writeJson.prop("checked"), $writeTxt.prop("checked"))
                     }
@@ -989,7 +989,7 @@ class Export {
 
         let targetDir
         try {
-            targetDir = await window.showDirectoryPicker({ mode: "readwrite", id: "slidershow-tags-target", startIn: "pictures" })
+            targetDir = await window.showDirectoryPicker({ mode: "readwrite", id: "sli:tags-target", startIn: "pictures" })
         } catch (e) {
             return // user cancelled the target folder picker
         }
@@ -1365,7 +1365,7 @@ class Export {
      */
     _open_handle_db() {
         return new Promise((resolve, reject) => {
-            const req = indexedDB.open("slidershow-tag-export", 1)
+            const req = indexedDB.open("sli:tag-export", 1)
             req.onupgradeneeded = () => req.result.createObjectStore("handles")
             req.onsuccess = () => resolve(req.result)
             req.onerror = () => reject(req.error)

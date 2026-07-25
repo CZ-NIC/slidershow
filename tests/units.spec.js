@@ -131,3 +131,67 @@ test("_photo_date_range returns min–max month from sli-datetime, null when non
     expect(result.none).toBeNull()
     expect(result.range).toEqual({ from: "2019-06", to: "2019-08" })
 })
+
+test("recent list renders frame count and photo date range for each saved presentation", async ({ page }) => {
+    await page.goto(FIXTURE)
+    await expect(page.locator("#start")).toBeVisible()
+
+    const entries = await page.evaluate(() => {
+        // Manually add a recent entry with date range (different URL so it's not filtered out)
+        const entry = {
+            url: "/other-presentation.html",
+            frames: 12,
+            name: "Other Presentation",
+            time: new Date().toISOString(),
+            storage: "local",
+            dateFrom: "2019-06",
+            dateTo: "2019-08"
+        }
+        const list = [entry]
+        localStorage.setItem(Menu.RECENT_KEY, JSON.stringify(list))
+
+        // Render recent list
+        menu.refresh_recent()
+
+        // Get rendered meta texts
+        return $("#recent-panel .recent-meta").map((_, el) => $(el).text()).get()
+    })
+
+    // Should show frame count and date range
+    expect(entries.length).toBeGreaterThan(0)
+    expect(entries[0]).toMatch(/12 frames · 2019-06 – 2019-08/)
+})
+
+test("recent list gracefully handles old entries without date range", async ({ page }) => {
+    await page.goto(FIXTURE)
+    await expect(page.locator("#start")).toBeVisible()
+
+    const result = await page.evaluate(() => {
+        // Simulate old entry format (no dateFrom/dateTo)
+        const oldEntry = {
+            url: "/old-path.html",
+            frames: 5,
+            name: "Old Presentation",
+            time: new Date().toISOString(),
+            storage: "local"
+        }
+
+        // Manually insert into localStorage to simulate old data
+        const list = [oldEntry]
+        localStorage.setItem(Menu.RECENT_KEY, JSON.stringify(list))
+
+        // Render recent list
+        menu.refresh_recent()
+
+        // Get the rendered meta for the old entry
+        const $meta = $("#recent-panel .recent-meta").eq(0)
+        return {
+            text: $meta.text(),
+            hasFrameCount: $meta.text().includes("5 frames"),
+            hasDateRange: $meta.text().includes("–")
+        }
+    })
+
+    expect(result.hasFrameCount).toBe(true)
+    expect(result.hasDateRange).toBe(false)  // Old entries shouldn't show date range
+})

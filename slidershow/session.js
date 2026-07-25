@@ -143,7 +143,8 @@ class Session {
             })
         }
         if (this.playback.frame.tag_names().length) {
-            params.set("tag-names", this.playback.frame.tag_names().join(","))
+            // Pipe-delimited with backslash-escape (see formatPipeList in static.js)
+            params.set("tag-names", formatPipeList(this.playback.frame.tag_names()))
         }
         if (this.playback.step_disabled) {
             params.set("no-steps", "")
