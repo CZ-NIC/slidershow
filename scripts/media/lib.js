@@ -144,6 +144,16 @@ async function openPresentation(page, filePaths, opts) {
     await page.locator("#content-summary").waitFor()
 }
 
+/** The top-bar control icons (☰ burger, ◁ ▷, ▦ grid overview) auto-hide after a second of no mouse
+ * activity (Hud.playback_icon_interval) and start out hidden, so their boundingBox() is null until
+ * something wakes them. Fires a synthetic document "mousemove" (the same event Hud listens for) without
+ * actually moving the real/fake cursor, so it can be called right before reading a control icon's box
+ * without disturbing whatever glide comes next. */
+async function wakeControlIcons(page) {
+    await page.evaluate(() => document.dispatchEvent(new MouseEvent("mousemove", { bubbles: true })))
+    await page.waitForTimeout(50)
+}
+
 async function screenshot(name, page, opts = {}) {
     fs.mkdirSync(OUT_DIR, { recursive: true })
     const out = path.join(OUT_DIR, `${name}.png`)
@@ -184,6 +194,14 @@ function installOverlayScript() {
         box-shadow:0 0 6px rgba(0,0,0,.6);opacity:0;transition:opacity .15s ease;`
     root.appendChild(cursor)
 
+    // Rides alongside the cursor during dropFilesFromSide() to read as "a file being dragged in from
+    // outside the browser" – plain dropFilesOnto() has no such visual since it never actually glides in.
+    const ghost = document.createElement("div")
+    ghost.style.cssText = `position:absolute;left:0;top:0;width:46px;height:46px;margin:-38px 0 0 10px;
+        border-radius:6px;border:2px solid #fff;box-shadow:0 4px 14px rgba(0,0,0,.5);
+        background-size:cover;background-position:center;opacity:0;transition:opacity .2s ease;`
+    root.appendChild(ghost)
+
     const attach = () => document.documentElement.appendChild(root)
     attach()
     // <body> gets wiped/replaced by some frameworks after load; make sure the overlay survives.
@@ -207,6 +225,18 @@ function installOverlayScript() {
         cursor(x, y) {
             cursor.style.transform = `translate(${x}px,${y}px)`
             cursor.style.opacity = "1"
+        },
+        ghost(x, y, url) {
+            if (url) {
+                ghost.style.backgroundImage = `url(${url})`
+            }
+            ghost.style.transition = "none"
+            ghost.style.transform = `translate(${x}px,${y}px)`
+            ghost.style.opacity = "1"
+        },
+        hideGhost() {
+            ghost.style.transition = "opacity .2s ease"
+            ghost.style.opacity = "0"
         },
         keys(labels) {
             // Only rebuild content when actually showing badges. On hide, leave the old badges in the
@@ -328,18 +358,13 @@ async function drag(page, from, to, opts = {}) {
  * the desktop" API, so this builds a `DataTransfer` with real `File` objects (read from disk, base64'd
  * across the page boundary) and dispatches dragenter/dragover/drop with it – indistinguishable from a
  * real drop to the app's own drop handler. Shows a cursor pulse at the drop point first. */
-async function dropFilesOnto(page, locator, filePaths) {
-    const box = await locator.boundingBox()
-    const point = { x: box.x + box.width / 2, y: box.y + box.height / 2 }
-    await moveMouse(page, point.x, point.y)
-    await page.evaluate(([px, py]) => window.__media?.pulse(px, py), [point.x, point.y])
-
+async function buildFileDataTransfer(page, filePaths) {
     const files = filePaths.map(p => ({
         name: path.basename(p),
         type: p.match(/\.(mp4|webm|mov)$/i) ? "video/mp4" : "image/jpeg",
         base64: fs.readFileSync(p).toString("base64"),
     }))
-    const dataTransfer = await page.evaluateHandle(files => {
+    return page.evaluateHandle(files => {
         const dt = new DataTransfer()
         for (const { name, type, base64 } of files) {
             const bytes = Uint8Array.from(atob(base64), c => c.charCodeAt(0))
@@ -347,9 +372,54 @@ async function dropFilesOnto(page, locator, filePaths) {
         }
         return dt
     }, files)
+}
 
+async function dropFilesOnto(page, locator, filePaths) {
+    const box = await locator.boundingBox()
+    const point = { x: box.x + box.width / 2, y: box.y + box.height / 2 }
+    await moveMouse(page, point.x, point.y)
+    await page.evaluate(([px, py]) => window.__media?.pulse(px, py), [point.x, point.y])
+
+    const dataTransfer = await buildFileDataTransfer(page, filePaths)
     await locator.dispatchEvent("dragover", { dataTransfer })
     await page.waitForTimeout(300) // let the "drop here" hover state actually render
+    await locator.dispatchEvent("drop", { dataTransfer })
+}
+
+/** Like dropFilesOnto(), but glides the cursor in from just outside the left edge of the viewport with a
+ * small thumbnail of the first file riding alongside it, so the drop reads as "dragged in from another
+ * app/the OS" instead of the file teleporting straight to the drop point. Only the approach is different –
+ * the actual drop still uses the same synthetic DataTransfer (Playwright has no real cross-app drag). */
+async function dropFilesFromSide(page, locator, filePaths) {
+    const box = await locator.boundingBox()
+    const point = { x: box.x + box.width / 2, y: box.y + box.height / 2 }
+    const from = { x: -40, y: point.y }
+    const thumbUrl = `data:image/jpeg;base64,${fs.readFileSync(filePaths[0]).toString("base64")}`
+
+    await page.mouse.move(from.x, from.y)
+    await page.evaluate(([px, py, url]) => {
+        window.__media?.cursor(px, py)
+        window.__media?.ghost(px, py, url)
+    }, [from.x, from.y, thumbUrl])
+
+    const steps = 24, durationMs = 700
+    for (let i = 1; i <= steps; i++) {
+        const ix = from.x + (point.x - from.x) * (i / steps)
+        const iy = from.y + (point.y - from.y) * (i / steps)
+        await page.mouse.move(ix, iy)
+        await page.evaluate(([px, py]) => {
+            window.__media?.cursor(px, py)
+            window.__media?.ghost(px, py)
+        }, [ix, iy])
+        await page.waitForTimeout(durationMs / steps)
+    }
+    lastMousePos.set(page, point)
+    await page.evaluate(([px, py]) => window.__media?.pulse(px, py), [point.x, point.y])
+    await page.evaluate(() => window.__media?.hideGhost())
+
+    const dataTransfer = await buildFileDataTransfer(page, filePaths)
+    await locator.dispatchEvent("dragover", { dataTransfer })
+    await page.waitForTimeout(300)
     await locator.dispatchEvent("drop", { dataTransfer })
 }
 
@@ -419,5 +489,6 @@ async function narrate(page, steps) {
 module.exports = {
     REPO_ROOT, OUT_DIR, VIEWPORT, presenterUrl,
     withPage, openWithFiles, openPresentation, screenshot, markVideoStart, waitForGridSettled, openGridSilently,
-    caption, beat, moveMouse, click, wheel, drag, dropFilesOnto, pressKeys, narrate,
+    wakeControlIcons,
+    caption, beat, moveMouse, click, wheel, drag, dropFilesOnto, dropFilesFromSide, pressKeys, narrate,
 }
