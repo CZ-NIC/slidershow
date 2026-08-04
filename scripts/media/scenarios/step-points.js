@@ -1,47 +1,92 @@
-const { withPage, openWithFiles, markVideoStart, moveMouse, wheel, pressKeys, narrate } = require("../lib")
-const { curatedPhotos } = require("../demo-files")
+const path = require("path")
+const { REPO_ROOT, withPage, openWithFiles, markVideoStart, pressKeys, wheel, moveMouse, narrate, wakeControlIcons } = require("../lib")
 
-/** docs/images.md — open the property panel (Alt+P), compose a couple of sli-step-points by zooming/
- * panning and clicking "+", then step through them with the regular next-step key.
- * Uses the middle of 3 curated photos so we can leave-and-return afterward: going FORWARD into a frame
- * primes step playback at its first point, going backward instead jumps straight to the last one (see
- * Frame.steps_prepare's "Adjust initial step" logic) – without that, "n" has nothing to advance through,
- * since the step list is only (re)built on actual frame entry, not when a point is added mid-edit. */
+/** docs/index.md — step-points demo: pan/zoom to two spots on a photo, add points (Alt+s) with one
+ * rotated, then close the property panel (Alt+p). Shows the authored presentation workflow. */
 module.exports = () => withPage("step-points", { record: true }, async page => {
-    await openWithFiles(page, curatedPhotos.slice(0, 3))
-    await page.keyboard.down("Shift")
-    await page.keyboard.press("PageDown") // land on the middle photo
-    await page.keyboard.up("Shift")
+    // The specific photo for this scenario (2 horses, good for panning between heads).
+    const photoPath = path.join(REPO_ROOT, "..", "copyright_allowed_to_use", "nahodny_fotecky", "20260610_083025.jpg")
+
+    await openWithFiles(page, [photoPath])
+    await page.locator("main article").first().waitFor()
+    // Non-zero so the "leaving and returning" jump at the end animates instead of snapping.
+    await page.evaluate(() => document.querySelector("main")?.setAttribute("sli-transition-duration", "1"))
+    await page.evaluate(() => document.querySelector("main img")?.setAttribute("sli-step-points", "[[], [-1361,-435,7.6],[-740,-498,7.6],[620,542,5,null,null,90]]"))
+
+
     await page.waitForTimeout(400)
     markVideoStart(page)
 
-    const actorBox = () => page.evaluate(() => {
-        const r = playback.frame.$actor[0].getBoundingClientRect()
-        return { x: r.x, y: r.y, width: r.width, height: r.height }
-    })
-
     await narrate(page, [
-        { caption: "Alt+P opens the property panel", after: 600, action: p => pressKeys(p, ["Alt", "p"], 400, { repeat: false }) },
+        { after: 0, action: p => pressKeys(p, ["Home"], 300, { repeat: false }) },
+        // { caption: "Zoom out …", before: 0, after: 0, action: p => wheel(p, 480, { x: 1000, y: 500 }) },
+        // // { caption: "Leaving and returning primes playback at the first point", before: 500, after: 300, action: p => pressKeys(p, ["Shift", "PageUp"], 200, { repeat: false }) },
+        // { caption: "Reset playback to the beginning", before: 500, after: 1500, action: p => pressKeys(p, ["Home"], 200, { repeat: false }) },
+        // { before: 200, after: 700, action: p => pressKeys(p, ["Home"], 200, { repeat: false }) },
+        { caption: "Hit \"n\" / → / Space to step through the previously set points", after: 900, action: p => pressKeys(p, ["Space"], 200, { repeat: false }) },
+        { after: 900, action: p => pressKeys(p, ["Space"], 200, { repeat: false }) },
+        { after: 900, action: p => pressKeys(p, ["Space"], 200, { repeat: false }) },
+        { caption: "The playback moves automatically and respects the rotation", after: 900, action: p => pressKeys(p, ["Space"], 200, { repeat: false }) },
+        // { caption: "\"n\" (or → / Space) 3steps through the points", after: 900, action: p => pressKeys(p, ["Space"], 200, { repeat: false }) },
+        // { caption: "\"n\" (or → / Space) 4steps through the points", after: 900, action: p => pressKeys(p, ["Space"], 200, { repeat: false }) },
+        // { after: 900, action: p => pressKeys(p, ["n"], 200, { repeat: false }) },
     ])
 
-    const plusBtn = page.locator('#hud-properties input[name="step-points"] + .hud-point')
-    await plusBtn.waitFor()
-    const box = await actorBox()
-    const spotA = { x: box.x + box.width * 0.62, y: box.y + box.height * 0.38 }
-    const spotB = { x: box.x + box.width * 0.32, y: box.y + box.height * 0.68 }
+    // const leftHeadX = 1050, leftHeadY = 531
+    // await narrate(page, [
+    //     { caption: "Pan to the first point …", action: p => moveMouse(p, leftHeadX, leftHeadY) },
+    //     { caption: "… and zoom in.", before: 300, after: 500, action: p => wheel(p, -600, { x: leftHeadX, y: leftHeadY }) },
+    // ])
+    // await narrate(page, [
+    //     { caption: "Open the property panel …", after: 300, action: p => pressKeys(p, ["Alt", "p"], 300, { repeat: false }) },
+    // ])
+    // await page.locator(".hud-point").first().waitFor()
+    // await narrate(page, [
+    //     { caption: "… and add a step point", after: 0, action: p => pressKeys(p, ["Alt", "s"], 300, { repeat: false }) },
+    // ])
 
-    await narrate(page, [
-        { caption: "\"+\" captures the current view as the first point", before: 600, after: 500, action: () => plusBtn.click() },
-        { caption: "Zoom and pan to a new spot …", before: 400, action: p => moveMouse(p, spotA.x, spotA.y) },
-        { after: 700, action: async p => { await wheel(p, -300, spotA); await p.waitForTimeout(200) } },
-        { caption: "… \"+\" captures it as the next point", before: 300, after: 700, action: () => plusBtn.click() },
-        { caption: "One more, elsewhere on the photo", before: 400, action: p => moveMouse(p, spotB.x, spotB.y) },
-        { after: 700, action: async p => { await wheel(p, -220, spotB); await p.waitForTimeout(200) } },
-        { after: 700, action: () => plusBtn.click() },
-        { caption: "Alt+P closes the panel", before: 400, after: 500, action: p => pressKeys(p, ["Alt", "p"], 400, { repeat: false }) },
-        { caption: "Leaving and returning primes playback at the first point", before: 500, after: 300, action: p => pressKeys(p, ["Shift", "PageUp"], 200, { repeat: false }) },
-        { before: 200, after: 700, action: p => pressKeys(p, ["Shift", "PageDown"], 200, { repeat: false }) },
-        { caption: "\"n\" (or → / Space) steps through the points", after: 900, action: p => pressKeys(p, ["n"], 200, { repeat: false }) },
-        { after: 900, action: p => pressKeys(p, ["n"], 200, { repeat: false }) },
-    ])
+    // await narrate(page, [
+    //     { caption: "Zoom out …", before: 0, after: 0, action: p => wheel(p, 600, { x: 1000, y: 500 }) },
+    // ])
+
+    // const middleHeadX = 863, middleHeadY = 550
+    // await narrate(page, [
+    //     { caption: "… choose another place to zoom in …", after: 0, action: p => wheel(p, -600, { x: middleHeadX, y: middleHeadY }) },
+    // ])
+
+    // await narrate(page, [
+    //     { caption: "… and add a step point", after: 400, action: p => pressKeys(p, ["Alt", "s"], 300, { repeat: false }) },
+    // ])
+
+    // await narrate(page, [
+    //     { caption: "Let's find another horse …", before: 0, after: 0, action: p => wheel(p, 600, { x: 640, y: 400 }) },
+    // ])
+
+    // const rightHeadX = 463, rightHeadY = 602
+    // await narrate(page, [
+    //     { caption: "… zoom in …", after: 400, action: p => wheel(p, -480, { x: rightHeadX, y: rightHeadY }) },
+    // ])
+
+    // await narrate(page, [
+    //     { caption: "… rotate …", action: p => pressKeys(p, ["Shift","r"], 50, { repeat: false }) },
+    //     {  before: 0, after: 400, action: p => pressKeys(p, ["Shift","r"], 50, { repeat: false }) },
+    //     {  before: 0, after: 400, action: p => pressKeys(p, ["Shift","r"], 50, { repeat: false }) },
+    //     {  before: 0, after: 400, action: p => pressKeys(p, ["Shift","r"], 50, { repeat: false }) },
+    //     {  before: 0, after: 400, action: p => pressKeys(p, ["Shift","r"], 50, { repeat: false }) },
+    //     { caption: "… and add the third step point", after: 200, action: p => pressKeys(p, ["Alt", "s"], 300, { repeat: false }) },
+    // ])
+    // await page.waitForTimeout(200)
+
+    // await narrate(page, [
+    //     { caption: "Close the panel", after: 0, action: p => pressKeys(p, ["Alt", "p"], 300, { repeat: false }) },
+    //     { caption: "Zoom out …", before: 0, after: 0, action: p => wheel(p, 480, { x: 1000, y: 500 }) },
+    //     // { caption: "Leaving and returning primes playback at the first point", before: 500, after: 300, action: p => pressKeys(p, ["Shift", "PageUp"], 200, { repeat: false }) },
+    //     { caption: "Reset playback to the beginning", before: 500, after: 1500, action: p => pressKeys(p, ["Home"], 200, { repeat: false }) },
+    //     // { before: 200, after: 700, action: p => pressKeys(p, ["Home"], 200, { repeat: false }) },
+    //     { caption: "\"n\" (or → / Space) steps through the points", after: 900, action: p => pressKeys(p, ["Space"], 200, { repeat: false }) },
+    //     { caption: "the playback moves automatically and respects the rotation", after: 900, action: p => pressKeys(p, ["Space"], 200, { repeat: false }) },
+    //     // { caption: "\"n\" (or → / Space) 3steps through the points", after: 900, action: p => pressKeys(p, ["Space"], 200, { repeat: false }) },
+    //     // { caption: "\"n\" (or → / Space) 4steps through the points", after: 900, action: p => pressKeys(p, ["Space"], 200, { repeat: false }) },
+    //     // { after: 900, action: p => pressKeys(p, ["n"], 200, { repeat: false }) },
+    // ])
 })

@@ -718,7 +718,7 @@ class Playback {
         this.hud.loading(frame)
 
         // start transition
-        frame.prepare(sameFrame ? null : lastFrame)
+        frame.prepare(lastFrame)
         this.play_pause(moving)
         this.doNotWaitAndGo()
 

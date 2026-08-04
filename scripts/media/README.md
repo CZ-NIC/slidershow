@@ -40,6 +40,27 @@ curl https://purge.jsdelivr.net/gh/CZ-NIC/slidershow-assets@main/<name>.webm
 When the assets repo grows too big, reset its history instead of accumulating it — a fresh orphan commit
 + `git push --force` drops the old blobs without touching this repo's history; then purge the whole ref.
 
+## Cheaper regeneration: tips for future scenarios
+
+A single scenario run is expensive (full browser launch, video encode via ffmpeg ~50s per clip). To cut
+cost for next-time AI:
+
+1. **Document non-obvious fixtures**. Keep `photos.json` in sync — add one-line descriptions for photos
+   used in a scenario. It costs ~0 here (you're already reading the file), but saves a future AI a
+   `vision()` call or grep hunt when they want to pick a fitting photo for the next scenario.
+2. **Mark stable interaction points ahead of time in the code** (hardcoded coords, locator+boundingBox
+   ahead-of-time, pre-computed values in comments). A `wakeControlIcons()` call saves 1000ms of real
+   mouse.move() waits — small but it adds up. Hard-coded positions from a reference run avoid re-reading
+   boundingBox() when the next AI re-runs the same story.
+3. **Use `markVideoStart()` right after file load finishes** — it trims the boring upload flash (~0.3–0.5s
+   per scenario). Over 20 scenarios, that's 6–10s of unnecessary encoding.
+4. **Don't re-narrate identical beats**. If a later scenario repeats the same interaction (e.g. "open the
+   grid") use the same captioning and pacing as the first to keep them consistent AND to make it clear
+   to a future AI that it's a copy, not a new exploration.
+5. **Keep recordings short and focused**. A 46s clip (hero.webm) encodes ~50s × 14fps × codec overhead =
+   large. An 8s clip (zoom.webm) is near-instantaneous. If your scenario needs 2+ distinct "chapters",
+   split it into 2 separate scenario files instead — they're free to register.
+
 ## Adding a new scenario
 
 Drop a new file in `scenarios/`, named after its output. No registration needed — `run.js` picks up

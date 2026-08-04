@@ -324,13 +324,22 @@ async function click(page, x, y) {
 
 /** Scrolls the wheel at the given position (or the cursor's current position), flashing a pulse per tick
  * so "the wheel just moved here" is visible in the recording. */
+/** Scrolls the wheel at the given position. `deltaY` is the total delta; it's split into multiple
+ * wheel events (~120 each) so the zoom animates visibly instead of snapping all at once. */
 async function wheel(page, deltaY, at) {
     if (at) {
         await moveMouse(page, at.x, at.y)
     }
     const pos = lastMousePos.get(page)
     await page.evaluate(([px, py]) => window.__media?.pulse(px, py), [pos.x, pos.y])
-    await page.mouse.wheel(0, deltaY)
+    // Split into ~120-unit ticks so zoom animates, not snaps.
+    const tickSize = 120
+    const numTicks = Math.ceil(Math.abs(deltaY) / tickSize)
+    const tickDelta = deltaY / numTicks
+    for (let i = 0; i < numTicks; i++) {
+        await page.mouse.wheel(0, tickDelta)
+        await page.waitForTimeout(30) // small pause between ticks
+    }
 }
 
 /** Drags from `from` to `to` (both {x, y}) – glide in, press, glide to target, release. Works for any

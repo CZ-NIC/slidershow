@@ -22,3 +22,20 @@ test("sli-step elements appear one by one, then navigation leaves the frame", as
     await page.keyboard.press("PageDown")
     await expect.poll(() => page.url()).toContain("#2")
 })
+
+test("Home key resets steps to the first step when on the same frame", async ({ page }) => {
+    await page.goto(FIXTURE)
+    await page.locator("#start").click()
+    await expect.poll(() => page.url()).toContain("#1")
+
+    // Navigate to second step
+    await page.keyboard.press("PageDown")
+    await page.keyboard.press("PageDown")
+    await expect(page.locator("#s2")).toHaveClass(/step-shown/)
+
+    // Press Home to go to first step of the same frame
+    await page.keyboard.press("Home")
+    await expect(page.locator("#s1")).toHaveClass(/step-shown/)
+    await expect(page.locator("#s2")).toHaveClass(/step-hidden/)
+    expect(page.url()).toContain("#1") // still on frame 1
+})

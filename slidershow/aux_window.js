@@ -81,11 +81,15 @@ class AuxWindow {
      * @param {*} e Message from an aux-window
      */
     controller_command(e) {
+        if (!this.$current_frame && ["info", "update-step", "display-message"].includes(e.action)) {
+            return // this is the master window's own channel object, not a real aux-window display (ex: two tabs sharing the same URL/channel name)
+        }
         switch (e.action) {
             case "info":
                 this.$current_frame.html(e.frame)
                 this.$notes.html((e.notes || "")).toggle(Boolean(this.$notes.html())) // hide notes if empty
                 this.$next_frame.html(e.next_frame || "END")
+                break
             case "update-step":
                 // Highlight the element to be revealed in the next step
                 this.$current_frame.find("[sli-step]")

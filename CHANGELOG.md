@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## 1.0.1 (unreleased)
+
+* fix (playback): pressing Home now resets to the first step too
+
 ## 1.0.0 (2026-07-25)
 
 * BREAKING: all app-owned attributes moved from `data-*` to a dedicated `sli-*` prefix (ex. `data-duration` → `sli-duration`) – every `sli-*` attribute is now unambiguously ours. Presentations exported before this change are not supported anymore; unless you replace the string manually.

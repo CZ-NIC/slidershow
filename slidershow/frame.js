@@ -289,7 +289,7 @@ class Frame {
         // Adjust initial step (either the first or the last).
         if (last_frame) {
             // last_frame might not be set. Eg. when no frame change happened on window resize or font size change
-            if (last_frame.index < this.index) { // went forward to the frame (or direct entry)
+            if (last_frame.index <= this.index) { // went forward to the frame (or direct entry) or stayed on same frame
                 this.step_index = 0
                 this.step_process($(this.steps.slice(0, 1).flat()), false)
             } else { // went backwards to the frame
