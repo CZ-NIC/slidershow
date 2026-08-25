@@ -781,6 +781,26 @@ frame-preview {
         frame-preview img,
         frame-preview video {
             object-fit: cover;
+            /* Anchored above the middle, not dead centre: a phone photo's subject (faces, a horizon, a
+               building) almost always sits in the upper half, so a centred crop eats the interesting part
+               and keeps the floor. Overridden back to centre when nothing is being cropped at all. */
+            object-position: center 40%;
+        }
+
+        /* Tile caption – hidden until the grid's caption cycle asks for it, and never in the ribbon. */
+        .tile-label {
+            display: none;
+        }
+
+        /* A media-only frame (its photo/video is the article's only child – see Hud.assureThumbnail) is not
+           rendered as a shrunken screenshot of the frame, but stretched so the media owns the tile outright.
+           Otherwise the cover crop above would follow the *screen's* aspect ratio – a portrait photo in a
+           16:10 tile kept less than half its height. Filling the tile makes the crop follow the tile's own
+           (square, in the grid) shape instead, so both orientations lose the same modest slice. */
+        frame-preview.media-only>article {
+            width: 100%;
+            height: 100%;
+            scale: none;
         }
 
         &#hud-thumbnails {
@@ -799,6 +819,10 @@ frame-preview {
             /* thumbnail grid */
             display: flex;
             flex-wrap: wrap;
+            /* Pack the rows at the top: with the default `stretch`, a grid too short to fill the viewport
+               (a handful of frames) would inflate its few rows to soak up the leftover height, which now
+               that tiles size themselves by aspect-ratio would stretch them out of square. */
+            align-content: flex-start;
             overflow: auto;
             height: 100vh;
             background: var(--bg-dark);
@@ -840,7 +864,21 @@ frame-preview {
             >frame-preview {
                 display: block;
                 width: calc(100% / var(--columns));
-                height: calc(100vh / var(--columns));
+                /* 4:3, not viewport-shaped: the tile's shape is what a media-only photo gets cropped to
+                   (see .media-only above), so tying it to the device's screen meant a vertical shot kept 47%
+                   of its height on a 16:10 laptop and less still on a wider one. 4:3 leaves a landscape phone
+                   photo untouched and a portrait one at 56%, and matches the gallery thumbnails on
+                   upload.edvard.cz. GRID_COLUMNS' default compensates for the taller tiles.
+                   GridController.applyTileShape() overrides this via [data-tile] below. */
+                aspect-ratio: 4 / 3;
+                align-self: start; /* the flex default `stretch` would override the aspect-ratio's height */
+
+                /* The shared `.current` outline below is `--bg-dark`, which the ribbon draws over a lit
+                   presentation but the grid draws on its own dark background – there it was invisible,
+                   leaving the cursor frame marked by its two corner brackets alone. */
+                &.current {
+                    outline-color: var(--highlight);
+                }
 
                 &.importable-target {
                     >* {
@@ -859,6 +897,89 @@ frame-preview {
                 }
 
 
+            }
+
+            /* Tile shapes the presenter cycles through (GridController.cycleTileShape). "screen" gives back
+               the device's own proportions – the right look for authored slides, where the overview should
+               resemble what the audience will see; it is expressed as a height rather than an aspect-ratio
+               so it follows a window resize on its own, with no JS to re-measure. */
+            &[data-tile="1:1"]>frame-preview {
+                aspect-ratio: 1;
+            }
+
+            &[data-tile="screen"]>frame-preview {
+                aspect-ratio: auto;
+                height: calc(100vh / var(--columns));
+            }
+
+            /* A frame with a layout of its own keeps the screen's proportions (its preview is a scaled clone
+               of the real thing), so in a photo-shaped tile it cannot fill the cell – Hud.assureThumbnail
+               centres it and leaves a band above and below. Paint that band the same quiet dark as the
+               "show whole frames" letterbox: in the placeholder grey it read as the tile bleeding out of
+               its row rather than as a slide sitting inside one. `.loading` keeps the grey, it is still
+               the cue that a cell has nothing in it yet. */
+            >frame-preview:not(.loading):not(.media-only) {
+                background-color: var(--bg-surface-dark);
+            }
+
+            /* The cursor frame is already marked by the highlight-coloured outline above; filling the tile
+               as well would paint those letterbox bands bright yellow, which is what made the current slide
+               look like it was spilling over its neighbours. */
+            >frame-preview.current {
+                background-color: transparent;
+            }
+
+            /* Tile captions (GridController.cycleTileLabels). Laid over the photo's foot on a gradient scrim
+               rather than on a line of its own below the tile: it costs the grid no geometry (the rows stay
+               exactly --columns wide, the aspect-ratio above stays the tile's whole box) and keeps the
+               photos edge to edge instead of breaking them into cards. */
+            &[data-labels="name"] .tile-label,
+            &[data-labels="name-date"] .tile-label {
+                display: block;
+                position: absolute;
+                inset: auto 0 0 0;
+                padding: 2px 5px;
+                background: linear-gradient(to top, color-mix(in srgb, var(--bg-dark) 85%, transparent), transparent);
+                color: var(--base);
+                font-size: 11px;
+                line-height: 1.35;
+                text-align: left;
+                pointer-events: none; /* the whole tile is a click target – the caption must not swallow it */
+
+                b,
+                i {
+                    display: block;
+                    overflow: hidden;
+                    text-overflow: ellipsis;
+                    white-space: nowrap;
+                    font-weight: normal;
+                    font-style: normal;
+                }
+
+                i {
+                    opacity: .65;
+                }
+            }
+
+            &[data-labels="name"] .tile-label i {
+                display: none;
+            }
+
+            /* "Show whole frames" (GridController.toggleTileFit) – nothing is cropped, so the crop bias
+               above must go back to centre or a portrait shot would hang off the top of its letterbox. */
+            &[data-fit="contain"] {
+
+                frame-preview img,
+                frame-preview video {
+                    object-fit: contain;
+                    object-position: center;
+                }
+
+                /* The letterbox itself. Painted on the article, not the tile, so the tile's own background
+                   stays free for the .selected / .current tints. */
+                frame-preview.media-only>article {
+                    background-color: var(--bg-surface-dark);
+                }
             }
 
             section-controller {
@@ -1189,6 +1310,7 @@ frame-preview {
                 scale: 0.75;
                 width: unset;
                 height: unset;
+                aspect-ratio: auto; /* jQuery UI sizes the helper itself; the grid's square tile must not fight it */
                 box-shadow: unset;
                 z-index: 10;
 

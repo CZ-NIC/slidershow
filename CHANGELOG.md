@@ -1,7 +1,12 @@
 # CHANGELOG
 
-## 1.0.1 (unreleased)
+## 1.1.0 (2026-08-26)
 
+* feat (grid): the grid guesses the tile shape from what the presentation actually holds – photo-only frames get the 4:3 photo tile, authored frames with a layout of their own keep the screen's shape so the overview still resembles what the audience sees. <kbd>Alt+A</kbd> (or the ▭ button) cycles 4:3 → square → screen shape by hand
+* feat (grid): "show whole frames" (<kbd>Alt+C</kbd>) stops cropping thumbnails to their tile and letterboxes each frame whole instead – a quick way to check composition or tell portrait shots from landscape ones
+* enh (grid): thumbnails crop from slightly above the middle rather than dead centre – a phone photo's subject is nearly always in the upper half, so a centred crop tended to eat it and keep the floor
+* feat (grid): tile captions – <kbd>Alt+F</kbd> cycles nothing → file name → file name and capture date, laid over the foot of each thumbnail, so a frame can be found by name instead of having to be recognized from a cropped preview
+* enh (grid): the column count (<kbd>+</kbd>/<kbd>-</kbd>) is remembered for next time instead of resetting on every open, and can no longer be stepped down to zero, which used to divide the tile width by it and break the layout
 * fix (playback): pressing Home now resets to the first step too
 
 ## 1.0.0 (2026-07-25)

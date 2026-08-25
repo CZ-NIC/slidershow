@@ -29,8 +29,19 @@ const MAPY_TOKEN = "G2Tz6lgHdd2FpdZCwuU3yvbggGKSwcVkv8ptLos3Mn8"
 const GRID_PRELOAD_RADIUS = 60
 /** Grid: Number of items loaded per scroll batch (snapped to row start) */
 const GRID_PAGE_SIZE = 30
-/** Number of columns – fewer, bigger tiles on touch devices are easier to hit with a finger */
-var GRID_COLUMNS = matchMedia("(pointer: coarse)").matches ? 3 : 5
+/** Number of columns – fewer, bigger tiles on touch devices are easier to hit with a finger.
+ * Six on desktop because grid tiles are 4:3 (style.css): that is taller than the old viewport-shaped
+ * tile, so a column more keeps at least as many frames on screen as the previous five. */
+var GRID_COLUMNS = matchMedia("(pointer: coarse)").matches ? 3 : 6
+/** Grid: upper bound for the +/- column control – past this a tile shows nothing recognizable. */
+const GRID_COLUMNS_MAX = 20
+/** Grid: tile shapes the presenter cycles through (GridController.cycleTileShape), in cycle order.
+ * "screen" reproduces the device's own proportions, which is what an authored slide should look like. */
+const GRID_TILE_SHAPES = ["4:3", "1:1", "screen"]
+/** Grid: what a tile's caption shows (GridController.cycleTileLabels), in cycle order. */
+const GRID_TILE_LABELS = ["off", "name", "name-date"]
+/** Grid: how a photo meets its tile (GridController.toggleTileFit) – crop to fill, or show whole. */
+const GRID_TILE_FITS = ["cover", "contain"]
 
 // style
 document.querySelector("html").style.display = "none" // so that body images are not shown before the style loads (short white blink appears instead)

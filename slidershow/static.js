@@ -277,3 +277,49 @@ function getEndTimeFromURL(url) {
         }
     }
 }
+
+/**
+ * Whether a frame (or a frame preview's clone of one) holds nothing but its photo/video – no caption, no
+ * layout of its own. Such a frame is a photo, anything else is an authored slide; the grid uses the
+ * distinction both to let the media own its whole tile and to guess the tile shape.
+ * @param {JQuery} $article
+ * @returns {boolean}
+ */
+function is_media_only($article) {
+    const $children = $article.children()
+    return $children.length === 1 && $children.is("img, video")
+}
+
+
+/**
+ * Read a small persisted UI preference. Preferences are a convenience, never load-bearing – when no
+ * storage is writable at all (some `file://` and private-mode setups, see Menu._local_storage_available)
+ * this simply keeps returning the fallback.
+ * @param {string} key Conventionally `sli:`-prefixed.
+ * @param {?string} fallback
+ * @returns {?string}
+ */
+function pref_get(key, fallback = null) {
+    for (const storage of [localStorage, sessionStorage]) {
+        try {
+            const value = storage.getItem(key)
+            if (value !== null) {
+                return value
+            }
+        } catch (e) { /* storage disabled – try the next one, then give up */ }
+    }
+    return fallback
+}
+
+/**
+ * Persist a small UI preference, preferring localStorage so it outlives the tab. Silent on failure.
+ * @param {string} key
+ * @param {string|number} value
+ */
+function pref_set(key, value) {
+    for (const storage of [localStorage, sessionStorage]) {
+        try {
+            return storage.setItem(key, String(value))
+        } catch (e) { /* quota / storage disabled – fall through to the next one */ }
+    }
+}

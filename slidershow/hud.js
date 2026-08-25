@@ -546,16 +546,47 @@ class Hud {
                         $thumbnail.append($("<span/>", { html: "&#10006;", class: "delete", title: "Delete frame" }).on("click", () => frame.delete()))
                     }
 
+                    // Tile caption. Built for every tile unconditionally and merely hidden by CSS unless the
+                    // grid's caption cycle asks for it (see GridController.cycleTileLabels), so flipping the
+                    // cycle costs nothing – no re-render of hundreds of previews. A text frame has no file
+                    // name to show, so it falls back to its own heading, then to its frame number.
+                    const $actor = frame.$actor
+                    const datetime = $actor.length ? String(prop("datetime", $actor) || "") : ""
+                    $thumbnail.append($("<span/>", { class: "tile-label" })
+                        .append($("<b/>", {
+                            text: frame.get_filename()
+                                || frame.$frame.find("h1, h2, h3").first().text().trim()
+                                || `#${frame.index + 1}`
+                        }))
+                        .append($("<i/>", { text: datetime.split("T")[0] })))
+
                     // tag visible
                     if (pl.tagging_mode) {
                         $thumbnail.append($("<span/>", { html: frame.tag_display(), class: "tag", title: "Tag that helps you organize" }))
                     }
 
-                    // Scale – use the proportions of the full screen but shrink to max thumbnail width.
-                    // $current can momentarily be a detached (just-deleted) frame with width 0, which would make
-                    // the scale Infinity and blow the preview out of its cell – fall back to a live frame / the window.
-                    const fullWidth = pl.$current.width() || pl.$articles.first().width() || $(window).width()
-                    $(":first", $thumbnail).css({ "scale": String($thumbnail.width() / fullWidth) })
+                    // A frame that is nothing but its photo/video lets that media own the whole tile instead
+                    // (".media-only", see style.css) – scaling it down like any other frame turns the tile into
+                    // a miniature of the *screen*, so `object-fit: cover` there crops every photo to the
+                    // viewport's aspect ratio and a vertical shot loses over half its height. Frames with any
+                    // further content (text, several elements, …) keep the scaled-clone treatment below, which
+                    // is what keeps their layout/font sizes proportional.
+                    const $clone = $(":first", $thumbnail)
+                    if (is_media_only($clone)) {
+                        $thumbnail.addClass("media-only")
+                    } else {
+                        // Scale – use the proportions of the full screen but shrink to max thumbnail width.
+                        // $current can momentarily be a detached (just-deleted) frame with width 0, which would make
+                        // the scale Infinity and blow the preview out of its cell – fall back to a live frame / the window.
+                        const fullWidth = pl.$current.width() || pl.$articles.first().width() || $(window).width()
+                        const fullHeight = pl.$current.height() || pl.$articles.first().height() || $(window).height()
+                        const scale = $thumbnail.width() / fullWidth
+                        // The clone keeps the screen's proportions, so in a square grid tile it is shorter than the
+                        // cell – centre it rather than let it hang from the top edge on a band of background.
+                        // `translate` composes before `scale` as its own property, so this offset is in tile pixels.
+                        const offset = Math.max(0, ($thumbnail.height() - fullHeight * scale) / 2)
+                        $clone.css({ "scale": String(scale), "translate": `0 ${offset}px` })
+                    }
                 } catch (e) {
                     // Whatever went wrong (ex: the same frame's full-quality load rejecting because the main
                     // view navigated away mid-fetch), never leave the tile spinning forever with no visible

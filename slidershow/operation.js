@@ -607,6 +607,11 @@ class Operation {
                     })],
                 ["NumpadAdd", "+", "More thumbnails on a row", () => pl.hud.grid.changeColumnsCount(1)],
                 ["NumpadSubtract", "-", "Less thumbnails on a row", () => pl.hud.grid.changeColumnsCount(-1)],
+                // Alt+ rather than bare letters: the grid also listens for digits (tagging) and single
+                // letters read as too grabby here. Alt+t, the obvious mnemonic, is Tagging mode already.
+                ["Alt+a", "▭", "Tile shape", () => pl.hud.grid.cycleTileShape()],
+                ["Alt+f", "Aa", "Tile captions", () => pl.hud.grid.cycleTileLabels()],
+                ["Alt+c", "&#9974;", "Show whole frames", () => pl.hud.grid.toggleTileFit()],
 
             ], pl.hud.grid.getHotkeys()).disable()
     }

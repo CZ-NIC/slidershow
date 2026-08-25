@@ -8,6 +8,24 @@ While presenting, press <kbd>j</kbd> to display the thumbnail ribbon or <kbd>g</
 
 **Reordering thumbnails.** Click and drag a tile to move it, or use Ctrl+Arrow to shift the whole selection as a block.
 
+**Tile shape.** The grid guesses what it is showing: frames that hold nothing but a photo or video get a
+photo-shaped 4:3 tile (a landscape phone photo then fits uncropped), while authored frames with a layout of
+their own keep the shape of your screen, so the overview resembles what the audience will see. Press
+<kbd>Alt+A</kbd> (or the ▭ button) to cycle the tile through **4:3**, **square** and **screen shape** yourself.
+
+**Captions.** <kbd>Alt+F</kbd> cycles the caption laid over each tile: nothing → file name → file name and
+capture date. Handy for finding a particular shot without having to recognize it from a cropped thumbnail.
+
+**Show whole frames.** Thumbnails are cropped to fill their tile. <kbd>Alt+C</kbd> switches to showing every
+frame whole instead – useful for checking composition or for telling portrait shots from landscape ones at a
+glance, though the grid goes ragged, so it works better as a quick look than as a way to browse.
+
+**Density.** <kbd>+</kbd> / <kbd>-</kbd> change how many tiles fit on a row. Your choice is remembered for
+next time.
+
+All of these are yours alone: the tile shape, captions and cropping live in the URL and the column count in
+your browser, never in the presentation, so browsing someone else's file never changes it.
+
 <video autoplay controls muted loop playsinline width="640" src="https://cdn.jsdelivr.net/gh/CZ-NIC/slidershow-assets@main/grid-sort.webm" title="Sorting a whole section by EXIF date via the grid ribbon's order ▾ menu"></video>
 
 **Sorting by EXIF date or file names.** Each section's ribbon menu has an "order ▾" button for bulk sorting without hand-dragging.

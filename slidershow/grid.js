@@ -14,6 +14,26 @@ class GridController {
 
         this.$framesSections = $()
         this.columns = 0
+        /** @type {?string} Tile shape the presenter picked from GRID_TILE_SHAPES, or null to let
+         * detectTileShape() decide. Session-only: it travels in the URL hash (session.js "grid-tile"),
+         * deliberately NOT in the document – opening someone else's presentation must never rewrite it.
+         * NOTE If authors ever want to ship a preferred grid look with an exported file, an
+         * `sli-grid-tile` on <main> would slot in here as the default underneath the autodetection. */
+        this.tile_shape = null
+        /** @type {string} One of GRID_TILE_LABELS – what the tile's caption shows. Session-only, like
+         * tile_shape; unlike it, there is nothing to autodetect, captions are simply off until asked for. */
+        this.tile_labels = "off"
+        /** @type {string} One of GRID_TILE_FITS. "contain" shows each photo whole instead of cropping it to
+         * the tile – a momentary aid when checking composition, not a look to browse in (every tile then
+         * sits in its own letterbox and the wall of photos goes ragged). */
+        this.tile_fit = "cover"
+
+        // The presenter's column count outlives the presentation it was set on – it is a preference about
+        // how dense *they* like the overview, not about this file (which is why it is not in the hash).
+        const stored = Number(pref_get("sli:grid-columns"))
+        if (stored >= 1 && stored <= GRID_COLUMNS_MAX) {
+            GRID_COLUMNS = stored
+        }
         this.preload_radius = 0
         this.page_size = 0
 
@@ -69,9 +89,87 @@ class GridController {
     }
 
     changeColumnsCount(step = 1) {
-        GRID_COLUMNS += step
+        // Clamped: a step down to 0 would make every `calc(100% / var(--columns))` divide by zero and take
+        // the whole overview with it, and there is no point in tiles too small to recognize anything on.
+        GRID_COLUMNS = Math.min(GRID_COLUMNS_MAX, Math.max(1, GRID_COLUMNS + step))
+        pref_set("sli:grid-columns", GRID_COLUMNS)
         this.$container.css("--columns", GRID_COLUMNS)
         this.hud.reset_grid()
+    }
+
+    /** The shape tiles are actually drawn in – the presenter's pick, or the autodetected one. */
+    get tileShape() {
+        return this.tile_shape || this.detectTileShape()
+    }
+
+    /**
+     * Photos want a photo-shaped tile; authored slides want to look like what the audience will see, or
+     * you cannot tell one slide from another in the overview. Decided from the DOM alone, so no media has
+     * to be loaded first: a frame holding nothing but its <img>/<video> is a photo (see is_media_only),
+     * anything carrying a layout of its own is a slide.
+     * @returns {string} One of GRID_TILE_SHAPES.
+     */
+    detectTileShape() {
+        const $frames = this.pl.$articles
+        if (!$frames.length) {
+            return "4:3"
+        }
+        const photos = $frames.filter((_, el) => is_media_only($(el))).length
+        // Two thirds, not a bare majority – a deck of photos opened with a title slide or two in front of
+        // it is still a photo album, and should not be dragged into the slide-shaped look by them.
+        return photos / $frames.length >= 2 / 3 ? "4:3" : "screen"
+    }
+
+    /** Adopt `shape` (anything not in GRID_TILE_SHAPES falls back to the autodetection). */
+    setTileShape(shape) {
+        this.tile_shape = GRID_TILE_SHAPES.includes(shape) ? shape : null
+        this.applyTileView()
+    }
+
+    /** Paint the whole tile view onto the container; the tiles themselves are styled from these attributes
+     * in CSS, so switching any of the three needs no re-render of the grid's contents. */
+    applyTileView() {
+        this.$container.attr({
+            "data-tile": this.tileShape,
+            "data-labels": this.tile_labels,
+            "data-fit": this.tile_fit,
+        })
+    }
+
+    /** Adopt `labels` (anything not in GRID_TILE_LABELS turns captions off). */
+    setTileLabels(labels) {
+        this.tile_labels = GRID_TILE_LABELS.includes(labels) ? labels : "off"
+        this.applyTileView()
+    }
+
+    /** Step to the next caption mode: nothing → file name → file name and date. */
+    cycleTileLabels() {
+        const next = (GRID_TILE_LABELS.indexOf(this.tile_labels) + 1) % GRID_TILE_LABELS.length
+        this.setTileLabels(GRID_TILE_LABELS[next])
+        this.hud.info(`Tile captions: ${this.tile_labels}`)
+        this.pl.session.store()
+    }
+
+    /** Adopt `fit` (anything not in GRID_TILE_FITS crops to fill). */
+    setTileFit(fit) {
+        this.tile_fit = GRID_TILE_FITS.includes(fit) ? fit : "cover"
+        this.applyTileView()
+    }
+
+    /** Flip between cropping a photo to its tile and showing it whole. */
+    toggleTileFit() {
+        this.setTileFit(this.tile_fit === "cover" ? "contain" : "cover")
+        this.hud.info(this.tile_fit === "contain" ? "Showing whole frames" : "Cropping frames to the tile")
+        this.pl.session.store()
+    }
+
+    /** Step to the next shape in GRID_TILE_SHAPES, starting from whatever is on screen now (so the first
+     * press moves off the autodetected shape rather than jumping to the head of the list). */
+    cycleTileShape() {
+        const next = (GRID_TILE_SHAPES.indexOf(this.tileShape) + 1) % GRID_TILE_SHAPES.length
+        this.setTileShape(GRID_TILE_SHAPES[next])
+        this.hud.info(`Tile shape: ${this.tile_shape}`)
+        this.pl.session.store()
     }
 
     /**
@@ -82,6 +180,7 @@ class GridController {
         this.$framesSections = $(FRAME_SECTION_SELECTOR).filter((_, el) => this._matchesFilter(el))
         this.columns = GRID_COLUMNS
         this.$container.css("--columns", GRID_COLUMNS) // keep the CSS var in sync (esp. on the very first load)
+        this.applyTileView() // the autodetection depends on the frames, so re-decide on every load
         this.preload_radius = Math.ceil(GRID_PRELOAD_RADIUS / GRID_COLUMNS) * GRID_COLUMNS
         this.page_size = Math.ceil(GRID_PAGE_SIZE / GRID_COLUMNS) * GRID_COLUMNS
         if (this.page_size > this.preload_radius) {

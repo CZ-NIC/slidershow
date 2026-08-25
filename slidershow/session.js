@@ -96,6 +96,17 @@ class Session {
                         pl.hud.toggle_properties()
                     }
                     break;
+                case "grid-tile":
+                    // Grid tile shape (GridController.cycleTileShape). Session-only by design: a view
+                    // preference of whoever is browsing, never written into the presentation itself.
+                    pl.hud.grid.setTileShape(value)
+                    break;
+                case "grid-labels":
+                    pl.hud.grid.setTileLabels(value)
+                    break;
+                case "grid-fit":
+                    pl.hud.grid.setTileFit(value)
+                    break;
                 case "map-disabled":
                     // already handled at program start
                     // NOTE undocumented feature: Append this to file name to disable maps `#6?map-disabled`
@@ -157,6 +168,18 @@ class Session {
         }
         if (this.playback.hud.$hud_properties.is(":visible")) {
             params.set("properties", "")
+        }
+        // The grid's view options – all three are the browsing person's, never the presentation's (see
+        // GridController.tile_shape), so they ride in the hash and only when off their default.
+        const grid = this.playback.hud.grid
+        if (grid.tile_shape) {
+            params.set("grid-tile", grid.tile_shape)
+        }
+        if (grid.tile_labels !== "off") {
+            params.set("grid-labels", grid.tile_labels)
+        }
+        if (grid.tile_fit !== "cover") {
+            params.set("grid-fit", grid.tile_fit)
         }
         if (!MAP_ENABLE) {
             params.set("map-disabled", "")
