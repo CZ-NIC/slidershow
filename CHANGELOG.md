@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## 1.1.1 (unreleased)
+
+* fix (playback): pressing Home while already on a stepped frame could leave a later step wrongly shown instead of resetting them all to the first step
+
 ## 1.1.0 (2026-08-26)
 
 * feat (grid): the grid guesses the tile shape from what the presentation actually holds – photo-only frames get the 4:3 photo tile, authored frames with a layout of their own keep the screen's shape so the overview still resembles what the audience sees. <kbd>Alt+A</kbd> (or the ▭ button) cycles 4:3 → square → screen shape by hand

@@ -396,7 +396,7 @@ class Operation {
                 pl.play_pause(!pl.moving)
             }]],
             [
-                ["Home", "⏮", "Go to the first", () => pl.goToFrame(0)],
+                ["Home", "⏮", "Go to the first", () => pl.goToFrame(0, false, false, true)],
                 ["Alt+PageUp", "◀◀", "Prev section", () => pl.previousSection()],
                 ["Shift+PageUp", "◀", "Prev frame", () => pl.previousFrame()],
                 ["p", "◁", "Prev step", () => pl.goPrev(), "prev-step"],

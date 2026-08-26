@@ -146,8 +146,9 @@ class Frame {
      * Frame is going to be entered right now but is not visible yet.
      * (Might run multiple times before leave.)
      * @param {?Frame} lastFrame The frame we are coming from. (If not set, it means eg. window/font size change.) It's never set to this frame.
+     * @param {boolean} resetSteps Force the step to reset to the first one, regardless of lastFrame (ex: Home key)
      */
-    prepare(lastFrame = null) {
+    prepare(lastFrame = null, resetSteps = false) {
         this.children.forEach(f => f.$frame.hide())
         if (this.parent) { // this is a child frame
             this.$frame.show(0) // it was hidden before
@@ -178,7 +179,7 @@ class Frame {
         this.loaded.then(() => {
             this.refresh_actor()
             if (!this.playback.step_disabled) {
-                this.steps_prepare(lastFrame)
+                this.steps_prepare(lastFrame, resetSteps)
             }
         })
     }
@@ -221,8 +222,9 @@ class Frame {
      * those with `sli-step` are to be filled around.
      *
      * @param {?Frame} last_frame
+     * @param {boolean} resetSteps Force the step to reset to the first one, regardless of last_frame (ex: Home key)
      */
-    steps_prepare(last_frame = null) {
+    steps_prepare(last_frame = null, resetSteps = false) {
         // Prepare the elements eligible for being step through
         const $steppable = $("[sli-step]", this.$frame)
             // [sli-step-li] affects all <li>
@@ -287,14 +289,20 @@ class Frame {
             })
 
         // Adjust initial step (either the first or the last).
-        if (last_frame) {
+        if (resetSteps) { // ex: Home key – reset to the first step, whatever the previous position was
+            this.step_index = Math.min(1, this.steps.length)
+            // Reset every group, not just the first – a stale (e.g. mid-way) step_index from before
+            // this rebuild might have left later groups marked shown by the loop above.
+            this.step_process($(this.steps.flat()), false)
+            this.step_process($(this.steps.slice(0, 1).flat()), true)
+        } else if (last_frame) {
             // last_frame might not be set. Eg. when no frame change happened on window resize or font size change
-            if (last_frame.index <= this.index) { // went forward to the frame (or direct entry) or stayed on same frame
+            if (last_frame.index < this.index) { // went forward to the frame (or direct entry)
                 this.step_index = 0
-                this.step_process($(this.steps.slice(0, 1).flat()), false)
+                this.step_process($(this.steps.flat()), false)
             } else { // went backwards to the frame
                 this.step_index = this.steps.length
-                this.step_process($(this.steps.slice(this.steps.length - 1).flat()), true)
+                this.step_process($(this.steps.flat()), true)
             }
         }
     }

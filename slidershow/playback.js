@@ -641,8 +641,9 @@ class Playback {
      * @param {Number} index
      * @param {Boolean} moving Auto-playback
      * @param {Boolean} supress_transition Block animation to the frame
+     * @param {Boolean} resetSteps Force the frame's step to reset to the first one, even when landing on the same frame (ex: Home key)
      */
-    goToFrame(index, moving = false, supress_transition = false) {
+    goToFrame(index, moving = false, supress_transition = false, resetSteps = false) {
         prop_invalidate() // fresh frame: drop the previous frame's memoized prop() lookups
         // Central tag_filter enforcement – every navigation path (next/prevFrame, sections, goToSlide,
         // hash restore, ribbon/grid clicks) funnels through here, so redirecting once covers them all.
@@ -718,7 +719,7 @@ class Playback {
         this.hud.loading(frame)
 
         // start transition
-        frame.prepare(lastFrame)
+        frame.prepare(sameFrame ? null : lastFrame, resetSteps)
         this.play_pause(moving)
         this.doNotWaitAndGo()
 
