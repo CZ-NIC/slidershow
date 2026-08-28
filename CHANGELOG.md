@@ -1,7 +1,9 @@
 # CHANGELOG
 
-## 1.1.1 (unreleased)
+## 1.2.0 (2026-08-28)
 
+* feat (notes): presenter's notes can finally be written from the app – a *notes* field at the top of the properties panel (<kbd>Alt+P</kbd>) and a roomier "Presenter's notes…" dialog (<kbd>Alt+Shift+N</kbd> in editing mode). Both land in the very same HTML comment as hand-authored notes, are undoable, and reach an open auxiliary window right away
+* feat (aux window): it became a two-by-two grid of configurable sectors – each may show the current slide, the next slide, the notes, the *next frame's notes* or nothing at all, and the three splits dividing the window are adjustable too. An emptied sector takes no room, which is how the familiar layout (slides left, full-height notes right) still comes out of the box. It is all set from one ⚙ knob in the window's corner, or from the main window with "Auxiliary window layout…" (<kbd>Alt+Shift+W</kbd>) – changes preview live, Cancel puts them back. The arrangement is the presenter's, not the presentation's, so it rides in the URL hash (`aux=`, `aux-size=`) instead of being exported
 * fix (playback): pressing Home while already on a stepped frame could leave a later step wrongly shown instead of resetting them all to the first step
 
 ## 1.1.0 (2026-08-26)

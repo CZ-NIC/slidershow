@@ -10,6 +10,7 @@ class Playback {
     constructor(menu, aux_window) {
         this.menu = menu
         this.aux_window = aux_window
+        aux_window.playback = this // so that a layout change coming from an aux window may reach `session`
         this.hud = new Hud(this)
         this.changes = new Changes(this)
         /** Transition promise */
@@ -700,9 +701,7 @@ class Playback {
 
 
 
-        const followingIndex = this.tag_filter.length ? this._nextMatchingIndex(index + 1, 1) : index + 1
-        /** @type {Frame|undefined} */
-        const following = $(this.$articles[followingIndex]).data("frame")
+        const following = this.get_following(index)
 
         // Make sure that current frame was preloaded.
         // We moved the playback position, old preloading tasks are no more valid, clear them.
@@ -843,5 +842,20 @@ class Playback {
         $main.stop()
         window.scrollTo(0, 0)
     }
+
+    /**
+     * @param {number} index Frame index to look from.
+     * @returns {Frame|undefined} The frame that will be played next (skipping those filtered out by tags).
+     */
+    get_following(index) {
+        const followingIndex = this.tag_filter.length ? this._nextMatchingIndex(index + 1, 1) : index + 1
+        return $(this.$articles[followingIndex]).data("frame")
+    }
+
+    /** Re-send the current and the next frame to the aux window (ex: after the notes have been edited). */
+    refresh_aux() {
+        this.aux_window.info(this.frame, this.get_following(this.index))
+    }
+
 }
 

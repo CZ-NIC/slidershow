@@ -385,8 +385,50 @@ class Operation {
                     pl.frame.delete()
                 }
             }],
+            ["Alt+Shift+n", "&#128221;", "Presenter's notes…", () => this._notesDialog()],
             ["Escape", "✔️", "Stop editing", () => $(":focus").blur(), "stop-editing"]
         ]).toggle(pl.editing_mode)
+    }
+
+    /**
+     * Edit the frame's presenter's notes in a roomy textarea. (The Properties panel has the same
+     * field inline; this is the comfortable way in for anything longer than a sentence.)
+     */
+    _notesDialog() {
+        const pl = this.playback
+        const frame = pl.frame
+        const before = frame.get_notes_raw()
+        const $list = $("<div/>", { class: "notes-editor" }).append($("<textarea/>", { rows: 12, text: before }))
+
+        const apply = () => {
+            const value = String($("textarea", $list).val()).trim()
+            if (value === before) {
+                return
+            }
+            pl.changes.undoable(`Notes of frame ${frame.slide_index + 1}`,
+                () => frame.set_notes(value),
+                () => frame.set_notes(before),
+                () => {
+                    pl.refresh_aux()
+                    if (pl.hud.properties_visible) {
+                        pl.hud.properties()
+                    }
+                })
+        }
+
+        new $.Zebra_Dialog({
+            message: "Shown in the auxiliary window (Alt+W). Markdown supported.",
+            source: { inline: $list },
+            type: "question",
+            title: "Presenter's notes",
+            onClose: this.suspendHotkeys(),
+            buttons: ["Cancel", {
+                caption: "Ok",
+                default_confirmation: true,
+                callback: apply
+            }]
+        })
+        $("textarea", $list).focus()
     }
 
     playthroughInit() {
@@ -674,6 +716,8 @@ class Operation {
             [["/", "?"], "🎨", "Command palette", () => this.playback.hud.palette.focus()],
             ["Alt+m", "🧰", "Show splashscreen", () => menu.stop_playback()],
             ["Alt+w", "&#127916;", "Auxiliary window", () => menu.aux_window.open()],
+            // the very same dialog the aux window opens from the knob in its corner
+            ["Alt+Shift+w", "&#10697;", "Auxiliary window layout…", () => this.playback.aux_window.layout_dialog()],
             ["Alt+n", "&#9998;", "Rename presentation…", () => new $.Zebra_Dialog("Name this presentation (used as the export filename and shown in Recent):", {
                 title: "Presentation name",
                 type: "prompt",

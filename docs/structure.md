@@ -156,6 +156,8 @@ On `<main>`: pipe-delimited display names for tags, position = digit (`sli-tag-n
 ### `<!-- presenter's notes -->`
 You may use HTML comments just before the frame or as the first frame child. Markdown syntax is supported. These will be displayed in the [auxiliary window](organizing.md#auxiliary-window) while presenting.
 
+Notes can be written from the app too, no hand-editing needed: the *notes* field at the top of the properties panel (<kbd>Alt+P</kbd>), or the roomier "Presenter's notes…" dialog (<kbd>Alt+Shift+N</kbd> in editing mode, <kbd>Alt+E</kbd>). Either way the text ends up in the very same HTML comment, so it survives an export. Emptying the field removes the comment.
+
 Before the frame:
 
 ```html

@@ -251,51 +251,99 @@ menu {
 
 #aux_window {
     display: flex;
+    height: 100vh;
 
-    #slide-wrapper {
-        text-align: center;
+    /* Two columns of two sectors each. The flex shares come from AuxWindow.render() – they are the
+       presenter's own splits, so they are set inline rather than being baked in here. */
+    .aux-column {
         display: flex;
         flex-direction: column;
-        max-height: 100vh;
-        width: 50vw;
+        flex: 1 1 0;
+        min-width: 0;
 
-        >frame-preview {
-            /* current frame */
-            height: 60vh;
-
-            >* {
-                scale: 0.5;
-            }
-
-            .current-step:before {
-                /* highlight step position in the main frame */
-                content: '';
-                position: absolute;
-                margin-left: -60px;
-                margin-top: 15x;
-
-                height: 25px;
-                width: 25px;
-                background-color: var(--color-error);
-                border-radius: 50%;
-                display: inline-block;
-            }
-        }
-
-        > :nth-child(2) {
-            /* the next frame */
-            max-height: 30vh;
-
-            frame-preview>* {
-                scale: 0.3;
-            }
+        /* nothing left in it – step aside so the other column gets the whole width */
+        &[data-empty] {
+            display: none;
         }
     }
 
-    > :nth-child(2) {
-        /* notes */
-        width: 50vw;
-        padding-top: 5px;
+    .aux-slot {
+        position: relative;
+        overflow: hidden;
+        text-align: center;
+        /* the grow factor is the presenter's split, handed over inline by AuxWindow.render() */
+        flex: 1 1 0;
+        min-width: 0;
+        min-height: 0;
+        border: 1px solid var(--border-default); /* so that the sectors read as sectors */
+
+        /* an emptied sector takes no room at all – the layout dialog is the way back */
+        &[data-pane="-"] {
+            display: none;
+        }
+
+        /* A frame preview is a full-window article; render() works out the share of the window this
+           sector covers and hands it over as the scale. Notes are text and stay at their own size. */
+        &[data-pane="current"] frame-preview>*,
+        &[data-pane="next"] frame-preview>* {
+            scale: var(--aux-scale, .5);
+        }
+
+        &[data-pane="notes"],
+        &[data-pane="next-notes"] {
+            text-align: left;
+            padding: 5px;
+            overflow: auto;
+        }
+
+        .current-step:before {
+            /* highlight step position in the main frame */
+            content: '';
+            position: absolute;
+            margin-left: -60px;
+            margin-top: 15x;
+
+            height: 25px;
+            width: 25px;
+            background-color: var(--color-error);
+            border-radius: 50%;
+            display: inline-block;
+        }
+    }
+
+    .aux-settings {
+        /* unobtrusive while presenting, reachable when looked for */
+        position: fixed;
+        right: 4px;
+        bottom: 2px;
+        z-index: 4;
+        border: 0;
+        background: none;
+        color: var(--base);
+        font-size: 1.5em;
+        line-height: 1;
+        cursor: pointer;
+        opacity: .15;
+        transition: opacity .2s;
+
+        &:hover,
+        &:focus {
+            opacity: 1;
+        }
+    }
+
+    #status_message {
+        /* floats over whatever sits in the sectors, hence its own backdrop */
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        z-index: 3;
+        margin: 0;
+        padding: 2px;
+        text-align: center;
+        background-color: var(--bg-menu);
+        pointer-events: none;
     }
 }
 
@@ -1349,6 +1397,14 @@ frame-preview {
             cursor: help;
         }
 
+        textarea {
+            /* the notes field – prose, unlike every other single-value property here */
+            width: 100%;
+            box-sizing: border-box;
+            font-family: inherit;
+            resize: vertical;
+        }
+
         div {
             .point-wrapper .hud-point {
                 display: block;
@@ -1555,6 +1611,30 @@ article-map {
 }
 
 /* "Name tags…" / "Filter by tag…" dialogs (operation.js) – one row per line, the digit leads the row. */
+/* Presenter's notes dialog (operation.js:_notesDialog) */
+.notes-editor textarea {
+    width: 100%;
+    box-sizing: border-box;
+    font-family: inherit;
+    resize: vertical;
+}
+
+/* Auxiliary window layout dialog (aux_window.js:layout_dialog) */
+.aux-layout-list {
+    input[type="range"] {
+        width: 7em;
+        vertical-align: middle;
+    }
+
+    output {
+        display: inline-block;
+        min-width: 4.5em;
+        text-align: right;
+        opacity: .7;
+    }
+}
+
+.aux-layout-list,
 .tag-names-list,
 .tag-filter-list {
     text-align: left;

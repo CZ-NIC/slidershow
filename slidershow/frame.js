@@ -1421,35 +1421,78 @@ class Frame {
     }
 
     /**
-     * @returns {?string} The comment just before the frame or just inside the frame.
+     * The DOM comment node holding the presenter's notes – the one just before the frame,
+     * or the one just inside it. (Both spellings are documented; whichever exists wins.)
+     * @returns {?Comment}
      */
-    get_notes() {
+    get_notes_node() {
         const frame_dom = this.$frame.get()[0]
-        const txt = find_comment(frame_dom.previousSibling, "previousSibling") || find_comment(frame_dom.firstChild, "nextSibling")
-        return this.playback.menu.markdown.makeHtml(txt)
+        if (!frame_dom) {
+            return null
+        }
+        return find_comment(frame_dom.previousSibling, "previousSibling") || find_comment(frame_dom.firstChild, "nextSibling")
 
         /**
-         *
          * @param {HTMLElement|Comment|Text} node First node to search.
          * @param {string} crossing Method
-         * @returns {string|undefined}
+         * @returns {?Comment}
          */
         function find_comment(node, crossing) {
             while (node) {
                 switch (node.nodeType) {
                     case Node.COMMENT_NODE:
-                        return node.nodeValue.trim()
+                        return /** @type {Comment} */ (node)
                     case Node.TEXT_NODE:
                         if (node.nodeValue.trim()) {
-                            return
+                            return null
                         }
                         node = node[crossing] // ex: previousSibling
                         continue // there is just empty text, like new line, ignore
                     default:
-                        return
+                        return null
                 }
             }
+            return null
         }
+    }
+
+    /**
+     * @returns {string} Raw (markdown) presenter's notes, as authored. Empty string when there are none.
+     */
+    get_notes_raw() {
+        return this.get_notes_node()?.nodeValue.trim() || ""
+    }
+
+    /**
+     * @returns {?string} The comment just before the frame or just inside the frame, rendered from markdown.
+     */
+    get_notes() {
+        return this.playback.menu.markdown.makeHtml(this.get_notes_raw())
+    }
+
+    /**
+     * Write the presenter's notes back into the DOM comment. An empty text removes the comment,
+     * a new one is created as the frame's first child (the spelling that survives frame moving).
+     * Not undoable on its own – wrap the call in `playback.changes`.
+     * @param {string} text Markdown.
+     */
+    set_notes(text) {
+        text = text.trim()
+        const node = this.get_notes_node()
+        if (node) {
+            if (text) {
+                node.nodeValue = Frame._wrap_notes(text)
+            } else {
+                node.remove()
+            }
+        } else if (text) {
+            this.$frame.prepend(document.createComment(Frame._wrap_notes(text)))
+        }
+    }
+
+    /** Pad the comment so that the exported HTML stays readable. */
+    static _wrap_notes(text) {
+        return text.includes("\n") ? `\n${text}\n` : ` ${text} `
     }
 
     /**

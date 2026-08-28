@@ -96,6 +96,16 @@ class Session {
                         pl.hud.toggle_properties()
                     }
                     break;
+                case "aux":
+                    // Auxiliary window sector→pane assignment (AuxWindow.set_layout). Like the grid's
+                    // view options this belongs to whoever is presenting, not to the presentation.
+                    pl.aux_window.set_layout(value.split(","), null, false)
+                    break;
+                case "aux-size":
+                    // …and the three splits it is divided by. Independent of `aux` and may come in
+                    // either order, hence passing the layout back in unchanged.
+                    pl.aux_window.set_layout(pl.aux_window.layout, value.split(","), false)
+                    break;
                 case "grid-tile":
                     // Grid tile shape (GridController.cycleTileShape). Session-only by design: a view
                     // preference of whoever is browsing, never written into the presentation itself.
@@ -168,6 +178,20 @@ class Session {
         }
         if (this.playback.hud.$hud_properties.is(":visible")) {
             params.set("properties", "")
+        }
+        // The auxiliary window's sector→pane assignment – the presenter's own view preference, hence
+        // the hash and not the document. Trailing sectors left at their default are dropped (a missing
+        // one restores to that very default), so the built-in layout serializes to nothing at all.
+        const aux = [...this.playback.aux_window.layout]
+        while (aux.length && aux[aux.length - 1] === AUX_LAYOUT_DEFAULT[aux.length - 1]) {
+            aux.pop()
+        }
+        if (aux.length) {
+            params.set("aux", aux.join(","))
+        }
+        const aux_size = this.playback.aux_window.sizes
+        if (aux_size.join(",") !== AUX_SIZE_DEFAULT.join(",")) {
+            params.set("aux-size", aux_size.join(","))
         }
         // The grid's view options – all three are the browsing person's, never the presentation's (see
         // GridController.tile_shape), so they ride in the hash and only when off their default.

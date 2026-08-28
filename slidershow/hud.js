@@ -1040,6 +1040,17 @@ class Hud {
         const $props = this.$hud_properties
             .html($("<p/>").html("Properties panel (Alt+P)"))
 
+        // Presenter's notes. Unlike everything else here they live in an HTML comment, not in an
+        // sli-* attribute, hence the custom writer instead of `input_ancestored`. First, because
+        // it is the field one actually writes in – the rest are values one occasionally tweaks.
+        $props.append(pp.textarea("notes", $frame, frame.get_notes_raw(),
+            "Shown in the auxiliary window (Alt+W)",
+            v => {
+                frame.set_notes(v || "")
+                this.playback.refresh_aux()
+            },
+            "Presenter's notes for this frame, shown in the auxiliary window (Alt+W). Markdown supported."))
+
         // element properties
         if ($actor.length) {
             // handle media properties
@@ -1088,6 +1099,7 @@ class Hud {
         $props
             .append(props.map(p => pp.input_ancestored(p, $frame)).flat())
         // XX sli-step could be implemented for any focused element
+
     }
 
     async fetch_help() {

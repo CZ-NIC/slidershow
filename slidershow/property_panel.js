@@ -55,6 +55,29 @@ class PropertyPanel {
      * @returns
      */
     input(p, $el, name, value, type, placeholder, change) {
+        return this._field(p, $el, name, value, placeholder, change, $("<input />").attr("type", type))
+    }
+
+    /**
+     * Same as `input()` but multiline – for a property that is prose rather than a value (ex: notes).
+     * @param {string} p Property name
+     * @param {JQuery} $el Element the property belongs to
+     * @param {string} value Initial value.
+     * @param {string} placeholder HTML placeholder
+     * @param {Function} change Callback applying (and reverting) the value on the DOM element.
+     * @param {?string} help Tooltip; when null the <label> queries the docs like `input()` does.
+     * @returns
+     */
+    textarea(p, $el, value, placeholder, change, help = null, rows = 5) {
+        return this._field(p, $el, "", value, placeholder, change, $("<textarea/>").attr("rows", rows), help)
+    }
+
+    /**
+     * The shared <label> + field + undo wiring behind `input()` and `textarea()`.
+     * @param {JQuery} $field The bare, unconfigured field element.
+     * @param {?string} help Tooltip; when null the <label> queries the docs.
+     */
+    _field(p, $el, name, value, placeholder, change, $field, help = null) {
         const pl = this.playback
         const original_frame = pl.frame.index
 
@@ -63,11 +86,14 @@ class PropertyPanel {
             value = JSON.stringify(value) // ex: step-points
         }
 
+        const $label = $("<label/>", { "text": `${name ? " - " + name : p}: `, "title": help ?? this.hud.get_help(p, true, false) })
+        if (help === null) {
+            $label.on("click", () => this.hud.get_help(p))
+        }
+
         return $.merge(
-            $("<label/>", { "text": `${name ? " - " + name : p}: `, "title": this.hud.get_help(p, true, false) })
-                .on("click", () => this.hud.get_help(p)),
-            $("<input />")
-                .attr("type", type)
+            $label,
+            $field
                 .attr("placeholder", placeholder)
                 .attr("name", `${name}${p}`)
                 .attr("data-property", p)

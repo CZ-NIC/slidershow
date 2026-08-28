@@ -100,6 +100,37 @@ var menu
 /** @type {AuxWindow} */
 var aux_window
 
+/**
+ * Auxiliary window panes – what a single slot may display. Keys are the hash-serialized ids
+ * (`#12?aux=current,next-notes,notes`), values the human labels shown in the layout dialog.
+ */
+const AUX_PANES = {
+    "current": "Current slide",
+    "next": "Next slide",
+    "notes": "Notes",
+    "next-notes": "Next notes",
+    "-": "(empty)"
+}
+/** Auxiliary window sectors, column by column: left top + bottom, then right top + bottom. */
+const AUX_COLUMNS = [["a", "b"], ["c", "d"]]
+/** The same sectors flattened – this is the order they are serialized in the hash. */
+const AUX_SLOTS = AUX_COLUMNS.flat()
+/**
+ * Default pane per sector – reproduces the layout the aux window had before it became configurable:
+ * an empty bottom sector leaves the one above it spanning the whole column (the merged right side).
+ */
+const AUX_LAYOUT_DEFAULT = ["current", "next", "notes", "-"]
+/** Human labels for the sectors, in AUX_SLOTS order. */
+const AUX_SLOT_NAMES = ["Left top", "Left bottom", "Right top", "Right bottom"]
+/**
+ * The window is sized by three splits, each the percentage taken by the first of the two parts
+ * (the other gets the rest): the column divider, then the row divider of either column.
+ */
+const AUX_SIZE_NAMES = ["Columns (left : right)", "Left column (top : bottom)", "Right column (top : bottom)"]
+const AUX_SIZE_DEFAULT = [50, 67, 67]
+const AUX_SIZE_MIN = 10
+const AUX_SIZE_MAX = 90
+
 const PROP_DEFAULT = {
     "duration": 0,
     "step-duration": 0,

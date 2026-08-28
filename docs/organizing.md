@@ -54,6 +54,37 @@ The selection is a grid-only convenience; it is never saved into the presentatio
 
 While presenting, you may appraise an auxiliary window on the second monitor that shows you the next frame and presenting notes. Start it with <kbd>Alt+W</kbd>.
 
+### Choosing what it shows where
+
+The window is a two-by-two grid of sectors – a top and a bottom one in each column – and each of them may display any of:
+
+| Pane | Shows |
+|---|---|
+| Current slide | the frame the audience sees, with the not-yet-revealed [steps](steps.md) outlined |
+| Next slide | the frame that comes next |
+| Notes | the [presenter's notes](structure.md#-presenters-notes-) of the current frame |
+| Next notes | the presenter's notes of the *next* frame – a look ahead at what you are about to say |
+| (empty) | nothing – does not take up space |
+
+The default layout has the right column's bottom sector empty, so the notes run full height beside the slides.
+
+```
+current | notes            current | notes
+--------|                 --------|------------
+next    |                 next    | next notes
+
+  the default               aux=current,next,notes,next-notes
+```
+
+Everything is set from one place: the ⚙ knob in the window's bottom right corner (it fades in on hover, so it does not disturb while presenting), or <kbd>Alt+Shift+W</kbd> in the main window – the same dialog either way. Besides the four panes it also carries the three sliders the window is divided by: the column split, and the row split of either column. Changes are shown live as you drag.
+
+The arrangement is yours, not the presentation's, so it is not exported – it rides in the URL hash and is restored whenever that link is opened:
+
+* `aux=` – the panes, in the order left top, left bottom, right top, right bottom. Trailing sectors left at their default are simply omitted.
+* `aux-size=` – the three splits as percentages of the first part (`aux-size=60,67,40` = a 60 : 40 column split, the left column 67 : 33, the right one 40 : 60).
+
+Both keys are left out while they hold their default, so the stock arrangement writes no hash at all.
+
 ## Tagging
 
 Start tagging mode with <kbd>Alt+T</kbd>. Use the Numpad to tag the images – think of a tag as a number that corresponds to one of your categories. A photo may carry several tags at once: hitting a digit again toggles that tag off, <kbd>0</kbd> clears all of them. Text frames (with no photo/video) can be tagged too – their tag rides along in the exported document. Then in the menu, hit <kbd>Alt+Shift+G</kbd> to group the images into `<section>`s according to tags. The resulting sections come out ordered by tag number (1, 2, 3…), with every untagged photo gathered into a single catch-all section at the end. Export with <kbd>Ctrl+S</kbd>. Sorted & ready!
