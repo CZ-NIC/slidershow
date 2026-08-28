@@ -10,6 +10,7 @@
 * fix (performance): any re-layout of a large presentation (sorting, grouping, renaming, deleting or importing frames – anything that reruns `reset()`) froze the browser for tens of seconds on ten thousand frames, and the more thumbnails the grid held, the longer it took. Every frame looked its preview up by scanning the whole document; previews are kept in a lookup table now, so the pass is linear again (11 000 frames with a fully loaded grid: 4.4 s → 0.1 s)
 * fix (grid): the mouse wheel over a video tile scrolls the grid again. The film-camera badge marking a video is sized for the shrunken clone of a whole screen, but a video-only frame's tile is not scaled that way, so the badge landed there unshrunk at 300px – spilling out of the cell and turning it into a scroll box of its own, which swallowed the wheel. It now sizes itself against the tile, and a preview never scrolls at all
 * fix (grid): sorting subsections alphabetically re-appended one section at a time, reflowing the whole document per section – a sort spanning thousands of subsections now moves each parent's children in a single batch
+* fix (grid): "regroup by tags/date" re-ran a document-wide selector to find each frame's target section – same O(n²) class of freeze as the thumbnail lookup above, now a lookup table built once per regroup
 
 ## 1.1.0 (2026-08-26)
 

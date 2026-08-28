@@ -339,6 +339,15 @@ class SectionController {
                     .map(el => ({ el, prev: el.previousElementSibling }))
                 /** @type {JQuery} Catch-all for frames without a group key; reused across regroups so it never duplicates. */
                 let $looseSection = this.getDirectSections($main).filter("[sli-untagged]").first()
+                /** @type {Map<string, HTMLElement>} Sections at this level by their sli-name, kept up to
+                 * date as new ones are created below – a `$('section[sli-name=...]')` document-wide
+                 * selector re-run for every single frame made a big regroup (thousands of frames) O(n²),
+                 * same class of freeze as the thumbnail lookup fixed in Hud.getThumbnail(). */
+                const sectionsByName = new Map(
+                    this.getDirectSections($main).toArray()
+                        .filter(el => el.hasAttribute("sli-name"))
+                        .map(el => [el.getAttribute("sli-name"), el])
+                )
                 $frames.each((_, el) => {
                     const $frame = $(el)
                     /** @type {Frame} */
@@ -372,10 +381,14 @@ class SectionController {
                     redos.push(this.redoForMoving($frame))
 
                     // find or create section to put the frame to (to its end)
-                    // quoted + escaped: a hand-authored tag may contain spaces or quotes
-                    let $section = $(`section[sli-name="${String(name).replaceAll('\\', '\\\\').replaceAll('"', '\\"')}"]`)
-                    if (!$section.length) {
+                    const key = String(name)
+                    let $section
+                    const existing = sectionsByName.get(key)
+                    if (existing) {
+                        $section = $(existing)
+                    } else {
                         $section = $("<section/>", { "sli-name": name }).prependTo($main)
+                        sectionsByName.set(key, $section[0])
                         added.push($section)
                     }
                     // sli-title is the resolved display label (ex. a tag's name) at grouping time, kept
@@ -394,9 +407,10 @@ class SectionController {
                 if (criterion == "tags") {
                     // Order the resulting sections by tag number (1, 2, 3…) instead of by the order frames
                     // happened to appear; the untagged catch-all (no numeric name) sinks to the end.
-                    this.getDirectSections($main).toArray()
-                        .sort((a, b) => this._tagSortKey(a) - this._tagSortKey(b))
-                        .forEach(section => $(section).parent().append(section))
+                    appendGroupedByParent(
+                        this.getDirectSections($main).toArray()
+                            .sort((a, b) => this._tagSortKey(a) - this._tagSortKey(b))
+                    )
                 }
                 pl.positionFrames()
                 pl.goToFrame(pl.$current.data("frame").index - 1) // keeps you on the same frame (works badly)
