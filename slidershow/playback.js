@@ -443,7 +443,9 @@ class Playback {
 
         this.slide_count = slide_index + 1
 
-        // Set the new indices to corresponding previews.
+        // Set the new indices to corresponding previews and rebuild the hud's index -> preview lookup
+        // (every frame has just been renumbered, so every key may have moved).
+        this.hud.clearThumbnailIndex()
         $(`frame-preview`).each((_, el) => {
             const $el = $(el)
             const ref = $el.data("ref-temp")
@@ -452,6 +454,7 @@ class Playback {
             } else {
                 $el.attr("data-ref", ref)
                 $el.removeData("ref-temp")
+                this.hud.indexThumbnail(el)
             }
         })
     }

@@ -73,6 +73,16 @@ class Hud {
          * Frame object so it survives reorder/regroup. Lets a grid scrolled back over already-seen frames
          * skip the clone + image-probe in assureThumbnail. Cleared on reset() (structural/media changes). */
         this.previewCache = new Map()
+
+        /** @type {Map<number, Set<HTMLElement>>} O(1) lookup of the `<frame-preview>` elements by the
+         * `frame.index` they refer to (their `data-ref`) – see getThumbnail(). The same index may hold
+         * two thumbnails at once (the ribbon's and the grid's), hence a Set. Filled by assureThumbnail(),
+         * re-keyed by Playback.positionFrames() (which renumbers every frame); entries whose element
+         * left the document or no longer carries that `data-ref` are dropped lazily on lookup, so the
+         * many places that just `.remove()` a preview need no bookkeeping.
+         * The former document-wide `frame-preview[data-ref=N]` scan made positionFrames() O(n²) – a
+         * ten-thousand-frame presentation froze the tab for minutes on every reset(). */
+        this.thumbnailIndex = new Map()
         this.propertyPanel = new PropertyPanel(this)
         this.palette = new CommandPalette(this)
         this.init_grid()
@@ -606,6 +616,7 @@ class Hud {
         } else {
             $thumbnail.appendTo($container)
         }
+        this.indexThumbnail($thumbnail[0])
         return $thumbnail
     }
 
@@ -734,7 +745,52 @@ class Hud {
      * @returns
      */
     getThumbnail(frame, $container = null) {
-        return $(`frame-preview[data-ref=${frame.index}]`, $container)
+        const index = frame.index
+        const set = this.thumbnailIndex.get(index)
+        if (!set) {
+            return $()
+        }
+        const container = $container?.[0] ?? null
+        const found = []
+        for (const el of set) {
+            if (Number(el.dataset.ref) !== index) { // renumbered meanwhile – this key is not its home anymore
+                set.delete(el)
+                continue
+            }
+            if (!el.isConnected && (!container || container.isConnected)) {
+                // Gone from the document (`.remove()`, `.html("")`, grid discarding far tiles) – the
+                // original selector could not have found it either. (A detached $container is the
+                // exception: there, containment below is still the right question.)
+                set.delete(el)
+                continue
+            }
+            if (!container || (el !== container && container.contains(el))) {
+                found.push(el)
+            }
+        }
+        if (!set.size) {
+            this.thumbnailIndex.delete(index)
+        }
+        return $(found)
+    }
+
+    /**
+     * Put a `<frame-preview>` into the getThumbnail() lookup index under its current `data-ref`.
+     * @param {HTMLElement} el
+     */
+    indexThumbnail(el) {
+        const ref = Number(el.dataset.ref)
+        let set = this.thumbnailIndex.get(ref)
+        if (!set) {
+            this.thumbnailIndex.set(ref, set = new Set())
+        }
+        set.add(el)
+    }
+
+    /** Forget every `<frame-preview>` – used by Playback.positionFrames() which rebuilds the index
+     * from the document right after renumbering the frames. */
+    clearThumbnailIndex() {
+        this.thumbnailIndex.clear()
     }
 
     /**
