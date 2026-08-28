@@ -304,6 +304,14 @@ function get_menu() {
                         Duration <input name="duration" size="4" placeholder="0"> s
                         <br />Transition <input name="transition-duration" size="4" placeholder="0"> s
                         <br />Media folder path <input title="If not set, we put the media data inside the DOM (RAM consuming)" name="path" value="" placeholder="./">
+                        <br />Group by <select name="group-by" id="group-by" title="Split the imported files into sections. Folder and dates are known from the files right away; Camera (and a date correction) come from the EXIF, so those sections settle shortly after the import.">
+                            <option value="">Nothing</option>
+                            <option value="folder">Folder</option>
+                            <option value="days">Day</option>
+                            <option value="months">Month</option>
+                            <option value="years">Year</option>
+                            <option value="camera">Camera</option>
+                        </select>
                     </details>
                 </form>
             </details>

@@ -85,6 +85,20 @@ The arrangement is yours, not the presentation's, so it is not exported – it r
 
 Both keys are left out while they hold their default, so the stock arrangement writes no hash at all.
 
+## Grouping on import
+
+A big drop does not have to land as one long section. In the splash screen's **Append frames → Defaults** panel, the **Group by** select splits every import into sections right away:
+
+* **Folder** – the folder each file came from. Only a whole-folder drop (or the directory picker) tells the browser the original path; a plain multi-file drop has none, so the import stays in one section. The folder is remembered on the frame as `sli-folder`, so you can regroup by it later as well.
+* **Day / Month / Year** – the photo's date.
+* **Camera** – the make and model that took the photo (`sli-device`).
+
+Folder and the dates are known from the files themselves, so those sections appear the very moment the import finishes. The camera – and an exact date, when the file's modification time lies about when the photo was taken – can only be read from the EXIF, which is loaded in the background: the presentation is usable immediately and re-shuffles itself **once**, when the last photo of the batch has been read. Nothing is regrouped photo by photo.
+
+Your choice is remembered in this browser (like the grid's column count), not in the presentation – so it applies to every presentation you open here, while the sections it produced belong to the file you export.
+
+The same criteria are available afterwards from the grid's **regroup ▾** ribbon menu (<kbd>g</kbd>), together with hours, weeks and tags.
+
 ## Tagging
 
 Start tagging mode with <kbd>Alt+T</kbd>. Use the Numpad to tag the images – think of a tag as a number that corresponds to one of your categories. A photo may carry several tags at once: hitting a digit again toggles that tag off, <kbd>0</kbd> clears all of them. Text frames (with no photo/video) can be tagged too – their tag rides along in the exported document. Then in the menu, hit <kbd>Alt+Shift+G</kbd> to group the images into `<section>`s according to tags. The resulting sections come out ordered by tag number (1, 2, 3…), with every untagged photo gathered into a single catch-all section at the end. Export with <kbd>Ctrl+S</kbd>. Sorted & ready!

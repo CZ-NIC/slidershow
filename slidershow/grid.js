@@ -437,6 +437,8 @@ class GridController {
                                     <button data-role='regroup' data-param='months' title="Group frames sharing the same month into their own subsection">by months</button>
                                     <button data-role='regroup' data-param='years' title="Group frames sharing the same year into their own subsection">by years</button>
                                     <button data-role='regroup' data-param='tags' title="Group frames by their tag into their own subsection">by tags</button>
+                                    <button data-role='regroup' data-param='folder' title="Group frames by the folder they were imported from (sli-folder) into their own subsection">by folder</button>
+                                    <button data-role='regroup' data-param='camera' title="Group frames by the camera that took them (EXIF Make + Model) into their own subsection">by camera</button>
                                 </div>
                             </div>
                         </div>`

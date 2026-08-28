@@ -248,6 +248,10 @@ menu {
         margin-top: 30px;
         text-align: left;
         font-size: 1vw;
+
+        select {
+            font: inherit; /* a form control keeps the browser font otherwise – oversized next to the labels */
+        }
     }
 
     #progress {

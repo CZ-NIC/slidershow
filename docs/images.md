@@ -6,6 +6,7 @@ We try to fetch Exif data for images.
 * `sli-device`: maker and model
 * `sli-datetime`: picture time stamp (or fallback to file modification time)
 * `sli-gps`: point on the map (the HUD map will be automatically displayed in the corner)
+* `sli-folder`: the folder the file was imported from (not EXIF – it comes from the drop itself, see [grouping on import](organizing.md#grouping-on-import))
 
 However, this is a non-trivial task since the browser protects your photos' privacy. This works for images you drag and drop inside, and images from the web (with a permissive CORS policy). Reading the Exif of local images you merely mention in the document works only with the browser [CORS disabled](https://stackoverflow.com/questions/4819060/allow-google-chrome-to-use-xmlhttprequest-to-load-a-url-from-a-local-file) – do that only if you know what you are doing.
 

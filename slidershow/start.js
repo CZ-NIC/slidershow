@@ -73,6 +73,17 @@ class Menu {
             this.start_playback()
         })
 
+        // "Group by" for imports: which criterion a drop is split into sections by. A personal habit of
+        // this browser (it applies to every presentation opened here), not a property of a presentation –
+        // hence pref_get/pref_set instead of an sli-* attribute. The resulting sections of course are
+        // part of the presentation.
+        const stored = pref_get(Menu.GROUP_BY_KEY, "")
+        this.$group_by = $("#group-by").val(stored)
+            .on("change", e => pref_set(Menu.GROUP_BY_KEY, String($(e.target).val())))
+        if (String(this.$group_by.val() ?? "") !== stored) {
+            this.$group_by.val("") // a stored value no longer offered (ex. an older version's key)
+        }
+
         this.refresh_summary()
         this.refresh_recent()
 
@@ -247,6 +258,20 @@ class Menu {
         $(FRAME_SELECTOR).remove()  // delete old frames
     }
 
+    /** localStorage key of the import "Group by" criterion – a per-browser preference, see the constructor. */
+    static get GROUP_BY_KEY() { return "sli:import-group-by" }
+
+    /** @type {string[]} Criteria (`GroupCriterion`s) whose group key is known from the `File` alone (folder, or the
+     * date of its `lastModified`). They need no EXIF, so the items can be sorted before a single frame is
+     * built and the sections come out finished in one pass. Everything else (Camera, an exact date) has to
+     * wait for the asynchronous EXIF reads – see `_regroup_when_settled()`. */
+    static get SYNC_GROUP_CRITERIA() { return ["folder", "days", "months", "years"] }
+
+    /** @returns {GroupCriterion|""} The chosen import grouping criterion, "" for none. */
+    group_criterion() {
+        return /** @type {GroupCriterion|""} */ (String(this.$group_by?.val() || ""))
+    }
+
     /**
      * Insert frames to a new section of the document, sets defaults and show the menu controls
      * @param {File[]} items
@@ -256,13 +281,21 @@ class Menu {
         if (!items.length) {
             return false
         }
-        const $frames = await this.loadFiles(items)
+        const criterion = this.group_criterion()
+        const $frames = await this.loadFiles(items, criterion)
         if (!$frames.length) { // nothing usable in the drop
             return false
         }
-        const $section = this.playback.section_controller.insertNewSection($main)
+        const settled = this.last_import_settled
 
-        $section.hide(0).append($frames).children().hide(0).parent().show(0)
+        if ($frames.some($frame => $frame.data("group-key"))) {
+            // The criterion was resolvable from the files themselves – the frames come back already
+            // ordered by their key, so they only have to be handed to the right sections.
+            this._append_grouped($frames)
+        } else {
+            const $section = this.playback.section_controller.insertNewSection($main)
+            $section.hide(0).append($frames).children().hide(0).parent().show(0)
+        }
         this.$start_wrapper.show()
         this.$start.focus()
         this.playback.reset()
@@ -273,14 +306,163 @@ class Menu {
         // anyway, while a bulk import (thousands of files) would meanwhile exhaust the memory.
         $frames.slice(0, PRELOAD_FORWARD).forEach($frame => $frame.data("frame")?.preload())
         this.start_playback()
+        if (criterion && criterion !== "folder") { // a folder never changes once EXIF lands
+            this._regroup_when_settled(criterion, $frames, settled) // deliberately not awaited
+        }
         return true
     }
 
     /**
-     * @param {File[]} items
-     * @returns {Promise<JQuery[]>} frames
+     * Hand freshly built frames over to one <section> per group key (`data("group-key")`, set by
+     * `loadFiles()` for the synchronous criteria). Sections are reused by `sli-name`, exactly like a
+     * regroup does, so importing the same folder twice does not create a second section for it. The
+     * frames arrive sorted by key, hence one ordered pass and one `append()` per section – no frame or
+     * section is ever moved afterwards (that shuffling is what used to freeze big regroups).
+     * @param {JQuery[]} frames
      */
-    async loadFiles(items) {
+    _append_grouped(frames) {
+        const sc = this.playback.section_controller
+        /** @type {Map<string, JQuery>} Sections at this level by their key, kept up to date below. */
+        const sections = new Map(sc.getDirectSections($main).toArray()
+            .filter(el => el.hasAttribute("sli-name"))
+            .map(el => [String(el.getAttribute("sli-name")), $(el)]))
+        /** @type {Map<JQuery, JQuery[]>} */
+        const batches = new Map()
+        /** @type {?JQuery} Catch-all for the files that yielded no key (ex. a photo with no lastModified),
+         * the same one a regroup reuses. */
+        let $loose = sc.getDirectSections($main).filter("[sli-untagged]").first()
+
+        frames.forEach($frame => {
+            const key = String($frame.data("group-key") || "")
+            let $section = key ? sections.get(key) : ($loose.length ? $loose : null)
+            if (!$section) {
+                $section = sc.insertNewSection($main)
+                if (key) {
+                    $section.attr({ "sli-name": key, "sli-title": key })
+                    sections.set(key, $section)
+                } else {
+                    $section.attr({ "sli-untagged": "", "sli-title": "untagged" })
+                    $loose = $section
+                }
+            }
+            const batch = batches.get($section)
+            batch ? batch.push($frame) : batches.set($section, [$frame])
+        })
+
+        batches.forEach((batch, $section) => {
+            batch.forEach($frame => $frame.hide(0)) // shown when navigated to, see Frame.prepare()
+            $section.hide(0).append(batch).show(0)
+        })
+    }
+
+    /**
+     * Group an import by a criterion only the EXIF can answer (Camera, an exact date) – ONCE, when the
+     * whole batch has settled. Regrouping per file as the reads trickle in would re-shuffle the DOM
+     * hundreds of times mid-import, so the presentation jumps at most once instead.
+     * For a criterion already applied at import time from `lastModified`, the regroup runs only when the
+     * EXIF actually moved a frame to another day/month/year – otherwise nothing happens at all, not even
+     * an undo entry.
+     * @param {GroupCriterion} criterion
+     * @param {JQuery[]} frames
+     * @param {Promise} settled Resolves once every frame of the batch reported its EXIF read done.
+     */
+    async _regroup_when_settled(criterion, frames, settled) {
+        await settled
+        // Only the frames still in the document – the import may have been undone meanwhile.
+        const $frames = $(frames.map($frame => $frame[0]).filter(el => el.isConnected))
+        if (!$frames.length) {
+            return
+        }
+        if (Menu.SYNC_GROUP_CRITERIA.includes(criterion) && !this._grouping_stale(criterion, $frames)) {
+            return
+        }
+        this.playback.section_controller.group(criterion, $frames)
+        this.playback.hud.info(`Grouped ${$frames.length} frames by ${criterion}`)
+    }
+
+    /**
+     * @param {GroupCriterion} criterion
+     * @param {JQuery} $frames
+     * @returns {boolean} Whether any frame's group key – now that the EXIF has landed – differs from the
+     * section it was imported into (ex. a photo whose DateTimeOriginal falls on another day than the
+     * file's lastModified).
+     */
+    _grouping_stale(criterion, $frames) {
+        const sc = this.playback.section_controller
+        return $frames.toArray().some(el => {
+            const key = String(sc.groupKey(criterion, $(el).data("frame")).name ?? "")
+            return key !== String($(el).closest("section").attr("sli-name") ?? "")
+        })
+    }
+
+    /**
+     * Group keys known without touching the EXIF – the containing folder (`webkitRelativePath`, present
+     * only when a whole folder was dropped) or the file's own `lastModified`.
+     * @param {File[]} items
+     * @param {?GroupCriterion|""} criterion
+     * @returns {?string[]} A key per item (aligned with `items`, "" where the file yields none), or null
+     * when the criterion needs the EXIF (Camera, an exact date), is none, or when not a single item
+     * yields a key (ex. grouping by folder in a plain multi-file drop) – then the import stays ungrouped.
+     */
+    sync_group_keys(items, criterion) {
+        if (!Menu.SYNC_GROUP_CRITERIA.includes(criterion)) {
+            return null
+        }
+        const keys = items.map(item => criterion === "folder"
+            ? Menu.item_folder(item)
+            : (item.lastModified
+                ? this.playback.section_controller._toGroupKey(item.lastModified,
+                    /** @type {"days"|"months"|"years"} */(criterion))
+                : ""))
+        return keys.some(Boolean) ? keys : null
+    }
+
+    /**
+     * @param {File} item
+     * @returns {string} The folder a dropped file came from – the last directory of its
+     * `webkitRelativePath` (set by the browser for a folder drop / directory picker only), "" otherwise.
+     */
+    static item_folder(item) {
+        return String(item.webkitRelativePath || "").split("/").slice(0, -1).pop() || ""
+    }
+
+    /**
+     * Track when a whole import batch has finished its asynchronous EXIF reads: each file reports exactly
+     * once through the `FrameFactory.file()` callback. A failed read stays silent in exif-js, so besides
+     * counting we also give up after `EXIF_TIMEOUT` of complete silence – the Semaphore in `Frame.exif()`
+     * guarantees the next read starts within that window, so a longer gap means nothing else is coming.
+     * @param {number} count Files in the batch.
+     * @returns {{done: function, promise: Promise<void>}}
+     */
+    _settle_tracker(count) {
+        let pending = count
+        /** @type {function} */
+        let resolve
+        const promise = new Promise(r => resolve = r)
+        let timer = null
+        const finish = () => {
+            clearTimeout(timer)
+            resolve()
+        }
+        const wait = () => {
+            clearTimeout(timer)
+            timer = setTimeout(finish, EXIF_TIMEOUT)
+        }
+        pending ? wait() : finish()
+        return { done: () => --pending > 0 ? wait() : finish(), promise }
+    }
+
+    /**
+     * @param {File[]} items
+     * @param {?GroupCriterion|""} criterion Import grouping criterion. For the synchronous ones
+     * (`Menu.SYNC_GROUP_CRITERIA`) the items are sorted by their group key before a single frame is built,
+     * so the sections can be filled in one ordered pass; every frame then carries its key in
+     * `data("group-key")`.
+     * @returns {Promise<JQuery[]>} frames, in the order they should be inserted. Sets
+     * `this.last_import_settled` (always the most recent batch), resolving once every frame of this batch
+     * reported its EXIF read done (or timed out) – the moment an EXIF-dependent regroup may run.
+     */
+    async loadFiles(items, criterion = null) {
         console.log("File items", items)
 
         const spin = this.display_progress(items.length, this.$drop)
@@ -296,9 +478,33 @@ class Menu {
         // Prepare frames
         const path = $("#defaults [name=path]").val()
         const ram_only = !Boolean(path)
-        const frames = items.map(item =>
-            FrameFactory.file(path + item.name, false, item, ram_only, spin))
-            .filter(x => !!x)
+        /** @type {?string[]} */
+        const keys = this.sync_group_keys(items, criterion)
+        /** Stable sort by the group key: the frames are then built – and appended – already grouped, so
+         * not a single section has to be moved around afterwards. */
+        const order = items.map((_, i) => i)
+        if (keys) {
+            order.sort((a, b) => keys[a].localeCompare(keys[b]) || a - b)
+        }
+        const settle = this._settle_tracker(items.length)
+        this.last_import_settled = settle.promise
+        const frames = order.map(i => {
+            const item = items[i]
+            const $frame = FrameFactory.file(path + item.name, false, item, ram_only, () => {
+                spin()
+                settle.done()
+            })
+            if (!$frame) {
+                return null
+            }
+            // Remember which folder the file came from (the frame's filename keeps no path) – so a later
+            // "regroup by folder" still works, and not only for the import that asked for it.
+            const folder = Menu.item_folder(item)
+            if (folder) {
+                $frame.attr("sli-folder", folder)
+            }
+            return keys ? $frame.data("group-key", keys[i]) : $frame
+        }).filter(x => !!x)
         $banner.remove()
         document.body.classList.remove("importing")
         return frames
