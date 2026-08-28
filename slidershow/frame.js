@@ -1,9 +1,27 @@
 const EDITABLE_ELEMENTS = "h1,h2,h3,h4,h5,h6,p,li"
-// EXIF (APP1) lives at the very start of a JPEG, so this leading slice is enough to read all metadata –
-// no need to materialize a whole 10s-of-MB File as an ArrayBuffer just to fetch the camera/date/GPS tags.
+// EXIF (APP1) lives at the very start of a JPEG, so this leading slice is enough to read metadata for
+// most photos – but not all: a large embedded thumbnail or verbose MakerNote can push an IFD pointer
+// past this slice, which is the one failure mode below is about.
 const EXIF_HEADER_BYTES = 256 * 1024
 /** Give up waiting for an EXIF read (ms) and free its concurrency slot. */
 const EXIF_TIMEOUT = 30 * 1000
+
+// exif-js throws a bare RangeError from inside its own FileReader.onload when a tag's offset falls
+// outside EXIF_HEADER_BYTES's slice (see Frame.exif) – there is nothing of ours on the call stack at
+// that point, so it can only be caught here, at window level, not around our EXIF.getData() call.
+// It is harmless: EXIF_TIMEOUT above already frees that file's concurrency slot, and the photo just
+// keeps its lastModified-derived date instead of the EXIF one. Left alone it both prints as a scary
+// "Uncaught" and (via launch.js's own window "error" listener, registered after this one) pops a
+// "Error: ..." toast on every affected file during a big import – stopImmediatePropagation() heads
+// that listener off too, so a quiet console line is all that is left of it.
+window.addEventListener("error", (e) => {
+    if (e.filename?.includes("exif-js") && e.error instanceof RangeError) {
+        e.preventDefault()
+        e.stopImmediatePropagation()
+        console.warn("EXIF read gave up on a file whose metadata reaches past the header slice we read – its capture date/GPS/device will be missing.", e.error)
+    }
+})
+
 class Frame {
     /**
      *

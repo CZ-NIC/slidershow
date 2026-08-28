@@ -285,9 +285,12 @@ class Menu {
 
         const spin = this.display_progress(items.length, this.$drop)
         document.body.classList.add("importing")
-        // Give the browser a chance to paint the spinner/cursor before the heavy (synchronous,
-        // freezing) import work below starts – a huge import can otherwise lock up the tab
-        // with no visible sign anything is happening.
+        // A huge import (thousands of files) builds every Frame synchronously below – nothing else
+        // on the page can run meanwhile, so a small corner spinner is easy to miss and looks like the
+        // tab just hung. A full-screen banner makes the freeze itself the visible feedback instead of
+        // something to be surprised by.
+        const $banner = $("<div/>", { id: "import-banner", text: `Importing ${items.length} files…` }).appendTo(document.body)
+        // Give the browser a chance to paint the banner/spinner/cursor before the heavy work starts.
         await new Promise(resolve => setTimeout(resolve))
 
         // Prepare frames
@@ -296,6 +299,7 @@ class Menu {
         const frames = items.map(item =>
             FrameFactory.file(path + item.name, false, item, ram_only, spin))
             .filter(x => !!x)
+        $banner.remove()
         document.body.classList.remove("importing")
         return frames
     }
@@ -347,7 +351,8 @@ class Menu {
     display_progress(max, $placement = null) {
         const $progress = $("<div/>", { id: "progress" }).insertAfter($placement || "h1").circleProgress({
             value: 0,
-            max: max
+            max: max,
+            textFormat: "percent" // "value/max" overflows the circle once max reaches the thousands
         })
         let progress = 0
         return (finish = false) => {

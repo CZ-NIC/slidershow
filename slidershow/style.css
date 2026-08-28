@@ -36,6 +36,24 @@
 }
 
 
+/* Covers the whole viewport for the (synchronous, unresponsive) span of a huge import – see
+   Menu.loadFiles(). Owns the busy cursor itself so it reads correctly even before body.importing's
+   style has painted. */
+#import-banner {
+    position: fixed;
+    inset: 0;
+    z-index: 50;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: var(--bg-dark);
+    color: var(--base);
+    font-size: 3vw;
+    font-weight: bold;
+    text-align: center;
+    cursor: wait;
+}
+
 body {
     background-color: var(--bg-dark);
     color: var(--base);
