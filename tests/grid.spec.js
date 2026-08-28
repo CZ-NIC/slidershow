@@ -202,3 +202,33 @@ test("a slide letterboxed in a photo-shaped tile gets a quiet dark band, not the
         return bg
     })).not.toBe("rgb(26, 26, 26)")
 })
+
+test("the wheel over a video tile scrolls the grid, not the tile's camera badge", async ({ page }) => {
+    await page.goto(SLIDES)
+    await page.locator("#start").click()
+
+    // Enough frames for the grid to scroll at all, the last of them videos – a video frame is media-only,
+    // so its tile is not the scaled-down clone the 300px camera badge was sized for.
+    await page.evaluate(async () => {
+        $("<article><video sli-src='nowhere.mp4'></video></article>").prependTo("main section") // on screen from the start
+        for (let i = 0; i < 40; i++) {
+            $("<article><p>filler</p></article>").appendTo("main section")
+        }
+        playback.reset()
+        playback.hud.toggle_grid()
+        await new Promise(r => setTimeout(r, 1500))
+    })
+
+    // The badge stays inside the tile – overflowing content is what made the tile a scroll box of its own.
+    const tile = page.locator("#hud-grid frame-preview.media-only").last()
+    expect(await tile.evaluate(el => {
+        const article = el.querySelector("article")
+        return { over: article.scrollHeight - article.clientHeight, wide: article.scrollWidth - article.clientWidth }
+    })).toEqual({ over: 0, wide: 0 })
+
+    // …so the wheel reaches the grid underneath it
+    const box = await tile.boundingBox()
+    await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2)
+    await page.mouse.wheel(0, 300)
+    await expect.poll(() => page.evaluate(() => document.querySelector("#hud-grid").scrollTop)).toBeGreaterThan(0)
+})

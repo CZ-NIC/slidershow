@@ -287,8 +287,8 @@ class GridController {
                 pl.set_tag_filter([])
                 break
             case "import":
-                $("<input/>", { type: "file" }).change(function () {
-                    const frames = pl.menu.loadFiles([...this.files])
+                $("<input/>", { type: "file" }).change(async function () {
+                    const frames = await pl.menu.loadFiles([...this.files])
                     pl.section_controller.importFrames(frames, rightPlace(), false)
                     pl.hud.info(`${this.files.length} media imported`)
                 }).trigger("click")

@@ -118,12 +118,13 @@ test("grid percentage never divides by a stale 0 total after hiding the grid mid
 })
 
 test("Frame.exif reads only the header slice of a large File, not the whole file", async ({ page }) => {
-    const seenSize = await page.evaluate(() => {
+    const seenSize = await page.evaluate(async () => {
         const big = new File([new Uint8Array(1024 * 1024)], "big.jpg", { type: "image/jpeg" }) // 1 MB
         let size = null
         const original = EXIF.getData
         EXIF.getData = (src) => { size = src instanceof Blob ? src.size : -1 } // capture, don't actually parse
         Frame.exif($("<img/>"), big, () => { })
+        await new Promise(r => setTimeout(r, 30)) // the read waits for a concurrency slot first
         EXIF.getData = original
         return size
     })

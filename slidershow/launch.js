@@ -91,6 +91,9 @@ var ORIGINAL_CONCURRENCY = 4
 /** Max concurrent thumbnail (`sli-thumb`) loads. Cheap, so a generous limit – kept only to avoid the browser's
     per-host connection pool filling up with previews and stalling the current frame's original. */
 var THUMB_CONCURRENCY = 8
+/** Max concurrent EXIF header reads. Importing a whole folder would otherwise fire thousands of
+    FileReaders at once, each holding an EXIF_HEADER_BYTES buffer. */
+var EXIF_CONCURRENCY = 8
 
 // Main launch and export to the dev console
 /** @type {Playback} */

@@ -37,10 +37,10 @@ class Menu {
 
         // Drop new files
         const $drop = this.$drop = $("#drop")
-        this.$menu.on("drop", ev => {
+        this.$menu.on("drop", async ev => {
             ev.preventDefault()
             const items = [...ev.originalEvent.dataTransfer.items].filter(i => i.kind === "file").map(i => i.getAsFile())
-            if (this.appendFiles(items)) {
+            if (await this.appendFiles(items)) {
                 $drop.text(`Dropped ${items.length} files.`)
             } else {
                 $drop.text('Drop failed, try again')
@@ -250,14 +250,17 @@ class Menu {
     /**
      * Insert frames to a new section of the document, sets defaults and show the menu controls
      * @param {File[]} items
-     * @returns {Boolean} Whether the items were successfully inserted.
+     * @returns {Promise<Boolean>} Whether the items were successfully inserted.
      */
-    appendFiles(items) {
+    async appendFiles(items) {
         if (!items.length) {
             return false
         }
+        const $frames = await this.loadFiles(items)
+        if (!$frames.length) { // nothing usable in the drop
+            return false
+        }
         const $section = this.playback.section_controller.insertNewSection($main)
-        const $frames = this.loadFiles(items)
 
         $section.hide(0).append($frames).children().hide(0).parent().show(0)
         this.$start_wrapper.show()
@@ -266,25 +269,35 @@ class Menu {
         // Preload eagerly: goToFrame only guarantees the current+following frame synchronously,
         // the rest queue as background tasks that a later navigation can wipe before they run,
         // leaving a newly appended frame blank until the user revisits it.
-        $frames.forEach($frame => $frame.data("frame")?.preload())
+        // Only the preload window though – anything further would be unloaded by the very next goToFrame
+        // anyway, while a bulk import (thousands of files) would meanwhile exhaust the memory.
+        $frames.slice(0, PRELOAD_FORWARD).forEach($frame => $frame.data("frame")?.preload())
         this.start_playback()
         return true
     }
 
     /**
      * @param {File[]} items
-     * @returns {JQuery[]} frames
+     * @returns {Promise<JQuery[]>} frames
      */
-    loadFiles(items) {
-        console.log("File items", items) // XX we might use item.size too
+    async loadFiles(items) {
+        console.log("File items", items)
+
+        const spin = this.display_progress(items.length, this.$drop)
+        document.body.classList.add("importing")
+        // Give the browser a chance to paint the spinner/cursor before the heavy (synchronous,
+        // freezing) import work below starts – a huge import can otherwise lock up the tab
+        // with no visible sign anything is happening.
+        await new Promise(resolve => setTimeout(resolve))
 
         // Prepare frames
         const path = $("#defaults [name=path]").val()
         const ram_only = !Boolean(path)
-        const spin = this.display_progress(items.length, this.$drop)
-        return items.map(item =>
+        const frames = items.map(item =>
             FrameFactory.file(path + item.name, false, item, ram_only, spin))
             .filter(x => !!x)
+        document.body.classList.remove("importing")
+        return frames
     }
 
     /**
@@ -300,10 +313,10 @@ class Menu {
     importable($el, onDrop) {
         let lastEvent = null
         $el.off("drop dragover dragleave")
-            .on("drop", e => {
+            .on("drop", async e => {
                 const before = clean(e)
                 const items = [...e.originalEvent.dataTransfer.items].filter(i => i.kind === "file").map(i => i.getAsFile())
-                const frames = this.loadFiles(items)
+                const frames = await this.loadFiles(items)
                 if (frames.length) {
                     this.playback.hud.info("Imported: " + frames.length)
                     onDrop(frames, e.currentTarget, before) // we should insert them into DOM

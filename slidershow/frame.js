@@ -2,6 +2,8 @@ const EDITABLE_ELEMENTS = "h1,h2,h3,h4,h5,h6,p,li"
 // EXIF (APP1) lives at the very start of a JPEG, so this leading slice is enough to read all metadata –
 // no need to materialize a whole 10s-of-MB File as an ArrayBuffer just to fetch the camera/date/GPS tags.
 const EXIF_HEADER_BYTES = 256 * 1024
+/** Give up waiting for an EXIF read (ms) and free its concurrency slot. */
+const EXIF_TIMEOUT = 30 * 1000
 class Frame {
     /**
      *
@@ -1671,10 +1673,30 @@ class Frame {
         // File, ex. a served presentation) keeps the original behaviour (exif-js fetches it itself).
         const source = data instanceof Blob ? data.slice(0, EXIF_HEADER_BYTES) : (data || el)
         // raises uncatcheable log when CORS encoutered
-        EXIF.getData(source, function () {
+        const read = () => EXIF.getData(source, function () {
             process(EXIF.getAllTags(this))
         })
+
+        if (!(source instanceof Blob)) {
+            return read() // the element variant is fetched by the browser itself, nothing to throttle
+        }
+        // Throttle the FileReaders – a whole-folder import would start thousands of them at once.
+        Frame.#exif_loader ??= new Semaphore(EXIF_CONCURRENCY)
+        Frame.#exif_loader.acquire().then(release => {
+            // exif-js stays silent when the read fails, so the slot is freed by whatever comes first;
+            // a lost slot would stall every remaining import.
+            let freed = false
+            const free = () => { if (!freed) { freed = true; release() } }
+            setTimeout(free, EXIF_TIMEOUT)
+            EXIF.getData(source, function () {
+                free()
+                process(EXIF.getAllTags(this))
+            })
+        })
     }
+
+    /** @type {?Semaphore} Lazy – EXIF_CONCURRENCY comes from launch.js, loaded after this file. */
+    static #exif_loader = null
 
     /**
      * GPS DMS -> DD

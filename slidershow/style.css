@@ -42,6 +42,10 @@ body {
     overflow-y: hidden;
     overflow-x: hidden;
     margin: 0;
+
+    &.importing, &.importing * {
+        cursor: wait !important;
+    }
 }
 
 kbd {
@@ -351,7 +355,10 @@ frame-preview {
 
     >article,
     >article-map {
-        overflow: auto;
+        /* `hidden`, not `auto`: a preview is a picture of a frame, never something to scroll inside.
+           Whatever sticks out of it used to make the tile itself scrollable, and the wheel then panned
+           that instead of scrolling the grid past it. */
+        overflow: hidden;
         display: block; /* by default, article is hidden; overwrite this for previews */
         transform-origin: 0 0;
 
@@ -375,6 +382,20 @@ frame-preview {
             font-size: 300px;
             text-shadow: 0 0 100px var(--base);
         }
+    }
+
+    /* The badge above is sized for the scaled-down clone of a whole screen – a 1280px-wide article that
+       the tile then shrinks to a sixth. A media-only frame gets no such scaling (its video owns the tile
+       outright, see .media-only in the grid), so those 300px landed unshrunk in a 200px cell: the glyph
+       spilled out of the tile and, being oversized content, turned the tile into its own scroll box.
+       Size it against the tile instead – the grid and the ribbon declare their tiles size containers. */
+    &.media-only>article.video-thumbnail:before {
+        margin-top: 0;
+        inset: 0;
+        display: grid;
+        place-content: center;
+        font-size: 35cqmin;
+        text-shadow: 0 0 10cqmin var(--base);
     }
 
     article-map:before {
@@ -860,6 +881,7 @@ frame-preview {
             >frame-preview {
                 width: 30vw;
                 height: 30vh;
+                container-type: size; /* lets a tile's overlay size itself in cqmin, see .media-only above */
             }
         }
 
@@ -920,6 +942,7 @@ frame-preview {
                    GridController.applyTileShape() overrides this via [data-tile] below. */
                 aspect-ratio: 4 / 3;
                 align-self: start; /* the flex default `stretch` would override the aspect-ratio's height */
+                container-type: size; /* lets a tile's overlay size itself in cqmin, see .media-only above */
 
                 /* The shared `.current` outline below is `--bg-dark`, which the ribbon draws over a lit
                    presentation but the grid draws on its own dark background – there it was invisible,

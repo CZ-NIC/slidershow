@@ -71,7 +71,10 @@ class FrameFactory {
             .data(READ_SRC, (prefer_blob = false) => {
                 return new Promise(resolve => {
                     if (prefer_blob) { // shorter but needed to revoke the URL manually
-                        resolve(URL.createObjectURL(new Blob([data])))
+                        // A `File` already is a `Blob` – hand it over as is. Wrapping it in `new Blob([data])`
+                        // would read the whole file into the memory first (fatal when importing gigabytes),
+                        // whereas this URL just points to the file still sitting on the disk.
+                        resolve(URL.createObjectURL(data))
                     } else {
                         const reader = new FileReader()
                         reader.onload = () => resolve(reader.result)
