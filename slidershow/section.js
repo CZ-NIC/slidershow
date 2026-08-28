@@ -449,15 +449,15 @@ class SectionController {
                         : nameB.localeCompare(nameA)
                 })
 
-                // Re-append in sorted order (preserving articles inside). Appending to each section's own
-                // current parent – not unconditionally $main – keeps it inside whatever wrapper div it
-                // actually lives in (ex. a layout wrapper around all sections).
-                sorted.forEach(section => $(section).parent().append(section))
+                // Re-append in sorted order (preserving articles inside). Grouped by each section's own
+                // current parent – not unconditionally $main, since a section may sit inside a wrapper
+                // div (ex. a layout wrapper) rather than directly under $section – and appended once per
+                // parent rather than one DOM move per section, so a big sort does not reflow n times.
+                appendGroupedByParent(sorted)
             },
             () => {
                 // Undo: restore original order
-                originalOrder.forEach(section => $(section).parent().append(section))
-
+                appendGroupedByParent(originalOrder)
             },
             () => {
                 pl.positionFrames()
@@ -497,4 +497,26 @@ class SectionController {
         }
     }
 
+}
+
+/**
+ * Re-append `elements` to the DOM in the given order, one `.append()` call per distinct current
+ * parent instead of one per element – a plain `elements.forEach(el => $(el).parent().append(el))`
+ * reflows once per element, which thrashes on a sort/undo spanning thousands of sections.
+ * @param {HTMLElement[]} elements Already in the desired final order.
+ */
+function appendGroupedByParent(elements) {
+    const byParent = new Map()
+    for (const el of elements) {
+        const parent = el.parentElement
+        const group = byParent.get(parent)
+        if (group) {
+            group.push(el)
+        } else {
+            byParent.set(parent, [el])
+        }
+    }
+    for (const [parent, group] of byParent) {
+        $(parent).append(group)
+    }
 }
