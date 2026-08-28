@@ -1,3 +1,9 @@
+/**
+ * How frames are split into sections. "folder"/"camera" and the date granularities are also offered at
+ * import time (see the "Group by" select in the append panel and `Menu.appendFiles()`).
+ * @typedef {"tags"|"folder"|"camera"|"hours"|"days"|"weeks"|"months"|"years"} GroupCriterion
+ */
+
 // Group the frames to sections, ex. by tags
 class SectionController {
     /**
@@ -132,6 +138,9 @@ class SectionController {
         const pl = this.playback
         const formData = new FormData($("#defaults")[0])
         formData.delete('path') // path does not belong to <section>
+        // The import "Group by" select shares the #defaults form for layout only – it is a personal
+        // preference of this browser (see Menu.GROUP_BY_KEY), not a property of the new section.
+        formData.delete('group-by')
         const $section = $("<section/>", Object.fromEntries(Array.from(formData)
             .map(([key, value]) => [`sli-${key}`, value])
             .filter(([key, value]) => value !== '')))
@@ -311,7 +320,7 @@ class SectionController {
 
     /**
      * Group frames according to the user tags across multiple <section> tags
-     * @param {"tags"|"hours"|"days"|"weeks"|"months"|"years"} criterion
+     * @param {GroupCriterion} criterion
     * @param {?JQuery<HTMLElement>} $frames If none, all frames are regrouped.
     */
     group(criterion = "tags", $frames = null) {
@@ -353,17 +362,9 @@ class SectionController {
                     /** @type {Frame} */
                     const frame = $frame.data("frame")
 
-                    let name, title
-                    if (criterion == "tags") {
-                        const tags = frame.get_tags()
-                        name = tags[0]
-                        title = name ? frame.tag_names()[name - 1] || null : null
-                        if (tags.length > 1) {
-                            multiTagged.push(`${frame.get_filename()} → ${tags.join(", ")}`)
-                        }
-                    } else {
-                        name = this._toGroupKey(prop("datetime", frame.$actor), criterion)
-                        title = name
+                    const { name, title, tags } = this.groupKey(criterion, frame)
+                    if (tags.length > 1) {
+                        multiTagged.push(`${frame.get_filename()} → ${tags.join(", ")}`)
                     }
                     if (!name) {
                         // No group key (untagged, ex. cleared with "0", or no datetime): collect every such
@@ -428,6 +429,43 @@ class SectionController {
             },
             () => pl.resetAndGo()
         )
+    }
+
+    /**
+     * Which section a frame belongs to under `criterion` – the single place a grouping key is derived,
+     * shared by `group()` and by the import-time grouping in `Menu.appendFiles()`.
+     * @param {GroupCriterion} criterion
+     * @param {Frame} frame
+     * @returns {{name: ?string, title: ?string, tags: number[]}} `name` is the stable key sections are
+     * matched by (`sli-name`), `title` the display label (`sli-title`); a null/empty name means "no
+     * group" (the frame lands in the untagged catch-all). `tags` is filled for the "tags" criterion only.
+     */
+    groupKey(criterion, frame) {
+        switch (criterion) {
+            case "tags": {
+                const tags = frame.get_tags()
+                const tag = tags[0]
+                return { name: tag ? String(tag) : null, title: tag ? frame.tag_names()[tag - 1] || null : null, tags }
+            }
+            case "folder": {
+                // The folder the media came from: `sli-folder`, written at import time from the dropped
+                // File's webkitRelativePath (the frame's own filename keeps no path), else the directory
+                // part of sli-src for a presentation that references media by path.
+                const src = String(frame.$actor.attr("sli-src") || frame.$actor.attr("src") || "")
+                const dir = String(prop("folder", frame.$actor) || "")
+                    || src.split("/").slice(0, -1).filter(p => p && p !== "." && p !== "..").pop() || ""
+                return { name: dir || null, title: dir || null, tags: [] }
+            }
+            case "camera": {
+                // sli-device is `Make Model`, written by the (asynchronous) EXIF read – see Frame.exif.
+                const device = String(prop("device", frame.$actor) || "")
+                return { name: device || null, title: device || null, tags: [] }
+            }
+            default: {
+                const name = this._toGroupKey(prop("datetime", frame.$actor), criterion)
+                return { name, title: name, tags: [] }
+            }
+        }
     }
 
     /**
@@ -499,7 +537,12 @@ class SectionController {
  * @returns {string} Group key for the given granularity
  */
     _toGroupKey(dateStr, granularity) {
-        const date = new Date(dateStr)
+        // `formatDateMs()` writes a file's lastModified as "2019-06-01T12-30-00" (hyphens in the time
+        // part, not colons) – V8 rejects that outright, so every EXIF-less photo used to group as
+        // "unknown-days". Normalize it back to an ISO time before parsing.
+        const date = new Date(typeof dateStr === "string"
+            ? dateStr.replace(/T(\d{2})-(\d{2})-(\d{2})/, "T$1:$2:$3")
+            : dateStr)
         if (isNaN(date)) return `unknown-${granularity}`
 
         switch (granularity) {

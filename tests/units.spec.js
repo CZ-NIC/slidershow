@@ -132,6 +132,25 @@ test("_photo_date_range returns min–max month from sli-datetime, null when non
     expect(result.range).toEqual({ from: "2019-06", to: "2019-08" })
 })
 
+test("_toGroupKey reads a file's own modification date, written with hyphens in the time part", async ({ page }) => {
+    await page.goto(FIXTURE)
+    await expect(page.locator("#start")).toBeVisible()
+
+    const keys = await page.evaluate(() => {
+        const sc = playback.section_controller
+        return {
+            // FrameFactory writes a lastModified fallback in this shape – it used to be unparseable
+            file: sc._toGroupKey("2019-08-15T10-00-00", "days"),
+            exif: sc._toGroupKey("2019-08-15T10:00:00", "days"),
+            missing: sc._toGroupKey("", "days"),
+        }
+    })
+
+    expect(keys.file).toBe("2019-08-15")
+    expect(keys.exif).toBe("2019-08-15")
+    expect(keys.missing).toBe("unknown-days")
+})
+
 test("recent list renders frame count and photo date range for each saved presentation", async ({ page }) => {
     await page.goto(FIXTURE)
     await expect(page.locator("#start")).toBeVisible()
