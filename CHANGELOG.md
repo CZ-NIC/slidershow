@@ -10,6 +10,8 @@
 * fix (grid): the mouse wheel over a video tile scrolls the grid again. The film-camera badge marking a video is sized for the shrunken clone of a whole screen, but a video-only frame's tile is not scaled that way, so the badge landed there unshrunk at 300px – spilling out of the cell and turning it into a scroll box of its own, which swallowed the wheel. It now sizes itself against the tile, and a preview never scrolls at all
 * fix (grid): sorting subsections alphabetically re-appended one section at a time, reflowing the whole document per section – a sort spanning thousands of subsections now moves each parent's children in a single batch
 * fix (grid): "regroup by tags/date" re-ran a document-wide selector to find each frame's target section – same O(n²) class of freeze as the thumbnail lookup above, now a lookup table built once per regroup
+* fix (grid): a long-press on a thumbnail now selects it, the touch equivalent of Ctrl/Shift-click – there was previously no way to build a multi-selection on mobile at all, since both the modified click and the drag-marquee only listen for a mouse
+* fix (performance): deleting frames one by one from the grid (the tile's ✖ button) re-ran the whole `reset()` per click; a burst of consecutive deletes now coalesces into a single reset. `reset()` itself is also leaner – frame repositioning writes styles directly instead of through jQuery, and tags are looked up from one localStorage scan instead of one read per frame (8 000 frames: reset() 300 ms → 130 ms)
 
 ## 1.2.0 (2026-08-28)
 
