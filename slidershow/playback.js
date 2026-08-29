@@ -310,6 +310,25 @@ class Playback {
         this.hud.reset()
     }
 
+    /**
+     * Debounced reset() – coalesces a burst of individual reset-triggering edits (ex. repeatedly hitting
+     * a grid tile's "✖ delete" button) into a single O(n) reset instead of one per edit, the same
+     * "freeze" class already fixed for regroup/sortSections. Only the last queued `afterReset` callback
+     * runs (ex. a goToFrame landing) – earlier ones targeted frames a later reset in the same burst has
+     * already moved past.
+     * @param {?function} afterReset
+     */
+    scheduleReset(afterReset = null) {
+        clearTimeout(this._resetTimer)
+        this._pendingAfterReset = afterReset
+        this._resetTimer = setTimeout(() => {
+            this._resetTimer = null
+            this.reset()
+            this._pendingAfterReset?.()
+            this._pendingAfterReset = null
+        }, 150)
+    }
+
     resetAndGo() {
         this.reset()
         if (this.frame?.index) { // the default dummy frame has no index
@@ -368,6 +387,7 @@ class Playback {
 
         let clockwise = true
         let sectionCount = 0
+        const tagCache = Frame.buildTagCache()
 
         this.$articles.each((_, el) => {
             const $el = $(el)
@@ -420,25 +440,27 @@ class Playback {
                     // if (index % 6 === 0) {
                     //     is_new_section = true
                     // }
+                    // Direct style writes instead of $el.css(...) – jQuery's normalization overhead adds up
+                    // over thousands of frames on every reset() (regroup, delete, …).
                     const pos = generateSpiralPosition(slide_index, is_new_section)
-                    $el.css(pos)
+                    el.style.top = pos.top
+                    el.style.left = pos.left
                     break;
                 case "diagonal":
-                    $el.css({
-                        top: frame.prop("y", null, slide_index) * 100 + "vh",
-                        left: frame.prop("x", null, slide_index) * 100 + "vw",
-                    })
+                    el.style.top = frame.prop("y", null, slide_index) * 100 + "vh"
+                    el.style.left = frame.prop("x", null, slide_index) * 100 + "vw"
                     break;
                 case "ribbon":
                     // Mobile: a plain horizontal photo-strip, one frame after another – no diagonal offset.
-                    $el.css({ top: "0vh", left: slide_index * 100 + "vw" })
+                    el.style.top = "0vh"
+                    el.style.left = slide_index * 100 + "vw"
                     break;
                 default:
                     this.hud.info(`Unknown spread-frames: ${positioning}`)
             }
 
             // load tags from localStorage
-            frame.check_tag()
+            frame.check_tag(tagCache)
         })
 
         this.slide_count = slide_index + 1

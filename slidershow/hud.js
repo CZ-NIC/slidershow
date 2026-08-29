@@ -152,6 +152,10 @@ class Hud {
             pl.hud_map.toggle(true)
         })
         this.$hud_thumbnails.add(this.$hud_grid).on("click", "frame-preview", e => {
+            if (this._longPressFired) { // the touchend that ends a long-press also fires a click – swallow it
+                this._longPressFired = false
+                return
+            }
             const ref = Number(e.currentTarget.dataset.ref)
             if (this.grid_visible) { // file-manager style modified clicks build a selection
                 if (e.ctrlKey || e.metaKey) {
@@ -167,6 +171,37 @@ class Hud {
             }
             this.playback.goToFrame(ref)
         })
+
+        // Touch has no Ctrl/Shift-click, so a long-press is the mobile equivalent of a modified click –
+        // toggles the tapped frame in/out of the selection. Movement past the threshold (a scroll, not a
+        // press-and-hold) or an early lift cancels the timer before it fires.
+        {
+            const LONG_PRESS_MS = 500, MOVE_THRESHOLD = 10
+            let timer = null, start = null
+            this.$hud_thumbnails.add(this.$hud_grid)
+                .on("touchstart", "frame-preview", e => {
+                    if (!this.grid_visible) return
+                    const ref = Number(e.currentTarget.dataset.ref)
+                    const touch = e.originalEvent.touches[0]
+                    start = { x: touch.clientX, y: touch.clientY }
+                    timer = setTimeout(() => {
+                        this._longPressFired = true
+                        this.playback.goToFrame(ref)
+                        this.grid.toggleSelect(ref)
+                    }, LONG_PRESS_MS)
+                })
+                .on("touchmove", "frame-preview", e => {
+                    if (!start) return
+                    const touch = e.originalEvent.touches[0]
+                    if (Math.hypot(touch.clientX - start.x, touch.clientY - start.y) > MOVE_THRESHOLD) {
+                        clearTimeout(timer)
+                    }
+                })
+                .on("touchend touchcancel", "frame-preview", () => {
+                    clearTimeout(timer)
+                    start = null
+                })
+        }
     }
 
     /**
@@ -424,8 +459,14 @@ class Hud {
         const clip = grid.clipboard
         const clipN = clip?.frames?.length || 0
 
-        // Empty grid → a faint always-there hint that teaches the multi-select affordance.
+        // Empty grid → a faint always-there hint that teaches the multi-select affordance. Skipped on
+        // mobile: the bar would sit there permanently (no keyboard shortcut applies) rather than being a
+        // one-off tip, so it's just in the way.
         if (!n && !clipN) {
+            if (this.playback.isMobileMode) {
+                this.$hud_selection.hide()
+                return
+            }
             this.$hud_selection.attr("data-mode", "hint").css("display", "flex")
                 .find(".sel-count").html("Select frames — <kbd>Shift</kbd>/<kbd>Ctrl-click</kbd> or drag a box, or <kbd>Space</kbd>")
             return

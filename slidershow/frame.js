@@ -1271,14 +1271,14 @@ class Frame {
         pl.changes.undoable("Delete frame",
             () => $frame.detach(),
             () => reinsert[0][reinsert[1]]($frame),
-            () => {
-                pl.reset()
+            // Debounced: deleting one grid tile at a time (the ✖ button) used to run a full O(n) reset per
+            // click – deadly on a large presentation. scheduleReset() coalesces a rapid-fire burst into one.
+            () => pl.scheduleReset(() =>
                 pl.goToFrame( // if we deleted current frame, go on a nearest one
                     (this === pl.frame && !this.$frame.parent().length ?
                         $(pl.$articles[this.index] ?? pl.$articles[pl.$articles.length - 1]).data("frame")
                         : pl.frame) // or stay on the current frame (unrelated to the deletion)
-                        .index)
-            })
+                        .index)))
     }
 
     panorama() {
@@ -1540,15 +1540,37 @@ class Frame {
         }
     }
 
-    check_tag() {
+    /** @param {?Map<string,string>} tagCache Prebuilt by buildTagCache() – lets a full positionFrames()
+     * pass over thousands of frames do one localStorage scan instead of one getItem() call each. */
+    check_tag(tagCache = null) {
         const name = this.get_filename()
         if (!name) {
             return // a text frame has no filename to key localStorage by; its sli-tag travels in the document
         }
-        const tag = localStorage.getItem("sli:tag:" + name)
+        const tag = tagCache ? tagCache.get(name) : localStorage.getItem("sli:tag:" + name)
         if (tag) {
             this._tagTarget().attr("sli-tag", tag)
         }
+    }
+
+    /**
+     * Enumerate every "sli:tag:*" localStorage key once and build a filename → tag lookup, so
+     * positionFrames() can call check_tag(tagCache) for each frame instead of hitting localStorage
+     * directly per frame – cheap for a handful of frames, but thousands of synchronous getItem() calls
+     * add up on a large presentation.
+     * @returns {Map<string,string>}
+     */
+    static buildTagCache() {
+        const cache = new Map()
+        try {
+            for (let i = 0; i < localStorage.length; i++) {
+                const key = localStorage.key(i)
+                if (key?.startsWith("sli:tag:")) {
+                    cache.set(key.slice("sli:tag:".length), localStorage.getItem(key))
+                }
+            }
+        } catch (e) { /* localStorage unavailable (file://, private mode) – tags just stay unset */ }
+        return cache
     }
 
     /**
