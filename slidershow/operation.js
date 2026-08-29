@@ -654,6 +654,7 @@ class Operation {
                 ["Alt+a", "▭", "Tile shape", () => pl.hud.grid.cycleTileShape()],
                 ["Alt+f", "Aa", "Tile captions", () => pl.hud.grid.cycleTileLabels()],
                 ["Alt+c", "&#9974;", "Show whole frames", () => pl.hud.grid.toggleTileFit()],
+                ["Alt+o", "⊞", "Outline view", () => pl.hud.grid.toggleOutlineView()],
 
             ], pl.hud.grid.getHotkeys()).disable()
     }

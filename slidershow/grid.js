@@ -27,6 +27,8 @@ class GridController {
          * the tile – a momentary aid when checking composition, not a look to browse in (every tile then
          * sits in its own letterbox and the wall of photos goes ragged). */
         this.tile_fit = "cover"
+        /** @type {boolean} Outline view – show only sections, no thumbnails. Session-only. */
+        this.outline_view = false
 
         // The presenter's column count outlives the presentation it was set on – it is a preference about
         // how dense *they* like the overview, not about this file (which is why it is not in the hash).
@@ -172,6 +174,14 @@ class GridController {
         this.pl.session.store()
     }
 
+    /** Toggle between normal grid and outline view (sections only, no thumbnails). */
+    toggleOutlineView() {
+        this.outline_view = !this.outline_view
+        this.$container.attr("data-view", this.outline_view ? "outline" : "grid")
+        this.hud.info(this.outline_view ? "Outline view" : "Grid view")
+        this.pl.session.store()
+    }
+
     /**
      * Initial load around current frame, bind scroll handler
      * @param {boolean} scrollToCurrent
@@ -180,6 +190,7 @@ class GridController {
         this.$framesSections = $(FRAME_SECTION_SELECTOR).filter((_, el) => this._matchesFilter(el))
         this.columns = GRID_COLUMNS
         this.$container.css("--columns", GRID_COLUMNS) // keep the CSS var in sync (esp. on the very first load)
+        this.$container.attr("data-view", this.outline_view ? "outline" : "grid")
         this.applyTileView() // the autodetection depends on the frames, so re-decide on every load
         this.preload_radius = Math.ceil(GRID_PRELOAD_RADIUS / GRID_COLUMNS) * GRID_COLUMNS
         this.page_size = Math.ceil(GRID_PAGE_SIZE / GRID_COLUMNS) * GRID_COLUMNS
@@ -265,9 +276,11 @@ class GridController {
             case "new-frame":
                 pl.section_controller.insertNewFrame(rightPlace())
                 break
-            case "regroup":
-                pl.section_controller.group(param, $frames)
+            case "regroup": {
+                const [criterion, order] = param.split(":")
+                pl.section_controller.group(criterion, $frames, order)
                 break
+            }
             case "delete":
                 pl.section_controller.deleteSection($section)
                 break
@@ -431,14 +444,22 @@ class GridController {
                             <div class="section-menu">
                                 <span title="Split the direct frames into new subsections">regroup ▾</span>
                                 <div class="dropdown">
-                                    <button data-role='regroup' data-param='hours' title="Group frames sharing the same hour into their own subsection">by hours</button>
-                                    <button data-role='regroup' data-param='days' title="Group frames sharing the same day into their own subsection">by days</button>
-                                    <button data-role='regroup' data-param='weeks' title="Group frames sharing the same week into their own subsection">by weeks</button>
-                                    <button data-role='regroup' data-param='months' title="Group frames sharing the same month into their own subsection">by months</button>
-                                    <button data-role='regroup' data-param='years' title="Group frames sharing the same year into their own subsection">by years</button>
-                                    <button data-role='regroup' data-param='tags' title="Group frames by their tag into their own subsection">by tags</button>
-                                    <button data-role='regroup' data-param='folder' title="Group frames by the folder they were imported from (sli-folder) into their own subsection">by folder</button>
-                                    <button data-role='regroup' data-param='camera' title="Group frames by the camera that took them (EXIF Make + Model) into their own subsection">by camera</button>
+                                    <button data-role='regroup' data-param='hours:desc' title="Group frames sharing the same hour into their own subsection, newest hour first">by hours ⇓</button>
+                                    <button data-role='regroup' data-param='hours:asc' title="Group frames sharing the same hour into their own subsection, oldest hour first">by hours ⇑</button>
+                                    <button data-role='regroup' data-param='days:desc' title="Group frames sharing the same day into their own subsection, newest day first">by days ⇓</button>
+                                    <button data-role='regroup' data-param='days:asc' title="Group frames sharing the same day into their own subsection, oldest day first">by days ⇑</button>
+                                    <button data-role='regroup' data-param='weeks:desc' title="Group frames sharing the same week into their own subsection, newest week first">by weeks ⇓</button>
+                                    <button data-role='regroup' data-param='weeks:asc' title="Group frames sharing the same week into their own subsection, oldest week first">by weeks ⇑</button>
+                                    <button data-role='regroup' data-param='months:desc' title="Group frames sharing the same month into their own subsection, newest month first">by months ⇓</button>
+                                    <button data-role='regroup' data-param='months:asc' title="Group frames sharing the same month into their own subsection, oldest month first">by months ⇑</button>
+                                    <button data-role='regroup' data-param='years:desc' title="Group frames sharing the same year into their own subsection, newest year first">by years ⇓</button>
+                                    <button data-role='regroup' data-param='years:asc' title="Group frames sharing the same year into their own subsection, oldest year first">by years ⇑</button>
+                                    <button data-role='regroup' data-param='tags:asc' title="Group frames by their tag into their own subsection, lowest tag number first">by tags ⇑</button>
+                                    <button data-role='regroup' data-param='tags:desc' title="Group frames by their tag into their own subsection, highest tag number first">by tags ⇓</button>
+                                    <button data-role='regroup' data-param='folder:asc' title="Group frames by the folder they were imported from (sli-folder) into their own subsection, A → Z">by folder ⇑</button>
+                                    <button data-role='regroup' data-param='folder:desc' title="Group frames by the folder they were imported from (sli-folder) into their own subsection, Z → A">by folder ⇓</button>
+                                    <button data-role='regroup' data-param='camera:asc' title="Group frames by the camera that took them (EXIF Make + Model) into their own subsection, A → Z">by camera ⇑</button>
+                                    <button data-role='regroup' data-param='camera:desc' title="Group frames by the camera that took them (EXIF Make + Model) into their own subsection, Z → A">by camera ⇓</button>
                                 </div>
                             </div>
                         </div>`
@@ -725,8 +746,10 @@ class GridController {
         const $section = $(currentSection)
         const depth = $section.parents("section").length // 0 for a top-level section, 1+ for a subsection
         const rawTitle = sc.getSectionTitle($section)
-        const $sc = $(`<section-controller style="--depth: ${depth}">
+        const hasNested = sc.getDirectSections($section).length > 0
+        const $sc = $(`<section-controller style="--depth: ${depth}" data-expanded="true">
                         <span class="section-title">
+                            ${hasNested ? '<span class="outline-toggle"></span>' : ''}
                             <span class="section-title-name">${rawTitle || "Section"}</span>
                             <span class="section-title-counts">(${sc.getSectionCounts($section)})</span>
                         </span>
@@ -735,6 +758,15 @@ class GridController {
             .data("section", currentSection)
         this._makeTitleEditable($sc.find(".section-title-name"), rawTitle, "Section",
             name => sc.renameSection($section, name))
+        if (hasNested) {
+            $sc.on("click", ".outline-toggle", e => {
+                e.stopPropagation()
+                if (this.outline_view) {
+                    const isExpanded = $sc.attr("data-expanded") === "true"
+                    $sc.attr("data-expanded", String(!isExpanded))
+                }
+            })
+        }
         return prepend ? $sc.prependTo(this.$container) : $sc.appendTo(this.$container)
     }
 

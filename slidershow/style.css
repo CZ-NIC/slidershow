@@ -1084,6 +1084,12 @@ frame-preview {
                    visible at a glance – see GridController._assureSection, which sets --depth. */
                 margin-left: calc(10px + var(--depth, 0) * 24px);
 
+                /* Sticky headers on all nesting levels */
+                position: sticky;
+                top: 0;
+                background: var(--bg-dark);
+                z-index: 10;
+
                 /* the "Presentation" (main) controller is always the grid's first row – give it enough
                    clearance from #control-icons (fixed at top:3vh right:3vw) so its own hover-menu/arrow
                    in the top-right corner isn't fought over with the fixed icons sitting on top of it. */
@@ -1262,6 +1268,47 @@ frame-preview {
                 font-size: 90%;
                 font-style: italic;
                 opacity: 0.55;
+            }
+
+            /* Outline view mode – show only sections, hide frames */
+            &[data-view="outline"] {
+                flex-direction: column;
+                flex-wrap: nowrap;
+
+                >frame-preview,
+                .grid-orphan-divider {
+                    display: none;
+                }
+
+                section-controller {
+                    margin: 0;
+                    padding: 8px 12px;
+                    border-bottom: 1px solid var(--border-default);
+
+                    .section-menus {
+                        display: none;
+                    }
+
+                    .section-title-counts {
+                        font-size: 85%;
+                    }
+
+                    .outline-toggle {
+                        cursor: pointer;
+                        margin-right: 8px;
+                        min-width: 16px;
+                        text-align: center;
+                        user-select: none;
+                    }
+
+                    &[data-expanded="false"] .outline-toggle::before {
+                        content: '▶';
+                    }
+
+                    &[data-expanded="true"] .outline-toggle::before {
+                        content: '▼';
+                    }
+                }
             }
         }
 
