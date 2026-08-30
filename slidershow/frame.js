@@ -1532,12 +1532,15 @@ class Frame {
 
     /**
      * Read the `#t=START[,STOP]` media-fragment trim off a video's src.
+     * Reads the actual `src` attribute, NOT get_filename() – that prefers `sli-src` (the canonical
+     * file reference), which never carries this runtime-only playback fragment, so a frame whose
+     * video has `sli-src` set (the common case for imported media) would always read back empty.
      * @param {?JQuery} $actor
      * @returns {{start: ?number, stop: ?number}}
      */
     getVideoCut($actor = null) {
         $actor = $actor || this.$actor
-        const raw = this.get_filename($actor).split("#")[1]?.split("t=")[1] || ""
+        const raw = ($actor.attr("src") || "").split("#")[1]?.split("t=")[1] || ""
         const [start, stop] = raw.split(",").map(v => v === "" ? undefined : Number(v))
         return { start, stop }
     }

@@ -1218,15 +1218,11 @@ class Hud {
                 groups.Video.push(...pp.input_ancestored("playback-rate", $actor, "number").get())
 
                 // video-cut property
-                const original = frame.get_filename($actor).split("#")[1]?.split("t=")[1]
+                const cut = frame.getVideoCut($actor)
+                const original = [cut.start, cut.stop].filter(v => v !== undefined).join(",") || undefined
                 groups.Video.push(...pp.input("video-cut", $actor, "", original, "text", "START[,STOP]", val => {
-                    const src = $actor.attr("src")
-                    if (val) {
-                        val = "t=" + val // -> "t=START[,STOP]""
-                    }
-                    if (src) {
-                        $actor.attr("src", [src.split("#")[0], val].join("#"))
-                    } else {
+                    const [start, stop] = val ? val.split(",").map(v => v === "" ? undefined : Number(v)) : [undefined, undefined]
+                    if (!frame.setVideoCut($actor, start, stop)) {
                         this.info("Not implemented changing this syntax of video URL")
                     }
                 }).get())
