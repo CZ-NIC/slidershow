@@ -117,11 +117,6 @@ class Session {
                 case "grid-fit":
                     pl.hud.grid.setTileFit(value)
                     break;
-                case "grid-outline":
-                    if (value === "true") {
-                        pl.hud.grid.outline_view = true
-                    }
-                    break;
                 case "map-disabled":
                     // already handled at program start
                     // NOTE undocumented feature: Append this to file name to disable maps `#6?map-disabled`
@@ -209,9 +204,6 @@ class Session {
         }
         if (grid.tile_fit !== "cover") {
             params.set("grid-fit", grid.tile_fit)
-        }
-        if (grid.outline_view) {
-            params.set("grid-outline", "true")
         }
         if (!MAP_ENABLE) {
             params.set("map-disabled", "")

@@ -918,6 +918,11 @@ frame-preview {
             overflow: auto;
             height: 100vh;
             background: var(--bg-dark);
+            /* GridController._bindScroll manually re-anchors scrollTop when frames are prepended above the
+               viewport (loading earlier content while scrolling up) – the browser's own CSS Scroll Anchoring
+               tries to do the exact same job automatically and, left on, fights our correction (both apply,
+               overshooting past the intended position and reading as a jump). */
+            overflow-anchor: none;
 
             --columns: 5;
 
@@ -1078,13 +1083,19 @@ frame-preview {
             section-controller {
                 display: flex;
                 align-items: flex-start; // the title sits on row 1's line, not centered across rows 1+2
-                padding: 4px 8px;
-                margin: 10px;
+                box-sizing: border-box; // keep the ribbon's rendered box at exactly 100% – flex-basis: 100%
+                                         // below sets the CONTENT width, so content-box's own default would
+                                         // let padding add on top of that and overflow past both edges
+                width: 100%;
+                padding: 8px;
                 /* Subsections indent further with each nesting level, so how deep a subsection sits is
-                   visible at a glance – see GridController._assureSection, which sets --depth. */
-                margin-left: calc(10px + var(--depth, 0) * 24px);
+                   visible at a glance – see GridController._assureSection, which sets --depth. Expressed as
+                   padding, not margin: a sticky element's margin sits outside the box it sticks with, which
+                   would leave a gap of stale scrolled-through content peeking out above/beside it. */
+                padding-left: calc(8px + var(--depth, 0) * 24px);
 
-                /* Sticky headers on all nesting levels */
+                /* Sticky headers on all nesting levels – kept to a single line (the hover-only menus below
+                   collapse to zero height, see .section-menus) so stacking many of them costs little space. */
                 position: sticky;
                 top: 0;
                 background: var(--bg-dark);
@@ -1094,7 +1105,11 @@ frame-preview {
                    clearance from #control-icons (fixed at top:3vh right:3vw) so its own hover-menu/arrow
                    in the top-right corner isn't fought over with the fixed icons sitting on top of it. */
                 &[data-role="main"] {
-                    margin-top: max(10px, 6vh);
+                    padding-top: max(8px, 6vh);
+                    /* Not sticky: only the CURRENT section should ever occupy the one sticky row (see
+                       above) – stacking the presentation's own ribbon behind/above it would just be a
+                       second, redundant line that never says anything a section header doesn't already. */
+                    position: static;
                 }
 
                 &.dragging-target {
@@ -1105,6 +1120,26 @@ frame-preview {
                 &.paste-target {
                     outline: 2px dashed var(--highlight);
                     outline-offset: 2px;
+                }
+
+                /* Collapse/expand this section (GridController.toggleSectionCollapse) – ▶ points into the
+                   ribbon when collapsed, ▼ when open. Only sections have one; the presentation itself
+                   ("collapse all"/"expand all" act on it instead, see the menu). */
+                .collapse-toggle {
+                    cursor: pointer;
+                    margin-right: 6px;
+                    min-width: 14px;
+                    display: inline-block;
+                    text-align: center;
+                    user-select: none;
+                }
+
+                &[data-expanded="false"] .collapse-toggle::before {
+                    content: '▶';
+                }
+
+                &[data-expanded="true"] .collapse-toggle::before {
+                    content: '▼';
                 }
 
                 .section-title {
@@ -1154,16 +1189,20 @@ frame-preview {
                     opacity: 0;
                 }
 
+                /* display: none by default (not just invisible) – reserving full height for two rows of
+                   menus that are almost always hidden made every sticky ribbon needlessly tall, especially
+                   now that ribbons for the whole presentation are all on screen at once (see
+                   GridController.load()). A max-height/overflow:hidden collapse was tried first, but that
+                   clips .dropdown (a .section-menu child positioned outside the collapsed box) instead of
+                   just hiding it – display:none avoids that since a non-rendered box clips nothing. */
                 .section-menus {
-                    display: flex;
+                    display: none;
                     flex-direction: column;
                     gap: 4px;
-                    opacity: 0;
-                    transition: opacity 0.15s;
                 }
 
                 &:hover .section-menus {
-                    opacity: 1;
+                    display: flex;
                 }
 
                 .section-menu-row {
@@ -1270,45 +1309,10 @@ frame-preview {
                 opacity: 0.55;
             }
 
-            /* Outline view mode – show only sections, hide frames */
-            &[data-view="outline"] {
-                flex-direction: column;
-                flex-wrap: nowrap;
-
-                >frame-preview,
-                .grid-orphan-divider {
-                    display: none;
-                }
-
-                section-controller {
-                    margin: 0;
-                    padding: 8px 12px;
-                    border-bottom: 1px solid var(--border-default);
-
-                    .section-menus {
-                        display: none;
-                    }
-
-                    .section-title-counts {
-                        font-size: 85%;
-                    }
-
-                    .outline-toggle {
-                        cursor: pointer;
-                        margin-right: 8px;
-                        min-width: 16px;
-                        text-align: center;
-                        user-select: none;
-                    }
-
-                    &[data-expanded="false"] .outline-toggle::before {
-                        content: '▶';
-                    }
-
-                    &[data-expanded="true"] .outline-toggle::before {
-                        content: '▼';
-                    }
-                }
+            /* Hides a frame (or a whole nested section, ribbon included) sitting inside a collapsed section
+               – see GridController.collapsedSections / _isHidden(). */
+            .grid-collapsed {
+                display: none;
             }
         }
 

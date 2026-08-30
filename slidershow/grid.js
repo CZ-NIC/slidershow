@@ -27,8 +27,11 @@ class GridController {
          * the tile – a momentary aid when checking composition, not a look to browse in (every tile then
          * sits in its own letterbox and the wall of photos goes ragged). */
         this.tile_fit = "cover"
-        /** @type {boolean} Outline view – show only sections, no thumbnails. Session-only. */
-        this.outline_view = false
+        /** @type {Set<HTMLElement>} <section> elements currently collapsed (their frames – and any nested
+         * subsections – hidden in the grid, showing just the ribbon). Ephemeral UI state, like `selection`:
+         * not part of the presentation, never exported nor persisted. Keyed by the real document element
+         * (stable across a grid reset), not by the ribbon (which gets torn down and rebuilt on one). */
+        this.collapsedSections = new Set()
 
         // The presenter's column count outlives the presentation it was set on – it is a preference about
         // how dense *they* like the overview, not about this file (which is why it is not in the hash).
@@ -174,12 +177,111 @@ class GridController {
         this.pl.session.store()
     }
 
-    /** Toggle between normal grid and outline view (sections only, no thumbnails). */
-    toggleOutlineView() {
-        this.outline_view = !this.outline_view
-        this.$container.attr("data-view", this.outline_view ? "outline" : "grid")
-        this.hud.info(this.outline_view ? "Outline view" : "Grid view")
-        this.pl.session.store()
+    /** Collapse or expand `section`'s ribbon – hides (or reveals) its frames and any nested subsections in
+     * the grid, leaving just the ribbon. @param {HTMLElement} section @param {boolean} collapsed */
+    setSectionCollapsed(section, collapsed) {
+        if (collapsed) {
+            this.collapsedSections.add(section)
+        } else {
+            this.collapsedSections.delete(section)
+        }
+        this._refreshRibbonExpandedAttrs()
+        this._refreshCollapsedVisibility()
+        if (!collapsed) {
+            this._ensureSectionLoaded(section)
+        }
+    }
+
+    /**
+     * After un-collapsing `section` (setSectionCollapsed/expandAllUnder), make sure its own frames are
+     * actually loaded and scrolled into view. Merely un-hiding them (via _refreshCollapsedVisibility) does
+     * nothing when the section sits far from wherever the grid's lazy-loaded window last was – it never had
+     * any frame-preview rendered there to un-hide in the first place, which read as "expand does nothing".
+     * _ensureLoaded jumps the window to a new position outside the current one just fine: the very next
+     * _discardFarItems it runs prunes the old (now far-away) island and the surviving children alone decide
+     * the new loadedFrom/loadedUpTo, so nothing needs to be loaded across the gap in between.
+     * @param {HTMLElement} section
+     */
+    _ensureSectionLoaded(section) {
+        const $frames = $(section).find(FRAME_TAGS)
+        if (!$frames.length) return
+        const pos = this.$framesSections.index($frames.first()[0])
+        if (pos === -1) return
+        this._ensureLoaded(pos)
+        this._scrollToSection($(section))
+    }
+
+    /** @param {HTMLElement} section */
+    toggleSectionCollapse(section) {
+        this.setSectionCollapsed(section, !this.collapsedSections.has(section))
+    }
+
+    /** Collapse/expand the section the current frame lives in directly (<kbd>Alt+O</kbd>). */
+    toggleCurrentSectionCollapse() {
+        const $section = this.pl.frame.$frame.closest("section")
+        if (!$section.length) {
+            this.hud.info("The frame is not in any section")
+            return
+        }
+        this.toggleSectionCollapse($section[0])
+    }
+
+    /** Collapse `$section` itself (when it is a <section> – <main> has no ribbon of its own to collapse)
+     * and every subsection nested under it, recursively – hides all their frames in the grid at once.
+     * @param {JQuery} $section */
+    collapseAllUnder($section) {
+        $section.find("section").addBack("section").each((_, el) => this.collapsedSections.add(el))
+        this._refreshRibbonExpandedAttrs()
+        this._refreshCollapsedVisibility()
+    }
+
+    /** Undo collapseAllUnder() – expand `$section` itself and every subsection nested under it back open.
+     * Also the fix for "collapse all" from the presentation menu, then "expand all" from one specific
+     * subsection's own menu doing nothing: that subsection was itself among the collapsed ones (its
+     * ancestor's collapse-all reaches everything nested under it, itself included), and expanding only
+     * ITS children back open left it still collapsed, still hiding its own frames.
+     * @param {JQuery} $section */
+    expandAllUnder($section) {
+        $section.find("section").addBack("section").each((_, el) => this.collapsedSections.delete(el))
+        this._refreshRibbonExpandedAttrs()
+        this._refreshCollapsedVisibility()
+        if ($section[0]?.tagName === "SECTION") {
+            this._ensureSectionLoaded($section[0])
+        }
+    }
+
+    /** @param {HTMLElement} el A frame (<article>) or a section/main element.
+     * @returns {boolean} Whether `el` sits inside a collapsed section – checking STRICT ancestors only, so
+     * a section's own ribbon is never hidden by its own collapse, only by an ancestor's. */
+    _isHidden(el) {
+        let parent = el.parentElement
+        while (parent) {
+            if (parent.tagName === "SECTION" && this.collapsedSections.has(parent)) return true
+            if (parent.tagName === "MAIN") break
+            parent = parent.parentElement
+        }
+        return false
+    }
+
+    /** Sync every currently-rendered ribbon's data-expanded to match this.collapsedSections. */
+    _refreshRibbonExpandedAttrs() {
+        this.$container.children("section-controller").each((_, el) => {
+            const section = $(el).data("section")
+            if (section?.tagName === "SECTION") {
+                $(el).attr("data-expanded", String(!this.collapsedSections.has(section)))
+            }
+        })
+    }
+
+    /** Re-derive the .grid-collapsed class on every currently-rendered child from this.collapsedSections –
+     * called after a bulk collapse/expand. New children streaming in through the scroll window pick up the
+     * current state on their own (see _addToGrid). */
+    _refreshCollapsedVisibility() {
+        this.$container.children().each((_, el) => {
+            const $el = $(el)
+            const src = $el.data("section") ?? this.$framesSections[$el.data("fsIndex")]
+            $el.toggleClass("grid-collapsed", src ? this._isHidden(src) : false)
+        })
     }
 
     /**
@@ -190,7 +292,6 @@ class GridController {
         this.$framesSections = $(FRAME_SECTION_SELECTOR).filter((_, el) => this._matchesFilter(el))
         this.columns = GRID_COLUMNS
         this.$container.css("--columns", GRID_COLUMNS) // keep the CSS var in sync (esp. on the very first load)
-        this.$container.attr("data-view", this.outline_view ? "outline" : "grid")
         this.applyTileView() // the autodetection depends on the frames, so re-decide on every load
         this.preload_radius = Math.ceil(GRID_PRELOAD_RADIUS / GRID_COLUMNS) * GRID_COLUMNS
         this.page_size = Math.ceil(GRID_PAGE_SIZE / GRID_COLUMNS) * GRID_COLUMNS
@@ -198,6 +299,18 @@ class GridController {
             console.log("Warning, grid page size", this.page_size, "is bigger than preload radius", this.preload_radius)
         }
         this.colMap = this._buildColMap()
+
+        // Section/main ribbons are cheap (no media) and are always built for the WHOLE presentation up
+        // front, unlike the frame thumbnails below which stream in through the lazy scroll window. This is
+        // what makes a sticky header for the current section available even when jumping straight into the
+        // middle of a huge one (the ribbon would otherwise sit outside the preload window and never load at
+        // all), and it is also why outline view – which shows only these ribbons – needs no windowing logic
+        // of its own: every section is simply already there.
+        this.$framesSections.each((i, el) => {
+            if (["SECTION", "MAIN"].includes(el.tagName)) {
+                this._addToGrid(el, false, i)
+            }
+        })
 
         const currentPos = this._currentPos()
         const startFrom = this._snapToRowStart(Math.max(0, currentPos - this.preload_radius))
@@ -292,6 +405,12 @@ class GridController {
                 break
             case "flatten-subsections":
                 pl.section_controller.flattenSubsections($section)
+                break
+            case "collapse-all":
+                this.collapseAllUnder($section)
+                break
+            case "expand-all":
+                this.expandAllUnder($section)
                 break
             case "add-subsection":
                 pl.section_controller.insertNewSection($section, param === "before")
@@ -421,7 +540,9 @@ class GridController {
                                     <button data-role='sort-sections' data-param='asc' title="Sort subsections A → Z">by name ⇑</button>
                                 </div>
                             </div>
-                            <button data-role='flatten-subsections' title="Remove the subsection wrappers, keeping their frames in place (opposite of delete)">flatten</button>`
+                            <button data-role='flatten-subsections' title="Remove the subsection wrappers, keeping their frames in place (opposite of delete)">flatten</button>
+                            <button data-role='collapse-all' title="Collapse every subsection here, hiding their frames in the grid">collapse all</button>
+                            <button data-role='expand-all' title="Expand every subsection here back open">expand all</button>`
 
     _frameMenuRow = `<div class="section-menu-row">
                             <span class="section-menu-row-label">frames</span>
@@ -614,23 +735,51 @@ class GridController {
     }
 
 
+    /** Discard frame thumbnails (and their orphan dividers) that fell far out of range – but never a
+     * section/main ribbon: those are built once for the whole presentation (see load()) and stay put so
+     * a sticky header is always available, however far the frame window has scrolled from them. */
     _discardFarItems(center) {
         const preload_limit = this.preload_radius * 5
         const newFrom = this._snapToRowStart(center - preload_limit)
         const newTo = center + preload_limit
 
-        const discarded = []
         this.$container.children().each((_, el) => {
+            if (el.tagName === "SECTION-CONTROLLER") return
             const pos = $(el).data("fsIndex")
             if (pos < newFrom || pos >= newTo) {
-                discarded.push(pos)
                 $(el).remove()
             }
         })
 
-        const ch = this.$container.children()
-        this.loadedFrom = ch.first().data("fsIndex")
-        this.loadedUpTo = ch.last().data("fsIndex")
+        // loadedFrom/loadedUpTo bound the *frame* window specifically – a permanent, far-away ribbon must
+        // not widen them back out, so they are read off the surviving non-ribbon children only.
+        const ch = this.$container.children().not("section-controller")
+        this.loadedFrom = ch.first().data("fsIndex") ?? newFrom
+        this.loadedUpTo = ch.last().data("fsIndex") ?? newTo
+    }
+
+    /**
+     * Keep the container's children ordered ascending by fsIndex. Needed because section/main ribbons are
+     * now built for the whole presentation up front (see load()) while frame thumbnails still stream in
+     * through the lazy scroll window – a blind append/prepend would always land a windowed frame after
+     * every ribbon instead of between the two it actually belongs between.
+     * @param {JQuery} $el
+     * @param {?number} fsIndex
+     */
+    _insertOrdered($el, fsIndex) {
+        $el.detach()
+        const children = this.$container.children().toArray()
+        let lo = 0, hi = children.length
+        while (lo < hi) {
+            const mid = (lo + hi) >> 1
+            if ($(children[mid]).data("fsIndex") > fsIndex) hi = mid
+            else lo = mid + 1
+        }
+        if (lo < children.length) {
+            $el.insertBefore(children[lo])
+        } else {
+            $el.appendTo(this.$container)
+        }
     }
 
     /**
@@ -638,15 +787,20 @@ class GridController {
      */
     _addToGrid(frameOrSection, prepend = false, fsIndex = null) {
         let el
+        const isRibbon = ["MAIN", "SECTION"].includes(frameOrSection.tagName)
         if (frameOrSection.tagName === "MAIN") {
-            el = this._assureMain(frameOrSection, prepend)
+            el = this._assureMain(frameOrSection)
         } else if (frameOrSection.tagName === "SECTION") {
-            el = this._assureSection(frameOrSection, prepend)
+            el = this._assureSection(frameOrSection)
         } else {
             el = this.hud.assureThumbnail($(frameOrSection).data("frame"), this.$container, prepend)
-            this._assureOrphanDivider(el, fsIndex)
         }
         el.data("fsIndex", fsIndex)
+        this._insertOrdered(el, fsIndex)
+        el.toggleClass("grid-collapsed", this._isHidden(frameOrSection))
+        if (!isRibbon) {
+            this._assureOrphanDivider(el, fsIndex)
+        }
     }
 
     /**
@@ -667,11 +821,17 @@ class GridController {
     }
 
     /**
-     * Insert control ribbon for the main element to the grid
+     * Insert control ribbon for the main element to the grid – or, if load() already built it (ribbons are
+     * now built once for the whole presentation up front), just return that existing one. Positioning is
+     * the caller's job (_addToGrid -> _insertOrdered), so this never touches this.$container itself.
      * @param {HTMLElement} main
-     * @param {boolean} prepend
+     * @returns {JQuery}
      */
-    _assureMain(main, prepend = false) {
+    _assureMain(main) {
+        const existing = this.$container.children("section-controller[data-role='main']")
+            .filter((_, el) => $(el).data("section") === main)
+        if (existing.length) return existing
+
         const pl = this.pl
         const sc = pl.section_controller
         const $main = $(main)
@@ -693,7 +853,7 @@ class GridController {
         // grid (digit hotkeys on the current frame) since this ribbon was last (re)rendered, and that
         // does not by itself trigger a grid rebuild (see Hud.tag()).
         $mc.find(".tag-filter-menu").on("mouseenter", () => this.refreshTagFilterDropdown($mc.find(".tag-filter-dropdown")))
-        return prepend ? $mc.prependTo(this.$container) : $mc.appendTo(this.$container)
+        return $mc
     }
 
     /**
@@ -737,19 +897,26 @@ class GridController {
     }
 
     /**
-     * Insert control ribbon for the section to the grid if encountered
+     * Insert control ribbon for the section to the grid if encountered – or, if load() already built it
+     * (ribbons are now built once for the whole presentation up front), just return that existing one.
+     * Positioning is the caller's job (_addToGrid -> _insertOrdered), so this never touches this.$container
+     * itself.
      * @param {HTMLElement} currentSection
-     * @param {boolean} prepend
+     * @returns {JQuery}
      */
-    _assureSection(currentSection, prepend = false) {
+    _assureSection(currentSection) {
+        const existing = this.$container.children("section-controller")
+            .filter((_, el) => $(el).data("section") === currentSection)
+        if (existing.length) return existing
+
         const sc = this.pl.section_controller
         const $section = $(currentSection)
         const depth = $section.parents("section").length // 0 for a top-level section, 1+ for a subsection
         const rawTitle = sc.getSectionTitle($section)
-        const hasNested = sc.getDirectSections($section).length > 0
-        const $sc = $(`<section-controller style="--depth: ${depth}" data-expanded="true">
+        const expanded = !this.collapsedSections.has(currentSection)
+        const $sc = $(`<section-controller style="--depth: ${depth}" data-expanded="${expanded}">
                         <span class="section-title">
-                            ${hasNested ? '<span class="outline-toggle"></span>' : ''}
+                            <span class="collapse-toggle" title="Collapse/expand this section"></span>
                             <span class="section-title-name">${rawTitle || "Section"}</span>
                             <span class="section-title-counts">(${sc.getSectionCounts($section)})</span>
                         </span>
@@ -758,16 +925,11 @@ class GridController {
             .data("section", currentSection)
         this._makeTitleEditable($sc.find(".section-title-name"), rawTitle, "Section",
             name => sc.renameSection($section, name))
-        if (hasNested) {
-            $sc.on("click", ".outline-toggle", e => {
-                e.stopPropagation()
-                if (this.outline_view) {
-                    const isExpanded = $sc.attr("data-expanded") === "true"
-                    $sc.attr("data-expanded", String(!isExpanded))
-                }
-            })
-        }
-        return prepend ? $sc.prependTo(this.$container) : $sc.appendTo(this.$container)
+        $sc.on("click", ".collapse-toggle", e => {
+            e.stopPropagation()
+            this.toggleSectionCollapse(currentSection)
+        })
+        return $sc
     }
 
     /**
@@ -821,11 +983,37 @@ class GridController {
         })
     }
 
+    /**
+     * Whether the loaded frame window's `edge` ("first" or "last" visible, non-collapsed frame-preview) is
+     * within one viewport of the container's own edge – used by _bindScroll to decide whether to page more
+     * frames in. Section/main ribbons are built for the WHOLE presentation up front (see load()), so the
+     * container's literal scrollTop/scrollHeight no longer track the loaded frame window at all once there
+     * are ribbons beyond it (a long stretch of bare headers past the last loaded thumbnail would otherwise
+     * read as "nowhere near the bottom yet", and paging would simply never resume).
+     * @param {"first"|"last"} edge
+     */
+    _nearLoadedEdge(edge) {
+        const $frames = this.$container.children("frame-preview").not(".grid-collapsed")
+        const frame = edge === "first" ? $frames.first()[0] : $frames.last()[0]
+        if (!frame) {
+            // Nothing VISIBLE to gauge from – either genuinely nothing is loaded yet (bootstrap: go ahead
+            // and page something in), or the whole loaded window just got hidden by collapsing its section
+            // (GridController.setSectionCollapsed) – in which case there is nothing to page in for, and doing
+            // so anyway would keep fetching thumbnails a collapsed section was specifically meant to spare.
+            return this.$container.children("frame-preview").length === 0
+        }
+        const containerRect = this.$container[0].getBoundingClientRect()
+        const frameRect = frame.getBoundingClientRect()
+        return edge === "first"
+            ? frameRect.top - containerRect.top > -containerRect.height
+            : containerRect.bottom - frameRect.bottom > -containerRect.height
+    }
+
     _bindScroll() {
         this.$container.off('scroll').on('scroll', e => {
             const el = e.currentTarget
-            const atBottom = el.scrollTop + el.clientHeight >= el.scrollHeight - 5
-            const atTop = el.scrollTop <= 5
+            const atBottom = this._nearLoadedEdge("last")
+            const atTop = this._nearLoadedEdge("first")
 
             if (atBottom && this.loadedUpTo < this.$framesSections.length) {
                 this._loadBatch(this.loadedUpTo, this.page_size, false)
@@ -863,11 +1051,16 @@ class GridController {
         }, 1)
     }
 
+    /** @returns {?{frameIndex: number, offsetY: number, frameSectionIndex: number}} The first VISIBLE
+     * loaded thumbnail at or below the current scroll position – null if none (nothing loaded, or the
+     * whole loaded window is currently hidden by a collapsed section). A hidden (.grid-collapsed) element
+     * reports offsetTop 0 like it sits at the very top, which would otherwise get picked as a false anchor
+     * and feed a bogus, much-too-early center into _discardFarItems. */
     getScrollAnchor() {
         const container = this.$container[0]
         let best = null
 
-        this.$container.children("frame-preview").each((_, el) => {
+        this.$container.children("frame-preview").not(".grid-collapsed").each((_, el) => {
             if (el.offsetTop >= container.scrollTop) {
                 best = {
                     frameIndex: Number(el.dataset.ref),
