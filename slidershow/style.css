@@ -1314,6 +1314,19 @@ frame-preview {
             .grid-collapsed {
                 display: none;
             }
+
+            /* Tag-hiding feature (Operation._nameTagsDialog, Playback.tag_hidden_mode): "hide" mode drops
+               a hidden-tag frame from the grid entirely, like .grid-collapsed. */
+            .grid-tag-hidden {
+                display: none;
+            }
+
+            /* "dim" mode (the default) keeps a hidden-tag frame visible but faded – distinct from .cut's
+               full grayscale so the two don't read as the same state. */
+            .grid-tag-dimmed {
+                opacity: .45;
+                filter: saturate(.3);
+            }
         }
 
         >frame-preview {
@@ -1742,6 +1755,11 @@ article-map {
 
     .tag-count {
         opacity: .6;
+    }
+
+    .tag-hidden-toggle {
+        float: right;
+        cursor: pointer;
     }
 }
 

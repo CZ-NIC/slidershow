@@ -232,3 +232,24 @@ test("the wheel over a video tile scrolls the grid, not the tile's camera badge"
     await page.mouse.wheel(0, 300)
     await expect.poll(() => page.evaluate(() => document.querySelector("#hud-grid").scrollTop)).toBeGreaterThan(0)
 })
+
+test("hidden-tag view: 'dim' greys the tile out, 'hide' drops it, 'show' restores it – all in the same grid", async ({ page }) => {
+    await page.goto(PHOTOS + "#1?start&grid")
+    await page.locator("#hud-grid frame-preview").first().waitFor()
+    await page.evaluate(() => {
+        playback.$articles.eq(1).data("frame").set_tag(1) // two.jpg (index 1) carries the hidden tag
+        $main.attr("sli-tag-hidden", "1")
+        playback.hud.reset_grid()
+    })
+    const tile = page.locator("#hud-grid frame-preview[data-ref='1']")
+
+    await expect(tile).toHaveClass(/grid-tag-dimmed/) // "dim" is the default
+    await expect(tile).toBeVisible()
+
+    await page.evaluate(() => playback.operation._cycleTagHiddenMode()) // -> hide
+    await expect(tile).not.toBeVisible()
+
+    await page.evaluate(() => playback.operation._cycleTagHiddenMode()) // -> show
+    await expect(tile).toBeVisible()
+    await expect(tile).not.toHaveClass(/grid-tag-dimmed|grid-tag-hidden/)
+})

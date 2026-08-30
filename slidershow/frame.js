@@ -1608,6 +1608,35 @@ class Frame {
     }
 
     /**
+     * Tags (and, via sentinel `0`, the "untagged" pseudo-tag) currently marked hidden
+     * (`<main sli-tag-hidden="0 2">`), set from the "Name tags…" dialog. `0` can never be a real tag –
+     * the digit-0 hotkey clears a frame's tags rather than applying one – so it is free to mean "frames
+     * carrying no tag at all" here.
+     * @returns {number[]}
+     */
+    hidden_tags() {
+        // Read the attribute directly, not via prop(): it lives on $main only (no cascade needed), and
+        // prop() would coerce a purely-numeric value like "0" into the Number 0 – silently dropping the
+        // untagged-only case, since 0 is falsy.
+        return ($main.attr("sli-tag-hidden") || "").split(/\s+/).filter(Boolean).map(Number)
+    }
+
+    /**
+     * Whether this frame should be treated as hidden by the tag-hiding feature: any of its own tags is
+     * marked hidden, or (for an untagged frame) the `0` sentinel is.
+     * @param {?JQuery} $actor
+     * @returns {boolean}
+     */
+    is_tag_hidden($actor = null) {
+        const hidden = this.hidden_tags()
+        if (!hidden.length) {
+            return false
+        }
+        const tags = this.get_tags($actor)
+        return tags.length ? tags.some(t => hidden.includes(t)) : hidden.includes(0)
+    }
+
+    /**
      * Display string joining tag names (or bare digits when unnamed) with " · ".
      * @param {?JQuery} $actor
      * @returns {string}

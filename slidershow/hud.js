@@ -311,7 +311,10 @@ class Hud {
             // even that the frame was focused, it was not yet prepared and entered
             this.grid.clearSelection() // the selection is a grid-only convenience; drop it on leaving the grid
             if (frameReady) {
-                this.playback.goToFrame(this.playback.frame.index, false, true)
+                // allowHidden: the grid's own cursor/click navigation can freely land on a hidden-tag frame
+                // (see Playback.frame_is_navigable) – closing the grid on one should show it, not silently
+                // redirect away just because normal playback would otherwise skip it.
+                this.playback.goToFrame(this.playback.frame.index, false, true, false, true)
             }
             this._updateGridStatusRow() // outstanding fetches (if any) keep running, just no longer shown
         }
@@ -944,14 +947,19 @@ class Hud {
     refresh(frame, scrollToCurrent = false) {
         this.file_info(frame)
 
-        // Counter
-        const collection_index = frame.$frame.index() + 1
-        const collection_max = frame.$frame.siblings().length + 1
+        // Counter. Both the inner "collection" counter (position within a section) and the outer "N /
+        // total" use their hidden-tag-aware variants (visible_collection_position/visible_slide_*), not
+        // the raw DOM sibling/slide counts – so a mostly-hidden presentation, or section, doesn't read as
+        // huge to whoever is watching the counter.
+        const { index: collection_index, max: collection_max } = frame.playback.visible_collection_position(frame.$frame)
 
-        if (collection_max > 1 && collection_max !== frame.playback.slide_count) {
-            this.$hud_counter.text(`${collection_index} / ${collection_max} (${frame.slide_index + 1} / ${frame.playback.slide_count})`)
+        // Compared against visible_slide_count, not the raw slide_count: both sides now count only
+        // non-hidden frames, so a single-section presentation (this "collection" IS the whole thing)
+        // still collapses to the plain outer counter instead of spuriously showing both once anything is hidden.
+        if (collection_max > 1 && collection_max !== frame.playback.visible_slide_count) {
+            this.$hud_counter.text(`${collection_index} / ${collection_max} (${frame.playback.visible_slide_index + 1} / ${frame.playback.visible_slide_count})`)
         } else {
-            this.$hud_counter.text(`${frame.slide_index + 1} / ${frame.playback.slide_count}`)
+            this.$hud_counter.text(`${frame.playback.visible_slide_index + 1} / ${frame.playback.visible_slide_count}`)
         }
 
         // Thumbnails
@@ -1025,6 +1033,7 @@ class Hud {
         const value = frame.tag_display()
         this.$hud_tag.html(value && !frame.tags_all_named() ? "🏷 " + value : value)
         this.getThumbnail(frame).find(".tag").html(value)
+        this.grid.refreshTileHiddenClass(frame)
     }
 
     /**

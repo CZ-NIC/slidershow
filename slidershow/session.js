@@ -72,6 +72,12 @@ class Session {
                     $main.attr("sli-loop-presentation", "true")
                     prop_invalidate()
                     break;
+                case "tag-hidden-mode":
+                    // Presenter's live override of how hidden-tag frames are treated (Operation._cycleTagHiddenMode).
+                    // Sets the same <main sli-tag-hidden-mode> the cycle command writes.
+                    $main.attr("sli-tag-hidden-mode", value)
+                    prop_invalidate()
+                    break;
                 case "progress":
                     // Countdown-to-next bar. Off by default; presetting it from the hash mirrors thumbnails/grid.
                     if (!pl.hud.progress_visible) {
@@ -162,6 +168,9 @@ class Session {
             this.playback.tag_filter.forEach(tagId => {
                 params.append("tag-filter", tagId)
             })
+        }
+        if (this.playback.tag_hidden_mode !== "dim") {
+            params.set("tag-hidden-mode", this.playback.tag_hidden_mode)
         }
         if (this.playback.frame.tag_names().length) {
             // Pipe-delimited with backslash-escape (see formatPipeList in static.js)

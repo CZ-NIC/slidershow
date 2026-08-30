@@ -150,6 +150,12 @@ Set by the [tagging feature](organizing.md#tagging) on the frame's `<img>`/`<vid
 ### `sli-tag-names`
 On `<main>`: pipe-delimited display names for tags, position = digit (`sli-tag-names="rodiče | vedoucí"` names tag 1 "rodiče" and tag 2 "vedoucí"). Backslash-escape for literal pipes: `sli-tag-names="role\|with\|pipes | other"`. Digits past the list still work, shown as bare numbers.
 
+### `sli-tag-hidden`
+On `<main>`: space-separated digit tokens of [tags](organizing.md#hiding-tags) marked hidden, e.g. `sli-tag-hidden="0 2"`. `0` is a sentinel meaning "frames carrying no tag at all" (the digit `0` can never be a real tag – it clears a frame's tags instead). Set from the "Name tags…" dialog, not hand-authored.
+
+### `sli-tag-hidden-mode`
+On `<main>`: one of `dim` (default), `hide`, `show` or `lock` – how frames matched by `sli-tag-hidden` are treated, see [Hiding tags](organizing.md#hiding-tags). Written directly (not undoable) by the "Cycle hidden-tag view" command; overridable per-session via the URL hash.
+
 ### `sli-rotate`
 **(number in degrees)** Any content can easily be rotated. Use the buttons in the menu to rotate live.
 

@@ -113,6 +113,23 @@ The tag itself is set on the frame's `<img>`/`<video>` as [`sli-tag`](structure.
 
 Tags can be named through the "Name tags…" button/command (<kbd>Alt+Shift+T</kbd> while in tagging mode): one row per digit, position corresponds to the digit (first row = tag 1, second = tag 2, …). Named tags then show up everywhere a tag is displayed (HUD, thumbnails, grid) instead of the bare digit.
 
+### Hiding tags
+
+Sometimes you only want to *review* some photos with an audience without deciding yet whether to remove them for good – e.g. you tag the ones you're unsure about, mark that tag (and/or the "untagged" pseudo-tag) hidden, and they get skipped while presenting. If someone then asks to see more, flip the hidden-tag view to "show" and carry on without editing anything.
+
+Each row in "Name tags…" (<kbd>Alt+Shift+T</kbd>) has a 🙈 checkbox – checking it keeps that tag (or, for the pinned "Netagováno" row, every untagged frame) out of the presentation. "Cycle hidden-tag view" (<kbd>Alt+Shift+H</kbd>) then steps through how hidden frames are actually treated:
+
+* **dim** (default) – shown in the grid overview, faded out; skipped during normal playback.
+* **hide** – dropped from the grid overview entirely; skipped during normal playback.
+* **show** – hiding is suppressed everywhere, hidden frames play and show normally.
+* **lock** – like "dim", but the grid overview's own cursor/click navigation also refuses to land on it. A hard exclusion, for when you don't want a hidden frame to be even a stray arrow-key press away.
+
+In "dim"/"hide"/"show" the grid overview is a way in on purpose: its own arrow-key/click navigation always reaches a hidden frame (you can still see and pick a dimmed one, and "hide" only drops it from the *view*, not from being addressable), and closing the grid (<kbd>g</kbd>/Enter) back to the presentation shows whatever frame the cursor was left on, hidden tag or not. Stepping onward from there (next/previous frame, autoplay, swiping) resumes skipping as normal – the exemption is only for the frame you deliberately navigated to. "lock" is the one mode where hiding really means "not reachable", grid included.
+
+Which tags are hidden ([`sli-tag-hidden`](structure.md#sli-tag-hidden)) is saved with the presentation, like tag names. The view mode ([`sli-tag-hidden-mode`](structure.md#sli-tag-hidden-mode)) is a live viewing preference instead – cycling it does not go through undo, and a link's URL hash can override it for that session without touching the saved file.
+
+The HUD's "N / total" counter (except in "show" mode) counts only what is actually reachable, so a presentation that is mostly hidden right now doesn't look intimidatingly large to whoever is watching that counter. The grid's own frame counts take the opposite approach on purpose – since the grid is where you organize things, "Presentation (1 section, 12 frames, 5 hidden)" keeps telling you the real size while still surfacing how much of it is hidden.
+
 ### Filtering by tag
 
 "Filter by tag…" (command palette, tagging group) shows only frames carrying any of the checked tags – a non-destructive preview of one or several tags at once. It applies both to the grid overview and to normal navigation (next/previous frame skip over hidden ones). A small icon appears next to the frame counter while a filter is active; click it to clear the filter, or reopen "Filter by tag…" to change the selection.

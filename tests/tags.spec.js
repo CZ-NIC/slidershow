@@ -54,7 +54,7 @@ test("text frames (no media) are taggable too – sli-tag lands on the article i
 
 test("tag names dialog resolves digits to names in the HUD", async ({ page }) => {
     await page.evaluate(() => playback.operation._nameTagsDialog())
-    const inputs = page.locator(".tag-names-list input")
+    const inputs = page.locator(".tag-names-list input[type=text]")
     await inputs.nth(0).fill("rodiče")
     await inputs.nth(1).fill("vedoucí")
     await page.getByRole("link", { name: "Ok" }).click()
@@ -136,6 +136,180 @@ test("tag names persist to localStorage keyed by document name and restore on a 
     await page.locator("#start").click()
     await expect.poll(() => page.url()).toContain("#1")
     expect(await page.evaluate(() => $main.attr("sli-tag-names"))).toBe("rodina")
+})
+
+test("Name tags dialog: 🙈 checkbox writes sli-tag-hidden (tag digits and the untagged pseudo-tag), undo restores it", async ({ page }) => {
+    await page.evaluate(() => playback.operation._nameTagsDialog())
+    await page.locator(".tag-names-list label").filter({ hasText: "1:" }).locator(".tag-hidden-checkbox").check()
+    await page.locator(".tag-untagged-row .tag-hidden-checkbox").check()
+    await page.getByRole("link", { name: "Ok" }).click()
+    expect(await page.evaluate(() => $main.attr("sli-tag-hidden"))).toBe("1 0")
+
+    await page.evaluate(() => playback.changes.undo())
+    expect(await page.evaluate(() => $main.attr("sli-tag-hidden"))).toBeUndefined()
+})
+
+test("Frame.is_tag_hidden matches a frame's own tags, or the untagged sentinel for tag-less frames", async ({ page }) => {
+    await page.evaluate(() => {
+        playback.$articles.eq(0).data("frame").set_tag(1) // one.jpg tagged, two/three.jpg untagged
+        $main.attr("sli-tag-hidden", "1")
+    })
+    expect(await page.evaluate(() => playback.$articles.eq(0).data("frame").is_tag_hidden())).toBe(true)
+    expect(await page.evaluate(() => playback.$articles.eq(1).data("frame").is_tag_hidden())).toBe(false)
+
+    await page.evaluate(() => $main.attr("sli-tag-hidden", "0"))
+    expect(await page.evaluate(() => playback.$articles.eq(0).data("frame").is_tag_hidden())).toBe(false) // tagged, sentinel doesn't apply
+    expect(await page.evaluate(() => playback.$articles.eq(1).data("frame").is_tag_hidden())).toBe(true) // untagged
+})
+
+test("Cycle hidden-tag view (dim/hide/show/lock): skips hidden frames in playback except in 'show'", async ({ page }) => {
+    await page.evaluate(() => {
+        playback.$articles.eq(1).data("frame").set_tag(1) // two.jpg (index 1) carries the hidden tag
+        $main.attr("sli-tag-hidden", "1")
+    })
+    expect(await page.evaluate(() => playback.tag_hidden_mode)).toBe("dim") // default
+
+    // "dim": still skipped during navigation (grid is closed here – see the grid.spec.js reachability test)
+    await page.evaluate(() => playback.goToFrame(1))
+    expect(await page.evaluate(() => playback.index)).not.toBe(1)
+
+    await page.evaluate(() => playback.operation._cycleTagHiddenMode()) // -> hide
+    expect(await page.evaluate(() => playback.tag_hidden_mode)).toBe("hide")
+    await page.evaluate(() => playback.goToFrame(1))
+    expect(await page.evaluate(() => playback.index)).not.toBe(1)
+
+    await page.evaluate(() => playback.operation._cycleTagHiddenMode()) // -> show
+    expect(await page.evaluate(() => playback.tag_hidden_mode)).toBe("show")
+    await page.evaluate(() => playback.goToFrame(1))
+    expect(await page.evaluate(() => playback.index)).toBe(1) // hiding suppressed, frame reachable again
+
+    await page.evaluate(() => playback.operation._cycleTagHiddenMode()) // -> lock
+    expect(await page.evaluate(() => playback.tag_hidden_mode)).toBe("lock")
+    await page.evaluate(() => playback.goToFrame(1))
+    expect(await page.evaluate(() => playback.index)).not.toBe(1)
+
+    await page.evaluate(() => playback.operation._cycleTagHiddenMode()) // back to dim
+    expect(await page.evaluate(() => playback.tag_hidden_mode)).toBe("dim")
+})
+
+test("The grid's own cursor/click navigation always reaches a hidden frame (dim/hide/show), closing the grid shows it once – except in 'lock'", async ({ page }) => {
+    await page.evaluate(() => {
+        playback.$articles.eq(1).data("frame").set_tag(1) // two.jpg (index 1) carries the hidden tag
+        $main.attr("sli-tag-hidden", "1")
+        playback.hud.toggle_grid()
+    })
+
+    // "dim" (default): the grid can still move its cursor onto the hidden frame directly
+    await page.evaluate(() => playback.goToFrame(1))
+    expect(await page.evaluate(() => playback.index)).toBe(1)
+
+    // Closing the grid on it shows it once, instead of redirecting away now that grid_visible is false
+    await page.evaluate(() => playback.hud.toggle_grid())
+    expect(await page.evaluate(() => playback.index)).toBe(1)
+
+    // Stepping onward resumes the normal skip
+    await page.evaluate(() => playback.previousFrame())
+    expect(await page.evaluate(() => playback.index)).toBe(0)
+    await page.evaluate(() => playback.nextFrame())
+    expect(await page.evaluate(() => playback.index)).toBe(2) // skipped back over 1
+
+    // "lock": the grid itself now also refuses to land on it
+    await page.evaluate(() => {
+        playback.hud.toggle_grid()
+        playback.operation._cycleTagHiddenMode() // dim -> hide
+        playback.operation._cycleTagHiddenMode() // hide -> show
+        playback.operation._cycleTagHiddenMode() // show -> lock
+    })
+    await page.evaluate(() => playback.goToFrame(1))
+    expect(await page.evaluate(() => playback.index)).not.toBe(1)
+})
+
+test("HUD counter and Playback.visible_slide_count/visible_slide_index exclude hidden frames from the total and position, except in 'show'", async ({ page }) => {
+    await page.evaluate(() => {
+        playback.$articles.eq(1).data("frame").set_tag(1) // two.jpg (index 1) carries the hidden tag
+        $main.attr("sli-tag-hidden", "1")
+        playback.goToFrame(0) // one.jpg – re-render the counter under the new hidden state
+    })
+    expect(await page.evaluate(() => playback.slide_count)).toBe(3) // raw total is unaffected
+    expect(await page.evaluate(() => playback.visible_slide_count)).toBe(2) // two.jpg doesn't count
+    expect(await page.evaluate(() => playback.visible_slide_index)).toBe(0) // one.jpg is the 1st visible one
+    await expect(page.locator("#hud-counter")).toHaveText("1 / 2")
+
+    await page.evaluate(() => playback.nextFrame()) // skips hidden two.jpg, lands on three.jpg
+    expect(await page.evaluate(() => playback.index)).toBe(2)
+    expect(await page.evaluate(() => playback.visible_slide_index)).toBe(1) // 2nd visible frame
+    await expect(page.locator("#hud-counter")).toHaveText("2 / 2")
+
+    await page.evaluate(() => playback.operation._cycleTagHiddenMode()) // -> hide
+    await page.evaluate(() => playback.operation._cycleTagHiddenMode()) // -> show
+    expect(await page.evaluate(() => playback.visible_slide_count)).toBe(3) // hiding suppressed
+})
+
+test("previousFrame keeps searching backward through a hidden run instead of bouncing forward", async ({ page }) => {
+    await page.evaluate(() => {
+        playback.$articles.eq(1).data("frame").set_tag(1) // two.jpg (index 1) carries the hidden tag
+        $main.attr("sli-tag-hidden", "1")
+        playback.goToFrame(2) // three.jpg, past the hidden run
+    })
+    expect(await page.evaluate(() => playback.index)).toBe(2)
+
+    await page.evaluate(() => playback.previousFrame())
+    expect(await page.evaluate(() => playback.index)).toBe(0) // one.jpg – not stuck back on 2
+})
+
+test("The section-level 'collection' counter also excludes hidden frames, not just the whole-presentation one", async ({ page }) => {
+    await page.evaluate(() => {
+        const $frames = playback.$articles.toArray().map(el => $(el))
+        const $extra = $frames[2].clone() // a 3rd member for section A, so it stays >1 after hiding two.jpg
+        $main.empty()
+        $("<section/>").append($frames[0], $frames[1], $extra).appendTo($main) // A: one, two(to hide), extra
+        $("<section/>").append($frames[2]).appendTo($main) // B: three – a 2nd section so A's count differs from the whole
+        playback.reset()
+        playback.$articles.eq(1).data("frame").set_tag(1) // two.jpg carries the hidden tag
+        $main.attr("sli-tag-hidden", "1")
+        playback.goToFrame(0) // one.jpg, in section A
+    })
+    // Section A has 3 members, 1 hidden -> "1 / 2" for the collection; presentation has 4, 1 hidden -> "1 / 3" overall
+    await expect(page.locator("#hud-counter")).toHaveText("1 / 2 (1 / 3)")
+})
+
+test("A grid tile's dim/hide class updates immediately when its tag changes, instead of staying stuck until the next full grid rebuild", async ({ page }) => {
+    await page.evaluate(() => {
+        $main.attr("sli-tag-hidden", "1")
+        playback.hud.toggle_grid()
+    })
+    const tile = page.locator("#hud-grid frame-preview[data-ref='1']")
+    await expect(tile).not.toHaveClass(/grid-tag-dimmed/)
+
+    await page.evaluate(() => playback.$articles.eq(1).data("frame").set_tag(1)) // two.jpg now carries the hidden tag
+    await expect(tile).toHaveClass(/grid-tag-dimmed/)
+
+    await page.evaluate(() => playback.$articles.eq(1).data("frame").set_tag(1)) // toggle back off
+    await expect(tile).not.toHaveClass(/grid-tag-dimmed/)
+})
+
+test("Grid ribbon counts show hidden frames as a separate 'N hidden' suffix, not folded into the total", async ({ page }) => {
+    await page.evaluate(() => {
+        playback.$articles.eq(1).data("frame").set_tag(1) // two.jpg carries the hidden tag
+        $main.attr("sli-tag-hidden", "1")
+        playback.hud.toggle_grid()
+    })
+    const mainCounts = page.locator("#hud-grid .section-title-counts").first()
+    await expect(mainCounts).toHaveText("(1 section, 3 frames, 1 hidden)")
+
+    await page.evaluate(() => playback.operation._cycleTagHiddenMode()) // -> hide (still hidden, count stays)
+    await expect(mainCounts).toHaveText("(1 section, 3 frames, 1 hidden)")
+
+    await page.evaluate(() => playback.operation._cycleTagHiddenMode()) // -> show (hiding suppressed)
+    await expect(mainCounts).toHaveText("(1 section, 3 frames)")
+})
+
+test("Cycle hidden-tag view mirrors into the URL hash, session-only (not the sli-tag-hidden document data)", async ({ page }) => {
+    await page.evaluate(() => playback.operation._cycleTagHiddenMode()) // -> hide
+    await expect.poll(() => page.url()).toContain("tag-hidden-mode=hide")
+
+    await page.goto(FIXTURE + "#1?tag-hidden-mode=hide")
+    expect(await page.evaluate(() => playback.tag_hidden_mode)).toBe("hide")
 })
 
 test("Filter by tag dialog: first checkbox is focused and Enter confirms (with whatever is checked)", async ({ page }) => {

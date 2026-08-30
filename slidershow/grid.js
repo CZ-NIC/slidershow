@@ -284,6 +284,33 @@ class GridController {
         })
     }
 
+    /** Whether `frameOrSection` (a frame <article>, or a section/main ribbon – always false for those, a
+     * ribbon is never itself hidden by the tag-hiding feature) carries a hidden tag.
+     * @param {HTMLElement} frameOrSection
+     * @returns {boolean}
+     */
+    _isTagHidden(frameOrSection) {
+        if (!$(frameOrSection).is(FRAME_SELECTOR)) {
+            return false
+        }
+        return this.pl.frame_is_tag_hidden($(frameOrSection).data("frame"))
+    }
+
+    /** Re-derive .grid-tag-hidden/.grid-tag-dimmed on just `frame`'s own rendered tile – called from
+     * Hud.tag() (every tag write), so toggling a hidden tag on/off while the grid is open updates that
+     * tile right away instead of staying stuck at whatever it looked like when it was first rendered.
+     * A dialog/mode-wide change instead goes through Hud.reset_grid() (it also needs to refresh the grid
+     * ribbons' "N hidden" counts, which this single-tile update does not touch).
+     * @param {Frame} frame
+     */
+    refreshTileHiddenClass(frame) {
+        const mode = this.pl.tag_hidden_mode
+        const hidden = this.pl.frame_is_tag_hidden(frame)
+        const $tile = this.hud.getThumbnail(frame, this.$container)
+        $tile.toggleClass("grid-tag-hidden", mode === "hide" && hidden)
+        $tile.toggleClass("grid-tag-dimmed", (mode === "dim" || mode === "lock") && hidden)
+    }
+
     /**
      * Initial load around current frame, bind scroll handler
      * @param {boolean} scrollToCurrent
@@ -799,6 +826,10 @@ class GridController {
         this._insertOrdered(el, fsIndex)
         el.toggleClass("grid-collapsed", this._isHidden(frameOrSection))
         if (!isRibbon) {
+            const mode = this.pl.tag_hidden_mode
+            const hidden = this._isTagHidden(frameOrSection)
+            el.toggleClass("grid-tag-hidden", mode === "hide" && hidden)
+            el.toggleClass("grid-tag-dimmed", (mode === "dim" || mode === "lock") && hidden)
             this._assureOrphanDivider(el, fsIndex)
         }
     }
@@ -993,7 +1024,7 @@ class GridController {
      * @param {"first"|"last"} edge
      */
     _nearLoadedEdge(edge) {
-        const $frames = this.$container.children("frame-preview").not(".grid-collapsed")
+        const $frames = this.$container.children("frame-preview").not(".grid-collapsed, .grid-tag-hidden")
         const frame = edge === "first" ? $frames.first()[0] : $frames.last()[0]
         if (!frame) {
             // Nothing VISIBLE to gauge from – either genuinely nothing is loaded yet (bootstrap: go ahead
@@ -1060,7 +1091,7 @@ class GridController {
         const container = this.$container[0]
         let best = null
 
-        this.$container.children("frame-preview").not(".grid-collapsed").each((_, el) => {
+        this.$container.children("frame-preview").not(".grid-collapsed, .grid-tag-hidden").each((_, el) => {
             if (el.offsetTop >= container.scrollTop) {
                 best = {
                     frameIndex: Number(el.dataset.ref),

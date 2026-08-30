@@ -29,14 +29,18 @@ class SectionController {
      * @returns {string} "N sections, M frames" when the section directly contains subsections,
      * otherwise just the frame count. Sections: only the direct subsections (the outline at this
      * level). Frames: the TOTAL all the way down (every frame in every nested subsection), so a
-     * header answers "how big is this group".
+     * header answers "how big is this group". A ", K hidden" suffix is appended when the tag-hiding
+     * feature currently hides any of them – shown alongside the real total (not folded into it), since
+     * the grid is an editing view where you want to see the true size and how much of it is hidden.
      */
     getSectionCounts($section) {
         const sectionCount = this.getDirectSections($section).length
         const frameCount = this.getTotalFrameCount($section)
+        const hiddenCount = this.getHiddenFrameCount($section)
+        const hiddenSuffix = hiddenCount ? `, ${hiddenCount} hidden` : ""
         return sectionCount
-            ? `${sectionCount} section${sectionCount === 1 ? "" : "s"}, ${frameCount} frame${frameCount === 1 ? "" : "s"}`
-            : String(frameCount)
+            ? `${sectionCount} section${sectionCount === 1 ? "" : "s"}, ${frameCount} frame${frameCount === 1 ? "" : "s"}${hiddenSuffix}`
+            : `${frameCount}${hiddenSuffix}`
     }
 
     /**
@@ -75,6 +79,23 @@ class SectionController {
      */
     getTotalFrameCount($section) {
         return $section.find(FRAME_TAGS).length
+    }
+
+    /**
+     * @param {JQuery} $section
+     * @returns {number} Frames anywhere inside $section (same reach as getTotalFrameCount) currently
+     * treated as hidden by the tag-hiding feature (Playback.frame_is_tag_hidden) – always 0 in "show" mode.
+     */
+    getHiddenFrameCount($section) {
+        const pl = this.playback
+        let count = 0
+        $section.find(FRAME_TAGS).each((_, el) => {
+            const frame = $(el).data("frame")
+            if (frame && pl.frame_is_tag_hidden(frame)) {
+                count++
+            }
+        })
+        return count
     }
 
     /**

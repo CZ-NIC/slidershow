@@ -120,6 +120,7 @@ class Operation {
             [
                 ["Alt+Shift+g", "🔀", "Group frames according to their tag", () => pl.section_controller.group()],
                 ["Alt+Shift+t", "🔤", "Name tags…", () => this._nameTagsDialog()],
+                ["Alt+Shift+h", "🙈", "Cycle hidden-tag view (dim / hide / show)", () => this._cycleTagHiddenMode()],
                 [["Numpad0", "Digit0"], "⛔", "Tag 0", () => pl.tag_current(null)],
                 [["Numpad1", "Digit1"], "1", "Tag 1", () => pl.tag_current(1)],
                 [["Numpad2", "Digit2"], "2", "Tag 2", () => pl.tag_current(2)],
@@ -205,6 +206,17 @@ class Operation {
     }
 
     /**
+     * Number of frames carrying no tag at all – counterpart of _tagCounts() for the "untagged" pseudo-tag
+     * row in _nameTagsDialog.
+     * @returns {number}
+     */
+    _untaggedCount() {
+        let count = 0
+        this.playback.$articles.each((_, el) => { if (!$(el).data("frame").get_tags().length) count++ })
+        return count
+    }
+
+    /**
      * Checkbox list (one per used tag) to show only frames carrying any of the checked tags (OR) –
      * applies to both the grid and normal navigation, see Playback.set_tag_filter. A "Clear filter"
      * button resets it; the small icon next to the frame counter does the same in one click.
@@ -250,8 +262,13 @@ class Operation {
 
     /**
      * Column of number+name inputs (`<main sli-tag-names="rodiče|vedoucí">`), undoable. Rows cover every
-     * currently used tag and every already-named tag, so a name is never silently dropped.
-     * Pipe-delimited; backslash-escaped for literal pipes: `name\|with\|pipes | other`.
+     * currently used tag and every already-named tag, so a name is never silently dropped. Pipe-delimited;
+     * backslash-escaped for literal pipes: `name\|with\|pipes | other`.
+     *
+     * Each row also carries a "🙈 Nezobrazovat v prezentaci" checkbox, plus one pinned row for the
+     * untagged pseudo-tag – together they write `<main sli-tag-hidden="0 2">` (`0` = untagged, see
+     * Frame.is_tag_hidden). What "hidden" actually does in the grid/during playback is controlled
+     * separately by the dim/hide/show cycle, see taggingInit()'s "Cycle hidden-tag view" command.
      */
     _nameTagsDialog() {
         const pl = this.playback
@@ -259,18 +276,36 @@ class Operation {
         const existing = tagStr ? parsePipeList(tagStr) : []
         const counts = this._tagCounts()
         const maxTag = Math.max(9, existing.length, ...this._usedTags())
+        const hidden = new Set((($main.attr("sli-tag-hidden") || "").split(/\s+/).filter(Boolean).map(Number)))
+        const HIDDEN_HINT = "Nezobrazovat v prezentaci"
+
+        const $hiddenCheckbox = (value, checked) =>
+            $("<label/>", { class: "tag-hidden-toggle", title: HIDDEN_HINT }).append(
+                $("<input/>", { type: "checkbox", class: "tag-hidden-checkbox", value, checked }),
+                document.createTextNode(" 🙈")
+            )
+
         const $list = $("<div/>", { class: "tag-names-list" })
         for (let t = 1; t <= maxTag; t++) {
             const count = counts.get(t) || 0
             $("<label/>").append(
                 document.createTextNode(t + ": "),
                 $("<input/>", { type: "text", value: existing[t - 1] || "" }),
-                $("<span/>", { class: "tag-count", text: count ? ` (${count})` : "" })
+                $("<span/>", { class: "tag-count", text: count ? ` (${count})` : "" }),
+                $hiddenCheckbox(t, hidden.has(t))
             ).appendTo($list)
         }
+        // Pinned last (not first) so it never shifts the tag-digit rows' order/index – ex. tests and the
+        // frame-count dialog both index rows by "row N == tag N".
+        const untaggedCount = this._untaggedCount()
+        $("<label/>", { class: "tag-untagged-row" }).append(
+            document.createTextNode("Netagováno: "),
+            $("<span/>", { class: "tag-count", text: untaggedCount ? ` (${untaggedCount})` : "" }),
+            $hiddenCheckbox(0, hidden.has(0))
+        ).appendTo($list)
 
         const apply = () => {
-            const names = $("input", $list).map((_, el) => String($(el).val()).trim()).get()
+            const names = $("input[type=text]", $list).map((_, el) => String($(el).val()).trim()).get()
             while (names.length && !names[names.length - 1]) {
                 names.pop() // trim trailing empty rows
             }
@@ -283,11 +318,16 @@ class Operation {
             const value = formatPipeList(names)
             const before = $main.attr("sli-tag-names") || ""
             const key = tag_names_key()
-            pl.changes.undoable("Name tags",
+            const hiddenValue = $(".tag-hidden-checkbox:checked", $list).map((_, el) => Number($(el).val())).get().join(" ")
+            const hiddenBefore = $main.attr("sli-tag-hidden") || ""
+            pl.changes.undoable("Name & hide tags",
                 () => {
                     $main.attr("sli-tag-names", value)
                     value ? localStorage.setItem(key, value) : localStorage.removeItem(key)
+                    hiddenValue ? $main.attr("sli-tag-hidden", hiddenValue) : $main.removeAttr("sli-tag-hidden")
                     prop_invalidate()
+                    pl.hud.reset_grid()
+                    pl.goToFrame(pl.index)
                 },
                 () => {
                     if (before) {
@@ -297,13 +337,16 @@ class Operation {
                         $main.removeAttr("sli-tag-names")
                         localStorage.removeItem(key)
                     }
+                    hiddenBefore ? $main.attr("sli-tag-hidden", hiddenBefore) : $main.removeAttr("sli-tag-hidden")
                     prop_invalidate()
+                    pl.hud.reset_grid()
+                    pl.goToFrame(pl.index)
                 })
         }
         this._confirmOnEnter($list)
 
         new $.Zebra_Dialog({
-            message: "Name your tags (position = digit):",
+            message: "Name your tags (position = digit). Check 🙈 to keep them out of the presentation:",
             source: { inline: $list },
             type: "question",
             title: "Name tags",
@@ -315,6 +358,28 @@ class Operation {
             }]
         })
         $("input", $list).first().focus()
+    }
+
+    /**
+     * Step to the next hidden-tag view: "dim" (default, shown greyed-out in the grid, but its cursor/click
+     * navigation still reaches it) → "hide" (dropped from the grid too, same reachability) → "show" (hiding
+     * suppressed everywhere, incl. playback) → "lock" (greyed-out like "dim", but the grid's own navigation
+     * can no longer land on it either – a hard exclusion for presenters who don't want it just an
+     * Alt+Shift+H away) → back to "dim". Written directly to `<main sli-tag-hidden-mode>` like the "Loop
+     * presentation" switch – a live viewing preference, not an undoable content edit – and mirrored into
+     * the URL hash by session.store() so a presenter can flip it mid-show without touching the saved file
+     * (see session.js "tag-hidden-mode").
+     */
+    _cycleTagHiddenMode() {
+        const pl = this.playback
+        const modes = ["dim", "hide", "show", "lock"]
+        const next = modes[(modes.indexOf(pl.tag_hidden_mode) + 1) % modes.length]
+        $main.attr("sli-tag-hidden-mode", next)
+        prop_invalidate()
+        pl.hud.reset_grid()
+        pl.goToFrame(pl.index)
+        pl.hud.info(`Hidden tags: ${next}`)
+        pl.session.store()
     }
 
     editingInit() {

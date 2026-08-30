@@ -563,7 +563,7 @@ class Playback {
             // why letting out of range for count == 1? See nextFrame comment.
             index = 0
         }
-        this.goToFrame(index)
+        this.goToFrame(index, false, false, false, false, -1) // -1: keep searching backward through a hidden run
     }
 
     /**
@@ -575,11 +575,122 @@ class Playback {
     }
 
     /**
-     * From `index`, walk in `direction` (±1) until a frame passes tag_filter. An index that runs out of
+     * @returns {string} One of "dim" (default) / "hide" / "show" / "lock" – how frames carrying a hidden
+     * tag (Frame.is_tag_hidden) are treated. "show" suppresses hiding everywhere. The other three all skip
+     * hidden frames during actual playback and differ only in the grid overview: "dim" shows them faded,
+     * "hide" drops them, "lock" also fades them but – unlike "dim"/"hide" – additionally keeps the grid's
+     * own cursor/click navigation from ever landing on one, for presenters who want a hidden tag to behave
+     * as a hard exclusion rather than something merely one Alt+Shift+H away from view.
+     * Presentation-wide (`<main sli-tag-hidden-mode>`), but overridable per-session via the URL hash –
+     * see session.js, same pattern as `sli-loop-presentation`.
+     */
+    get tag_hidden_mode() {
+        return prop("tag-hidden-mode", $main, "dim")
+    }
+
+    /**
+     * @param {Frame} frame
+     * @returns {boolean} Whether `frame` should be skipped during navigation for carrying a hidden tag.
+     */
+    frame_is_tag_hidden(frame) {
+        return this.tag_hidden_mode !== "show" && frame.is_tag_hidden()
+    }
+
+    /**
+     * @returns {number} How many top-level frames (frame.parent === null; a "collection" of nested
+     * children still counts once, like slide_count itself) are NOT currently hidden by the tag-hiding
+     * feature – always slide_count outright in "show" mode. What the HUD counter shows as the total
+     * instead of the raw slide_count, so presenters/the audience aren't alarmed by a big total when much
+     * of it is intentionally hidden (see docs/organizing.md#hiding-tags).
+     */
+    get visible_slide_count() {
+        if (this.tag_hidden_mode === "show") {
+            return this.slide_count
+        }
+        let count = 0
+        this.$articles.each((_, el) => {
+            const frame = $(el).data("frame")
+            if (!frame.parent && !this.frame_is_tag_hidden(frame)) {
+                count++
+            }
+        })
+        return count
+    }
+
+    /**
+     * @returns {number} This.frame's rank (0-based) among the top-level frames counted by
+     * visible_slide_count – the current frame itself always counts even if it happens to be hidden (ex.
+     * reached through the grid's exemption, see frame_is_navigable), so the HUD counter never shows a
+     * position past its own total.
+     */
+    get visible_slide_index() {
+        if (this.tag_hidden_mode === "show") {
+            return this.frame.slide_index
+        }
+        const currentSlideIndex = this.frame.slide_index
+        let count = -1
+        let reachedCurrent = false
+        this.$articles.each((_, el) => {
+            if (reachedCurrent) return false
+            const frame = $(el).data("frame")
+            if (frame.parent) return
+            const isCurrent = frame.slide_index === currentSlideIndex
+            if (isCurrent || !this.frame_is_tag_hidden(frame)) {
+                count++
+            }
+            reachedCurrent = isCurrent
+        })
+        return count
+    }
+
+    /**
+     * Position of `$frame` among its own DOM siblings that are frames (typically: the other frames sharing
+     * its <section> – the HUD's inner "collection" counter, see Hud.refresh), excluding any hidden by the
+     * tag-hiding feature. Mirrors visible_slide_index/visible_slide_count but scoped to one collection
+     * instead of the whole presentation; $frame itself always counts, even if it is itself hidden.
+     * @param {JQuery} $frame
+     * @returns {{index: number, max: number}} 1-based index and max, both counting only visible siblings.
+     */
+    visible_collection_position($frame) {
+        const $siblings = $frame.parent().children(FRAME_SELECTOR)
+        if (this.tag_hidden_mode === "show") {
+            return { index: $siblings.index($frame[0]) + 1, max: $siblings.length }
+        }
+        let max = 0, index = 0
+        $siblings.each((_, el) => {
+            const isSelf = el === $frame[0]
+            if (isSelf || !this.frame_is_tag_hidden($(el).data("frame"))) {
+                max++
+                if (isSelf) index = max
+            }
+        })
+        return { index, max }
+    }
+
+    /**
+     * @param {Frame} frame
+     * @param {boolean} allowHidden Bypass the hidden-tag check for this one call (see goToFrame).
+     * @returns {boolean} Whether `frame` should be reachable by normal navigation at all – passes the
+     * tag_filter AND (is not currently hidden by the tag-hiding feature, OR the grid overview is open,
+     * where you should always be able to browse onto a dimmed/hidden frame – except in "lock" mode, which
+     * withholds even that).
+     */
+    frame_is_navigable(frame, allowHidden = false) {
+        if (!this.frame_matches_filter(frame)) {
+            return false
+        }
+        if (allowHidden || !this.frame_is_tag_hidden(frame)) {
+            return true
+        }
+        return this.hud.grid_visible && this.tag_hidden_mode !== "lock"
+    }
+
+    /**
+     * From `index`, walk in `direction` (±1) until a frame is navigable. An index that runs out of
      * range is returned unchanged, so the existing "swipe past the end" out-of-range handling still applies.
      */
     _nextMatchingIndex(index, direction) {
-        while (index >= 0 && index < this.$articles.length && !this.frame_matches_filter($(this.$articles[index]).data("frame"))) {
+        while (index >= 0 && index < this.$articles.length && !this.frame_is_navigable($(this.$articles[index]).data("frame"))) {
             index += direction
         }
         return index
@@ -668,18 +779,25 @@ class Playback {
      * @param {Boolean} moving Auto-playback
      * @param {Boolean} supress_transition Block animation to the frame
      * @param {Boolean} resetSteps Force the frame's step to reset to the first one, even when landing on the same frame (ex: Home key)
+     * @param {Boolean} allowHidden Land on `index` even if it carries a hidden tag, bypassing the redirect
+     * below outright – used once by Hud.toggle_grid() when closing the grid, so whatever frame the grid's
+     * cursor was parked on (reachable there regardless of hiding, see frame_is_navigable) actually shows
+     * instead of silently jumping elsewhere the moment the grid closes.
+     * @param {Number} direction Which way to search for a substitute when `index` itself is filtered/hidden
+     * (±1). previousFrame() passes -1 so stepping backward through a run of hidden frames keeps going
+     * backward instead of always bouncing forward – with a fixed forward-first search, walking back from
+     * the frame right after a hidden run would (re)land on the very frame you started from, since the
+     * forward search finds it immediately and the backward fallback never even runs.
      */
-    goToFrame(index, moving = false, supress_transition = false, resetSteps = false) {
+    goToFrame(index, moving = false, supress_transition = false, resetSteps = false, allowHidden = false, direction = 1) {
         prop_invalidate() // fresh frame: drop the previous frame's memoized prop() lookups
-        // Central tag_filter enforcement – every navigation path (next/prevFrame, sections, goToSlide,
-        // hash restore, ribbon/grid clicks) funnels through here, so redirecting once covers them all.
-        if (this.tag_filter.length && this.$articles[index]) {
-            if (!this.frame_matches_filter($(this.$articles[index]).data("frame"))) {
-                const forward = this._nextMatchingIndex(index, 1)
-                const candidate = forward < this.$articles.length ? forward : this._nextMatchingIndex(index, -1)
-                if (candidate >= 0 && candidate < this.$articles.length) {
-                    index = candidate
-                }
+        // Central tag_filter/hidden-tag enforcement – every navigation path (next/prevFrame, sections,
+        // goToSlide, hash restore, ribbon/grid clicks) funnels through here, so redirecting once covers them all.
+        if (this.$articles[index] && !this.frame_is_navigable($(this.$articles[index]).data("frame"), allowHidden)) {
+            const primary = this._nextMatchingIndex(index, direction)
+            const candidate = (primary >= 0 && primary < this.$articles.length) ? primary : this._nextMatchingIndex(index, -direction)
+            if (candidate >= 0 && candidate < this.$articles.length) {
+                index = candidate
             }
         }
 
@@ -873,7 +991,8 @@ class Playback {
      * @returns {Frame|undefined} The frame that will be played next (skipping those filtered out by tags).
      */
     get_following(index) {
-        const followingIndex = this.tag_filter.length ? this._nextMatchingIndex(index + 1, 1) : index + 1
+        const followingIndex = this.tag_filter.length || this.tag_hidden_mode !== "show"
+            ? this._nextMatchingIndex(index + 1, 1) : index + 1
         return $(this.$articles[followingIndex]).data("frame")
     }
 
