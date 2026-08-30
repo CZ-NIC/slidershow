@@ -370,6 +370,11 @@ class Hud {
     get grid_visible() {
         return this.$hud_grid.is(":visible")
     }
+    /** @type {number} Thumbnail fetches queued for the grid that have not settled yet – the grid's paging
+     * gate (GridController._pageOnScroll) holds further batches back while this runs high. */
+    get grid_loading_pending() {
+        return this._grid_loading_pending
+    }
     get properties_visible() {
         return this.$hud_properties.is(":visible")
     }
@@ -393,6 +398,31 @@ class Hud {
             .on("dblclick", "frame-preview", () => this.toggle_grid())
             // grid section buttons
             .on("click", "section-controller button", e => this.grid.sectionMenuAction($($(e.target.closest("section-controller")).data("section")), e.target.dataset.role, e.target.dataset.param))
+            // Position a ribbon's hover dropdown (add/sort/order/regroup/…), measured on mouseenter rather
+            // than in CSS alone since the browser has already applied :hover (and thus .dropdown's
+            // display:flex) by the time this handler runs, so rects reflect the real, about-to-show size.
+            .on("mouseenter", "section-controller .section-menu", e => {
+                const $menu = $(e.currentTarget)
+                const $dropdown = $menu.children(".dropdown")
+                if (!$dropdown.length) return
+                // A row-1 (subsection ops) dropdown would otherwise open right on top of row 2 (frame ops)
+                // sitting just below it, covering its buttons – push it down far enough to clear that row
+                // instead. Measured directly (row 2's bottom minus row 1's own) rather than assumed from a
+                // fixed line-height, so it stays correct regardless of font size/zoom.
+                const $ownRow = $menu.closest(".section-menu-row")
+                const nextRowBottom = $ownRow.next(".section-menu-row")[0]?.getBoundingClientRect().bottom
+                const push = nextRowBottom ? Math.max(0, nextRowBottom - $ownRow[0].getBoundingClientRect().bottom) : 0
+                // Both set on the menu, not the dropdown: the CSS hover bridge (.section-menu::after) spans
+                // the gap and has to be as wide as the dropdown it leads to (which is right-aligned and
+                // usually wider than its own label, so a bridge the label's width is easy to slip out of).
+                $menu.css({
+                    "--push-below": push ? `${push}px` : null,
+                    "--dropdown-width": push ? `${$dropdown[0].getBoundingClientRect().width}px` : null
+                })
+                // Flip upward when there's no room below – #hud-grid's own overflow:auto would otherwise
+                // clip the dropdown near the bottom of the viewport.
+                $dropdown.toggleClass("open-up", $dropdown[0].getBoundingClientRect().bottom > window.innerHeight)
+            })
             // clicking the ribbon itself (not its buttons) pins/unpins it as the Ctrl+V destination –
             // lets an empty section (with no frame of its own to anchor the cursor) receive a paste
             .on("click", "section-controller", e => {

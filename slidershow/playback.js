@@ -54,6 +54,7 @@ class Playback {
         /** @type {Semaphore} Throttles the cheap `sli-thumb` previews (generous limit). */
         this.thumb_loader = new Semaphore(THUMB_CONCURRENCY)
 
+
         /** Preloading tasks background worker */
         this.bg_worker = new Interval(async () => {
             const task = this.bg_tasks.shift()
@@ -249,6 +250,15 @@ class Playback {
     /** On a coarse-pointer (touch) device we drop the spiral fly-through for a simple photo-strip feel. */
     get isMobileMode() {
         return matchMedia("(pointer: coarse)").matches
+    }
+
+    /** @type {number} Frame index the media loaders rank their queues around (see Semaphore) – the grid's
+     * scroll position while the grid is open, otherwise the frame being played. */
+    get loading_center_index() {
+        const grid = this.hud?.grid
+        return this.hud?.grid_visible && grid?.viewportIndex !== null && grid?.viewportIndex !== undefined
+            ? grid.viewportIndex
+            : this.index
     }
 
     start() {

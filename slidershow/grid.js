@@ -33,6 +33,15 @@ class GridController {
          * (stable across a grid reset), not by the ribbon (which gets torn down and rebuilt on one). */
         this.collapsedSections = new Set()
 
+        /** @type {?number} Frame index of the first tile at/below the scroll position – the centre the
+         * thumbnail loader ranks its queue around while the grid is open (Playback.loading_center_index).
+         * Refreshed, throttled, from the scroll handler; null until the first load(). */
+        this.viewportIndex = null
+        this._viewportIndexAt = 0
+        /** @type {?number} Pending re-check of the paging gate (see _pageOnScroll) – set only while
+         * paging is deliberately held back, so the grid resumes even if the presenter stopped scrolling. */
+        this._pageRetry = null
+
         // The presenter's column count outlives the presentation it was set on – it is a preference about
         // how dense *they* like the overview, not about this file (which is why it is not in the hash).
         const stored = Number(pref_get("sli:grid-columns"))
@@ -216,14 +225,38 @@ class GridController {
         this.setSectionCollapsed(section, !this.collapsedSections.has(section))
     }
 
-    /** Collapse/expand the section the current frame lives in directly (<kbd>Alt+O</kbd>). */
+    /** @returns {JQuery} The section the keyboard cursor is currently AT – the pinned ribbon (see
+     * pasteTarget/_currentPos) while one is pinned, otherwise the section the actual current frame lives
+     * in. Arrow-navigating onto a ribbon (an empty or collapsed section, nothing else to land on – see
+     * getFrameIndexInNextRow) pins it without moving the real current frame, so Alt+O/Alt+Shift+O – and
+     * the "current-section" ribbon highlight, see _syncSelectionClass – must follow the same precedence
+     * or they'd keep acting on/marking wherever the frame happens to be instead of the section the cursor
+     * is visibly sitting on. */
+    _currentSection() {
+        const $ref = this.pasteTarget ?? this.pl.frame.$frame
+        return $ref.closest("section")
+    }
+
+    /** Collapse/expand the section the keyboard cursor is currently at (<kbd>Alt+O</kbd>). */
     toggleCurrentSectionCollapse() {
-        const $section = this.pl.frame.$frame.closest("section")
+        const $section = this._currentSection()
         if (!$section.length) {
             this.hud.info("The frame is not in any section")
             return
         }
         this.toggleSectionCollapse($section[0])
+    }
+
+    /** Collapse/expand the section the keyboard cursor is currently at AND every subsection nested under
+     * it, recursively (<kbd>Alt+Shift+O</kbd>) – the keyboard equivalent of the ribbon's "collapse all"/
+     * "expand all" menu. */
+    toggleCurrentSectionCollapseAll() {
+        const $section = this._currentSection()
+        if (!$section.length) {
+            this.hud.info("The frame is not in any section")
+            return
+        }
+        this.collapsedSections.has($section[0]) ? this.expandAllUnder($section) : this.collapseAllUnder($section)
     }
 
     /** Collapse `$section` itself (when it is a <section> – <main> has no ribbon of its own to collapse)
@@ -275,13 +308,16 @@ class GridController {
 
     /** Re-derive the .grid-collapsed class on every currently-rendered child from this.collapsedSections –
      * called after a bulk collapse/expand. New children streaming in through the scroll window pick up the
-     * current state on their own (see _addToGrid). */
+     * current state on their own (see _addToGrid). Also rebuilds colMap/rowOf (see _buildColMap) so arrow-key
+     * navigation keeps matching what's actually visible instead of stepping through newly hidden/revealed
+     * frames as if nothing had changed. */
     _refreshCollapsedVisibility() {
         this.$container.children().each((_, el) => {
             const $el = $(el)
             const src = $el.data("section") ?? this.$framesSections[$el.data("fsIndex")]
             $el.toggleClass("grid-collapsed", src ? this._isHidden(src) : false)
         })
+        this.colMap = this._buildColMap()
     }
 
     /** Whether `frameOrSection` (a frame <article>, or a section/main ribbon – always false for those, a
@@ -344,6 +380,7 @@ class GridController {
         const startTo = Math.min(this.$framesSections.length, currentPos + this.preload_radius)
 
         this._loadBatch(startFrom, startTo - startFrom, false)
+        this.viewportIndex = this.pl.index // until the first scroll, the frame we opened on is the centre
 
         this.hud.makeThumbnailsImportable(this.$container)
         this._bindScroll()
@@ -568,8 +605,13 @@ class GridController {
                                 </div>
                             </div>
                             <button data-role='flatten-subsections' title="Remove the subsection wrappers, keeping their frames in place (opposite of delete)">flatten</button>
-                            <button data-role='collapse-all' title="Collapse every subsection here, hiding their frames in the grid">collapse all</button>
-                            <button data-role='expand-all' title="Expand every subsection here back open">expand all</button>`
+                            <div class="section-menu">
+                                <span title="Collapse or expand every subsection here">collapse ▾</span>
+                                <div class="dropdown">
+                                    <button data-role='collapse-all' title="Collapse every subsection here, hiding their frames in the grid">collapse all</button>
+                                    <button data-role='expand-all' title="Expand every subsection here back open">expand all</button>
+                                </div>
+                            </div>`
 
     _frameMenuRow = `<div class="section-menu-row">
                             <span class="section-menu-row-label">frames</span>
@@ -654,7 +696,18 @@ class GridController {
      * navigation still needs to be able to stop here (see getFrameIndexInNextRow) so Ctrl+V has a way to
      * target a freshly inserted empty subsection without reaching for the mouse. */
     _isEmptySection(el) {
-        return ["SECTION", "MAIN"].includes(el.tagName) && $(el).find(FRAME_SELECTOR).length === 0
+        // Native querySelectorAll, not jQuery's .find(): FRAME_SELECTOR's "main" qualifier is an ANCESTOR
+        // of `el` here (a section), never a descendant of it, and jQuery's .find() – unlike querySelectorAll
+        // – comes back empty for that shape of selector, always reporting empty regardless of content.
+        return ["SECTION", "MAIN"].includes(el.tagName) && el.querySelectorAll(FRAME_SELECTOR).length === 0
+    }
+
+    /** @param {HTMLElement} el section/main ribbon @returns {boolean} Whether this ribbon's own row currently
+     * holds nothing visible below it – either genuinely empty, or directly collapsed. Used by _buildColMap
+     * and getFrameIndexInNextRow so a collapsed (non-empty) section is landable/isolates its row exactly
+     * like an empty one. */
+    _isRowIsolatedSection(el) {
+        return this._isEmptySection(el) || this.collapsedSections.has(el)
     }
 
     /**
@@ -702,10 +755,17 @@ class GridController {
         let col = 0
         let row = -1
         this.$framesSections.each((i, el) => {
+            if (this._isHidden(el)) {
+                // Hidden by a collapsed ancestor – not on screen at all, so it gets no row/col of its own
+                // (see getFrameIndexInNextRow, which navigates purely on this map).
+                colMap[i] = null
+                rowOf[i] = row
+                return
+            }
             if (["SECTION", "MAIN"].includes(el.tagName)) {
                 col = 0
                 colMap[i] = null
-                if (this._isEmptySection(el)) row++
+                if (this._isRowIsolatedSection(el)) row++
                 rowOf[i] = row
             } else {
                 if (this._orphanRunStart(i)) col = 0 // break onto a fresh row under the loose-frames divider
@@ -1041,28 +1101,61 @@ class GridController {
     }
 
     _bindScroll() {
-        this.$container.off('scroll').on('scroll', e => {
-            const el = e.currentTarget
-            const atBottom = this._nearLoadedEdge("last")
-            const atTop = this._nearLoadedEdge("first")
+        this.$container.off('scroll').on('scroll', () => this._pageOnScroll())
+    }
 
-            if (atBottom && this.loadedUpTo < this.$framesSections.length) {
-                this._loadBatch(this.loadedUpTo, this.page_size, false)
-                this.hud.makeThumbnailsImportable(this.$container)
-            } else if (atTop && this.loadedFrom > 0) {
-                const scrollBefore = el.scrollHeight
-                this._loadBatch(Math.max(0, this.loadedFrom - this.page_size), this.page_size, true)
-                this.hud.makeThumbnailsImportable(this.$container) // duplicated row?
-                el.scrollTop += el.scrollHeight - scrollBefore
-            } else {
-                return
-            }
+    /** Page the next/previous batch of thumbnails in when the scroll position nears the loaded window's
+     * edge – unless the tiles already queued are still fetching. Paging on regardless used to bury the
+     * section actually on screen: its tiles wait for a THUMB_CONCURRENCY slot behind a section the
+     * presenter has not reached yet, and the grid keeps growing underneath them, carrying the scroll far
+     * past where they were looking. Held-back paging is re-tried on a timer, so it also resumes for a
+     * presenter who scrolled to the edge and simply waits there. */
+    _pageOnScroll() {
+        clearTimeout(this._pageRetry)
+        this._pageRetry = null
+        this._refreshViewportIndex()
 
-            const pos = this.getScrollAnchor()
-            if (pos) {
-                this._discardFarItems(pos.frameSectionIndex)
-            }
-        })
+        const el = this.$container[0]
+        const atBottom = this._nearLoadedEdge("last")
+        const atTop = this._nearLoadedEdge("first")
+        const wants = (atBottom && this.loadedUpTo < this.$framesSections.length) || (atTop && this.loadedFrom > 0)
+        if (!wants) {
+            return
+        }
+        if (this.hud.grid_loading_pending > GRID_PAGE_AHEAD_BACKLOG) {
+            this._pageRetry = setTimeout(() => this.hud.grid_visible && this._pageOnScroll(), 300)
+            return
+        }
+
+        if (atBottom && this.loadedUpTo < this.$framesSections.length) {
+            this._loadBatch(this.loadedUpTo, this.page_size, false)
+            this.hud.makeThumbnailsImportable(this.$container)
+        } else {
+            const scrollBefore = el.scrollHeight
+            this._loadBatch(Math.max(0, this.loadedFrom - this.page_size), this.page_size, true)
+            this.hud.makeThumbnailsImportable(this.$container) // duplicated row?
+            el.scrollTop += el.scrollHeight - scrollBefore
+        }
+
+        const pos = this.getScrollAnchor()
+        if (pos) {
+            this._discardFarItems(pos.frameSectionIndex)
+        }
+    }
+
+    /** Keep `viewportIndex` (the loader's priority centre) roughly in step with the scroll position.
+     * Throttled – getScrollAnchor walks the loaded tiles, and a scroll event fires far more often than
+     * the ranking needs to change. */
+    _refreshViewportIndex() {
+        const now = Date.now()
+        if (now - this._viewportIndexAt < 100) {
+            return
+        }
+        this._viewportIndexAt = now
+        const anchor = this.getScrollAnchor()
+        if (anchor) {
+            this.viewportIndex = anchor.frameIndex
+        }
     }
 
     /**
@@ -1164,18 +1257,47 @@ class GridController {
         let ribbon = null, best = null
         for (let i = 0; i < this.rowOf.length; i++) {
             if (this.rowOf[i] !== targetRow) continue
+            const el = this.$framesSections[i]
             const col = this.colMap[i]
             if (col === null) {
-                ribbon = this.$framesSections[i] // a non-empty ribbon never gets its own row (see _buildColMap)
+                // colMap is null for three different things sharing this row: a landable ribbon (isolated –
+                // empty or collapsed), an ordinary ribbon just riding along (never landable, see
+                // _buildColMap), and a frame hidden by a collapsed ancestor (also never landable). Only the
+                // first ever qualifies – in particular, an ordinary ribbon immediately following an isolated
+                // one (nothing of its own between them) must not overwrite it and null out the whole row.
+                if (["SECTION", "MAIN"].includes(el.tagName) && this._isRowIsolatedSection(el)) ribbon = el
                 continue
             }
             if (col <= desiredCol) best = i
             if (col >= desiredCol) break // first column reaching (or clamped past) the desired one – nearest match
         }
-        if (ribbon) {
-            return this._isEmptySection(ribbon) ? ribbon : null
-        }
+        if (ribbon) return ribbon
         return best != null ? $(this.$framesSections[best]).data("frame")?.index ?? null : null
+    }
+
+    /**
+     * Adjacent frame or collapsed/empty section ribbon in document order, `direction` steps away from the
+     * cursor – the grid's ArrowLeft/ArrowRight. Frames hidden inside a collapsed section are skipped
+     * entirely rather than landed on one by one; the section's own ribbon (its "name") is the sole stop
+     * standing in for the whole hidden run, exactly like an empty section already does for Up/Down (see
+     * getFrameIndexInNextRow) – a plain, non-empty, expanded ribbon is passed straight through as before.
+     * @param {number} direction 1 = forward (right), -1 = backward (left)
+     * @returns {?number|HTMLElement}
+     */
+    getAdjacentFrameOrRibbon(direction) {
+        const pos = this._currentPos()
+        if (pos === -1) return null
+
+        for (let i = pos + direction; i >= 0 && i < this.$framesSections.length; i += direction) {
+            const el = this.$framesSections[i]
+            if (this._isHidden(el)) continue
+            if (["SECTION", "MAIN"].includes(el.tagName)) {
+                if (this._isRowIsolatedSection(el)) return el
+                continue
+            }
+            return $(el).data("frame")?.index ?? null
+        }
+        return direction > 0 ? this.pl.$articles.length - 1 : 0
     }
 
     // ---- Multi-selection ---------------------------------------------------------------------------
@@ -1325,7 +1447,10 @@ class GridController {
     /**
      * Paint `selected` on the chosen thumbnails, `cut` on those in a cut-clipboard (greyed, "about to
      * move") and `copied` on those in a copy-clipboard (dashed outline, "will be cloned") – so the user
-     * can tell which frames are on the clipboard – then refresh the badge.
+     * can tell which frames are on the clipboard. Also paints `paste-target` (the pinned Ctrl+V/keyboard
+     * destination – dashed outline) and `current-section` (see _currentSection – colors the ▶/▼ toggle,
+     * so which section the cursor is in stays obvious while just browsing its frames too, not only while
+     * pinned to a ribbon) on section-controllers – then refreshes the badge.
      */
     _syncSelectionClass() {
         const clip = this.clipboard
@@ -1336,8 +1461,11 @@ class GridController {
                 .toggleClass("cut", !!clip?.cut && clipSet.has(ref))
                 .toggleClass("copied", !!clip && !clip.cut && clipSet.has(ref))
         })
+        const $currentSection = this._currentSection()
         this.$container.children("section-controller").each((_, el) => {
-            $(el).toggleClass("paste-target", !!this.pasteTarget?.is($(el).data("section")))
+            const section = $(el).data("section")
+            $(el).toggleClass("paste-target", !!this.pasteTarget?.is(section))
+                .toggleClass("current-section", $currentSection.length > 0 && $currentSection.is(section))
         })
         this.hud.refresh_selection_info()
     }

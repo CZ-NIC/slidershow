@@ -1112,14 +1112,33 @@ frame-preview {
                     position: static;
                 }
 
+                /* A hovered ribbon shows its menus and dropdowns; every other sticky ribbon carries the same
+                   z-index:10 and – being later in the DOM – would paint its own black band right across
+                   them (a sticky element with a z-index is its own stacking context, so the dropdown's
+                   z-index:100 only orders it *within* this ribbon). Lift the whole hovered ribbon instead. */
+                &:hover {
+                    z-index: 30;
+                }
+
                 &.dragging-target {
                     box-shadow: inset 0px 0px 5px 0px var(--highlight);
                 }
 
-                /* pinned via a plain click as the Ctrl+V destination – see GridController.togglePasteTarget */
+                /* Pinned as the keyboard/Ctrl+V destination – either a plain click (GridController.
+                   togglePasteTarget) or arrow-navigating onto a ribbon with nothing else to land on, an
+                   empty or collapsed section (GridController.moveCursor/getFrameIndexInNextRow). */
                 &.paste-target {
                     outline: 2px dashed var(--highlight);
                     outline-offset: 2px;
+                }
+
+                /* The section the cursor is currently AT (see GridController._currentSection) – pinned as
+                   above, or just the section whose frames are currently being browsed. Colors the ▶/▼
+                   toggle so which section that is stays obvious at a glance, not only while pinned to a
+                   ribbon (the dashed outline above is easy to miss on a thin, full-width ribbon; this
+                   repeats the same cue right next to the name, where the eye is already looking). */
+                &.current-section .collapse-toggle {
+                    color: var(--highlight);
                 }
 
                 /* Collapse/expand this section (GridController.toggleSectionCollapse) – ▶ points into the
@@ -1219,6 +1238,40 @@ frame-preview {
                 .section-menu {
                     position: relative;
 
+                    /* Bridge the --push-below gap (see .dropdown below): without it the pointer leaves
+                       .section-menu on its way from the label down to the dropdown, the :hover is lost and
+                       the menu closes before it can be reached. The strip goes below the label, or above it
+                       for a dropdown flipped upwards; it is zero-height, and inert, when there is no gap. */
+                    &::after {
+                        content: '';
+                        position: absolute;
+                        right: 0;
+                        top: 100%;
+                        width: max(100%, var(--dropdown-width, 0px));
+                        height: var(--push-below, 0px);
+                    }
+
+                    &:has(.dropdown.open-up)::after {
+                        top: auto;
+                        bottom: 100%;
+                    }
+
+                    /* The gap the strip covers is exactly the row of menus below (that is what it was
+                       pushed past), so the strip has to sit ON TOP of them – otherwise the pointer crossing
+                       it hovers "order"/"regroup" underneath and swaps the open dropdown for theirs. */
+                    &:hover {
+                        z-index: 101;
+
+                        /* Mark WHICH label the open dropdown belongs to – "sort" (row 1) and "order"
+                           (row 2) sit right above each other and their dropdowns open in the same spot,
+                           so without this it is easy to lose track of which one is showing. */
+                        >span {
+                            background: var(--bg-menu);
+                            outline: 1px solid var(--border-default);
+                            color: var(--highlight);
+                        }
+                    }
+
                     >span {
                         cursor: pointer;
                         padding: 2px 6px;
@@ -1232,7 +1285,11 @@ frame-preview {
                     .dropdown {
                         display: none;
                         position: absolute;
-                        top: 100%;
+                        /* --push-below (set on .section-menu by Hud.init_grid's mouseenter handler, so the
+                           hover bridge above can use it too) clears row 2 (frame ops) for a row-1
+                           (subsection ops) dropdown that would otherwise open right on top of it, covering
+                           its buttons – 0px and a no-op for every other dropdown. */
+                        top: calc(100% + var(--push-below, 0px));
                         right: 0;
                         background: var(--bg-menu);
                         border: 1px solid var(--border-default);
@@ -1241,6 +1298,16 @@ frame-preview {
                         z-index: 100;
                         flex-direction: column;
                         min-width: 120px;
+                        max-height: 70vh;
+                        overflow-y: auto;
+
+                        /* Flipped by Hud.init_grid's mouseenter handler when there is no room below –
+                           the ribbon's own overflow:auto scroll container (#hud-grid) would otherwise
+                           clip a dropdown opened near the bottom of the viewport. */
+                        &.open-up {
+                            top: auto;
+                            bottom: calc(100% + var(--push-below, 0px));
+                        }
 
                         button {
                             display: block;

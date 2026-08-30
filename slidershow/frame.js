@@ -1405,8 +1405,12 @@ class Frame {
         // Route through the same limiter as regular thumbnail loading (frame.js:_load_media) – otherwise
         // a big grid fires one unthrottled `new Image()` probe per visible cell (up to GRID_PRELOAD_RADIUS
         // at once), which over http(s) floods the browser's per-host connection pool and starves them all.
-        const distance = Math.abs(this.index - this.playback.index)
-        const release = distance > 0 ? await this.playback.thumb_loader.acquire(() => distance) : () => { }
+        // Served in order of distance from wherever the presenter is looking – which, while the grid is
+        // open, is the grid's own scroll position, not the playing frame (the whole grid may sit far from
+        // it). Re-evaluated on every freed slot (see Semaphore), so a batch queued before the presenter
+        // scrolled on loses its place to the section now on screen instead of blocking it.
+        const distance = () => Math.abs(this.index - this.playback.loading_center_index)
+        const release = this.index !== this.playback.index ? await this.playback.thumb_loader.acquire(distance) : () => { }
         onStart?.()
         let ok
         try {

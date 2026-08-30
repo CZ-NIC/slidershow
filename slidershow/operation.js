@@ -700,8 +700,11 @@ class Operation {
             // plain Arrow – move the cursor, KEEPING the selection (Escape clears it)
             ["ArrowUp", "Go up", () => g().moveCursor(() => g().getFrameIndexInNextRow(-1))],
             ["ArrowDown", "Go down", () => g().moveCursor(() => g().getFrameIndexInNextRow(1))],
-            ["ArrowLeft", "Go left", () => g().moveCursor(() => pl.previousFrame())], // normally, left arrow triggers next step but this would block the grid, we need next frame
-            ["ArrowRight", "Go right", () => g().moveCursor(() => pl.nextFrame())],
+            // grid-aware stepping (not pl.previousFrame()/nextFrame() – those are plain linear index math
+            // with no notion of a collapsed section, which would otherwise step through its hidden frames
+            // one keypress at a time instead of passing over its ribbon, see getAdjacentFrameOrRibbon)
+            ["ArrowLeft", "Go left", () => g().moveCursor(() => g().getAdjacentFrameOrRibbon(-1))],
+            ["ArrowRight", "Go right", () => g().moveCursor(() => g().getAdjacentFrameOrRibbon(1))],
 
             ["PageUp", "Page up", () => g().moveCursor(() => g().getFrameIndexInNextPage(-1))],
             ["PageDown", "Page down", () => g().moveCursor(() => g().getFrameIndexInNextPage(1))],
@@ -720,6 +723,7 @@ class Operation {
                 ["Alt+f", "Aa", "Tile captions", () => pl.hud.grid.cycleTileLabels()],
                 ["Alt+c", "&#9974;", "Show whole frames", () => pl.hud.grid.toggleTileFit()],
                 ["Alt+o", "⊟", "Collapse/expand section", () => pl.hud.grid.toggleCurrentSectionCollapse()],
+                ["Alt+Shift+o", "⊟⊟", "Collapse/expand all subsections here", () => pl.hud.grid.toggleCurrentSectionCollapseAll()],
 
             ], pl.hud.grid.getHotkeys()).disable()
     }
