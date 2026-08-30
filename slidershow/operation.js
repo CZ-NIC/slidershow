@@ -650,15 +650,56 @@ class Operation {
 
     propertiesInit() {
         const pl = this.playback
+        // Unlike the other groups below, this one is NOT gated to "panel open" (or any other mode) –
+        // every one of these shortcuts opens the panel itself on demand, so they must stay reachable
+        // however that panel currently sits.
         return this._group("Properties", null,
             [
-                // NOTE: If you change the frame with the property panel closed,
-                // the shortcut still triggers the button on the old frame
-                // causing the browser to go back and register unzoomed position as a data-point.
-                ["Alt+s", "📸", "Add step point", () =>
-                    $(".hud-point", pl.hud.$hud).eq(1).trigger("click")
-                ],
-            ]).disable()
+                ["Alt+s", "📸", "Add step point", () => addPoint("ownStepPoints")],
+                ["Alt+v", "🎬", "Add video point", () => addPoint("ownVideoPoints")],
+                ["Alt+[", "⏱", "Mark video trim start", () => setTrim("start")],
+                ["Alt+]", "⏱", "Mark video trim end", () => setTrim("stop")],
+            ])
+
+        // Opens the properties panel first if it's closed – it builds `pl.hud.ownStepPoints` /
+        // `.ownVideoPoints` (the current frame's own-level point editor) as a side effect, so this
+        // never guesses at stale DOM state the way clicking a nth ".hud-point" button once did.
+        async function addPoint(which) {
+            if (!pl.hud.properties_visible) {
+                await pl.hud.toggle_properties()
+            }
+            pl.hud[which]?.addPoint()
+        }
+
+        function setTrim(which) {
+            const frame = pl.frame
+            const $actor = frame.$actor
+            if (!$actor?.length || $actor.prop("tagName") !== "VIDEO") {
+                pl.hud.info("Mark trim start/end only works on a video")
+                return
+            }
+            const before = frame.getVideoCut($actor)
+            const video = /** @type {HTMLVideoElement} */ ($actor[0])
+            const time = Math.round(video.currentTime * 10) / 10
+            const after = { ...before, [which]: time }
+
+            pl.changes.undoable(`Mark video trim ${which} ${time}s`,
+                () => {
+                    frame.setVideoCut($actor, after.start, after.stop)
+                    pl.hud.playback_icon(`${which === "start" ? "⏱▶" : "⏱■"} ${time}s`)
+                    refreshVideoCutInput()
+                },
+                () => {
+                    frame.setVideoCut($actor, before.start, before.stop)
+                    refreshVideoCutInput()
+                })
+
+            function refreshVideoCutInput() {
+                if (pl.hud.properties_visible) {
+                    pl.hud.properties()
+                }
+            }
+        }
     }
 
     gridInit() {

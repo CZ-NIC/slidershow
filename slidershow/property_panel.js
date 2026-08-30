@@ -145,5 +145,7 @@ class PropertyPanel {
                         }, value, previous)
                 })
         ).wrapAll($("<div/>")).parent()
+            .attr("data-property", p)
+            .attr("data-el-tag", $el.prop("tagName"))
     }
 }

@@ -84,6 +84,14 @@ class Hud {
          * ten-thousand-frame presentation froze the tab for minutes on every reset(). */
         this.thumbnailIndex = new Map()
         this.propertyPanel = new PropertyPanel(this)
+        /** @type {?PropertyPanelPoints} The step-points editor for the current frame's own <img>, if any – set by properties(). Used by the Alt+s shortcut so it never guesses via the DOM. */
+        this.ownStepPoints = null
+        /** @type {?PropertyPanelPoints} Same as ownStepPoints, for the current frame's own <video> video-points. Used by the Alt+v shortcut. */
+        this.ownVideoPoints = null
+        /** @type {string} Which property-panel level tab (Frame/Section/Main) was last active – restored across properties() rebuilds. */
+        this._activePropLevel = "Frame"
+        /** @type {Set<string>} Names of the property-panel's thematic <details> groups that are open – restored across properties() rebuilds. All open by default; the user's own collapses persist from then on. */
+        this._openPropGroups = new Set(["Notes", "Transform", "Video", "Timing"])
         this.palette = new CommandPalette(this)
         this.init_grid()
 
@@ -322,15 +330,15 @@ class Hud {
         this.playback.session.store()
     }
 
-    toggle_properties() {
-        let on = false
+    async toggle_properties() {
         this.$hud_properties.toggle()
         if (this.properties_visible && this.playback.frame) {
             // when restoring session from the hash, frame is not ready yet
-            on = true
-            this.properties()
+            await this.properties()
         }
-        this.playback.operation.properties.toggle(on)
+        // NOTE: operation.properties is intentionally never enabled/disabled here – its Alt+s / Alt+v /
+        // Alt+[ / Alt+] shortcuts open this very panel on demand, so they must work regardless of
+        // whether it's currently visible (see propertiesInit()).
         this.playback.session.store()
     }
     toggle_progress() {
@@ -1144,6 +1152,8 @@ class Hud {
         this._updateGridRetryBadge()
         this.reset_thumbnails()
         this.$hud_properties.html("")
+        this.ownStepPoints = null
+        this.ownVideoPoints = null
         this.reset_grid()
     }
 
@@ -1165,7 +1175,9 @@ class Hud {
     }
 
     /**
-     * Properties pane
+     * Properties pane. Builds the raw rows (unchanged generation logic – input_ancestored/input/
+     * textarea, undo wiring and all) bucketed by theme, then hands them to _renderPropertyPanel()
+     * which lays them out as level tabs (Frame/Section/Main) with collapsible groups + a filter box.
     */
     async properties() {
         await this.fetch_help()
@@ -1173,38 +1185,41 @@ class Hud {
         const frame = this.playback.frame
         const $frame = frame.$frame
         const $actor = frame.$actor
-        const $props = this.$hud_properties
-            .html($("<p/>").html("Properties panel (Alt+P)"))
+
+        this.ownStepPoints = null
+        this.ownVideoPoints = null
+
+        /** @type {Record<string, HTMLElement[]>} theme name -> row <div>s, mixed ancestor levels (split by data-el-tag in _renderPropertyPanel) */
+        const groups = { "Notes": [], "Transform": [], "Video": [], "Timing": [] }
 
         // Presenter's notes. Unlike everything else here they live in an HTML comment, not in an
         // sli-* attribute, hence the custom writer instead of `input_ancestored`. First, because
         // it is the field one actually writes in – the rest are values one occasionally tweaks.
-        $props.append(pp.textarea("notes", $frame, frame.get_notes_raw(),
+        groups.Notes.push(...pp.textarea("notes", $frame, frame.get_notes_raw(),
             "Shown in the auxiliary window (Alt+W)",
             v => {
                 frame.set_notes(v || "")
                 this.playback.refresh_aux()
             },
-            "Presenter's notes for this frame, shown in the auxiliary window (Alt+W). Markdown supported."))
+            "Presenter's notes for this frame, shown in the auxiliary window (Alt+W). Markdown supported.").get())
 
         // element properties
         if ($actor.length) {
             // handle media properties
-            $props.append(["rotate"].map(p => pp.input_ancestored(p, $actor)).flat())
+            groups.Transform.push(...pp.input_ancestored("rotate", $actor).get())
 
             if ($actor.prop("tagName") === "IMG") {
                 // step-points property
-                pp
-                    .input_ancestored("step-points", $actor)
-                    .appendTo($props)
-                    .find("input").map((_, el) => new pp.points(this.playback, el, false))
+                const $rows = pp.input_ancestored("step-points", $actor)
+                this.ownStepPoints = $rows.find("input").map((_, el) => new pp.points(this.playback, el, false)).get()[0] ?? null
+                groups.Transform.push(...$rows.get())
             } else if ($actor.prop("tagName") === "VIDEO") {
                 // playback-rate property
-                $props.append(["playback-rate"].map(p => pp.input_ancestored(p, $actor, "number")).flat())
+                groups.Video.push(...pp.input_ancestored("playback-rate", $actor, "number").get())
 
                 // video-cut property
                 const original = frame.get_filename($actor).split("#")[1]?.split("t=")[1]
-                $props.append(pp.input("video-cut", $actor, "", original, "text", "START[,STOP]", val => {
+                groups.Video.push(...pp.input("video-cut", $actor, "", original, "text", "START[,STOP]", val => {
                     const src = $actor.attr("src")
                     if (val) {
                         val = "t=" + val // -> "t=START[,STOP]""
@@ -1214,28 +1229,98 @@ class Hud {
                     } else {
                         this.info("Not implemented changing this syntax of video URL")
                     }
-                }))
+                }).get())
 
                 // video-points property
-                // NOTE pack input_ancestored to save space (hide inputs unless having value or clicked or something)
-                pp
-                    .input_ancestored("video-points", $actor)
-                    .appendTo($props)
-                    .find("input").map((_, el) => new pp.points(this.playback, el, true))
+                const $vrows = pp.input_ancestored("video-points", $actor)
+                this.ownVideoPoints = $vrows.find("input").map((_, el) => new pp.points(this.playback, el, true)).get()[0] ?? null
+                groups.Transform.push(...$vrows.get())
 
                 // video property
                 // The `video` attribute can be derived also from the real HTML attributes which is not here implemented to bear.
-                $props.append(pp.input_ancestored("video", $actor))
+                groups.Video.push(...pp.input_ancestored("video", $actor).get())
             }
         }
 
         // frame properties
         // XX step-li might be checkbox, some of them can go to any element, not just its frame
-        const props = ["duration", "transition-duration", "step-li", "step-duration", "step-class", "step-shown", "step-transition-duration"]
-        $props
-            .append(props.map(p => pp.input_ancestored(p, $frame)).flat())
+        const timingProps = ["duration", "transition-duration", "step-li", "step-duration", "step-class", "step-shown", "step-transition-duration"]
+        for (const p of timingProps) {
+            groups.Timing.push(...pp.input_ancestored(p, $frame).get())
+        }
         // XX sli-step could be implemented for any focused element
 
+        this._renderPropertyPanel(groups)
+    }
+
+    /**
+     * Lay the collected property rows out as level tabs (Frame/Section/Main, each only rendered
+     * when it actually has rows) with collapsible thematic <details> groups inside, plus a name
+     * filter that reveals matching rows across every tab regardless of collapsed state.
+     * @param {Record<string, HTMLElement[]>} groups theme name -> row <div>s (mixed ancestor levels)
+     */
+    _renderPropertyPanel(groups) {
+        const LEVEL_TAGS = { Frame: ["IMG", "VIDEO", "ARTICLE"], Section: ["SECTION"], Main: ["MAIN"] }
+        const $props = this.$hud_properties.empty()
+        const $filter = $("<input/>", { type: "search", placeholder: "🔍 Filter properties…", "class": "prop-filter" })
+        const $tabs = $("<div/>", { "class": "prop-tabs" })
+        /** @type {Record<string, JQuery>} level name -> its tab-content container (only populated levels) */
+        const $levels = {}
+
+        const activate = level => {
+            this._activePropLevel = level
+            $tabs.children().each((_, btn) => { $(btn).toggleClass("active", $(btn).text() === level) })
+            Object.entries($levels).forEach(([l, $el]) => $el.toggleClass("active", l === level))
+        }
+
+        for (const [level, tags] of Object.entries(LEVEL_TAGS)) {
+            const $level = $("<div/>", { "class": "prop-tab-content" })
+            for (const [theme, rows] of Object.entries(groups)) {
+                const own = rows.filter(row => tags.includes(row.getAttribute("data-el-tag")))
+                if (!own.length) {
+                    continue
+                }
+                $("<details/>", { "class": "prop-group" })
+                    .prop("open", this._openPropGroups.has(theme))
+                    .on("toggle", e => {
+                        this._openPropGroups[$(e.target).prop("open") ? "add" : "delete"](theme)
+                    })
+                    .append($("<summary/>", { text: theme }))
+                    .append(own)
+                    .appendTo($level)
+            }
+            if (!$level.children().length) {
+                continue // ex: no <section> ancestor between the frame and <main> – skip that tab entirely
+            }
+            $levels[level] = $level
+            $("<button/>", { type: "button", text: level }).on("click", () => activate(level)).appendTo($tabs)
+        }
+
+        if (!$levels[this._activePropLevel]) {
+            this._activePropLevel = Object.keys($levels)[0]
+        }
+
+        $filter.on("input", () => {
+            const q = String($filter.val()).trim().toLowerCase()
+            $props.toggleClass("searching", Boolean(q))
+            $props.find(".prop-group").each((_, det) => {
+                const $det = $(det)
+                let anyVisible = false
+                $det.children("[data-property]").each((_, row) => {
+                    const $row = $(row)
+                    const match = !q || $row.attr("data-property").toLowerCase().includes(q) || $row.find("label").text().toLowerCase().includes(q)
+                    $row.toggle(match)
+                    anyVisible ||= match
+                })
+                $det.toggle(anyVisible)
+                if (q) {
+                    $det.prop("open", true)
+                }
+            })
+        })
+
+        $props.append($("<p/>", { "class": "prop-hint", "text": "Properties panel (Alt+P)" }), $filter, $tabs, ...Object.values($levels))
+        activate(this._activePropLevel)
     }
 
     async fetch_help() {

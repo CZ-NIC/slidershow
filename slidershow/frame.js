@@ -1530,6 +1530,36 @@ class Frame {
         return ($actor.attr("sli-src") || $actor.attr("src") || $("source", $actor).attr("src"))?.split("/").pop() || ""
     }
 
+    /**
+     * Read the `#t=START[,STOP]` media-fragment trim off a video's src.
+     * @param {?JQuery} $actor
+     * @returns {{start: ?number, stop: ?number}}
+     */
+    getVideoCut($actor = null) {
+        $actor = $actor || this.$actor
+        const raw = this.get_filename($actor).split("#")[1]?.split("t=")[1] || ""
+        const [start, stop] = raw.split(",").map(v => v === "" ? undefined : Number(v))
+        return { start, stop }
+    }
+
+    /**
+     * Write the `#t=START[,STOP]` media-fragment trim onto a video's src.
+     * @param {JQuery} $actor
+     * @param {?number} start
+     * @param {?number} stop
+     * @returns {boolean} False when the src does not support this syntax (ex: a data URI).
+     */
+    setVideoCut($actor, start, stop) {
+        const src = $actor.attr("src")
+        if (!src) {
+            return false
+        }
+        const val = start === undefined && stop === undefined ? ""
+            : "t=" + [start ?? 0, stop].filter(v => v !== undefined).join(",")
+        $actor.attr("src", [src.split("#")[0], val].join("#"))
+        return true
+    }
+
     get_position() {
         if (this.playback.debug) {
             const zoom = $main.css("zoom")

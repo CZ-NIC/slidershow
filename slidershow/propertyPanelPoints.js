@@ -16,8 +16,9 @@ class PropertyPanelPoints {
         const $actor = this.$actor = pl.frame.$actor
         this.zoom = pl.frame.zoom
         this.$input = $(input)
+        this.videoStep = videoStep
 
-        const $wrap = $("<div />", { "class": "point-wrapper" }).hide().insertAfter(this.$input)
+        const $wrap = this.$wrap = $("<div />", { "class": "point-wrapper" }).hide().insertAfter(this.$input)
         this.points = PointStep.load(this.$input, videoStep) // load set of points from the given <input>
         if (this.points.length) {
             $wrap.show().append(this.points.map(p => this.new_point(p)))
@@ -28,16 +29,29 @@ class PropertyPanelPoints {
                 $wrap.remove()
                 $button.remove()
                 $actor.off(".slidershow")
-                new PropertyPanelPoints(pl, this.$input, videoStep)
+                const replacement = new PropertyPanelPoints(pl, this.$input, videoStep)
+                // Keep the Alt+s / Alt+v shortcuts pointed at a live instance – this one is being torn down.
+                if (pl.hud.ownStepPoints === this) {
+                    pl.hud.ownStepPoints = replacement
+                }
+                if (pl.hud.ownVideoPoints === this) {
+                    pl.hud.ownVideoPoints = replacement
+                }
             })
 
         // new point button
         const $button = this.new_tag("+")
-            .on("click", () => {
-                this.new_point(PointStep.fromActor(this, $actor, videoStep), true)
-                $wrap.show()
-            })
+            .on("click", () => this.addPoint())
             .insertAfter(this.$input)
+    }
+
+    /**
+     * Add a new point at the actor's current position/time and reveal the point list.
+     * Shared by the "+" button and the Alt+s / Alt+v keyboard shortcuts (operation.js).
+     */
+    addPoint() {
+        this.new_point(PointStep.fromActor(this, this.$actor, this.videoStep), true)
+        this.$wrap.show()
     }
 
     /**
@@ -55,6 +69,18 @@ class PropertyPanelPoints {
         }
 
         return this.new_tag(point)
+            .attr("draggable", "true")
+            .on("dragstart", e => {
+                this._dragged = point
+                $(e.currentTarget).addClass("dragging")
+                e.originalEvent.dataTransfer.effectAllowed = "move"
+            })
+            .on("dragend", e => $(e.currentTarget).removeClass("dragging"))
+            .on("dragover", e => e.preventDefault()) // allow drop
+            .on("drop", e => {
+                e.preventDefault()
+                this.reorderPoint(this._dragged, point)
+            })
             .on("click", e => {
                 const pt = e.currentTarget
                 if ($(pt).hasClass("active")) {
@@ -68,6 +94,29 @@ class PropertyPanelPoints {
                 point.enter(this, pt)
             })
             .on("dblclick", () => point.remove(this))
+    }
+
+    /**
+     * Move a dragged point next to the one it was dropped on and persist the new order.
+     * Reordering only touches array order (not any point's own data), so it reuses the same
+     * <input> value-diffing undo path as every other point edit – no separate Changes wiring needed.
+     * @param {?PointStep} dragged
+     * @param {PointStep} target
+     */
+    reorderPoint(dragged, target) {
+        if (!dragged || dragged === target) {
+            return
+        }
+        const from = this.points.indexOf(dragged)
+        const to = this.points.indexOf(target)
+        if (from === -1 || to === -1) {
+            return
+        }
+        this.points.splice(from, 1)
+        this.points.splice(to, 0, dragged)
+        this.refresh_points()
+        // refresh_points() only rewrites the <input> value – rebuild the pills in the new order too
+        this.$wrap.empty().append(this.points.map(p => this.new_point(p)))
     }
 
     /**

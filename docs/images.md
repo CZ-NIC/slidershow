@@ -30,7 +30,7 @@ In this example, the image starts at `[100, 10, 2]`, then zooms out `[]` (instan
 </article>
 ```
 
-Position `0,0` is at the image centre. Its real dimension is taken into account so the value remains stable while changing the browser size (different displays). We recommend using the property panel (<kbd>Alt+P</kbd>) to determine the coordinates.
+Position `0,0` is at the image centre. Its real dimension is taken into account so the value remains stable while changing the browser size (different displays). We recommend using the property panel (<kbd>Alt+P</kbd>) to determine the coordinates – <kbd>Alt+S</kbd> adds a point at the image's current position without even opening the panel first. Drag a point onto another one in the panel to reorder them.
 
 <video autoplay controls muted loop playsinline width="640" src="https://cdn.jsdelivr.net/gh/CZ-NIC/slidershow-assets@main/step-points.webm" title="Composing sli-step-points in the property panel and stepping through them"></video>
 
