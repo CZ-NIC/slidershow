@@ -1192,6 +1192,23 @@ class Hud {
         /** @type {Record<string, HTMLElement[]>} theme name -> row <div>s, mixed ancestor levels (split by data-el-tag in _renderPropertyPanel) */
         const groups = { "Notes": [], "Transform": [], "Video": [], "Timing": [] }
 
+        // rotate/step-points/video-points/playback-rate/video can ALSO be set on the frame's own
+        // <article> (applying to every media element inside it, per docs/images.md), duplicating the
+        // actor's own row for a case that's only ever relevant with more than one image/video per
+        // frame – which is rare. Hide that duplicate by default (a "+ …" link in the group reveals it)
+        // unless it's already carrying a value or there's actually more than one actor to justify it.
+        const hasMultipleActors = $frame.find("video, img").length > 1
+        const markFrameRowHideable = (/** @type {HTMLElement[]} */ rows, /** @type {string} */ p) => {
+            if (hasMultipleActors || $frame.attr(`sli-${p}`) !== undefined) {
+                return
+            }
+            const articleRow = rows.find(row => row.getAttribute("data-el-tag") === "ARTICLE")
+            if (articleRow) {
+                articleRow.classList.add("frame-override")
+                articleRow.hidden = true
+            }
+        }
+
         // Presenter's notes. Unlike everything else here they live in an HTML comment, not in an
         // sli-* attribute, hence the custom writer instead of `input_ancestored`. First, because
         // it is the field one actually writes in – the rest are values one occasionally tweaks.
@@ -1206,16 +1223,22 @@ class Hud {
         // element properties
         if ($actor.length) {
             // handle media properties
-            groups.Transform.push(...pp.input_ancestored("rotate", $actor).get())
+            const rotateRows = pp.input_ancestored("rotate", $actor).get()
+            markFrameRowHideable(rotateRows, "rotate")
+            groups.Transform.push(...rotateRows)
 
             if ($actor.prop("tagName") === "IMG") {
                 // step-points property
                 const $rows = pp.input_ancestored("step-points", $actor)
                 this.ownStepPoints = $rows.find("input").map((_, el) => new pp.points(this.playback, el, false)).get()[0] ?? null
-                groups.Transform.push(...$rows.get())
+                const stepPointRows = $rows.get()
+                markFrameRowHideable(stepPointRows, "step-points")
+                groups.Transform.push(...stepPointRows)
             } else if ($actor.prop("tagName") === "VIDEO") {
                 // playback-rate property
-                groups.Video.push(...pp.input_ancestored("playback-rate", $actor, "number").get())
+                const rateRows = pp.input_ancestored("playback-rate", $actor, "number").get()
+                markFrameRowHideable(rateRows, "playback-rate")
+                groups.Video.push(...rateRows)
 
                 // video-cut property
                 const cut = frame.getVideoCut($actor)
@@ -1230,11 +1253,15 @@ class Hud {
                 // video-points property
                 const $vrows = pp.input_ancestored("video-points", $actor)
                 this.ownVideoPoints = $vrows.find("input").map((_, el) => new pp.points(this.playback, el, true)).get()[0] ?? null
-                groups.Transform.push(...$vrows.get())
+                const videoPointRows = $vrows.get()
+                markFrameRowHideable(videoPointRows, "video-points")
+                groups.Transform.push(...videoPointRows)
 
                 // video property
                 // The `video` attribute can be derived also from the real HTML attributes which is not here implemented to bear.
-                groups.Video.push(...pp.input_ancestored("video", $actor).get())
+                const videoRows = pp.input_ancestored("video", $actor).get()
+                markFrameRowHideable(videoRows, "video")
+                groups.Video.push(...videoRows)
             }
         }
 
@@ -1287,7 +1314,7 @@ class Hud {
                         $label.text($label.text().replace(` ${REDUNDANT_QUALIFIER[level]}`, ""))
                     })
                 }
-                $("<details/>", { "class": "prop-group" })
+                const $details = $("<details/>", { "class": "prop-group" })
                     .prop("open", this._openPropGroups.has(theme))
                     .on("toggle", e => {
                         this._openPropGroups[$(e.target).prop("open") ? "add" : "delete"](theme)
@@ -1295,6 +1322,18 @@ class Hud {
                     .append($("<summary/>", { text: theme }))
                     .append(own)
                     .appendTo($level)
+
+                // rows hidden by markFrameRowHideable() (hud.js's properties()) – reveal them on demand
+                const hiddenOverrides = own.filter(row => row.hidden)
+                if (hiddenOverrides.length) {
+                    $("<a/>", { "class": "reveal-frame-override", "href": "#", "text": "+ set for the whole frame too" })
+                        .on("click", e => {
+                            e.preventDefault()
+                            hiddenOverrides.forEach(row => { row.hidden = false })
+                            $(e.currentTarget).remove()
+                        })
+                        .appendTo($details)
+                }
             }
             if (!$level.children().length) {
                 continue // ex: no <section> ancestor between the frame and <main> – skip that tab entirely
@@ -1316,6 +1355,11 @@ class Hud {
                 $det.children("[data-property]").each((_, row) => {
                     const $row = $(row)
                     const match = !q || $row.attr("data-property").toLowerCase().includes(q) || $row.find("label").text().toLowerCase().includes(q)
+                    if (match && row.hidden) {
+                        // surfaced by a search hit – permanently reveal, same as the "+ set for the
+                        // whole frame too" link (a plain $row.toggle() can't override [hidden] alone)
+                        row.hidden = false
+                    }
                     $row.toggle(match)
                     anyVisible ||= match
                 })
