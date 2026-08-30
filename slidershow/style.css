@@ -1606,11 +1606,12 @@ frame-preview {
                 border: 1px solid var(--border-muted);
                 border-radius: 5px;
                 padding: 3px 6px;
-                color: inherit;
+                color: var(--base);
                 font-size: 90%;
 
                 &.active {
                     background-color: var(--highlight);
+                    color: var(--bg-dark);
                 }
             }
         }

@@ -86,7 +86,11 @@ class PropertyPanel {
             value = JSON.stringify(value) // ex: step-points
         }
 
-        const $label = $("<label/>", { "text": `${name ? " - " + name : p}: `, "title": help ?? this.hud.get_help(p, true, false) })
+        // `name` is the owning ancestor's tag name (ex: "ARTICLE") when this row is a duplicate for a
+        // parent level, not the actor/frame itself – shown as a friendly qualifier so the row still says
+        // which property it is (ex: "step-points (frame):"), not just which ancestor it belongs to.
+        const ANCESTOR_LABEL = { ARTICLE: "frame", SECTION: "section", MAIN: "main" }
+        const $label = $("<label/>", { "text": `${p}${name ? ` (${ANCESTOR_LABEL[name] ?? name.toLowerCase()})` : ""}: `, "title": help ?? this.hud.get_help(p, true, false) })
         if (help === null) {
             $label.on("click", () => this.hud.get_help(p))
         }

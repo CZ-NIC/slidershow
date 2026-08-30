@@ -1261,6 +1261,11 @@ class Hud {
      */
     _renderPropertyPanel(groups) {
         const LEVEL_TAGS = { Frame: ["IMG", "VIDEO", "ARTICLE"], Section: ["SECTION"], Main: ["MAIN"] }
+        // Section/Main tabs hold exactly one ancestor level each, so a row's "(section)"/"(main)"
+        // qualifier (see property_panel.js's _field()) is redundant with the tab it's already sitting
+        // in – only the Frame tab actually mixes two levels (the actor itself vs. its <article>) and
+        // needs to keep the qualifier to tell those apart.
+        const REDUNDANT_QUALIFIER = { Section: "(section)", Main: "(main)" }
         const $props = this.$hud_properties.empty()
         const $filter = $("<input/>", { type: "search", placeholder: "🔍 Filter properties…", "class": "prop-filter" })
         const $tabs = $("<div/>", { "class": "prop-tabs" })
@@ -1279,6 +1284,12 @@ class Hud {
                 const own = rows.filter(row => tags.includes(row.getAttribute("data-el-tag")))
                 if (!own.length) {
                     continue
+                }
+                if (REDUNDANT_QUALIFIER[level]) {
+                    own.forEach(row => {
+                        const $label = $(row).children("label")
+                        $label.text($label.text().replace(` ${REDUNDANT_QUALIFIER[level]}`, ""))
+                    })
                 }
                 $("<details/>", { "class": "prop-group" })
                     .prop("open", this._openPropGroups.has(theme))
