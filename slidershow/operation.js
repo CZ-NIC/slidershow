@@ -164,6 +164,20 @@ class Operation {
     }
 
     /**
+     * Ctrl+Enter confirms the dialog (clicks its "Ok" button). Useful for multi-line text inputs
+     * where Enter alone would add a newline.
+     * @param {JQuery} $container The dialog's inline content (passed as `source: {inline: ...}`).
+     */
+    _confirmOnCtrlEnter($container) {
+        $container.on("keydown", e => {
+            if (e.ctrlKey && e.key === "Enter") {
+                e.preventDefault()
+                $container.closest(".ZebraDialog").find("a").filter((_, el) => $(el).text().trim() === "Ok").trigger("click")
+            }
+        })
+    }
+
+    /**
      * Arrow Up/Down move focus between `selector` elements inside $container – dialog rows are plain
      * <label> wrappers (not a native <select>/radio-group), so the browser gives no such navigation for free.
      * @param {JQuery} $container
@@ -481,6 +495,8 @@ class Operation {
                 })
         }
 
+        this._confirmOnCtrlEnter($list)
+
         new $.Zebra_Dialog({
             message: "Shown in the auxiliary window (Alt+W). Markdown supported.",
             source: { inline: $list },
@@ -687,15 +703,21 @@ class Operation {
                 () => {
                     frame.setVideoCut($actor, after.start, after.stop)
                     pl.hud.playback_icon(`${which === "start" ? "⏱▶" : "⏱■"} ${time}s`)
-                    refreshVideoCutInput()
+                    revealVideoCutInput()
                 },
                 () => {
                     frame.setVideoCut($actor, before.start, before.stop)
-                    refreshVideoCutInput()
+                    revealVideoCutInput()
                 })
 
-            function refreshVideoCutInput() {
-                if (pl.hud.properties_visible) {
+            // Opens the panel (like addPoint()) and force-opens the Video group even if the user had
+            // collapsed it earlier, so the result of the mark is always actually visible, not just
+            // written to the DOM.
+            async function revealVideoCutInput() {
+                pl.hud._openPropGroups.add("Video")
+                if (!pl.hud.properties_visible) {
+                    await pl.hud.toggle_properties()
+                } else {
                     pl.hud.properties()
                 }
             }

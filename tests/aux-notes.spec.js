@@ -71,6 +71,27 @@ test("Presenter's notes… dialog writes the note", async ({ page }) => {
     expect((await notes(page))[2]).toBe("Wrap it up.")
 })
 
+test("Ctrl+Enter confirms the notes dialog", async ({ page }) => {
+    await start(page)
+    await page.evaluate(() => playback.goToFrame(1))
+    await page.evaluate(() => playback.operation._notesDialog())
+
+    const dialog = page.locator(".ZebraDialog:visible")
+    const textarea = dialog.locator(".notes-editor textarea")
+    await expect(textarea).toBeFocused()
+    await textarea.fill("Updated note.")
+
+    // Ctrl+Enter should close the dialog
+    await textarea.press("Control+Enter")
+    await page.waitForTimeout(100) // brief wait for dialog to close
+
+    // Dialog should be gone
+    await expect(page.locator(".ZebraDialog:visible")).toHaveCount(0)
+
+    // Note should be saved
+    expect((await notes(page))[1]).toBe("Updated note.")
+})
+
 test("aux layout and its splits ride in the URL hash, the defaults stay out of it", async ({ page }) => {
     await start(page, BASIC)
     await expect.poll(() => page.url()).not.toContain("aux")
