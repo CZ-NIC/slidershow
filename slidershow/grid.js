@@ -1668,11 +1668,11 @@ class GridController {
             return
         }
         const frames = this.selectedFrames()
-        if (frames.length === 1) {
-            frames[0].delete()
-            this.clearSelection()
-            return
-        }
+        // Deliberately not frames[0].delete() here: that goes through Frame's debounced scheduleReset
+        // (meant to coalesce rapid-fire ✖-button clicks), which lands the cursor ~150ms later. In the grid,
+        // an arrow-key press right after Delete would then compute its target off the stale, pre-deletion
+        // layout (colMap/rowOf/$framesSections) and jump to the wrong tile. Resetting synchronously, like
+        // the multi-frame branch below already does, keeps grid navigation state consistent immediately.
         const snaps = frames.map(f => {
             const $frame = f.$frame
             const $prev = $frame.prev()
@@ -1680,7 +1680,7 @@ class GridController {
             return { $frame, reinsert: $prev.length ? () => $frame.insertAfter($prev) : () => $frame.prependTo($parent) }
         })
         const landing = Math.min(...frames.map(f => f.index))
-        pl.changes.undoable(`Delete ${frames.length} frames`,
+        pl.changes.undoable(frames.length === 1 ? "Delete frame" : `Delete ${frames.length} frames`,
             () => snaps.forEach(s => s.$frame.detach()),
             () => snaps.forEach(s => s.reinsert()),
             () => {
