@@ -11,7 +11,7 @@ Have you ever wanted to show your friends media from holidays? How cumbersome it
 
 ## Why SlideRshow?
 
-* **A media player** that handles photos *and* videos in one ordered playlist, stays stable with 1000+ files, and supports video zoom — unlike Nomacs, VLC, Windows Photo Viewer or Google Photos.
+* **A media player** that handles photos *and* videos in one ordered playlist and supports video zoom — unlike Nomacs, VLC, Windows Photo Viewer or Google Photos. It scales: **10 000 photos totalling 100 GB** open as a single presentation, because the media is linked, never loaded up front.
 * **An organizer** – simply tag photos as you browse them, then regroup them into albums for a screening.
 * **Presentation software** with a ridiculously small file size – you link local or online files instead of copying gigabytes of media onto slides. Plus super easy video trimming.
 

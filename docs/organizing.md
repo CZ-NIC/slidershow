@@ -85,6 +85,26 @@ The arrangement is yours, not the presentation's, so it is not exported – it r
 
 Both keys are left out while they hold their default, so the stock arrangement writes no hash at all.
 
+## Large collections
+
+SlideRshow is built for whole photo archives, not for a dozen slides: **10 000 photos totalling
+100 GB open as a single presentation.** That is possible because the presentation file holds
+only *paths*, never the media:
+
+* an exported presentation of 10 000 files is still a few megabytes of HTML;
+* only a window of frames around the current one is ever loaded – 50 ahead and 20 behind – and
+  frames leaving that window are unloaded again, so the tab's memory does not grow with the
+  album's size;
+* the [thumbnails ribbon and the grid](#thumbnails-ribbon-and-grid) load their previews lazily,
+  as you scroll.
+
+Two things are worth doing at that scale:
+
+* prepare [thumbnails](images.md#thumbnail-preview-sli-thumb) (`sli-thumb`). Without them, the
+  grid has to decode full-size originals to draw a tile;
+* keep the presentation file next to the media and use relative paths, so the whole tree can be
+  moved or copied without breaking a single link.
+
 ## Grouping on import
 
 A big drop does not have to land as one long section. In the splash screen's **Append frames → Defaults** panel, the **Group by** select splits every import into sections right away:

@@ -11,7 +11,7 @@ Have you ever wanted to show your friends media from holidays? How cumbersome it
 **As a media player**
 
 * [Nomacs](https://nomacs.org/) – perfect but does not handle videos
-* [VLC](https://www.videolan.org/vlc/) – perfect but not stable with 100+ files in the playlist
+* [VLC](https://www.videolan.org/vlc/) – perfect but not stable with 100+ files in the playlist – SlideRshow stays usable with **10 000 photos / 100 GB** in a single presentation (see [Large collections](organizing.md#large-collections))
 * Windows Photo Viewer – cannot set the presentation order
 * Google Photos viewer – instead of moving the video forward, the arrow jumps to the next image
 * none support video zoom (we do)
