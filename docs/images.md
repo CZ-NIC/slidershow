@@ -87,6 +87,21 @@ You prepare the thumbnails yourself (e.g. with `ffmpeg`/`imagemagick`) – Slide
 <img sli-src="photos/oddball.jpg" sli-thumb="thumbs/oddball-special.jpg" />
 ```
 
+### What the stand-in looks like
+
+While the full file downloads, the preview occupies the frame exactly like the original would –
+it is scaled up to the same size, so a 300 px thumbnail does fill the whole screen. To keep that
+from being mistaken for the real photo, it is rendered blurred (`filter: blur(12px)` on
+`[sli-thumb-shown]`); the blur fades away over 0.3 s the moment the full-quality file is swapped
+in. Restyle it in your own CSS if you prefer a sharper stand-in:
+
+```css
+[sli-thumb-shown] { filter: blur(4px); }
+```
+
+For a `<video>`, the thumbnail becomes the `poster` instead – the browser replaces it on its own
+once the first frame is decodable, and it is not blurred.
+
 The grid/ribbon overview (<kbd>g</kbd>/<kbd>j</kbd>) uses the thumbnail exclusively and never downloads the full file just to show a preview.
 
 ## Fallback source (`sli-fallback`)
