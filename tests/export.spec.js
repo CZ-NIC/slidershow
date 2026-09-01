@@ -301,3 +301,32 @@ test("download all media to a folder copies every photo into media/ and rewrites
     expect(layout.html).toContain('sli-src="media/two.jpg"')
     expect(layout.html).toContain('sli-src="media/three.jpg"')
 })
+
+test("exporting keeps the live blob: sources alive, so grid previews still work afterwards", async ({ page }) => {
+    // Dragged-in files are held as blob: URLs. The export copy is re-parsed from outerHTML, so it
+    // carries the very same URL strings – revoking them while "unloading the copy" used to blank the
+    // running presentation (and every grid preview) the moment one exported.
+    await page.goto(FIXTURE + "#1?start")
+    await expect.poll(() => page.evaluate(() => typeof playback !== "undefined" && playback.frame?.index !== undefined)).toBe(true)
+
+    const result = await page.evaluate(async () => {
+        const url = URL.createObjectURL(new Blob(["hello"], { type: "text/plain" }))
+        $("<img/>", { "sli-src": "dragged.png", src: url }).appendTo(playback.$articles.eq(0))
+
+        const $contents = $("<div>" + $("body").prop("outerHTML") + "</div>")
+        await Frame.finalize_frames($contents, playback.$articles)
+
+        const copy = $contents.find("img[sli-src='dragged.png']")
+        let alive = true
+        try {
+            await fetch(url)
+        } catch (e) {
+            alive = false
+        }
+        return { alive, copyHasSrc: Boolean(copy.attr("src")), liveSrc: $("img[sli-src='dragged.png']", "main").attr("src") }
+    })
+
+    expect(result.alive).toBe(true)          // the live blob URL survived the export
+    expect(result.copyHasSrc).toBe(false)    // …while the copy still dropped it, as it must
+    expect(result.liveSrc).toMatch(/^blob:/) // the live element still points at it
+})

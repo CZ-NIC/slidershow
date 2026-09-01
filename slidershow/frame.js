@@ -792,8 +792,14 @@ class Frame {
         // }
     }
 
-    /** If there is a place the `[src]` can be re-read, delete it. */
-    static unload_media($el, $el_original = null) {
+    /**
+     * If there is a place the `[src]` can be re-read, delete it.
+     * @param {boolean} revoke Free a `blob:` src along the way. Must be false when `$el` is an export
+     *  copy: it was re-parsed from `outerHTML`, so its `src` is the very same blob URL string the live
+     *  element on screen still uses – revoking it would blank the running presentation (and every grid
+     *  preview built from it) the moment one exports.
+     */
+    static unload_media($el, $el_original = null, revoke = true) {
         $el.data("progress-abort")?.abort() // cancel Frame._fetch_with_progress() if it is still in flight
         if ($el.attr("sli-thumb-shown")) {
             // The full-quality file never finished loading; drop the thumbnail too so a future preload() starts over
@@ -801,7 +807,9 @@ class Frame {
             $el.removeAttr("src sli-thumb-shown")
         } else if (($el_original || $el).data(READ_SRC) || $el.data("src") && $el.data("src") === $el.attr("src")
             || $el.attr("src")?.startsWith("blob:")) {
-            URL.revokeObjectURL($el.attr("src")) // for the case this is a blob URL (FrameFactory reader, or Frame._fetch_with_progress())
+            if (revoke) {
+                URL.revokeObjectURL($el.attr("src")) // for the case this is a blob URL (FrameFactory reader, or Frame._fetch_with_progress())
+            }
             $el.removeAttr("src")
         }
         if ($el.is("video") && $el.attr("autoplay")) {
@@ -840,7 +848,7 @@ class Frame {
             // progress bar
             const $parent = $el.closest(FRAME_SELECTOR)
             if ($frame !== $parent) {
-                Frame.unload_media($el, $el_original) // unload the frame copy
+                Frame.unload_media($el, $el_original, false) // unload the frame copy – the live original keeps its blob: src
                 callback?.()  // this is a new frame, increase
             }
             $frame = $parent
