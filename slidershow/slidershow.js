@@ -246,6 +246,7 @@ function get_menu() {
             <div id="hud-tag-filter" title="Filtered by tag – click to change or clear"></div>
         </div>
         <div id="hud-properties"></div>
+        <div id="hud-points" title="Points of this frame – click (or Alt+P) to edit them"></div>
         <div id="hud-grid-status">
             <div id="hud-grid-loading" title="Click to list the files currently loading"><span></span></div>
             <span id="hud-grid-retry" title="Retry loading these files"></span>

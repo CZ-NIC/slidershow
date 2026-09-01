@@ -677,9 +677,20 @@ class Operation {
                 ["Alt+.", "⏱", "Mark video trim end", () => setTrim("stop")],
             ])
 
-        // Adds a point without automatically opening the properties panel
+        // Adds a point without automatically opening the properties panel. The point editor lives in
+        // the panel's rows, so with the panel never opened (or opened for a different frame) there is
+        // none yet – build the rows silently; they stay hidden, only the corner badge shows the result.
         async function addPoint(which) {
-            pl.hud[which]?.addPoint()
+            if (!pl.hud[which]) {
+                await pl.hud.properties()
+            }
+            if (!pl.hud[which]) {
+                return pl.hud.info(which === "ownStepPoints"
+                    ? "Step points can only be added to an image"
+                    : "Video points can only be added to a video")
+            }
+            pl.hud[which].addPoint()
+            pl.hud.refresh_points_badge()
         }
 
         function setTrim(which) {
@@ -819,6 +830,7 @@ class Operation {
                         pl.hud.display_thumbnails()
                     }
                     pl.hud.reset_grid()
+                    pl.hud.refresh_points_badge() // the badge is an editing-mode affordance only
                     pl.hud.info(`Editing mode ${pl.editing_mode ? "enabled" : "disabled."}`)
                     pl.session.store()
                 }],

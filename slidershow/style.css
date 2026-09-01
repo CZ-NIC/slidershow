@@ -1573,6 +1573,46 @@ frame-preview {
         }
     }
 
+    /* Read-only mirror of the current frame's step-/video-points while the properties panel is
+       closed (Hud.refresh_points_badge) – it sits in the corner the panel would occupy, so the two
+       are never up at the same time. */
+    #hud-points {
+        top: 0;
+        right: 0;
+        max-width: var(--prop-panel-width);
+        padding: 4px 6px;
+        background-color: var(--bg-neutral);
+        color: var(--bg-dark);
+        cursor: pointer;
+        z-index: 1;
+
+        .points-row {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 3px;
+            margin-bottom: 2px;
+
+            &:last-child {
+                margin-bottom: 0;
+            }
+        }
+
+        .points-icon {
+            font-size: 110%;
+        }
+
+        .hud-point>span {
+            display: inline-block;
+            background-color: var(--point-highlight);
+            border: 1px solid var(--border-muted);
+            border-radius: 5px;
+            padding: 1px 3px;
+            font-size: 85%;
+            white-space: nowrap;
+        }
+    }
+
     #hud-properties {
         /* display: flex; */
         max-width: var(--prop-panel-width);

@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8" />
+    <script src="../../slidershow/slidershow.js"></script>
+</head>
+
+<body>
+    <!-- Two image frames: the first already carries step-points, the second has none – so the
+         corner points badge can be checked both when there is something to show and when there is not.
+         The images are inline data URIs; *.jpg is gitignored (see TESTING.md). -->
+    <main>
+        <section>
+            <article>
+                <img sli-step-points="[[10,20,2],[30,40,3]]"
+                    src="data:image/gif;base64,R0lGODlhAQABAIAAAP///wAAACH5BAEAAAAALAAAAAABAAEAAAICRAEAOw==" />
+            </article>
+            <article>
+                <img src="data:image/gif;base64,R0lGODlhAQABAIAAAP///wAAACH5BAEAAAAALAAAAAABAAEAAAICRAEAOw==" />
+            </article>
+        </section>
+    </main>
+</body>
+
+</html>
