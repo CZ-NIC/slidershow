@@ -8,7 +8,8 @@ const BASIC = "file://" + path.resolve(__dirname, "fixtures/basic.html")
 async function start(page, url = FIXTURE) {
     await page.goto(url)
     await page.locator("#start").click()
-    await page.evaluate(() => playback.hud._help = "#") // non-empty → fetch_help() short-circuits
+    // non-empty → fetch_help() short-circuits (it holds one entry per docs/*.md page)
+    await page.evaluate(() => playback.hud._help = [{ page: "structure", text: "#" }])
 }
 
 /** Raw (markdown) notes of every frame. */

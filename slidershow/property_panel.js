@@ -92,7 +92,10 @@ class PropertyPanel {
         const ANCESTOR_LABEL = { ARTICLE: "frame", SECTION: "section", MAIN: "main" }
         const $label = $("<label/>", { "text": `${p}${name ? ` (${ANCESTOR_LABEL[name] ?? name.toLowerCase()})` : ""}: `, "title": help ?? this.hud.get_help(p, true, false) })
         if (help === null) {
-            $label.on("click", () => this.hud.get_help(p))
+            // ⓘ makes the otherwise invisible "the label is clickable" affordance discoverable;
+            // the whole label stays clickable as before.
+            $label.append($("<span/>", { "class": "prop-help-toggle", "text": "ⓘ", "title": "Documentation" }))
+            $label.on("click", () => this.hud.toggle_property_help(p, $label.parent()[0]))
         }
 
         return $.merge(

@@ -92,6 +92,10 @@ class Hud {
         this._activePropLevel = "Frame"
         /** @type {Set<string>} Names of the property-panel's thematic <details> groups that are open – restored across properties() rebuilds. All open by default; the user's own collapses persist from then on. */
         this._openPropGroups = new Set(["Notes", "Transform", "Video", "Timing"])
+        /** @type {?{page: string, text: string}[]} Documentation pages, once fetched (see fetch_help). */
+        this._help = null
+        /** @type {?Promise<{page: string, text: string}[]>} In-flight docs download – shared so concurrent callers fetch once. */
+        this._helpPromise = null
         this.palette = new CommandPalette(this)
         this.init_grid()
 
@@ -1374,13 +1378,21 @@ class Hud {
         activate(this._activePropLevel)
     }
 
+    /**
+     * The `sli-*` reference used to be a single README.md; it now lives in the MkDocs site
+     * (docs/*.md). Fetch every page in parallel and keep the page name next to its text so
+     * a property can be linked to its real published anchor (`…/docs/<page>/#sli-x`).
+     * A page that fails to load is skipped – partial help beats no help.
+     */
     async fetch_help() {
         if (!this._help) {
-            this._help = await $.ajax({
-                dataType: "text",
-                url: DOCS_URI
-            })
+            this._helpPromise ??= Promise.all(DOCS_PAGES.map(page =>
+                Promise.resolve($.ajax({ dataType: "text", url: `${DOCS_URI}${page}.md` }))
+                    .then(text => ({ page, text }), () => null)))
+                .then(pages => pages.filter(Boolean))
+            this._help = await this._helpPromise
         }
+        return this._help
     }
 
     get_help(property, short = false, display = true) {
@@ -1390,20 +1402,29 @@ class Hud {
             text = "Loading docs, try again"
         } else {
             const real_name = "sli-" + property
-            const rr = short ? `#+ \`${real_name}\`\\n\\n?([\\s\\S]*?)(?=\\n)` : `#+ \`${real_name}\`\\n\\n?([\\s\\S]*?)(?=\\n#)`
+            // A heading may cover several properties at once (ex: "## `sli-x`, `sli-y`"),
+            // hence the loose line match around the name. The section ends at the next
+            // heading or at the end of the page (the last property on a page has none).
+            const head = `^#+ [^\\n]*\`${real_name}\`[^\\n]*\\n\\n?`
+            const rr = head + (short ? `([\\s\\S]*?)(?=\\n)` : `([\\s\\S]*?)(?=\\n#|$(?![\\s\\S]))`)
             const r = new RegExp(rr, "m")
 
-            const m = this._help.match(r)
-            if (m) {
+            for (const { page, text: doc } of this._help) {
+                const m = doc.match(r)
+                if (!m) {
+                    continue
+                }
                 if (short) {
                     text = m[1]
                 } else {
-                    const docs_link = `<a href="${HOME_PAGE}#${real_name}">→ docs</a>`
-                    // point internal links to the homepage
-                    const links = m[1].replaceAll("`](#", "`](" + HOME_PAGE + "#")
+                    const page_url = `${DOCS_HOME_PAGE}${page}/`
+                    const docs_link = `<a href="${page_url}#${real_name}" target="_blank">→ docs</a>`
+                    // point internal links to the published page
+                    const links = m[1].replaceAll("`](#", "`](" + page_url + "#")
                     const markdown = this.playback.menu.markdown.makeHtml(links)
                     text = docs_link + markdown
                 }
+                break
             }
         }
 
@@ -1417,5 +1438,22 @@ class Hud {
         } else {
             return text || error
         }
+    }
+
+    /**
+     * Reveal the docs for a property inline, right under its row in the Properties panel.
+     * Since the panel became a tabbed, scrollable pane, a transient HUD notification was both
+     * easy to miss and liable to cover the very field one was reading about; the help now stays
+     * open next to the field until clicked away.
+     * @param {string} property ex: 'duration'
+     * @param {HTMLElement} row The property row (the <div data-property> wrapping label + field).
+     */
+    async toggle_property_help(property, row) {
+        const $row = $(row)
+        if ($row.children(".prop-help").remove().length) {
+            return // it was open – the click closed it
+        }
+        await this.fetch_help()
+        $("<div/>", { "class": "prop-help", html: this.get_help(property, false, false) }).appendTo($row)
     }
 }

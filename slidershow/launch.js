@@ -20,9 +20,13 @@ const IMAGE_EXTENSIONS = ["jpg", "jpeg", "jxl", "png", "gif", "avif", "webp", "h
 const _propCache = new WeakMap()
 let _propGen = 0
 
-/** To fetch docs */
-const DOCS_URI = "https://cdn.jsdelivr.net/gh/CZ-NIC/slidershow@main/README.md"
-/** To link docs */
+/** Base for fetching the raw documentation sources (the `sli-*` reference lives in docs/*.md) */
+const DOCS_URI = "https://cdn.jsdelivr.net/gh/CZ-NIC/slidershow@main/docs/"
+/** docs/*.md pages (without the extension) scanned for the `sli-*` property reference */
+const DOCS_PAGES = ["structure", "steps", "images", "video", "text-maps", "styling", "organizing", "playback"]
+/** Where the built documentation is published; a property anchors as `<page>/#sli-property` */
+const DOCS_HOME_PAGE = "https://cz-nic.github.io/slidershow/docs/"
+/** To link the project */
 const HOME_PAGE = "https://github.com/CZ-NIC/slidershow/"
 
 /**

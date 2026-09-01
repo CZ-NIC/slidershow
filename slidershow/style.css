@@ -1573,6 +1573,36 @@ frame-preview {
             cursor: help;
         }
 
+        .prop-help-toggle {
+            margin-left: 3px;
+            opacity: 0.5;
+
+            &:hover {
+                opacity: 1;
+            }
+        }
+
+        /* documentation for a single property, unfolded under its row by Hud.toggle_property_help() */
+        .prop-help {
+            margin: 2px 0 6px;
+            padding: 4px 6px;
+            border-left: 3px solid var(--highlight);
+            background-color: var(--bg-surface-dark, rgba(0, 0, 0, 0.06));
+            font-size: 85%;
+            max-height: 30vh;
+            overflow: auto;
+
+            p {
+                margin: 0 0 4px;
+            }
+
+            pre,
+            code {
+                white-space: pre-wrap;
+                word-break: break-word;
+            }
+        }
+
         textarea {
             /* the notes field – prose, unlike every other single-value property here */
             width: 100%;
