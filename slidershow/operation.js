@@ -673,17 +673,12 @@ class Operation {
             [
                 ["Alt+s", "📸", "Add step point", () => addPoint("ownStepPoints")],
                 ["Alt+v", "🎬", "Add video point", () => addPoint("ownVideoPoints")],
-                ["Alt+[", "⏱", "Mark video trim start", () => setTrim("start")],
-                ["Alt+]", "⏱", "Mark video trim end", () => setTrim("stop")],
+                ["Alt+,", "⏱", "Mark video trim start", () => setTrim("start")],
+                ["Alt+.", "⏱", "Mark video trim end", () => setTrim("stop")],
             ])
 
-        // Opens the properties panel first if it's closed – it builds `pl.hud.ownStepPoints` /
-        // `.ownVideoPoints` (the current frame's own-level point editor) as a side effect, so this
-        // never guesses at stale DOM state the way clicking a nth ".hud-point" button once did.
+        // Adds a point without automatically opening the properties panel
         async function addPoint(which) {
-            if (!pl.hud.properties_visible) {
-                await pl.hud.toggle_properties()
-            }
             pl.hud[which]?.addPoint()
         }
 
