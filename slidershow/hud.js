@@ -336,6 +336,9 @@ class Hud {
 
     async toggle_properties() {
         this.$hud_properties.toggle()
+        // Both the panel and the Escape menu live in the top-right corner; the class lets the
+        // stylesheet move the menu column aside for as long as the panel is there (style.css).
+        $hud.toggleClass("properties-open", this.properties_visible)
         if (this.properties_visible && this.playback.frame) {
             // when restoring session from the hash, frame is not ready yet
             await this.properties()

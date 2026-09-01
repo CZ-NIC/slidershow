@@ -1,4 +1,8 @@
 :root {
+    /* How wide the properties panel (Alt+P) is allowed to grow. The Escape menu reads it too,
+       so it can step aside instead of being covered – see &.properties-open in #hud below. */
+    --prop-panel-width: 20vw;
+
     /* Interactive state colors */
     --highlight: yellow;
     --control: blue;
@@ -638,6 +642,18 @@ frame-preview {
         top: 6vh;
         text-align: right;
         z-index: 1; /* placed over the thumbnails grid */
+    }
+
+    /* The Escape menu / command palette and the Alt+P properties panel both claim the top-right
+       corner, so opening one used to bury the other. Rather than moving either elsewhere (both
+       belong there – the panel edits what the menu acts on), the menu column steps aside for
+       exactly as long as the panel is open. Same trick as HUD notifications, which already
+       offset themselves by the panel's width (see Hud.info). */
+    &.properties-open {
+        #hud-righttop-wrapper {
+            right: calc(3vw + var(--prop-panel-width) + 10px);
+            max-width: calc(97vw - var(--prop-panel-width) - 10px);
+        }
     }
 
     #hud-menu {
@@ -1559,7 +1575,7 @@ frame-preview {
 
     #hud-properties {
         /* display: flex; */
-        max-width: 20vw;
+        max-width: var(--prop-panel-width);
         max-height: 70vh;
         top: 0;
         right: 0;

@@ -49,3 +49,30 @@ test("content summary reports the loaded frame count", async ({ page }) => {
     await page.goto(FIXTURE)
     await expect(page.locator("#content-summary")).toContainText("3 frames")
 })
+
+test("the Escape menu steps aside for the properties panel instead of hiding under it", async ({ page }) => {
+    await page.goto(FIXTURE + "#1?start")
+    await expect.poll(() => page.evaluate(() => typeof playback !== "undefined" && playback.frame?.index !== undefined)).toBe(true)
+    await page.evaluate(() => playback.hud._help = [{ page: "structure", text: "#" }])
+
+    const menu = page.locator("#hud-righttop-wrapper")
+    const panel = page.locator("#hud-properties")
+
+    await page.keyboard.press("Escape") // open the menu
+    await expect(page.locator("#hud-menu")).toBeVisible()
+    const alone = await menu.boundingBox()
+
+    await page.keyboard.press("Alt+p")
+    await expect(panel).toBeVisible()
+    await expect(page.locator("#hud")).toHaveClass(/properties-open/)
+
+    const shifted = await menu.boundingBox()
+    const box = await panel.boundingBox()
+    expect(shifted.x).toBeLessThan(alone.x) // moved left, out of the corner
+    expect(shifted.x + shifted.width).toBeLessThanOrEqual(box.x + 1) // and no longer overlaps
+
+    // closing the panel gives the corner back
+    await page.keyboard.press("Alt+p")
+    await expect(page.locator("#hud")).not.toHaveClass(/properties-open/)
+    expect((await menu.boundingBox()).x).toBeCloseTo(alone.x, 0)
+})
