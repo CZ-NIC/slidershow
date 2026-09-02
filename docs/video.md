@@ -59,7 +59,7 @@ Browsers allow you to specify the [playback range](https://developer.mozilla.org
 
 Example: `<video src="myvideo.mp4#t=10"></video>` will start playing at time 10 s.
 
-Use the property panel (<kbd>Alt+P</kbd>) to help you, or mark the start/end while the video plays: <kbd>Alt+[</kbd> sets the start to the current playback time, <kbd>Alt+]</kbd> sets the end. Both are undoable (<kbd>Ctrl+Alt+Z</kbd>).
+Use the property panel (<kbd>Alt+P</kbd>) to help you, or mark the start/end while the video plays: <kbd>Alt+,</kbd> sets the start to the current playback time, <kbd>Alt+.</kbd> sets the end. Both are undoable (<kbd>Ctrl+Alt+Z</kbd>).
 
 <video autoplay controls muted loop playsinline width="640" src="https://cdn.jsdelivr.net/gh/CZ-NIC/slidershow-assets@main/video-cut.webm" title="Trimming a clip's playback range via the sli-video-cut property panel field"></video>
 
@@ -77,3 +77,7 @@ The first item is the `startTime` when the other rules happen. Rules are as foll
 * `point:[sli-step-point]` – Zoom to a point. This is defined by a standard [sli-step-point](images.md#sli-step-points). Ex: `[4, "goto:2.9", "point:[100,100,5]"]` means: at time 4 s, jump back to time 2.9 s and zoom to a given point.
 
 Use the property panel (<kbd>Alt+P</kbd>) to help you create video points – <kbd>Alt+V</kbd> adds one at the video's current playback time, even while the panel is closed. Drag a point onto another one to reorder them.
+
+In [editing mode](playback.md) (<kbd>Alt+E</kbd>) with the panel closed, the points of the current
+frame are mirrored as read-only 🎬 pills in the top-right corner, so you can see them piling up
+while marking them – see [Seeing the points without the panel](images.md#sli-step-points).
