@@ -821,8 +821,8 @@ class Operation {
                 }],
                 ["Shift+c", "&#9203;", "Countdown bar", () => pl.hud.toggle_progress()],
                 ["Alt+b", "🐢", "Data saver", () => pl.dataSaver.toggle()],
-                ["Alt+l", "⤓", "Load this frame fully", () => pl.dataSaver.load_current_frame()],
-                ["Shift+Alt+b", "🐢?", "How much the data saver saved", () => pl.dataSaver.report()],
+                ["Alt+l", "⤓", "Load this frame fully", () => pl.dataSaver.load_current_frame(), "saver-only"],
+                ["Shift+Alt+b", "🐢?", "How much the data saver saved", () => pl.dataSaver.report(), "saver-only"],
                 ["Alt+e", "&#9998;", "Editing mode", () => {
                     pl.editing_mode = !pl.editing_mode
                     // when there will be interfering shortcuts like numbers, we have retag the previous shortcuts

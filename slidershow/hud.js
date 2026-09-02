@@ -234,6 +234,7 @@ class Hud {
         this.$stopEditing = $("[title='Stop editing (Escape)']", $m).prop("disabled", true)
         this.$notVideoButtons = $("[data-role~='not-video']")
         this.$onlyVideoButtons = $("[data-role~='only-video']").prop("disabled", true)
+        this.$saverOnlyButtons = $("[data-role~='saver-only']", $m).hide()
 
         hideAlternatives("prev-step", "Prev step")
         hideAlternatives("next-step", "Next step")
@@ -1051,6 +1052,7 @@ class Hud {
     refresh_data_saver() {
         const saver = this.playback.dataSaver
         const $el = this.$hud_data_saver
+        this.$saverOnlyButtons.toggle(!!saver?.active)
         if (!saver?.active) {
             return $el.hide()
         }
