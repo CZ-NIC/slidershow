@@ -2045,6 +2045,18 @@ article-map {
     margin-left: 1.6em;
 }
 
+/* Export dialog (export.js): the folder an already-made offline copy of the app lives in – belongs to
+   the "Point at a copy I already have" radio above it. */
+.app-code-ref-row {
+    margin: .2em 0 .4em 0;
+
+    .app-code-ref {
+        width: 50%;
+        margin-left: .4em;
+        padding: 3px 6px;
+    }
+}
+
 /* Export dialog (export.js): where the exported file will look for its media. */
 .export-path-row {
     margin: .2em 0 .5em 0;

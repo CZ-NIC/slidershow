@@ -11,13 +11,19 @@ class Export {
         this.file_handler_wanted = this.file_handler_allowed
         this.file_handler = null
 
-        /** @type {"cdn"|"inline"|"folder"} How the app's own code (vendor libs + local slidershow/*.js +
-         * style.css) is attached to the exported file: fetched from the CDN again on next open ("cdn",
-         * the default), inlined verbatim into the exported HTML itself ("inline"), or copied as separate
-         * files into vendor/+slidershow/ folders next to it ("folder"). Applies to every media target
+        /** @type {"cdn"|"inline"|"folder"|"local"} How the app's own code (vendor libs + local
+         * slidershow/*.js + style.css) is attached to the exported file: fetched from the CDN again on
+         * next open ("cdn", the default), inlined verbatim into the exported HTML itself ("inline"),
+         * copied as separate files into vendor/+slidershow/ folders next to it ("folder"), or simply
+         * pointed at a folder that already holds such a copy ("local"). Applies to every media target
          * except "Split into folders by tags" (which writes no presentation file at all) – independent
          * of what happens to the media itself. */
         this.app_code = "cdn"
+
+        /** @type {string} "local" app-code only: a relative (or absolute) directory the exported file
+         * should load SlideRshow from, instead of the CDN. Nothing is copied – the folder is expected to
+         * already hold a copy (one made earlier by "Copy into a folder", typically). */
+        this.app_code_ref = "slidershow/"
 
         /** @type {"asis"|"absolute"|"relative"} How a media path already referenced by `sli-src` (not
          * embedded raw bytes) is rewritten before export: left exactly as-is (the default), forced into
@@ -73,7 +79,7 @@ class Export {
      * "folder" – so a radio group, not a checkbox. Kept near the bottom of the dialog: it's the setting
      * people change least (the CDN default is almost always right).
      */
-    app_code_radio() {
+    app_code_radio(onChange) {
         const file_blocked = this._is_file_protocol()
         const dir_supported = Boolean(window.showDirectoryPicker)
         const folder_blocked = file_blocked || !dir_supported
@@ -94,7 +100,44 @@ class Export {
                     + "exported HTML itself stays as small as a normal export."
                     + (!dir_supported ? " Only available in Chrome/Edge." : "")
                     + (file_blocked ? " Currently blocked: see the warning below." : ""), blocked: folder_blocked },
-        ])
+            { value: "local", label: "Point at a copy I already have",
+                title: "Copies nothing. The exported file simply loads SlideRshow from the folder you name "
+                    + "below – handy when several presentations sit next to one offline copy made earlier "
+                    + "with \"Copy into a folder\". Nothing is fetched during the export, so this one works "
+                    + "from file:// too.",
+                extra: this._app_code_ref_field() },
+        ], "", onChange)
+    }
+
+    /**
+     * "Point at a copy I already have" only: the directory the exported file will load SlideRshow from.
+     * Unlike "Copy into a folder" this writes nothing – it just retargets the bootstrap `<script src>` –
+     * so it needs no directory picker, no network and no readable sibling files, which makes it the one
+     * offline option that also works from a `file://` presentation.
+     */
+    _app_code_ref_field() {
+        const $input = $("<input/>", {
+            type: "text", value: this.app_code_ref, placeholder: "slidershow/",
+            class: "app-code-ref", name: "app-code-ref",
+            title: "Directory holding slidershow.js – relative to the exported file (ex: \"slidershow/\", "
+                + "\"../lib/slidershow/\") or an absolute URL. Nothing is copied there; it has to be a copy "
+                + "you already made.",
+        }).on("input", () => { this.app_code_ref = String($input.val()) })
+        return $("<div/>", { class: "media-target-detail app-code-ref-row" })
+            .append($("<label/>", { text: "Load SlideRshow from: " }).append($input))
+    }
+
+    /**
+     * Retarget the exported bootstrap `<script src>` at `this.app_code_ref` (see `_app_code_ref_field`).
+     * The integrity/crossorigin attributes go with it – they belong to the CDN copy it no longer points
+     * at, and would make the browser refuse the local file.
+     * @param {JQuery} $head
+     */
+    _point_app_code_at_local($head) {
+        const dir = this.app_code_ref.trim().replace(/\/*$/, "/")
+        $head.find("script[src$='slidershow.js']")
+            .attr("src", `${dir}slidershow.js`)
+            .removeAttr("integrity crossorigin referrerpolicy")
     }
 
     /**
@@ -296,12 +339,13 @@ class Export {
                 .find("input").each((_, el) => {
                     $(el).prop("disabled", !app_code_used || $(el).data("blocked"))
                 })
+            $(".app-code-ref", $body).prop("disabled", !app_code_used || this.app_code !== "local")
         }
 
         const $body = $("<div/>").append(
             this.presentation_name_field(),
             this.media_target_radio(refresh),
-            $("<div/>", { class: "app-code-footer" }).append(this.app_code_radio(), this._file_protocol_warning()),
+            $("<div/>", { class: "app-code-footer" }).append(this.app_code_radio(refresh), this._file_protocol_warning()),
             $("<div/>", { class: "export-handler-row" }).append(this.file_handler_checkbox()),
         )
         // Remember which radios are unavailable for their own reasons (file://, no Chrome), so refresh()
@@ -607,6 +651,8 @@ class Export {
                 this._offline_file_error(e)
                 return
             }
+        } else if (this.app_code === "local") {
+            this._point_app_code_at_local($head)
         }
 
         // Export the data blob
@@ -909,6 +955,8 @@ class Export {
                 await this._inline_offline_assets($head)
             } else if (this.app_code === "folder") {
                 await this._copy_app_code_to_folder($head, targetDir)
+            } else if (this.app_code === "local") {
+                this._point_app_code_at_local($head)
             }
         } catch (e) {
             this._offline_file_error(e)

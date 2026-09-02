@@ -330,3 +330,27 @@ test("exporting keeps the live blob: sources alive, so grid previews still work 
     expect(result.copyHasSrc).toBe(false)    // …while the copy still dropped it, as it must
     expect(result.liveSrc).toMatch(/^blob:/) // the live element still points at it
 })
+
+test("the app code can be pointed at a copy that already exists, without copying anything", async ({ page }) => {
+    // "Copy into a folder" needs a directory picker, network and readable sibling files; this one only
+    // retargets the bootstrap tag, so it is the offline option that also works from file://.
+    await page.goto(FIXTURE)
+    await page.locator("#start").click()
+    await expect.poll(() => page.url()).toContain("#1")
+
+    const [download] = await Promise.all([
+        page.waitForEvent("download"),
+        page.evaluate(() => {
+            menu.export.file_handler_wanted = false
+            menu.export.app_code = "local"
+            menu.export.app_code_ref = "../lib/slidershow" // trailing slash deliberately left off
+            return menu.export.export()
+        }),
+    ])
+    const html = fs.readFileSync(await download.path(), "utf8")
+
+    expect(html).toContain('src="../lib/slidershow/slidershow.js"')
+    expect(html).not.toContain("cdn.jsdelivr.net/gh/CZ-NIC/slidershow")
+    // the CDN's integrity/crossorigin would make the browser refuse the local file
+    expect(html).not.toMatch(/integrity=.*slidershow\.js/)
+})

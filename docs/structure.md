@@ -105,10 +105,19 @@ kind of export it will be.
 * **Split into folders by tags** (Chrome/Edge) – an album export rather than a presentation one;
   see [Exporting tags to album folders](organizing.md#exporting-tags-to-album-folders).
 
-**App's own code** – whether the exported file fetches SlideRshow from the CDN again (default),
-inlines it, or gets it copied into `slidershow/` + `vendor/` folders next to it (Chrome/Edge). The
-last two need to re-read this presentation's own files, which Chrome refuses under `file://` – host
-the presentation over http(s) to use them.
+**App's own code** – where the exported file gets SlideRshow itself from:
+
+* **Load from CDN** (default) – fetched again on next open, so the export needs network.
+* **Inline into the file** – embedded verbatim; opening it later needs no network at all.
+* **Copy into a folder** (Chrome/Edge) – written as `slidershow/` + `vendor/` folders next to the
+  export, which is pointed at them.
+* **Point at a copy I already have** – give a directory relative to the exported file (ex:
+  `slidershow/`, `../lib/slidershow/`) or an absolute URL, and the export loads SlideRshow from
+  there. Nothing is copied, so several presentations can share a single offline copy made once with
+  the previous option.
+
+The middle two have to re-read this presentation's own files, which Chrome refuses under `file://` –
+host the presentation over http(s) to use them. The last one copies nothing, so it works anywhere.
 
 ## Frame `<article>`
 
