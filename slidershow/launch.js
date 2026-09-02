@@ -58,6 +58,8 @@ Private attributes that are not documented in the README because the user should
 * [sli-templated] This element was inserted only temporarily throught a template (ex: footer in an article or a <head> vendor script). Should not be exported.
 * [sli-preloaded] The frame has already been preloaded.
 * img[sli-thumb-shown] The full-quality src is still loading in the background; src currently holds the sli-thumb preview.
+* [sli-data-saved] Data saver (data_saver.js) held the full-quality file back: "thumb" = the sli-thumb preview stands in for good, "none" = nothing was loaded at all.
+* [sli-load-full] One-shot marker asking Frame._load_media to ignore the data saver for this element (Alt+L).
 * data("step-original") Temporarily change [sli-step] value.
 * .step-shown Frame step index has greater value so we see this element.
 * .step-hidden Frame step index has lower value so we do not see this element.

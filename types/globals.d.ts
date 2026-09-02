@@ -12,6 +12,16 @@ declare global {
         webHotkeys: WebHotkeys
     }
 
+    // Network Information API – Chromium only, and not in lib.dom.d.ts (see data_saver.js).
+    interface NetworkInformation extends EventTarget {
+        saveData?: boolean
+        effectiveType?: string
+    }
+
+    interface Navigator {
+        connection?: NetworkInformation
+    }
+
     // TS's lib.dom.d.ts doesn't yet know about the File System Access API's permission methods.
     interface FileSystemHandle {
         queryPermission?(options?: any): Promise<"granted" | "denied" | "prompt">

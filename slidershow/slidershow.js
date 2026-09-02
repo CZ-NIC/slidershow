@@ -75,7 +75,7 @@ loadjQuery(() => {
         loadStyle("https://unpkg.com/leaflet@1.9.4/dist/leaflet.css")
     }
 
-    const local = ["static.js", "frame_factory.js", "frame.js", "frame_zoom.js", "place.js", "map.js", "hud.js", "grid.js", "palette.js", "export.js", "property_panel.js", "propertyPanelPoints.js", "operation.js", "section.js", "changes.js", "start.js", "playback.js", "session.js", "aux_window.js"].filter(Boolean).map(f => loadScript({ src: DIR + f }))
+    const local = ["static.js", "data_saver.js", "frame_factory.js", "frame.js", "frame_zoom.js", "place.js", "map.js", "hud.js", "grid.js", "palette.js", "export.js", "property_panel.js", "propertyPanelPoints.js", "operation.js", "section.js", "changes.js", "start.js", "playback.js", "session.js", "aux_window.js"].filter(Boolean).map(f => loadScript({ src: DIR + f }))
 
     /**
      When there were 60 photos and 10 videos in a 230 MB presentation file, these were started before we could
@@ -247,6 +247,7 @@ function get_menu() {
         </div>
         <div id="hud-properties"></div>
         <div id="hud-points" title="Points of this frame – click (or Alt+P) to edit them"></div>
+        <div id="hud-data-saver" title="Data saver – click to see how much it saved"></div>
         <div id="hud-grid-status">
             <div id="hud-grid-loading" title="Click to list the files currently loading"><span></span></div>
             <span id="hud-grid-retry" title="Retry loading these files"></span>

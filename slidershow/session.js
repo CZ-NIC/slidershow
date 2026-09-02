@@ -87,6 +87,12 @@ class Session {
                 case "no-steps":
                     pl.step_disabled = true
                     break
+                case "save-data":
+                    // Explicit in the hash, so it must not be overridden by the connection's own
+                    // Save-Data header on the next `change` event (see DataSaver.listen).
+                    pl.dataSaver._explicit = true
+                    pl.dataSaver.set(value !== "0")
+                    break;
                 case "thumbnails":
                     if (!pl.hud.thumbnails_visible) {
                         pl.hud.toggle_thumbnails()
@@ -178,6 +184,9 @@ class Session {
         }
         if (this.playback.step_disabled) {
             params.set("no-steps", "")
+        }
+        if (this.playback.dataSaver.active) {
+            params.set("save-data", "")
         }
         if (this.playback.hud.$hud_thumbnails.is(":visible")) {
             params.set("thumbnails", "")

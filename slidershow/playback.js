@@ -74,6 +74,8 @@ class Playback {
         this.debug = false
         this.tagging_mode = false
         this.editing_mode = false
+        /** @type {DataSaver} Metered-connection mode – see data_saver.js. */
+        this.dataSaver = new DataSaver(this)
         // On mobile the authored pan/zoom "flyover" (sli-step-points) is disabled by default – just the plain
         // full-screen photo, swipeable/pinch-zoomable, no automatic camera movement.
         this.step_disabled = this.isMobileMode
@@ -268,6 +270,9 @@ class Playback {
         this.operation.general.enable()
         this.operation.playthrough.enable()
         this.operation.switches.enable()
+        // Before restore(), so an explicit `save-data` in the hash gets the last word over what the
+        // browser reports about the connection.
+        this.dataSaver.listen()
         this.session.restore(true)
     }
 
@@ -913,6 +918,25 @@ class Playback {
                 ...[...this.preloaded].map(f => nearby.includes(f) ? null : () => f.unload()).filter(Boolean),
             ])
         })
+    }
+
+    /**
+     * Drop every preloaded frame so the media around the cursor is fetched again under the loading rules
+     * in force right now – used when a switch changes what "loading a frame" even means (the data saver).
+     */
+    reload_media() {
+        [...this.preloaded].forEach(f => f.unload())
+        // unload() deliberately leaves a `src` it has no reason to free (a plain path costs nothing to
+        // keep, unlike a blob: URL) – but here the whole point is to re-decide *whether* to load that
+        // file at all, and preload() skips an element that already has a src. Both a path (`sli-src`)
+        // and a dragged-in file (data(READ_SRC)) can be re-read, so dropping it is safe.
+        this.$articles.find("img[sli-src], video[sli-src]").each((_, el) => {
+            Frame.unload_media($(el)) // aborts an in-flight fetch and invalidates a finishing one
+            $(el).removeAttr("src sli-thumb-shown sli-data-saved")
+        })
+        // The badge says what happened to *this* frame's media, which is only settled once the reload is
+        // through – refresh it then, on top of the immediate one in DataSaver.set().
+        Promise.resolve(this.frame?.preload()).then(() => this.hud.refresh_data_saver())
     }
 
     toggle_steps() {

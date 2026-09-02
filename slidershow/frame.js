@@ -439,7 +439,7 @@ class Frame {
         // Process media
         const loaded = $frame.find("img[sli-src], video[sli-src]").map((_, el) => {
             const $el = $(el)
-            if ($el.attr("src") && !$el.attr("sli-thumb-shown")) { // src already fully set, nothing to do
+            if ($el.attr("src") && !$el.attr("sli-thumb-shown") && !$el.attr("sli-data-saved")) { // src already fully set, nothing to do
                 return null
             }
             return Frame._load_media($el, el, this)
@@ -488,11 +488,33 @@ class Frame {
 
         const playback = frame?.playback
         const distance = () => (playback && frame ? Math.abs(frame.index - playback.index) : 0)
+        // A fetch started here can outlive the reason it was started – the frame gets unloaded (left
+        // behind, or the data saver switched on) while it is still in flight. Every assignment below is
+        // gated on this token, bumped by unload_media(), so a late arrival cannot paint itself over
+        // whatever the element holds by then.
+        const gen = Number($el.data("load-gen") || 0)
+        const stale = () => Number($el.data("load-gen") || 0) !== gen
         // The current frame (distance 0) loads immediately; everything else queues on the given limiter.
         const gate = sem => (sem && distance() > 0 ? sem.acquire(distance) : Promise.resolve(() => { }))
 
         const isImg = el.tagName === "IMG"
         const thumb = !$el.attr("src") && Frame.get_thumb_src($el)
+
+        // Data saver (data_saver.js): stop short of the expensive file. A thumbnail, where one exists,
+        // becomes the picture rather than a stand-in for it; without one nothing is loaded at all until
+        // the frame is asked for by hand (DataSaver.load_current_frame sets sli-load-full and comes back
+        // through here). Marked on the element so both the HUD and that escape hatch can find it.
+        if (playback?.dataSaver?.active && !$el.attr("sli-load-full")) {
+            const stand_in = thumb && await Frame.probe_image(thumb) ? thumb : null
+            if (stand_in) {
+                $el.attr(isImg ? "src" : "poster", stand_in)
+            }
+            $el.attr("sli-data-saved", stand_in ? "thumb" : "none")
+            playback.dataSaver.skip(src, stand_in)
+            return
+        }
+        $el.removeAttr("sli-load-full")
+        playback?.dataSaver?.note_loaded(src)
 
         if (thumb && isImg) {
             // The cheap thumbnail (generous limiter) and the expensive full-quality file (stricter limiter) load
@@ -504,7 +526,7 @@ class Frame {
             const thumb_task = (async () => {
                 const release = await gate(playback?.thumb_loader)
                 try {
-                    if (await Frame.probe_image(thumb) && !full_shown) {
+                    if (await Frame.probe_image(thumb) && !full_shown && !stale()) {
                         $el.attr("src", thumb).attr("sli-thumb-shown", 1)
                     }
                 } finally {
@@ -535,7 +557,7 @@ class Frame {
                     if (frame) {
                         frame.load_failed = !final_src
                     }
-                    if (final_src) {
+                    if (final_src && !stale()) {
                         full_shown = true
                         $el.attr("src", final_src).removeAttr("sli-thumb-shown") // instant cache hit, no second request
                         // Wait for the visible element too – `loaded` must not resolve while it still displays the thumbnail
@@ -586,7 +608,7 @@ class Frame {
                     }
                     throw e
                 }
-                if (blob_src) {
+                if (blob_src && !stale()) {
                     el.src = blob_src
                     loaded = await await_load()
                     if (!loaded) { // fetched fine but the browser could not decode it (ex: HEIC/HEIF)
@@ -594,7 +616,7 @@ class Frame {
                     }
                 }
             }
-            if (!loaded) {
+            if (!loaded && !stale()) {
                 el.src = src
                 loaded = await await_load()
             }
@@ -801,10 +823,14 @@ class Frame {
      */
     static unload_media($el, $el_original = null, revoke = true) {
         $el.data("progress-abort")?.abort() // cancel Frame._fetch_with_progress() if it is still in flight
-        if ($el.attr("sli-thumb-shown")) {
-            // The full-quality file never finished loading; drop the thumbnail too so a future preload() starts over
-            // instead of finding a (thumbnail) `src` already present and skipping the load.
-            $el.removeAttr("src sli-thumb-shown")
+        // Invalidate any _load_media() still running for this element – an abort only stops our own
+        // fetch, not a probe/decode already past it (see `stale()` there).
+        $el.data("load-gen", Number($el.data("load-gen") || 0) + 1)
+        if ($el.attr("sli-thumb-shown") || $el.attr("sli-data-saved")) {
+            // The full-quality file never finished loading (or was deliberately skipped by the data
+            // saver); drop the thumbnail too so a future preload() starts over instead of finding a
+            // (thumbnail) `src` already present and skipping the load.
+            $el.removeAttr("src sli-thumb-shown sli-data-saved")
         } else if (($el_original || $el).data(READ_SRC) || $el.data("src") && $el.data("src") === $el.attr("src")
             || $el.attr("src")?.startsWith("blob:")) {
             if (revoke) {
@@ -831,6 +857,9 @@ class Frame {
         // batch execute operations otherwise done in methods like `unload` or `left`
         $("video[sli-autoplay-prevented]", $contents).removeAttr("sli-autoplay-prevented").attr("autoplay", "")
         $("[sli-wzoom]", $contents).removeAttr("sli-wzoom")
+        // Data-saver bookkeeping (data_saver.js) is about this session's connection, not about the
+        // presentation – it must not travel into the exported file.
+        $("[sli-data-saved], [sli-load-full]", $contents).removeAttr("sli-data-saved sli-load-full")
         const $frames = $contents.find(FRAME_SELECTOR).removeAttr("sli-preloaded")
         $frames.find("[sli-templated]").remove()
         Frame.unmake_editable($frames)

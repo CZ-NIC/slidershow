@@ -91,6 +91,24 @@ main {
         filter: blur(12px);
         transition: filter .3s;
     }
+
+    /* Data saver (data_saver.js): the thumbnail is not a stand-in here, it IS the picture – no blur,
+       which would only make a deliberately cheap image look broken. */
+    [sli-data-saved="thumb"] {
+        filter: none;
+    }
+
+    /* Nothing was downloaded for this one at all – give the empty element a visible, obviously-placeholder
+       shape instead of collapsing the frame to nothing (Alt+L loads it; see #hud-data-saver). */
+    [sli-data-saved="none"] {
+        min-width: 40vmin;
+        min-height: 30vmin;
+        border: 2px dashed var(--border-muted);
+        border-radius: 8px;
+        background: repeating-linear-gradient(45deg,
+                color-mix(in srgb, var(--surface-white) 6%, transparent) 0 12px,
+                transparent 12px 24px);
+    }
 }
 
 menu {
@@ -1611,6 +1629,19 @@ frame-preview {
             font-size: 85%;
             white-space: nowrap;
         }
+    }
+
+    /* Data-saver indicator (data_saver.js) – bottom left, out of the way of the properties panel and
+       the points badge in the opposite corner. */
+    #hud-data-saver {
+        left: 3vw;
+        bottom: 3vh;
+        padding: 3px 8px;
+        border-radius: 1em;
+        background-color: var(--control);
+        color: var(--base);
+        cursor: pointer;
+        z-index: 1;
     }
 
     #hud-properties {

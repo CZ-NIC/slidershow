@@ -60,6 +60,9 @@ class Hud {
         /** Read-only mirror of the current frame's points, shown while the properties panel is closed. */
         this.$hud_points = $("#hud-points").hide()
             .on("click", () => this.properties_visible || this.toggle_properties())
+        /** Data-saver indicator – present only while the mode is on (see data_saver.js). */
+        this.$hud_data_saver = $("#hud-data-saver").hide()
+            .on("click", () => this.playback.dataSaver.report())
         this.$control_icons = $("#control-icons")
         this.$mobile_nav = $("#mobile-nav")
         // On mobile the bottom nav bar replaces the top icons entirely (bigger, thumb-reachable) – #control-icons
@@ -1027,6 +1030,28 @@ class Hud {
             this.ownVideoPoints = null
         }
         this.refresh_points_badge()
+        this.refresh_data_saver()
+    }
+
+    /**
+     * Data-saver indicator (data_saver.js): shown only while the mode is on, and saying whether *this*
+     * frame is standing in for something – a thumbnail in place of the photo, or nothing loaded at all.
+     * Without it, a slightly soft photo and a blank frame look like bugs rather than like a deliberate
+     * saving; clicking it reports how much has been saved so far.
+     */
+    refresh_data_saver() {
+        const saver = this.playback.dataSaver
+        const $el = this.$hud_data_saver
+        if (!saver?.active) {
+            return $el.hide()
+        }
+        const held = this.playback.frame?.$frame.find("[sli-data-saved]").attr("sli-data-saved")
+        $el.show().text(held === "none" ? "🐢 ⤓ Alt+L" : "🐢")
+            .attr("title", held === "none"
+                ? "Data saver: this frame's media was not downloaded. Alt+L loads it. Click for the total saved."
+                : held === "thumb"
+                    ? "Data saver: showing the thumbnail instead of the full-size file. Alt+L loads it. Click for the total saved."
+                    : "Data saver is on. Click to see how much it saved.")
     }
 
     /**
