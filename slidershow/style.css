@@ -1663,6 +1663,7 @@ frame-preview {
             padding: 4px 6px;
             border-left: 3px solid var(--highlight);
             background-color: var(--bg-surface-dark, rgba(0, 0, 0, 0.06));
+            color: var(--bg-neutral);
             font-size: 85%;
             max-height: 30vh;
             overflow: auto;
