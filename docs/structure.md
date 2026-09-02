@@ -81,6 +81,35 @@ The name is mirrored to the document `<title>` (browser tab), shown in the splas
 <main sli-title="Dovolená 2019"> … </main>
 ```
 
+## Exporting
+
+<kbd>Ctrl+S</kbd> opens one dialog with a single **Export** button; everything above it says what
+kind of export it will be.
+
+**Media** – what happens to the photos and videos:
+
+* **Referenced where they are now** (default) – writes just the presentation file, a few
+  megabytes even for [ten thousand photos](organizing.md#large-collections). The **Media folder
+  path** field below it says where the exported file should look for them: leave it empty for
+  "right next to me", or give a path (relative to the export, or absolute) such as `media/` or
+  `../shared-photos/`. It is remembered as `sli-path` on `<main>`.
+    * **Media paths** – whether an already-referenced path is rewritten on the way out: kept as it
+      is, forced relative (strips this server's origin off, for hosting the export elsewhere with
+      the same layout), or forced absolute (resolved against this page's address, for a
+      presentation served from a dev server whose URL won't be the final one). Files dropped in
+      from disk carry their own bytes and are never touched by this.
+* **All inside one single file** – every photo/video embedded as a data URI. One self-contained
+  file, at the price of its size and a lot of memory while exporting.
+* **Copied into a media/ folder next to the file** (Chrome/Edge) – self-contained like the single
+  file, but the media stay real files, so the HTML stays small.
+* **Split into folders by tags** (Chrome/Edge) – an album export rather than a presentation one;
+  see [Exporting tags to album folders](organizing.md#exporting-tags-to-album-folders).
+
+**App's own code** – whether the exported file fetches SlideRshow from the CDN again (default),
+inlines it, or gets it copied into `slidershow/` + `vendor/` folders next to it (Chrome/Edge). The
+last two need to re-read this presentation's own files, which Chrome refuses under `file://` – host
+the presentation over http(s) to use them.
+
 ## Frame `<article>`
 
 Every frame is represented by an `<article>` tag.

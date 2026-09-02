@@ -2000,15 +2000,6 @@ article-map {
     }
 }
 
-/* Export dialog (export.js): a rule above a button (or the plain heading spliced in front of a button
-   group, see export_dialog()) – unrelated to whatever sits above it. */
-.ZebraDialog_Buttons .dialog-separator {
-    display: block;
-    margin-top: .6em;
-    padding-top: .6em;
-    border-top: 1px solid var(--border-default);
-}
-
 /* Export dialog (export.js): presentation-name field at the very top – the same identity as the
    splash field / grid ribbon (Playback.set_presentation_name()), surfaced here since it's what
    decides the export filename (see export_filename()). */
@@ -2022,54 +2013,55 @@ article-map {
     }
 }
 
-/* Export dialog (export.js): heading shared by "Export the tiny presentation…" (plain body text) and
-   "Export all to" (a real sibling `<div>` spliced in right before its button group, not one of the
-   buttons itself – see export_dialog()), so both sections read with the same weight/alignment. */
-.dialog-heading {
-    display: block;
+/* Export dialog (export.js): the four things that can happen to the media – the choice that used to be
+   five separate dialog buttons, now one radio group above a single "Export" button. */
+.media-target-radio {
     text-align: left;
-    font-weight: bold;
 }
 
-/* .ZebraDialog_Body sits 20px further right than .ZebraDialog_Buttons (10px extra margin-left + 10px
-   extra padding-left, both from the vendor theme) – pulled back so this heading lines up with "Export
-   all to" below it instead of sitting visibly further indented. It also sits noticeably lower than the
-   title bar above it: the vendor theme's own 20px padding-top on .ZebraDialog_Body was sized for a
-   "message" line to sit above the rest of the content, but this dialog has no such message any more (see
-   export_dialog()) – pulled up to close that now-empty gap. */
-.ZebraDialog_Body .dialog-heading {
-    margin-top: -14px;
-    margin-left: -20px;
+/* Export dialog (export.js): the settings belonging to one media-target radio – shown under it,
+   indented, so it is clear which choice they qualify (and not the last radio in the group). */
+.media-target-detail {
+    margin-left: 1.6em;
 }
 
-/* Inside .ZebraDialog_Buttons specifically, the spliced-in heading sits among the theme's own `<a>`
-   buttons instead of regular body text: needs an explicit width (a bare block would only be as wide as
-   its text) and the body's own text color (otherwise it inherits this app's white body text –
-   unreadable against the dialog's light background). */
-.ZebraDialog_Buttons .dialog-heading {
-    width: 100%;
-    color: rgb(68, 72, 74);
+/* Export dialog (export.js): where the exported file will look for its media. */
+.export-path-row {
+    margin: .2em 0 .5em 0;
+
+    .export-path {
+        width: 60%;
+        margin-left: .4em;
+        padding: 3px 6px;
+    }
 }
 
-/* Export dialog (export.js): "App's own code" is spliced in as the tail end of the "Same/Another
-   folder" section (see export_dialog()) – just a bit of breathing room above it, no rule/heading of its
-   own (that would make it read as a separate section, which it isn't). Text color fixed the same way as
-   `.dialog-heading`: being a sibling of the `<a>` buttons inside `.ZebraDialog_Buttons` rather than
-   regular `.ZebraDialog_Body` text, it doesn't inherit the vendor theme's own color and would otherwise
-   render as this app's white body text – unreadable against the dialog's light background. */
+/* Export dialog (export.js): "App's own code" applies to every media target except "folders by tags"
+   (which writes no presentation file at all). Just breathing room above it – no rule/heading of its own,
+   which would make it read as a separate section. */
 .app-code-footer {
     margin-top: .8em;
     text-align: left;
-    color: rgb(68, 72, 74);
 }
 
-/* Export dialog (export.js): "Media paths" is narrower in scope (Same/Another folder only) than
-   "App's own code" below it (every button) – indented with a left guide line, like a nested outline
-   level, and placed right above the two buttons it actually governs. */
+/* Export dialog (export.js): "Media paths" is narrower in scope ("Referenced where they are now" only)
+   than "App's own code" below it – indented with a left guide line, like a nested outline level. */
 .media-paths-radio {
-    margin: .4em 0 .6em 1em;
+    text-align: left;
+    margin: .4em 0 .6em 0;
     padding-left: .8em;
     border-left: 3px solid var(--border-default);
+}
+
+/* Export dialog (export.js): a group the current Media choice doesn't reach. Left visible (so it stays
+   obvious the setting exists and what it would do) but plainly inert – its inputs are disabled too. */
+.inapplicable {
+    opacity: .45;
+}
+
+.export-handler-row {
+    margin-top: .8em;
+    text-align: left;
 }
 
 .tag-summary {

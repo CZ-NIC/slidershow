@@ -14,25 +14,37 @@ class Export {
         /** @type {"cdn"|"inline"|"folder"} How the app's own code (vendor libs + local slidershow/*.js +
          * style.css) is attached to the exported file: fetched from the CDN again on next open ("cdn",
          * the default), inlined verbatim into the exported HTML itself ("inline"), or copied as separate
-         * files into vendor/+slidershow/ folders next to it ("folder"). Applies to four of the five
-         * export buttons ("Same folder" / "Another folder" / "Export all to" a single file/a folder –
-         * not "folders by tags") – independent of how those buttons handle the media itself. */
+         * files into vendor/+slidershow/ folders next to it ("folder"). Applies to every media target
+         * except "Split into folders by tags" (which writes no presentation file at all) – independent
+         * of what happens to the media itself. */
         this.app_code = "cdn"
 
         /** @type {"asis"|"absolute"|"relative"} How a media path already referenced by `sli-src` (not
          * embedded raw bytes) is rewritten before export: left exactly as-is (the default), forced into
          * an absolute https URL against this page's own address, or forced into one relative to it.
-         * Only meaningful for "Same folder"/"Another folder" – "Export all to" a single file/a folder
-         * copy the actual bytes instead, so no path is left to rewrite. */
+         * Only meaningful for "Referenced where they are now" – the other media targets copy the actual
+         * bytes instead, so no path is left to rewrite. */
         this.media_paths = "asis"
+
+        /** @type {"reference"|"single"|"folder"|"tags"} What happens to the media itself – the choice
+         * that used to be spread over five separate dialog buttons: left referenced wherever they are
+         * ("reference", the default; a tiny exported file), carried inside the one exported file
+         * ("single"), copied as real files into a `media/` folder next to it ("folder"), or split into
+         * one folder per tag ("tags"). */
+        this.media_target = "reference"
+
+        /** @type {string} "reference" only: where the exported presentation will look for the media,
+         * i.e. what used to be the "Another folder" prompt. Empty = the same folder as the export.
+         * Persisted on `<main sli-path>`. */
+        this.media_path = ""
     }
 
     /**
-     * Only applies to "Same folder"/"Another folder"/"Export all to" a single file – those three write
-     * one file via a normal browser download (Downloads folder, `(1)`/`(2)` suffix on repeat exports)
-     * unless this is checked, which asks – via `assure_handler()`, on the *next* export click – where to
-     * save that one file once, then keeps overwriting it on every export after, with no further prompts.
-     * The two folder buttons below always use a directory picker instead and are unaffected either way.
+     * Only applies to the media targets that write one file ("Referenced where they are now" and "All
+     * inside one single file") – those download it normally (Downloads folder, `(1)`/`(2)` suffix on
+     * repeat exports) unless this is checked, which asks – via `assure_handler()`, on the *next* export –
+     * where to save it once, then keeps overwriting that exact file, with no further prompts. The two
+     * folder targets always use a directory picker instead and are unaffected either way.
      */
     file_handler_checkbox() {
         if (!this.file_handler_allowed) {
@@ -40,8 +52,9 @@ class Export {
         }
         return $("<label />", {
             "text": "Save to a file you pick, then keep overwriting it?",
-            "title": "Applies to \"Same folder\"/\"Another folder\"/\"Export all to\" a single file only (the "
-                + "two folder buttons below always ask for a folder anyway). Instead of a normal browser download "
+            "title": "Applies to the media targets that write one file – \"Referenced where they are now\" "
+                + "and \"All inside one single file\" (the two folder targets always ask for a folder anyway). "
+                + "Instead of a normal browser download "
                 + "(Downloads folder, `(1)`/`(2)` suffix on repeat exports), asks where to save on the next "
                 + "export click, then reuses that exact file for every export after – no further prompts."
         })
@@ -54,13 +67,11 @@ class Export {
     }
 
     /**
-     * Radio group applying to four buttons – "Same folder"/"Another folder" above it and "Export all
-     * to" a single file/a folder below it (everything except "folders by tags"): picks how the app's own
-     * code (vendor libs + local slidershow/*.js + style.css) is attached to the exported file,
-     * independent of how those buttons handle the media itself. Three mutually exclusive options only –
-     * "cdn" (default), "inline", "folder" – so a radio group, not a checkbox. Spliced in as its own
-     * section *between* the two button groups it applies to (see `export_dialog()`), since it's the
-     * setting people change least – it doesn't need to be the first thing seen by either group.
+     * Picks how the app's own code (vendor libs + local slidershow/*.js + style.css) is attached to the
+     * exported file, independent of what happens to the media. Applies to every media target except
+     * "Split into folders by tags". Three mutually exclusive options only – "cdn" (default), "inline",
+     * "folder" – so a radio group, not a checkbox. Kept near the bottom of the dialog: it's the setting
+     * people change least (the CDN default is almost always right).
      */
     app_code_radio() {
         const file_blocked = this._is_file_protocol()
@@ -87,11 +98,10 @@ class Export {
     }
 
     /**
-     * Radio group applying only to "Same folder"/"Another folder" (path-reference exports) – picks
-     * whether an already-referenced media path is rewritten before export. "Export all to" a single
-     * file/a folder copy the actual bytes instead, so this doesn't apply to them. Indented (style.css) –
-     * narrower scope than "App's own code" below it, and placed right above the two buttons it actually
-     * governs, instead of sitting at the same level as the broader radio.
+     * Applies only to "Referenced where they are now" – picks whether an already-referenced media path is
+     * rewritten before export. The other media targets copy the actual bytes instead, so this doesn't
+     * reach them (`export_dialog()` greys it out then). Indented (style.css): narrower in scope than
+     * "App's own code" below it.
      */
     media_paths_radio() {
         const file_protocol = this._is_file_protocol()
@@ -102,7 +112,7 @@ class Export {
             : counts.absolute ? ` (${counts.absolute} absolute → relative)` : " (all already relative)"
         const absolute_hint = counts.total === 0 ? ""
             : counts.relative ? ` (${counts.relative} relative → absolute)` : " (all already absolute)"
-        const scope = "Same/Another folder only"
+        const scope = "referenced media only"
             + (counts.dragdropped ? `; ${counts.dragdropped} drag-and-dropped file(s) unaffected` : ", not drag-and-dropped files")
         return this._radio_group("media-paths", `Media paths (${scope}):`, "media_paths", [
             { value: "asis", label: "Keep as-is (default)",
@@ -129,10 +139,12 @@ class Export {
      * @param {string} name radio `name` attribute, groups the inputs so only one can be checked
      * @param {string} legend heading shown above the group
      * @param {string} prop property on `this` read for the initial checked value and written on click
-     * @param {{value: string, label: string, title: string, blocked?: boolean}[]} options
+     * @param {{value: string, label: string, title: string, blocked?: boolean, extra?: JQuery}[]} options
      * @param {string} css_class extra class on the wrapping `<div>`, for scope-specific styling (style.css)
+     * @param {?Function} onChange Called after a radio is picked – lets a group enable/disable the
+     *  other groups its choice governs (see `export_dialog()`).
      */
-    _radio_group(name, legend, prop, options, css_class = "") {
+    _radio_group(name, legend, prop, options, css_class = "", onChange = null) {
         const $group = $("<div/>", { class: css_class }).append($("<strong/>", { text: legend }), "<br>")
         for (const opt of options) {
             $group.append(
@@ -140,12 +152,91 @@ class Export {
                     $("<input/>", {
                         "type": "radio", "name": name, "value": opt.value,
                         "checked": this[prop] === opt.value, "disabled": opt.blocked,
-                    }).on("click", () => { this[prop] = opt.value })
+                    }).on("click", () => { this[prop] = opt.value; onChange?.() })
                 ),
+                opt.extra ?? "",
                 "<br>"
             )
         }
         return $group
+    }
+
+    /**
+     * The former five export buttons, as the one thing they actually differed in: what happens to the
+     * media. A single "Export" button then runs whichever is picked (`_export_selected()`), so the
+     * dialog reads as "here are the settings, now export" instead of "pick one of five buttons, each
+     * silently governed by a different subset of the radios above it".
+     */
+    media_target_radio(onChange) {
+        const dir_supported = Boolean(window.showDirectoryPicker)
+        const chrome_only = dir_supported ? "" : " (Chrome only)"
+        return this._radio_group("media-target", "Media:", "media_target", [
+            {
+                value: "reference", label: "Referenced where they are now (default)",
+                title: "Writes just the tiny presentation file; every photo/video stays where it already "
+                    + "lives and is only linked to. Say below where the exported file should look for them.",
+                // Both sub-settings that apply to this option only, nested under it rather than left
+                // floating below the last radio (where they read as belonging to "folders by tags").
+                extra: $("<div/>", { class: "media-target-detail" })
+                    .append(this._media_path_field(), this.media_paths_radio()),
+            },
+            {
+                value: "single", label: "All inside one single file (huge RAM demand)",
+                title: "Embeds every photo/video into the exported HTML itself as a data URI – one "
+                    + "self-contained file that needs nothing else, at the cost of a big file and a lot of "
+                    + "memory while exporting.",
+            },
+            {
+                value: "folder", label: "Copied into a media/ folder next to the file" + chrome_only,
+                title: "Writes the presentation plus a media/ folder holding real copies of every "
+                    + "photo/video – self-contained like a single file, but without the huge HTML."
+                    + (dir_supported ? "" : " Only available in Chrome/Edge."),
+                blocked: !dir_supported,
+            },
+            {
+                value: "tags", label: "Split into folders by tags" + chrome_only,
+                title: "One folder per tag, each with the media tagged that way – an album export rather "
+                    + "than a presentation export. Opens its own dialog."
+                    + (dir_supported ? "" : " Only available in Chrome/Edge."),
+                blocked: !dir_supported,
+            },
+        ], "media-target-radio", onChange)
+    }
+
+    /**
+     * "Referenced where they are now" only: where the exported file will look for the media – what used
+     * to be a second prompt dialog behind the "Another folder" button. Empty means the export's own
+     * folder, which is what "Same folder" did, so the two buttons collapse into this one field.
+     */
+    _media_path_field() {
+        this.media_path = $main.attr("sli-path") || String($("[name=path]", "#defaults").val() || "")
+        const $input = $("<input/>", {
+            type: "text", value: this.media_path, placeholder: "./ (the same folder as the exported file)",
+            class: "export-path", name: "export-path",
+            title: "A path (relative to the exported file, or absolute) where the presentation will find "
+                + "its media folder. Leave empty to look right next to the exported file. Stored as "
+                + "<main sli-path>.",
+        }).on("input", () => { this.media_path = String($input.val()) })
+        return $("<div/>", { class: "export-path-row" })
+            .append($("<label/>", { text: "Media folder path: " }).append($input))
+    }
+
+    /** Runs the export the way `this.media_target` says. */
+    _export_selected() {
+        switch (this.media_target) {
+            case "single":
+                return this._run_export(true, "")
+            case "folder":
+                return this.export_media_folder()
+            case "tags":
+                return this.export_tags_dialog()
+            default: {
+                const path = this.media_path.trim()
+                // Remembered on <main> so the next export (and the exported file itself) starts from it.
+                path ? $main.attr("sli-path", path) : $main.removeAttr("sli-path")
+                return this._run_export(false, path)
+            }
+        }
     }
 
     /**
@@ -190,59 +281,47 @@ class Export {
     }
 
     export_dialog() {
+        // Every group below governs only some of the media targets; refresh() greys out the ones the
+        // current choice doesn't apply to, so the dialog says what it does instead of the user having to
+        // remember which of five buttons each radio used to reach.
+        const refresh = () => {
+            const referenced = this.media_target === "reference"
+            $(".export-path", $body).prop("disabled", !referenced)
+            $(".media-paths-radio", $body).toggleClass("inapplicable", !referenced)
+                .find("input").prop("disabled", !referenced)
+            // "Split into folders by tags" exports media only – there is no presentation file to attach
+            // the app's own code to.
+            const app_code_used = this.media_target !== "tags"
+            $(".app-code-footer", $body).toggleClass("inapplicable", !app_code_used)
+                .find("input").each((_, el) => {
+                    $(el).prop("disabled", !app_code_used || $(el).data("blocked"))
+                })
+        }
+
+        const $body = $("<div/>").append(
+            this.presentation_name_field(),
+            this.media_target_radio(refresh),
+            $("<div/>", { class: "app-code-footer" }).append(this.app_code_radio(), this._file_protocol_warning()),
+            $("<div/>", { class: "export-handler-row" }).append(this.file_handler_checkbox()),
+        )
+        // Remember which radios are unavailable for their own reasons (file://, no Chrome), so refresh()
+        // can re-enable only the ones it actually disabled.
+        $body.find("input:disabled").data("blocked", true)
+        refresh()
+
         const dialog = new $.Zebra_Dialog({
             type: false, // no icon – it reserves left padding this already-busy dialog can't spare
             width: 720, // wider than the 450px default – this dialog has grown too tall to also be narrow
-            source: {
-                inline: $("<div/>").append(
-                    this.presentation_name_field(),
-                    $("<div/>", { class: "dialog-heading", text: "Export the tiny presentation file to the media folder:" }),
-                    "<br>",
-                    this.file_handler_checkbox(), this.media_paths_radio()
-                )
-            },
+            source: { inline: $body },
             title: "Export",
-            buttons: [{
-                caption: "Same folder", callback: () => this._run_export(false, "")
-            }, {
-                caption: "Another folder", callback: () =>
-                    new $.Zebra_Dialog("Where will the presentation find the media folder?", {
-                        title: "The path to the media folder",
-                        default_value: $main.attr("sli-path") || $("[name=path]", "#defaults").val() || "./",
-                        type: "prompt",
-                        buttons: ["Cancel", {
-                            caption: "Ok",
-                            default_confirmation: true,
-                            callback: (_, path) => $main.attr("sli-path", path) && this._run_export(false, path)
-                        }]
-                    })
-            }, {
-                // Marked only so the "Export all to"/"App's own code" content can be spliced in right
-                // before it (see below) – every button from here on actually carries the media itself,
-                // not just a path to it, unlike the two above.
-                custom_class: "export-media-group",
-                caption: "a single file (huge RAM demand)", callback: () => this._run_export(true, "")
-            }, {
-                caption: "a folder" + (!window.showDirectoryPicker ? " (Chrome only)" : ""),
-                callback: () => this.export_media_folder()
-            }, {
-                caption: "folders by tags", callback: () => this.export_tags_dialog()
+            buttons: ["Cancel", {
+                caption: "Export",
+                default_confirmation: true,
+                callback: () => this._export_selected()
             }]
         })
-        // Zebra_Dialog's buttons are all clickable – there's no plain heading row to give this button
-        // group its own label, so a real (non-clickable) one is spliced in right before it instead of
-        // folding "Export all to" into the first button's own caption. "App's own code" is tucked in
-        // right before that, as a tail-end of the "Same/Another folder" section (no rule/heading of its
-        // own) – it's the setting people change least (CDN is fine almost always), so it doesn't need to
-        // sit above the buttons, but it still applies to "Export all to"'s first two buttons as well.
-        dialog.dialog.find("a.export-media-group")
-            .removeClass("export-media-group")
-            .before($("<div/>", { class: "app-code-footer" })
-                .append(this.app_code_radio(), this._file_protocol_warning()))
-            .before($("<div/>", { class: "dialog-separator dialog-heading", text: "Export all to:" }))
-        // Zebra_Dialog centers the dialog vertically once, from its height at construction time – all
-        // the splicing above happens after that and makes it taller, so without this it renders too low
-        // and runs off the bottom edge instead of staying centered.
+        // Zebra_Dialog centers the dialog vertically from its height at construction time; this body is
+        // tall enough that a mis-measure would run it off the bottom edge, so pin it explicitly.
         dialog.dialog.css("top", `${Math.max(20, (window.innerHeight - dialog.dialog[0].offsetHeight) / 2)}px`)
     }
 
@@ -267,7 +346,7 @@ class Export {
         await Frame.finalize_frames($contents, this.playback.$articles, compact_file, path, this.menu.display_progress(this.playback.$articles.length))
         let inlineStats = null
         if (compact_file) {
-            // "Export all to a single file": drag-dropped media already carry their bytes by now, but
+            // "All inside one single file": drag-dropped media already carry their bytes by now, but
             // server-hosted media referenced by a path still don't – fetch and inline those too.
             inlineStats = await this._inline_referenced_media($contents)
         } else {
@@ -311,7 +390,7 @@ class Export {
      */
 
     /**
-     * "Export all to a single file" only: fetch every photo/video still referenced by a path (server-
+     * "All inside one single file" only: fetch every photo/video still referenced by a path (server-
      * hosted media that carries no in-memory bytes) and inline it as a data URI, so the one exported file
      * is genuinely self-contained. Drag-dropped media already carry their bytes by now (`EXPORT_SRC_BYTES`,
      * set by `Frame.finalize_frames`) and are skipped. Media that can't be fetched – a relative path on a
@@ -447,7 +526,7 @@ class Export {
      *
      * Frames still only in memory (drag-dropped, not yet backed by any real URL – `READ_SRC`) are
      * skipped entirely: their `sli-src` is just a filename label `Frame.finalize_frames()` prefixes
-     * with "Another folder"'s `path`, not a real address – resolving that against *this* page (whatever
+     * with the media-folder `path`, not a real address – resolving that against *this* page (whatever
      * `path` turns out to mean once the export actually lands somewhere) would be a coin flip at best.
      * @param {JQuery} $contents
      * @param {"asis"|"absolute"|"relative"} mode
@@ -664,7 +743,7 @@ class Export {
     }
 
     /**
-     * @param {boolean} compact_file same meaning as in `export()` – "Export all to" a single file vs. the media
+     * @param {boolean} compact_file same meaning as in `export()` – everything in one file vs. the media
      *  staying referenced by path
      * @param {string} path same meaning as in `export()` – where the presentation will find the media folder
      */
@@ -763,10 +842,10 @@ class Export {
     }
 
     /**
-     * Chrome-only: like "Export all to" a single file, except every photo/video is written as a real file into
-     * a `media/` folder next to the exported HTML instead of embedded as a data URI – keeps the HTML
-     * itself small while still making the whole export self-contained (unlike "Same folder"/"Another
-     * folder", which only ever reference wherever the media already lives). Frames not currently
+     * Chrome-only: like "All inside one single file", except every photo/video is written as a real file
+     * into a `media/` folder next to the exported HTML instead of embedded as a data URI – keeps the HTML
+     * itself small while still making the whole export self-contained (unlike "Referenced where they are
+     * now", which only ever references wherever the media already lives). Frames not currently
      * reachable (no in-memory File, not fetchable over http) fall back to the same "pick a source
      * folder" prompt as "Export tags to folders…"; any that still can't be found are reported, and
      * their `sli-src` is left untouched. Respects `this.app_code` exactly like the other export
@@ -774,7 +853,7 @@ class Export {
      */
     async export_media_folder() {
         if (!window.showDirectoryPicker) {
-            this.playback.hud.ok("Media export", "Writing a local folder works only in Chrome/Edge.<br>Use \"Export all to\" a single file instead.")
+            this.playback.hud.ok("Media export", "Writing a local folder works only in Chrome/Edge.<br>Pick \"All inside one single file\" instead.")
             return
         }
         if (this.app_code === "folder" && this._is_file_protocol()) {
