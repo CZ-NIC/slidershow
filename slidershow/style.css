@@ -86,18 +86,6 @@ main {
     position: relative;
     /* zoom:0.05 */
 
-    [sli-thumb-shown] {
-        /* sli-thumb preview is shown while the full-quality file downloads in the background */
-        filter: blur(12px);
-        transition: filter .3s;
-    }
-
-    /* Data saver (data_saver.js): the thumbnail is not a stand-in here, it IS the picture – no blur,
-       which would only make a deliberately cheap image look broken. */
-    [sli-data-saved="thumb"] {
-        filter: none;
-    }
-
     /* Nothing was downloaded for this one at all – give the empty element a visible, obviously-placeholder
        shape instead of collapsing the frame to nothing (Alt+L loads it; see #hud-data-saver). */
     [sli-data-saved="none"] {
