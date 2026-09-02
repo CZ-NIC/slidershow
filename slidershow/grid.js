@@ -1288,6 +1288,10 @@ class GridController {
         const pos = this._currentPos()
         if (pos === -1) return null
 
+        // A horizontal step lands on whatever column it lands on – forget any column Up/Down was
+        // aiming for, so the next vertical move starts fresh from here instead of snapping back to it.
+        this.preferredCol = null
+
         for (let i = pos + direction; i >= 0 && i < this.$framesSections.length; i += direction) {
             const el = this.$framesSections[i]
             if (this._isHidden(el)) continue
