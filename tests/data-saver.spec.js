@@ -6,7 +6,10 @@ const THUMBS = "file://" + path.resolve(__dirname, "fixtures/data-saver.html")
 /** Start playback, then turn the mode on by hand (no real metered connection to lean on). */
 async function start(page, hash = "#1?start") {
     await page.goto(THUMBS + hash)
-    await expect.poll(() => page.evaluate(() => typeof playback !== "undefined" && playback.frame?.index !== undefined)).toBe(true)
+    // Not just "a frame exists" – before Playback.start() runs, playback.frame is still the dummy
+    // pre-boot Frame and the Switches hotkeys are off, so an Alt+B pressed here would go nowhere.
+    await expect.poll(() => page.evaluate(() =>
+        typeof playback !== "undefined" && playback.operation?.switches?.some(h => h.enabled))).toBe(true)
 }
 
 const src = (page, selector) => page.evaluate(s => $(s).attr("src") || null, selector)

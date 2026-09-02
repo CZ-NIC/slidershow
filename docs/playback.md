@@ -20,8 +20,11 @@ whole album then costs a few megabytes instead of tens of gigabytes. Where there
 nothing is loaded at all and the frame shows a dashed placeholder until you ask for it with
 <kbd>Alt+L</kbd>, which downloads that one frame in full and leaves the mode on.
 
-It switches itself on when the browser reports a metered connection or the user's own "Save data"
-preference (`navigator.connection.saveData`, Chromium only). Toggling it by hand – or presetting it
+In the mode the read-ahead also shrinks – 5 frames forward and 2 back instead of 50/20 – because even
+thumbnails are fifty requests on a link you have just asked to go easy on.
+
+It switches itself on when the browser reports a metered connection, the user's own "Save data"
+preference, or a 2G-class link (`navigator.connection`, Chromium only). Toggling it by hand – or presetting it
 with `save-data` in the [URL hash](#url-hash-presets) – wins from then on, so a mode you turned off
 does not switch itself back on.
 

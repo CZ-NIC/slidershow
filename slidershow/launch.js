@@ -91,6 +91,10 @@ var PREFER_SRC_EXPORT = false
 var PRELOAD_FORWARD = 50
 /** How many frames should be preloaded for the case the user goes back in the playback. */
 var PRELOAD_BACKWARD = 20
+/** The same two, in data-saver mode (data_saver.js) – only thumbnails are fetched there, but a metered
+    link is exactly where a fifty-request read-ahead is unwelcome. */
+var PRELOAD_FORWARD_SAVING = 5
+var PRELOAD_BACKWARD_SAVING = 2
 /** Max concurrent full-quality media downloads (the expensive ones). They are the flood risk on a real server,
     so they are throttled and served in order of distance from the current frame. */
 var ORIGINAL_CONCURRENCY = 4

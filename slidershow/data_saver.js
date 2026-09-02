@@ -34,7 +34,10 @@ class DataSaver {
      * `navigator.connection` is Chromium-only; elsewhere there is simply nothing to go on.
      */
     static get metered() {
-        return Boolean(navigator.connection?.saveData)
+        const c = navigator.connection
+        // saveData is the user's own "Save data" preference; a 2G-class link is worth treating the same
+        // way even without it – a full-size photo there is a minute of waiting, not a cost concern.
+        return Boolean(c?.saveData || ["slow-2g", "2g"].includes(c?.effectiveType))
     }
 
     /**
@@ -63,8 +66,13 @@ class DataSaver {
         }
         this.active = on
         const hud = this.playback.hud
+        // Worth saying upfront: with no sli-thumb anywhere, the mode has nothing to substitute and every
+        // single frame will need an explicit Alt+L – useful, but a very different experience.
+        const no_thumbs = on && !this.playback.$articles.find("[sli-thumb]").length && !$main.attr("sli-thumb")
         hud.info(`${why ? why + " – d" : "D"}ata saver ${on ? "enabled" : "disabled"}. ${on
-            ? "Photos are shown from their thumbnails, or left unloaded where there is none (Alt+L loads the current frame)."
+            ? (no_thumbs
+                ? "This presentation has no sli-thumb thumbnails, so nothing can stand in – each frame stays empty until Alt+L loads it."
+                : "Photos are shown from their thumbnails, or left unloaded where there is none (Alt+L loads the current frame).")
             : "Photos are downloaded in full again."}`)
         // Frames already loaded keep whatever they hold; the ones around the cursor are re-preloaded so
         // the change is visible right away rather than only once the cursor reaches fresh frames.

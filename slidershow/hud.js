@@ -1031,6 +1031,15 @@ class Hud {
         }
         this.refresh_points_badge()
         this.refresh_data_saver()
+        // Whether *this* frame is standing in for something is only settled once its media has been
+        // (not) loaded, which happens after this refresh – come back then, unless we moved on since.
+        if (this.playback.dataSaver?.active) {
+            frame.loaded?.then(() => {
+                if (this.playback.frame === frame) {
+                    this.refresh_data_saver()
+                }
+            })
+        }
     }
 
     /**
