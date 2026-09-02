@@ -1185,11 +1185,15 @@ class Hud {
         console.warn(text)
         this._pushHistory(text)
         if (!soft) {
+            // Top-left, stacked below whatever toasts are still showing – the top-right corner belongs
+            // to the Escape menu / properties panel, which a toast there used to cover.
+            const top = 20 + $(".hud-info-toast").toArray().reduce((sum, el) => sum + $(el).outerHeight(true), 0)
             new $.Zebra_Dialog(text, {
                 auto_close: Math.max(2000, 40 * text.length),
                 buttons: false,
                 modal: false,
-                position: ["right - " + (this.properties_visible ? Math.round(this.$hud_properties.width()) + 10 + 20 : 20), "top + 20"]
+                custom_class: "hud-info-toast",
+                position: ["left + 20", "top + " + top]
             })
         }
     }
