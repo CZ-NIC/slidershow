@@ -916,9 +916,8 @@ class Playback {
             // Preload future frames and unload those preloaded frames which are far away.
             // The data saver only ever loads cheap thumbnails, but fifty of them ahead is still fifty
             // requests on a link the user just told us to go easy on – keep the window tight there.
-            const [back, forward] = this.dataSaver.active
-                ? [PRELOAD_BACKWARD_SAVING, PRELOAD_FORWARD_SAVING]
-                : [PRELOAD_BACKWARD, PRELOAD_FORWARD]
+            // A very large presentation gets the same treatment even off data-saver – see preloadWindow().
+            const [back, forward] = this.preloadWindow()
             const nearby = Frame.frames(this.$articles.slice(Math.max(0, index - back), index + forward))
             this.process_bg_tasks([
                 () => new Promise(resolve => setTimeout(resolve, 100)), // since preblink is a costly operation, wait a moment. User might be holding forward arrow (100 photos / 7 secs, do not slow it down).
@@ -927,6 +926,21 @@ class Playback {
                 ...[...this.preloaded].map(f => nearby.includes(f) ? null : () => f.unload()).filter(Boolean),
             ])
         })
+    }
+
+    /**
+     * How many frames to preload backward/forward from the cursor, right now. Data-saver mode wins over
+     * the large-presentation scale-down when both apply (its window is already the tighter of the two).
+     * @returns {[number, number]} `[back, forward]`
+     */
+    preloadWindow() {
+        if (this.dataSaver.active) {
+            return [PRELOAD_BACKWARD_SAVING, PRELOAD_FORWARD_SAVING]
+        }
+        if (this.$articles.length > PRELOAD_LARGE_THRESHOLD) {
+            return [PRELOAD_BACKWARD_LARGE, PRELOAD_FORWARD_LARGE]
+        }
+        return [PRELOAD_BACKWARD, PRELOAD_FORWARD]
     }
 
     /**

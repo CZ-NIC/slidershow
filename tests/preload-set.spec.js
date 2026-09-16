@@ -61,3 +61,24 @@ test("duplicating a frame and navigating around it doesn't crash the preload/unl
 
     expect(await setSize()).toBe(await attrPreloadedCount())
 })
+
+test("preloadWindow() scales down once the presentation grows past PRELOAD_LARGE_THRESHOLD", async ({ page }) => {
+    // Faking $articles.length is cheaper than building a fixture with hundreds of real frames.
+    const windowFor = (length) => page.evaluate((length) => {
+        const original = playback.$articles
+        Object.defineProperty(playback, "$articles", { value: { length }, configurable: true })
+        try {
+            return playback.preloadWindow()
+        } finally {
+            Object.defineProperty(playback, "$articles", { value: original, configurable: true })
+        }
+    }, length)
+    const constants = await page.evaluate(() => ({
+        back: PRELOAD_BACKWARD, forward: PRELOAD_FORWARD,
+        backLarge: PRELOAD_BACKWARD_LARGE, forwardLarge: PRELOAD_FORWARD_LARGE,
+        threshold: PRELOAD_LARGE_THRESHOLD,
+    }))
+
+    expect(await windowFor(constants.threshold)).toEqual([constants.back, constants.forward])
+    expect(await windowFor(constants.threshold + 1)).toEqual([constants.backLarge, constants.forwardLarge])
+})

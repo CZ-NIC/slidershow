@@ -304,7 +304,8 @@ class Menu {
         // leaving a newly appended frame blank until the user revisits it.
         // Only the preload window though – anything further would be unloaded by the very next goToFrame
         // anyway, while a bulk import (thousands of files) would meanwhile exhaust the memory.
-        $frames.slice(0, PRELOAD_FORWARD).forEach($frame => $frame.data("frame")?.preload())
+        const [, forward] = this.playback.preloadWindow()
+        $frames.slice(0, forward).forEach($frame => $frame.data("frame")?.preload())
         this.start_playback()
         if (criterion && criterion !== "folder") { // a folder never changes once EXIF lands
             this._regroup_when_settled(criterion, $frames, settled) // deliberately not awaited

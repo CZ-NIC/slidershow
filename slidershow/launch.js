@@ -95,6 +95,12 @@ var PRELOAD_BACKWARD = 20
     link is exactly where a fifty-request read-ahead is unwelcome. */
 var PRELOAD_FORWARD_SAVING = 5
 var PRELOAD_BACKWARD_SAVING = 2
+/** The same two again, once the presentation has grown past `PRELOAD_LARGE_THRESHOLD` frames – the default
+    50/20 window means 71 concurrently held media (mobile photos run a few MB apiece), which is still a lot
+    even once unload() properly frees `src` (see the "Aw snap" fix in the CHANGELOG). */
+var PRELOAD_FORWARD_LARGE = 10
+var PRELOAD_BACKWARD_LARGE = 5
+var PRELOAD_LARGE_THRESHOLD = 500
 /** Max concurrent full-quality media downloads (the expensive ones). They are the flood risk on a real server,
     so they are throttled and served in order of distance from the current frame. */
 var ORIGINAL_CONCURRENCY = 4
