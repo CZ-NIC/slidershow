@@ -4,9 +4,7 @@ const fs = require("fs")
 
 const FIXTURE = "file://" + path.resolve(__dirname, "fixtures/basic.html")
 const TAGS_FIXTURE = "file://" + path.resolve(__dirname, "fixtures/tags.html")
-// Gitignored. Default app-code is "cdn", so the exported file's bootstrap <script src> is rewritten
-// to the public CDN regardless of where this fixture itself loaded slidershow.js from (see
-// Export._point_app_code_at_cdn) - reopening it needs network, same as every other CDN-loaded page.
+// Gitignored.
 const EXPORTED = path.resolve(__dirname, "fixtures/exported.tmp.html")
 
 test.afterAll(() => fs.rmSync(EXPORTED, { force: true }))
@@ -20,14 +18,15 @@ test("export round-trips: the exported file boots and keeps frames + data attrib
         page.waitForEvent("download"),
         page.evaluate(() => {
             menu.export.file_handler_wanted = false // force the <a download> path instead of showSaveFilePicker
+            menu.export.app_code = "cdn" // this fixture is file://, so the default would be "asis" instead (see below)
             menu.export.export()
         }),
     ])
     await download.saveAs(EXPORTED)
 
     // The fixture itself loads slidershow.js from a local relative path (see FIXTURE above) - "cdn"
-    // app-code (the default) must still rewrite the exported copy to the public CDN, not keep that
-    // dev-only relative path (which would 404 once the file is opened anywhere else).
+    // app-code must still rewrite the exported copy to the public CDN, not keep that dev-only relative
+    // path (which would 404 once the file is opened anywhere else).
     expect(fs.readFileSync(EXPORTED, "utf8")).toContain(
         '<script src="https://cdn.jsdelivr.net/gh/CZ-NIC/slidershow@latest/slidershow/slidershow.js">'
     )
@@ -387,6 +386,47 @@ test("\"cdn\" app-code leaves an existing jsdelivr src alone, whatever tag it pi
     ])
     const html = fs.readFileSync(await download.path(), "utf8")
     expect(html).toContain(`src="${PINNED}"`)
+})
+
+test("app-code defaults to \"asis\" on what looks like the developer's own machine (file://)", async ({ page }) => {
+    // Regression: exporting from presenter.html (file://, non-jsdelivr src per CLAUDE.md's dev workflow)
+    // used to force-rewrite the bootstrap tag to the CDN by default, silently discarding that the
+    // developer is pinned to a local copy. FIXTURE is itself file://, so this is the real default here,
+    // not a simulation.
+    await page.goto(FIXTURE)
+    await page.locator("#start").click()
+    await expect.poll(() => page.url()).toContain("#1")
+
+    const defaultAppCode = await page.evaluate(() => menu.export._default_app_code())
+    expect(defaultAppCode).toBe("asis")
+})
+
+test("app-code still defaults to \"cdn\" off the developer's machine (self-hosted embed)", async ({ page }) => {
+    // A self-hosted embed (ex. a WordPress plugin vendoring its own copy at a relative path) looks
+    // identical to the dev case above - non-jsdelivr src - except it isn't running on file:// or
+    // localhost. That's still the scenario _point_app_code_at_cdn's force-rewrite exists to protect,
+    // so the default there must stay "cdn".
+    await page.goto(FIXTURE)
+    await page.locator("#start").click()
+    await expect.poll(() => page.url()).toContain("#1")
+
+    const defaultAppCode = await page.evaluate(() => {
+        menu.export._is_file_protocol = () => false // simulate a real http(s) origin, not file://
+        return menu.export._default_app_code() // location.hostname is "" on this file:// page - not "localhost" either
+    })
+    expect(defaultAppCode).toBe("cdn")
+})
+
+test("app-code defaults to \"cdn\" when already on jsdelivr, dev machine or not", async ({ page }) => {
+    await page.goto(FIXTURE)
+    await page.locator("#start").click()
+    await expect.poll(() => page.url()).toContain("#1")
+
+    const defaultAppCode = await page.evaluate(pinned => {
+        document.querySelector("script[src$='slidershow.js']").src = pinned
+        return menu.export._default_app_code() // still file:// / dev, but now on jsdelivr already
+    }, "https://cdn.jsdelivr.net/gh/CZ-NIC/slidershow@dev-7/slidershow/slidershow.js")
+    expect(defaultAppCode).toBe("cdn")
 })
 
 test("the export copy is built in an inert document, so the HUD's thumbnails are not re-fetched", async ({ page }) => {

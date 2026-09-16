@@ -11,14 +11,15 @@ class Export {
         this.file_handler_wanted = this.file_handler_allowed
         this.file_handler = null
 
-        /** @type {"cdn"|"inline"|"folder"|"local"} How the app's own code (vendor libs + local
+        /** @type {"cdn"|"inline"|"folder"|"local"|"asis"} How the app's own code (vendor libs + local
          * slidershow/*.js + style.css) is attached to the exported file: fetched from the CDN again on
-         * next open ("cdn", the default), inlined verbatim into the exported HTML itself ("inline"),
-         * copied as separate files into vendor/+slidershow/ folders next to it ("folder"), or simply
-         * pointed at a folder that already holds such a copy ("local"). Applies to every media target
-         * except "Split into folders by tags" (which writes no presentation file at all) – independent
-         * of what happens to the media itself. */
-        this.app_code = "cdn"
+         * next open ("cdn"), inlined verbatim into the exported HTML itself ("inline"), copied as
+         * separate files into vendor/+slidershow/ folders next to it ("folder"), simply pointed at a
+         * folder that already holds such a copy ("local"), or left exactly as this session currently has
+         * it ("asis"). Applies to every media target except "Split into folders by tags" (which writes
+         * no presentation file at all) – independent of what happens to the media itself.
+         * Defaulted per session by `_default_app_code()`, not hardcoded – see there for why. */
+        this.app_code = this._default_app_code()
 
         /** @type {string} "local" app-code only: a relative (or absolute) directory the exported file
          * should load SlideRshow from, instead of the CDN. Nothing is copied – the folder is expected to
@@ -75,9 +76,9 @@ class Export {
     /**
      * Picks how the app's own code (vendor libs + local slidershow/*.js + style.css) is attached to the
      * exported file, independent of what happens to the media. Applies to every media target except
-     * "Split into folders by tags". Three mutually exclusive options only – "cdn" (default), "inline",
-     * "folder" – so a radio group, not a checkbox. Kept near the bottom of the dialog: it's the setting
-     * people change least (the CDN default is almost always right).
+     * "Split into folders by tags". Mutually exclusive options only – "cdn", "asis", "inline", "folder",
+     * "local" – so a radio group, not a checkbox. Kept near the bottom of the dialog: it's the setting
+     * people change least (`_default_app_code()` picks a sensible starting choice already).
      */
     app_code_radio(onChange) {
         const file_blocked = this._is_file_protocol()
@@ -86,9 +87,15 @@ class Export {
         // Only unsupported browsers need telling – Chrome/Edge already know they're Chrome/Edge.
         const folder_suffix = !dir_supported ? " (Chrome only)" : (file_blocked ? " (blocked)" : "")
         return this._radio_group("app-code", "App's own code:", "app_code", [
-            { value: "cdn", label: "Load from CDN (default)",
+            { value: "cdn", label: "Load from CDN",
                 title: "Nothing extra happens. The exported file fetches jQuery/etc. and slidershow's own "
                     + "code from the CDN again on next open – needs network for that, just like this presentation." },
+            { value: "asis", label: "Leave as-is",
+                title: "Keeps the exported bootstrap <script src> exactly as this presentation currently has "
+                    + "it – unlike \"Load from CDN\", which forces it back to the public CDN whenever it isn't "
+                    + "already there. Only offered as the default on what looks like your own dev machine "
+                    + "(presenter.html opened via file://, or a localhost dev server); a real self-hosted embed "
+                    + "still defaults to the CDN rewrite so an export opened elsewhere doesn't 404." },
             { value: "inline", label: "Inline into the file" + (file_blocked ? " (blocked)" : ""),
                 title: "Embeds that code right inside the exported HTML itself, so opening it later needs no "
                     + "network at all (except the map, which always needs one). Makes the file bigger and the "
@@ -138,6 +145,38 @@ class Export {
         $head.find("script[src$='slidershow.js']")
             .attr("src", `${dir}slidershow.js`)
             .removeAttr("integrity crossorigin referrerpolicy")
+    }
+
+    /**
+     * True on a machine that's plausibly the developer's own – opened straight from disk (`presenter.html`,
+     * `file://`) or served by a throwaway local dev server (`localhost`/`127.0.0.1`). A self-hosted embed
+     * (ex. the WordPress plugin) always lives on a real domain, dev or not, so this stays false for it –
+     * the two scenarios otherwise look identical from the script `src` alone (see `_default_app_code()`).
+     * @returns {boolean}
+     */
+    _is_dev_environment() {
+        return this._is_file_protocol() || /^(?:localhost|127\.0\.0\.1|\[::1\])$/.test(location.hostname)
+    }
+
+    /**
+     * The "App's own code" radio's starting value, computed once per dialog open rather than hardcoded to
+     * "cdn": mirrors whatever this session is *already* doing, except where that would silently reintroduce
+     * the self-hosted-embed bug `_point_app_code_at_cdn` exists to prevent (see its own doc comment).
+     * - Already on jsdelivr → "cdn" (a no-op rewrite; keeps whatever tag was pinned).
+     * - Not on jsdelivr, but this looks like the developer's own machine (`_is_dev_environment()`, ex.
+     *   `presenter.html` opened via `file://`) → "asis": the whole point is exporting from there shouldn't
+     *   silently discard that you're pinned to a local dev copy.
+     * - Not on jsdelivr and not a dev environment → "cdn", same as before this default became dynamic: a
+     *   real self-hosted embed on a live domain still gets force-rewritten to the public CDN, so an export
+     *   opened elsewhere doesn't 404 on a plugin-only relative path.
+     * @returns {"cdn"|"asis"}
+     */
+    _default_app_code() {
+        const current = $("head script[src$='slidershow.js']").attr("src") || ""
+        if (/^https?:\/\/cdn\.jsdelivr\.net\//i.test(current)) {
+            return "cdn"
+        }
+        return this._is_dev_environment() ? "asis" : "cdn"
     }
 
     /** @type {string} The canonical bootstrap URL "cdn" app-code points the exported file at. */
