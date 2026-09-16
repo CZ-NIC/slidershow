@@ -411,6 +411,26 @@ test("the app code can be pointed at a copy that already exists, without copying
     expect(html).not.toMatch(/integrity=.*slidershow\.js/)
 })
 
+test("app_code_ref pasted with a trailing slidershow.js doesn't double up into .../slidershow.js/slidershow.js", async ({ page }) => {
+    await page.goto(FIXTURE)
+    await page.locator("#start").click()
+    await expect.poll(() => page.url()).toContain("#1")
+
+    const [download] = await Promise.all([
+        page.waitForEvent("download"),
+        page.evaluate(() => {
+            menu.export.file_handler_wanted = false
+            menu.export.app_code = "local"
+            menu.export.app_code_ref = "../lib/slidershow/slidershow.js" // a whole file path, not a directory
+            return menu.export.export()
+        }),
+    ])
+    const html = fs.readFileSync(await download.path(), "utf8")
+
+    expect(html).toContain('src="../lib/slidershow/slidershow.js"')
+    expect(html).not.toContain("slidershow.js/slidershow.js")
+})
+
 test("\"cdn\" app-code leaves an existing jsdelivr src alone, whatever tag it pins", async ({ page }) => {
     await page.goto(FIXTURE)
     await page.locator("#start").click()

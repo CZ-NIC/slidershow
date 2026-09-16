@@ -141,7 +141,10 @@ class Export {
      * @param {JQuery} $head
      */
     _point_app_code_at_local($head) {
-        const dir = this.app_code_ref.trim().replace(/\/*$/, "/")
+        // Lenient towards a value that already ends in the filename (ex. "../lib/slidershow/slidershow.js"
+        // instead of the expected directory "../lib/slidershow/") – without this, it doubles up into
+        // ".../slidershow.js/slidershow.js".
+        const dir = this.app_code_ref.trim().replace(/\/*$/, "").replace(/\/?slidershow\.js$/, "") + "/"
         $head.find("script[src$='slidershow.js']")
             .attr("src", `${dir}slidershow.js`)
             .removeAttr("integrity crossorigin referrerpolicy")
