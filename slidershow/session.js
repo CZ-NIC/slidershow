@@ -54,6 +54,7 @@ class Session {
                 case "tagging":
                     pl.tagging_mode = true
                     pl.operation.tagging.enable()
+                    pl.operation.displaceSeeking(true)
                     break;
                 case "tag-filter":
                     // Collect all tag-filter values (may appear multiple times)

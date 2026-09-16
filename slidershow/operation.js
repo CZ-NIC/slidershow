@@ -132,6 +132,17 @@ class Operation {
     }
 
     /**
+     * Tagging mode claims Digit0-9 for the tags, so the video seeking steps behind Shift for as long as it
+     * lasts (Shift+1 = seek to 10 %) instead of going dead – the HUD button titles and the command palette
+     * follow the move on their own. Only the seeking is displaced: 'r' (rotate) would land on the group's
+     * own 'Shift+r'.
+     * @param {boolean} displace
+     */
+    displaceSeeking(displace) {
+        this.media.filter(hotkey => hotkey.hint.startsWith("Seek")).displace(displace ? "Shift" : null)
+    }
+
+    /**
      * Suspend every hotkey group while a Zebra_Dialog with its own inputs/checkboxes is open.
      * WebHotkeys deliberately lets single-char keys (Space, digits, letters…) through when a checkbox
      * is focused (it only special-cases text inputs/contenteditable) – without this, Space would toggle
@@ -669,9 +680,6 @@ class Operation {
         }
 
         function seek(fraction) {
-            if (pl.tagging_mode) {
-                return // Digit0-9 are taken by tagging shortcuts while tagging mode is on
-            }
             const video = /** @type {HTMLVideoElement} */ (act()[0])
             video.currentTime = video.duration * fraction
         }
@@ -870,6 +878,7 @@ class Operation {
                     pl.tagging_mode = !pl.tagging_mode
                     // when there will be interfering shortcuts like numbers, we have retag the previous shortcuts
                     pl.operation.tagging.toggle(pl.tagging_mode)
+                    pl.operation.displaceSeeking(pl.tagging_mode)
                     pl.hud.reset_thumbnails()
                     if (pl.hud.thumbnails_visible) {
                         pl.hud.display_thumbnails()

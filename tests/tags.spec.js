@@ -323,3 +323,38 @@ test("Filter by tag dialog: first checkbox is focused and Enter confirms (with w
     await expect(page.locator(".ZebraDialog:visible")).toHaveCount(0)
     expect(await page.evaluate(() => playback.tag_filter)).toEqual([1])
 })
+
+// The digits belong to the tags while tagging mode is on, so the video seeking steps behind Shift
+// (WebHotkeys' `displace`) instead of going dead. See Operation.displaceSeeking.
+test("tagging mode moves the video seeking onto Shift, and gives it back", async ({ page }) => {
+    const VIDEO_FIXTURE = "file://" + path.resolve(__dirname, "fixtures/video-points.html")
+    await page.goto(VIDEO_FIXTURE + "#2?start") // the 2nd frame: a 20s clip with no video points of its own
+    await expect.poll(() => page.evaluate(() =>
+        typeof playback !== "undefined" && playback.frame?.$actor?.[0]?.tagName)).toBe("VIDEO")
+    await page.evaluate(() => playback.frame.$actor[0].pause()) // a running clip would move under the assertions
+    const time = () => page.evaluate(() => playback.frame.$actor[0].currentTime)
+    const tags = () => page.evaluate(() => playback.frame.get_tags())
+
+    await page.keyboard.press("Digit1") // no tagging mode yet: the digit seeks (10 % of the 20s clip)
+    await expect.poll(time).toBe(2)
+
+    await page.keyboard.press("Alt+t")
+    expect(await page.evaluate(() => playback.tagging_mode)).toBe(true)
+
+    await page.keyboard.press("Digit2") // the bare digit is the tag's now
+    expect(await tags()).toEqual([2])
+    expect(await time()).toBe(2) // ... and seeks nowhere
+
+    await page.keyboard.press("Shift+Digit4") // the seeking, displaced
+    await expect.poll(time).toBe(8)
+    expect(await tags()).toEqual([2]) // no tag 4 sneaked in
+
+    // the HUD button and the palette follow the move
+    expect(await page.evaluate(() => $("[data-role~='only-video'][title^='Seek to 40']").attr("title")))
+        .toContain("(Shift+4)")
+
+    await page.keyboard.press("Alt+t") // tagging off, the digits are the seeking's again
+    await page.keyboard.press("Digit0")
+    await expect.poll(time).toBe(0)
+    expect(await tags()).toEqual([2])
+})

@@ -4,6 +4,7 @@
 
 ### Tagging
 * feat: tags (and the untagged pseudo-tag) can be marked hidden from the "Name tags…" dialog (🙈 checkbox), so they get skipped during playback without deleting or untagging anything; "Cycle hidden-tag view" (<kbd>Alt+Shift+H</kbd>) switches how the grid shows them (dimmed / dropped entirely / hiding suppressed / a hard "lock" that also blocks the grid's own navigation onto them). In the first three modes the grid overview stays a way in: its arrow-key/click navigation always reaches a hidden frame, and closing the grid shows whatever frame the cursor landed on, hidden or not. The HUD's "N / total" counter now counts only non-hidden frames, so a mostly-hidden presentation doesn't read as huge to whoever is watching it; the grid's own frame counts keep the true total but add a separate "N hidden" note
+* enh: the digits belong to the tags while tagging mode is on, so the video seeking (<kbd>0</kbd>-<kbd>9</kbd>) steps behind <kbd>Shift</kbd> for as long as it lasts instead of going dead – <kbd>Shift+3</kbd> seeks to 30 %. The menu buttons and the command palette show the moved combination
 * fix: stepping backward through a run of hidden frames got stuck bouncing forward instead of continuing back; a grid tile stayed dimmed/hidden after its own tag changed until the next full grid rebuild; the HUD's inner per-section counter still counted every frame in the section, hidden or not
 
 ### Embedding
