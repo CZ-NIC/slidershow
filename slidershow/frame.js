@@ -1613,7 +1613,22 @@ class Frame {
             $actor.attr("sli-src", newSrc)
         }
         if ($actor.attr("src")) {
+            // Reassigning `src` makes the browser reload the resource from scratch, which resets
+            // `currentTime` to the start – restore it to the position just cut (or wherever it was)
+            // and keep the video paused instead of letting the reload jump it back.
+            const video = /** @type {HTMLVideoElement} */ ($actor[0])
+            const restoreTime = start ?? stop ?? video.currentTime
+            const restore = () => {
+                video.currentTime = restoreTime
+                video.pause()
+            }
             $actor.attr("src", newSrc)
+            video.pause()
+            if (video.readyState === 0) {
+                video.addEventListener("loadedmetadata", restore, { once: true })
+            } else {
+                restore()
+            }
         }
         return true
     }
