@@ -127,8 +127,9 @@ class Export {
             type: "text", value: this.app_code_ref, placeholder: "slidershow/",
             class: "app-code-ref", name: "app-code-ref",
             title: "Directory holding slidershow.js – relative to the exported file (ex: \"slidershow/\", "
-                + "\"../lib/slidershow/\") or an absolute URL. Nothing is copied there; it has to be a copy "
-                + "you already made.",
+                + "\"../lib/slidershow/\") or an absolute URL. Pasting the full path to slidershow.js itself "
+                + "(ex: \"../lib/slidershow/slidershow.js\") works too. Nothing is copied there; it has to be "
+                + "a copy you already made.",
         }).on("input", () => { this.app_code_ref = String($input.val()) })
         return $("<div/>", { class: "media-target-detail app-code-ref-row" })
             .append($("<label/>", { text: "Load SlideRshow from: " }).append($input))
