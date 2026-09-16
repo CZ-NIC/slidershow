@@ -88,7 +88,10 @@ test("Filter by tag dialog: checked tags apply, Clear filter resets", async ({ p
 })
 
 test("tag names round-trip through the #hash too, not just localStorage", async ({ page }) => {
-    await page.evaluate(() => $main.attr("sli-tag-names", "rodice | vedouci"))
+    // Real writers always follow a sli-* attribute write with prop_invalidate() (see its doc comment) –
+    // the beforeEach's set_tag() calls above now read tag_names() too (grid ribbon's live tag-count
+    // refresh), memoizing the then-still-unset value, so this raw write needs it to not be read back stale.
+    await page.evaluate(() => { $main.attr("sli-tag-names", "rodice | vedouci"); prop_invalidate() })
     await page.evaluate(() => playback.session.store())
     await expect.poll(() => page.url()).toContain("tag-names=rodice+%7C+vedouci")
 

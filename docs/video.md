@@ -76,7 +76,35 @@ The first item is the `startTime` when the other rules happen. Rules are as foll
 * `pause` – Video stops.
 * `point:[sli-step-point]` – Zoom to a point. This is defined by a standard [sli-step-point](images.md#sli-step-points). Ex: `[4, "goto:2.9", "point:[100,100,5]"]` means: at time 4 s, jump back to time 2.9 s and zoom to a given point.
 
-Use the property panel (<kbd>Alt+P</kbd>) to help you create video points – <kbd>Alt+V</kbd> adds one at the video's current playback time, even while the panel is closed. Drag a point onto another one to reorder them.
+### Marking points while watching
+
+<kbd>Alt+V</kbd> marks a point at the video's current playback time, even while the properties panel is
+closed. Since the rules above cannot be guessed from what the video happens to be doing, it pauses the
+video and asks:
+
+* **At time** – the moment the point applies to, prefilled with the current playback time.
+* **jump to** (`goto`), **playback rate** (`rate`), **pause**, **Sound** (`mute` / `unmute`) and
+  **zoom to** (`point`) – the rules the point carries. The rate/sound are pre-filled only when the
+  video really differs from what the *previous* points have already put in effect, so a rule is never
+  repeated for nothing; the zoom is pre-filled from the current view when you zoomed in before marking.
+
+Confirming adds the point and – if the video was playing – resumes it, so marking a series of points
+does not interrupt the watching.
+
+!!! tip "Cutting a video into excerpts"
+    A cut takes two times: *when* to jump away and *where* to. So when the point just before is still
+    waiting for a target, the dialog offers to fill in **its** `goto` instead of adding a point of its
+    own – and picks that by default when that previous point carries nothing but its time.
+    Mark the end of a boring part, then the start of the next interesting one, and the pair becomes
+    `[5, "goto:41"]`.
+
+<kbd>Shift+Alt+V</kbd> skips the dialog and marks a bare point, snapshotting whatever the video is
+doing at that moment (the pre-1.3.0 behaviour of <kbd>Alt+V</kbd>).
+
+Clicking a point in the property panel (<kbd>Alt+P</kbd>) reopens the same dialog for it, with a
+**Remove** button and a **Zoom live** one – the latter hands over to the live editing, where the video
+follows the point and every zoom/rotate is written into it until you click the point again.
+Drag a point onto another one to reorder them.
 
 In [editing mode](playback.md) (<kbd>Alt+E</kbd>) with the panel closed, the points of the current
 frame are mirrored as read-only 🎬 pills in the top-right corner, so you can see them piling up

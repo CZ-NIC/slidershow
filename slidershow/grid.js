@@ -348,6 +348,31 @@ class GridController {
     }
 
     /**
+     * Re-derive the "🏷 tag (N), …" text (`_tagCountsLabel`) on every ribbon `frame` sits inside – its
+     * own section, every ancestor subsection, and the main Presentation ribbon – called from Hud.tag()
+     * (every tag write) so toggling a tag while the grid is open updates those counts right away instead
+     * of waiting for the next full grid rebuild. Cheap: touches only the handful of ribbons on frame's
+     * own ancestor chain, and only re-reads tags for the frames inside each of those (not every tile in
+     * the grid) – the same cost `_assureMain`/`_assureSection` already pay once per ribbon at build time.
+     * @param {Frame} frame
+     */
+    refreshTagCounts(frame) {
+        const $scopes = frame.$frame.parents("section").add($main)
+        $scopes.each((_, scope) => {
+            const $ribbon = this.$container.children("section-controller")
+                .filter((_, el) => $(el).data("section") === scope)
+            const $title = $ribbon.find(".section-title")
+            const $existing = $title.find(".section-title-tags")
+            const label = this._tagCountsLabel($(scope))
+            if ($existing.length) {
+                label ? $existing.replaceWith(label) : $existing.remove()
+            } else if (label) {
+                $title.find(".section-title-counts").after(label)
+            }
+        })
+    }
+
+    /**
      * Initial load around current frame, bind scroll handler
      * @param {boolean} scrollToCurrent
     */
@@ -931,6 +956,7 @@ class GridController {
                     <span class="section-title">
                         <span class="section-title-name">${rawTitle || "Presentation"}</span>
                         <span class="section-title-counts">(${sc.getSectionCounts($main)})</span>
+                        ${this._tagCountsLabel($main)}
                     </span>
                     ${this._tagFilterBadge()}
                     ${this._menuOfMainTemplate}
@@ -945,6 +971,28 @@ class GridController {
         // does not by itself trigger a grid rebuild (see Hud.tag()).
         $mc.find(".tag-filter-menu").on("mouseenter", () => this.refreshTagFilterDropdown($mc.find(".tag-filter-dropdown")))
         return $mc
+    }
+
+    /**
+     * Inline "🏷 tag (N), tag (N)" breakdown of the tags used inside `$scope` (recursively, same reach
+     * as `getSectionCounts`) – shown right in the section-title row so a section's tag composition
+     * reads at a glance, without opening "filter by tag ▾" or regrouping anything. Same staleness rule
+     * as the "N hidden" suffix in `getSectionCounts`: only refreshed on the next full grid rebuild
+     * (`Hud.reset_grid()`), not live on every digit-hotkey tag toggle (see `refreshTileHiddenClass`'s
+     * doc comment for why that's the existing convention for ribbon-level aggregates).
+     * @param {JQuery} $scope <main> or a <section>
+     * @returns {string} "" when nothing inside `$scope` is tagged
+     */
+    _tagCountsLabel($scope) {
+        const counts = new Map()
+        $scope.find(FRAME_TAGS).each((_, el) => $(el).data("frame").get_tags().forEach(t => counts.set(t, (counts.get(t) || 0) + 1)))
+        if (!counts.size) {
+            return ""
+        }
+        const names = this.pl.frame.tag_names()
+        const label = [...counts.keys()].sort((a, b) => a - b)
+            .map(t => `${names[t - 1] || t} (${counts.get(t)})`).join(", ")
+        return `<span class="section-title-tags" title="Tags used inside, with their frame counts">🏷 ${label}</span>`
     }
 
     /**
@@ -1010,6 +1058,7 @@ class GridController {
                             <span class="collapse-toggle" title="Collapse/expand this section"></span>
                             <span class="section-title-name">${rawTitle || "Section"}</span>
                             <span class="section-title-counts">(${sc.getSectionCounts($section)})</span>
+                            ${this._tagCountsLabel($section)}
                         </span>
                         ${this._sectionMenuTemplate}
                     </section-controller>`)

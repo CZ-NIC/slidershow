@@ -672,7 +672,8 @@ class Operation {
         return this._group("Properties", null,
             [
                 ["Alt+s", "📸", "Add step point", () => addPoint("ownStepPoints")],
-                ["Alt+v", "🎬", "Add video point", () => addPoint("ownVideoPoints")],
+                ["Alt+v", "🎬", "Add video point…", () => addPoint("ownVideoPoints", true)],
+                ["Shift+Alt+v", "🎬", "Add video point (no dialog)", () => addPoint("ownVideoPoints")],
                 ["Alt+,", "⏱", "Mark video trim start", () => setTrim("start")],
                 ["Alt+.", "⏱", "Mark video trim end", () => setTrim("stop")],
             ])
@@ -680,7 +681,7 @@ class Operation {
         // Adds a point without automatically opening the properties panel. The point editor lives in
         // the panel's rows, so with the panel never opened (or opened for a different frame) there is
         // none yet – build the rows silently; they stay hidden, only the corner badge shows the result.
-        async function addPoint(which) {
+        async function addPoint(which, dialog = false) {
             if (!pl.hud[which]) {
                 await pl.hud.properties()
             }
@@ -688,6 +689,9 @@ class Operation {
                 return pl.hud.info(which === "ownStepPoints"
                     ? "Step points can only be added to an image"
                     : "Video points can only be added to a video")
+            }
+            if (dialog) { // the dialog persists (and refreshes the badge) itself, once confirmed
+                return pl.hud[which].pointDialog()
             }
             pl.hud[which].addPoint()
             pl.hud.refresh_points_badge()
@@ -735,7 +739,11 @@ class Operation {
         /** @returns {GridController} */
         const g = () => pl.hud.grid
         return this._group("Grid", [
-            ["Enter", "Enter the frame (hides the grid)", () => this.playback.hud.toggle_grid()],
+            // When the keyboard cursor is pinned on a ribbon (pasteTarget – an empty/collapsed section
+            // with no frame to land on, see _currentSection's doc comment) there is no frame to "enter";
+            // toggle that section's collapse state instead of falling through to toggle_grid(), which
+            // would otherwise just leave the grid on whatever frame was current before the cursor moved.
+            ["Enter", "Enter the frame (hides the grid), or toggle collapse when the cursor is on a section", () => g().pasteTarget ? g().toggleCurrentSectionCollapse() : pl.hud.toggle_grid()],
             // Escape drops the clipboard/selection first (only then, on a second press, closes the embed
             // or toggles the menu – see the Global group's own Escape for why)
             ["Escape", "Clear selection / menu", () => g().hasSelection() || g().clipboard ? g().clearClipboardOrSelection() : (embed_bridge ? embed_bridge.close() : pl.hud.toggleMenu())],

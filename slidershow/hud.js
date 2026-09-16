@@ -1176,6 +1176,7 @@ class Hud {
         this.$hud_tag.html(value && !frame.tags_all_named() ? "🏷 " + value : value)
         this.getThumbnail(frame).find(".tag").html(value)
         this.grid.refreshTileHiddenClass(frame)
+        this.grid.refreshTagCounts(frame)
     }
 
     /**

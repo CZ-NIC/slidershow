@@ -1228,6 +1228,12 @@ frame-preview {
                         margin-left: .3em;
                     }
 
+                    .section-title-tags {
+                        opacity: .6;
+                        margin-left: .6em;
+                        font-size: 90%;
+                    }
+
                     .section-title-input {
                         font: inherit;
                         color: inherit;
@@ -2043,6 +2049,47 @@ article-map {
     .tag-hidden-toggle {
         float: right;
         cursor: pointer;
+    }
+}
+
+/* Video-point dialog (propertyPanelPoints.js: pointDialog) – Alt+v pauses the video and asks
+   which rules the point should carry, since [startTime, "goto:…", …] cannot be guessed from what
+   the video happens to be doing. */
+.video-point-dialog {
+    text-align: left;
+
+    label {
+        display: block;
+        padding: .2em 0;
+    }
+
+    .vp-label {
+        display: inline-block;
+        min-width: 5em;
+    }
+
+    input[type="number"] {
+        width: 5em;
+    }
+
+    .vp-mode {
+        margin-bottom: .6em;
+        padding-bottom: .4em;
+        border-bottom: 1px solid rgba(128, 128, 128, .4);
+    }
+
+    /* Only the time matters while filling in the previous point's jump target. */
+    .vp-rules.disabled {
+        opacity: .4;
+        pointer-events: none;
+    }
+
+    code {
+        opacity: .8;
+    }
+
+    button {
+        margin-left: .5em;
     }
 }
 
