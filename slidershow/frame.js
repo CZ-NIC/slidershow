@@ -1106,6 +1106,26 @@ class Frame {
             this.playback.play_pause(false)
         })
 
+        // Chrome draws the native control bar inside the <video>'s user-agent shadow DOM. Clicking it
+        // moves focus in there and from that moment the browser swallows every key event – not even a
+        // capture-phase listener on `window` sees them, so no shortcut (not even Escape) can reach us.
+        // The state is recognizable (the host matches `:focus-within` but no longer `:focus`) and cured
+        // by re-focusing the host, which is where the shortcuts work. Do that as soon as the pointer
+        // leaves the video or shortly after a control has been used.
+        const unstick = () => {
+            if (video.matches(":focus-within:not(:focus)")) {
+                video.blur()
+                video.focus()
+            }
+        }
+        let unstick_timer = null
+        $actor.on("mouseleave.slidershow-video", unstick)
+            .on("play.slidershow-video pause.slidershow-video seeked.slidershow-video volumechange.slidershow-video ratechange.slidershow-video", () => {
+                // debounced – dragging the progress gauge fires these in bursts
+                clearTimeout(unstick_timer)
+                unstick_timer = setTimeout(unstick, 300)
+            })
+
         // Video points
         const videoPoints = (this.prop("video-points", $actor) || []).map(p => new PointStep(null, p, null))
         if (videoPoints.length) {
