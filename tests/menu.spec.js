@@ -33,3 +33,16 @@ test("append panel is unfolded when the presentation has no frames", async ({ pa
     await expect(page.locator("#drop")).toBeVisible()
     await expect(page.locator("#start")).toBeHidden()
 })
+
+// The HUD menu fades out during the presentation, yet its buttons are only affordances of the hotkeys.
+// WebHotkeys skips a hotkey whose element is hidden unless told otherwise – see the `inHidden` option
+// the bootstrap passes (slidershow.js).
+test("a shortcut whose button sits in the hidden HUD menu still fires", async ({ page }) => {
+    await page.goto(fixture("basic"))
+    await page.locator("#start").click()
+    await expect.poll(() => page.url()).toContain("#1")
+
+    await page.evaluate(() => playback.hud.$hud_menu.hide())
+    await page.keyboard.press("Alt+t") // the 🏷 menu button's own combination
+    expect(await page.evaluate(() => playback.tagging_mode)).toBe(true)
+})

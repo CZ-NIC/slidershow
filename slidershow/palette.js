@@ -4,7 +4,7 @@ class CommandPalette {
      * @property {string} description
      * @property {Function} callback
      * @property {Function|Boolean} isEnabled Optional function that returns whether the command is currently enabled.
-     * @property {?string} hotkey
+     * @property {function(): ?string} hotkey
      * @property {?string} group
      */
 
@@ -38,11 +38,12 @@ class CommandPalette {
      * @param {string} description
      * @param {Function} callback
      * @param {Function|Boolean} isEnabled Optional function that returns whether the command is currently enabled
-     * @param {?string} hotkey
+     * @param {?string|?function} hotkey Its combination, or a getter of it.
      * @param {?string} group
      */
     register(description, callback, isEnabled = true, hotkey = null, group = null) {
-        this._commands.push({ description, callback, isEnabled, hotkey, group })
+        // Normalized to a getter – a hotkey may move at runtime (displace), the clue has to be read then, not now.
+        this._commands.push({ description, callback, isEnabled, group, hotkey: typeof hotkey === "function" ? hotkey : () => hotkey })
     }
 
     focus() {
@@ -171,7 +172,8 @@ class CommandPalette {
             const parts = []
             if (cmd.group) parts.push(`<span class="hint">${cmd.group}</span>`)
             parts.push(this.#highlight(query, cmd.description))
-            if (cmd.hotkey) parts.push(`<span class="hint">${cmd.hotkey}</span>`)
+            const clue = cmd.hotkey()
+            if (clue) parts.push(`<span class="hint">${clue}</span>`)
 
             const html = parts.join(" ")
             $('<li/>', { html: html })

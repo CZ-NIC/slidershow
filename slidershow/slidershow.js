@@ -63,7 +63,7 @@ loadjQuery(() => {
         },
         { src: "https://cdn.jsdelivr.net/npm/js-circle-progress@0.2.4/dist/jquery.circle-progress.min.js" },
         { src: "https://code.jquery.com/ui/1.13.1/jquery-ui.min.js" },
-        { src: "https://cdn.jsdelivr.net/gh/e3rd/WebHotkeys@0.9.5/WebHotkeys.js?register" },
+        { src: "https://cdn.jsdelivr.net/npm/webhotkeys@1.1.0/dist/WebHotkeys.min.js" },
         { src: "https://cdn.jsdelivr.net/npm/exif-js" },
         { src: "https://cdn.jsdelivr.net/npm/showdown@2.1.0/dist/showdown.min.js" },
         MAP_ENABLE ? { src: "https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" } : null,
@@ -112,14 +112,21 @@ loadjQuery(() => {
 
     // wait for all scripts to load
     Promise.all(vendor.concat(local)).then(() => {
-        // WebHotkeys normally self-registers by reading its own `?register` query param off
-        // `document.currentScript.src` – offline export replaces `src` with a `data:` URL (see
-        // offline_data_url) whose content can't safely carry that query, so it never self-registers there.
-        // Harmless/redundant otherwise: this only fires when the normal path somehow left it unset.
+        // WebHotkeys self-registers only for a <script data-register> tag; loadScript sets its entries as
+        // properties, not attributes, so we always instantiate it ourselves here. Which is what we want
+        // anyway – helpKey/hintKey/remap are read in the constructor only, setOptions (launch.js, where
+        // the rest of the options lives) comes too late for them.
         // `WebHotkeys` (the class) is a bare identifier, not `window.WebHotkeys` – classic <script>s share
         // one top-level lexical scope, but a class/const/let declaration never becomes a window property.
         if (!window.webHotkeys && typeof WebHotkeys !== "undefined") {
-            window.webHotkeys = new WebHotkeys()
+            window.webHotkeys = new WebHotkeys({
+                helpKey: null, // F1 is ours: the HUD dialog listing the shortcuts (Menu.help)
+                hintKey: null, // the HUD menu and the command palette already show what is bound
+                remap: false, // no remapping UI is reachable (that is the F1 dialog's), store nothing
+                // The HUD menu fades out during the presentation, yet its buttons are mere affordances
+                // of the hotkeys – without this, every shortcut having a button would die with it.
+                inHidden: true,
+            })
         }
         load_launch()
     })

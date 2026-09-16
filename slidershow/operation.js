@@ -31,7 +31,7 @@ class Operation {
                 $group.append($("<span/>", { class: "hud-menu-label", text: symbol, "aria-hidden": "true" }))
                 return null
             }
-            return [hotkey,
+            return [hotkey, hint,
                 $("<button/>", { "title": hint, "data-hotkey": hotkey, "html": symbol, "data-role": role })
                     .on("click", fn)
                     .appendTo($group)[0]
@@ -89,7 +89,7 @@ class Operation {
         }
         for (const hotkey of group) {
             const callback = hotkey.element ? () => hotkey.element.click() : hotkey.action
-            this.playback.hud.palette.register(hotkey.hint, callback, () => hotkey.enabled, hotkey.getClue(), group_name)
+            this.playback.hud.palette.register(hotkey.hint, callback, () => hotkey.enabled, () => hotkey.clue, group_name)
         }
         for (const cmd of commands || []) {
             this.playback.hud.palette.register(cmd[0], cmd[1], cmd[2], null, group_name + " > " + cmd[3])
