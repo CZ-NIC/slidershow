@@ -823,8 +823,12 @@ class Frame {
      *  copy: it was re-parsed from `outerHTML`, so its `src` is the very same blob URL string the live
      *  element on screen still uses – revoking it would blank the running presentation (and every grid
      *  preview built from it) the moment one exports.
+     * @param {boolean} mark_autoplay_prevented Replace a live `autoplay` with `sli-autoplay-prevented`
+     *  (so a later preload() knows to restore it). Must be false when called from `finalize_frames()`:
+     *  it has already decided every video's final export `autoplay` state, and this would just clobber
+     *  it back to prevented again for every medium.
      */
-    static unload_media($el, $el_original = null, revoke = true) {
+    static unload_media($el, $el_original = null, revoke = true, mark_autoplay_prevented = true) {
         $el.data("progress-abort")?.abort() // cancel Frame._fetch_with_progress() if it is still in flight
         // Invalidate any _load_media() still running for this element – an abort only stops our own
         // fetch, not a probe/decode already past it (see `stale()` there).
@@ -840,7 +844,7 @@ class Frame {
             // (thumbnail) `src` already present and skipping the load.
             $el.removeAttr("src sli-thumb-shown sli-data-saved")
         }
-        if ($el.is("video") && $el.attr("autoplay")) {
+        if (mark_autoplay_prevented && $el.is("video") && $el.attr("autoplay")) {
             $el.removeAttr("autoplay").attr("sli-autoplay-prevented", 1)
         }
     }
@@ -880,7 +884,9 @@ class Frame {
             const $el = $($media[index])
             const $el_original = $($originals[index])
 
-            Frame.unload_media($el, $el_original, false) // unload the frame copy – the live original keeps its blob: src
+            // unload the frame copy – the live original keeps its blob: src. Don't re-mark autoplay as
+            // prevented: the batch pass above already restored the correct export autoplay state.
+            Frame.unload_media($el, $el_original, false, false)
 
             // progress bar. Compare the frame *elements* – `closest()` hands out a fresh jQuery object every
             // time, so the former `$frame !== $parent` was true on every single medium and the bar (sized by

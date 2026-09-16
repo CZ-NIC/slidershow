@@ -4,6 +4,7 @@ const fs = require("fs")
 
 const FIXTURE = "file://" + path.resolve(__dirname, "fixtures/basic.html")
 const TAGS_FIXTURE = "file://" + path.resolve(__dirname, "fixtures/tags.html")
+const VIDEO_AUTOPLAY_FIXTURE = "file://" + path.resolve(__dirname, "fixtures/video-autoplay-export.html")
 // Gitignored.
 const EXPORTED = path.resolve(__dirname, "fixtures/exported.tmp.html")
 
@@ -66,6 +67,27 @@ test("export drops src on path-referenced media – only sli-src travels, so the
     expect(html).not.toMatch(/<img[^>]* src=/)
     expect(html).not.toMatch(/<video[^>]* src=/)
     expect((html.match(/sli-src="(one|two|three)\.jpg"/g) || []).length).toBe(3)
+})
+
+test("export restores autoplay on an off-screen video's sli-autoplay-prevented instead of leaving it prevented forever", async ({ page }) => {
+    // videoInit() marks every video sli-autoplay-prevented on boot except the current frame's (enter()
+    // flips that one back) - so article[1]'s video already carries the marker with no navigation needed.
+    // finalize_frames() batch-restores autoplay for export, but its own per-medium unload_media() call
+    // used to unconditionally re-mark any video that still had autoplay as prevented again, undoing that
+    // restoration for every single video in the export (see PLAN.md's "Aw snap" writeup).
+    await page.goto(VIDEO_AUTOPLAY_FIXTURE + "#1?start")
+    await expect.poll(() => page.evaluate(() => typeof playback !== "undefined" && playback.frame?.index !== undefined)).toBe(true)
+    expect(await page.evaluate(() => playback.$articles.eq(1).find("video").attr("sli-autoplay-prevented"))).toBeTruthy()
+
+    const videos = await page.evaluate(async () => {
+        const { $contents } = await menu.export._build_export_contents(false, "")
+        return $contents.find("video").toArray().map(v => ({ autoplay: v.hasAttribute("autoplay"), preventedMarker: v.hasAttribute("sli-autoplay-prevented") }))
+    })
+
+    expect(videos).toEqual([
+        { autoplay: true, preventedMarker: false },
+        { autoplay: true, preventedMarker: false },
+    ])
 })
 
 test("single-file export inlines server-hosted media it can fetch, and reports the ones it can't", async ({ page }) => {
