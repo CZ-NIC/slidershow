@@ -1129,27 +1129,24 @@ class Frame {
         // Video points
         const videoPoints = (this.prop("video-points", $actor) || []).map(p => new PointStep(null, p, null))
         if (videoPoints.length) {
-            /** @type {PointStep} */
-            let videoPoint = videoPoints.shift()
-            let videoPointOutput = false
+            // -1 = no cue reached yet. Tracked by index (rather than shift()ing videoPoints, as
+            // before) so it lines up with the `data-point-index` the aux window's points list uses
+            // to bold the one currently playing.
+            let index = -1
             $actor.on('timeupdate.slidershow-video', () => {
-                if (!this.playback.hud.propertyPanel.points.beingEdited) {
-                    if (video.currentTime >= videoPoint?.startTime) {
-                        videoPoint.affect($actor, this.zoom)
-                        let msg = `Video point: ${videoPoint}`
-                        videoPoint = videoPoints.shift()
-                        if (videoPoint) {
-                            msg += `→ ⌛ ${videoPoint}`
-                        }
-                        this.playback.aux_window.display_message(msg)
-                    } else if (!videoPointOutput) {
-                        this.playback.aux_window.display_message(`Video point: → ⌛ ${videoPoint}`)
-                    }
-                    videoPointOutput = true
-                }
                 if (this.playback.hud.propertyPanel.points.beingEdited) {
                     // Why checking being edited? Due to performance reasons, we do not want to flood the trigger with no sense.
                     $actor.trigger('actor.slidershow', { currentTime: video.currentTime })
+                    return
+                }
+                let changed = false
+                while (index + 1 < videoPoints.length && video.currentTime >= videoPoints[index + 1].startTime) {
+                    index++
+                    videoPoints[index].affect($actor, this.zoom)
+                    changed = true
+                }
+                if (changed) {
+                    this.playback.aux_window.update_video_point(index)
                 }
             })
         }
@@ -1601,7 +1598,7 @@ class Frame {
      * @returns {string} HTML; empty when the frame just plainly shows its media.
      */
     get_points_summary() {
-        /** @type {[string, string, string][]} icon, title, description */
+        /** @type {[string, string, JQuery][]} icon, title, content */
         const rows = []
 
         /**
@@ -1626,16 +1623,18 @@ class Frame {
         const $images = this.getImagesWithStepPoints()
         $images.each((i, el) => {
             const points = this.prop("step-points", $(el))
-            rows.push(["📸", "sli-step-points",
-                ($images.length > 1 ? `image ${i + 1}: ` : "")
-                + "zoom: " + points.map(position_text).join(" → ")])
+            rows.push(["📸", "sli-step-points", $("<span/>", {
+                text: ($images.length > 1 ? `image ${i + 1}: ` : "") + "zoom: " + points.map(position_text).join(" → ")
+            })])
         })
 
         if (this.$actor.is("video")) {
-            // Video cues
+            // Video cues – each cue is its own span carrying `data-point-index`, so the aux window
+            // can bold whichever one is currently playing (see AuxWindow.update_video_point).
             const points = this.prop("video-points", this.$actor) || []
             if (points.length) {
-                rows.push(["🎬", "sli-video-points", points.map(data => {
+                const $content = $("<span/>")
+                points.forEach((data, i) => {
                     const point = new PointStep(null, data, null)
                     const flags = [
                         point.goto != null ? `→ ${formatSeconds(point.goto)}` : null,
@@ -1645,15 +1644,21 @@ class Frame {
                         point.unmute ? "unmute" : null,
                         point.position?.length ? position_text(point.position) : null,
                     ].filter(Boolean)
-                    return formatSeconds(point.startTime) + (flags.length ? ` (${flags.join(", ")})` : "")
-                }).join(" → ")])
+                    const label = formatSeconds(point.startTime) + (flags.length ? ` (${flags.join(", ")})` : "")
+                    if (i) {
+                        $content.append(" → ")
+                    }
+                    $content.append($("<span/>", { "class": "aux-point", text: label, "data-point-index": i }))
+                })
+                rows.push(["🎬", "sli-video-points", $content])
             }
 
             // Video trim
             const { start, stop } = this.getVideoCut()
             if (start !== undefined || stop !== undefined) {
-                rows.push(["✂️", "video cut",
-                    `${formatSeconds(start || 0)} – ${stop === undefined ? "end" : formatSeconds(stop)}`])
+                rows.push(["✂️", "video cut", $("<span/>", {
+                    text: `${formatSeconds(start || 0)} – ${stop === undefined ? "end" : formatSeconds(stop)}`
+                })])
             }
         }
 
@@ -1661,9 +1666,9 @@ class Frame {
             return ""
         }
         return $("<ul/>", { "class": "aux-points" })
-            .append(rows.map(([icon, title, text]) => $("<li/>")
+            .append(rows.map(([icon, title, $content]) => $("<li/>")
                 .append($("<span/>", { "class": "aux-points-icon", text: icon, title: title }))
-                .append($("<span/>", { text: text }))))
+                .append($content)))
             .prop("outerHTML")
     }
 

@@ -125,6 +125,7 @@ class AuxWindow {
             next_notes: following?.get_notes(),
             next_points: following?.get_points_summary(),
             step: frame.get_step(),
+            video_point_index: -1, // a freshly entered frame has not reached any of its cues yet
             layout: this.layout,
             sizes: this.sizes
         }
@@ -147,13 +148,22 @@ class AuxWindow {
     }
 
     /**
+     * Tell the aux window which `sli-video-points` cue is currently playing, so it can bold the
+     * matching entry in the points list instead of flashing a message about it.
+     * @param {number} index Index of the cue reached, or -1 before the first one.
+     */
+    update_video_point(index) {
+        this.channel.postMessage({ "action": "video-point", "index": index })
+    }
+
+    /**
      * @param {*} e Message from an aux-window
      */
     controller_command(e) {
         // Both ends share this method and both listen on the same channel, so each ignores what is
         // addressed to the other. (Also guards the master's own channel object against its own echo –
         // ex: two tabs sharing the same URL, hence the same channel name.)
-        const AUX_ONLY = ["info", "update-step", "display-message", "layout"]
+        const AUX_ONLY = ["info", "update-step", "video-point", "display-message", "layout"]
         const MASTER_ONLY = ["get-last-state", "set-layout", "pressed-key"]
         if (this.$aux ? MASTER_ONLY.includes(e.action) : AUX_ONLY.includes(e.action)) {
             return
@@ -172,6 +182,10 @@ class AuxWindow {
                 this.data.step = e.step
                 this.apply_step()
                 this.$status_message.html("").hide()
+                break
+            case "video-point":
+                this.data.video_point_index = e.index
+                this.apply_video_point()
                 break
             case "get-last-state":
                 this.channel.postMessage(this.last_info
@@ -248,6 +262,20 @@ class AuxWindow {
             .removeClass("current-step step-hidden step-not-yet-visible")
             .filter((_, el) => Number($(el).attr("sli-step")) > this.data.step).addClass("step-not-yet-visible")
         $current.find(`[sli-step=${Number(this.data.step)}]`).addClass("current-step", true)
+        this.apply_video_point()
+    }
+
+    /**
+     * Bold the `sli-video-points` cue currently playing among the current frame's points summary.
+     * Re-applied after every render, since a fresh render rebuilds the points list from scratch.
+     */
+    apply_video_point() {
+        const $points = this.$aux.find(".aux-slot[data-pane=notes] .aux-point")
+        $points.removeClass("current-point")
+        const index = this.data.video_point_index
+        if (index >= 0) {
+            $points.filter(`[data-point-index=${index}]`).addClass("current-point")
+        }
     }
 
     /**

@@ -97,13 +97,13 @@ test("aux layout and its splits ride in the URL hash, the defaults stay out of i
     await start(page, BASIC)
     await expect.poll(() => page.url()).not.toContain("aux")
 
-    // the fourth sector (bottom right) is empty by default – filling it shows up in the hash
-    await page.evaluate(() => playback.aux_window.set_layout(["current", "next", "notes", "next-notes"]))
-    await expect.poll(() => decodeURIComponent(page.url())).toContain("aux=current,next,notes,next-notes")
+    // the fourth sector (bottom right) shows the next frame's notes by default – emptying it shows up in the hash
+    await page.evaluate(() => playback.aux_window.set_layout(["current", "next", "notes", "-"]))
+    await expect.poll(() => decodeURIComponent(page.url())).toContain("aux=current,next,notes,-")
     await expect.poll(() => page.url()).not.toContain("aux-size") // splits untouched → still absent
 
     // trailing sectors left at their default are dropped, the rest is spelled out
-    await page.evaluate(() => playback.aux_window.set_layout(["notes", "-", "notes", "-"], [60, 50, 67]))
+    await page.evaluate(() => playback.aux_window.set_layout(["notes", "-", "notes", "next-notes"], [60, 50, 67]))
     await expect.poll(() => decodeURIComponent(page.url())).toContain("aux=notes,-")
     await expect.poll(() => decodeURIComponent(page.url())).toContain("aux-size=60,50,67")
 
@@ -120,7 +120,7 @@ test("aux arrangement is restored from the hash; missing, unknown and out-of-ran
 
     // a shortened hash (ex: one written before the fourth sector existed) fills the rest in from the default
     await page.evaluate(() => playback.aux_window.set_layout(["notes", "-", "next-notes"]))
-    expect(await page.evaluate(() => playback.aux_window.layout)).toEqual(["notes", "-", "next-notes", "-"])
+    expect(await page.evaluate(() => playback.aux_window.layout)).toEqual(["notes", "-", "next-notes", "next-notes"])
     expect(await page.evaluate(() => playback.aux_window.sizes)).toEqual([70, 40, 55]) // sizes left alone
 
     await page.evaluate(() => playback.aux_window.set_layout(["notes", "nonsense", "-", "-"], [999, "x", 1]))
@@ -152,12 +152,12 @@ test("an emptied sector takes no room; its neighbour gets the whole column", asy
     const { aux, sectors } = await open_aux(page)
     await aux.setViewportSize({ width: 1000, height: 600 })
 
-    // default: the bottom right sector is empty, so the notes run the full height beside the slides
-    await expect.poll(sectors).toEqual(["current:50x70", "next:50x30", "notes:50x100", "-:gone"])
-
-    // filling it splits that column by the third slider (67 : 33 by default)
-    await page.evaluate(() => playback.aux_window.set_layout(["current", "next", "notes", "next-notes"]))
+    // default: the bottom right sector holds the next frame's notes, splitting that column by the third slider (67 : 33 by default)
     await expect.poll(sectors).toEqual(["current:50x70", "next:50x30", "notes:50x70", "next-notes:50x30"])
+
+    // emptying it hands the notes sector the whole column
+    await page.evaluate(() => playback.aux_window.set_layout(["current", "next", "notes", "-"]))
+    await expect.poll(sectors).toEqual(["current:50x70", "next:50x30", "notes:50x100", "-:gone"])
 
     // emptying a whole column hands the other one the entire width
     await page.evaluate(() => playback.aux_window.set_layout(["-", "-", "notes", "next-notes"]))

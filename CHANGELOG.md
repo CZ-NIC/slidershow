@@ -13,6 +13,8 @@
 
 ### Playback
 * fix: entering a frame whose image carries three or more `sli-step-points` zoomed straight into the second point instead of standing at the first one – all the step's zooms were applied at once and the last one won
+* enh: the aux window bolds the `sli-video-points` cue currently playing right in the points list, instead of flashing a separate message about it; its default layout now also fills the previously empty bottom-right sector with the next frame's notes
+* fix: a benign "ResizeObserver loop completed with undelivered notifications" browser warning (ex: after deleting a frame in editing mode) was surfacing as an error toast
 * feat: the auxiliary (presenter's) window lists what the frame is about to do on its own under the notes – the image zoom flyover (`sli-step-points`), the video cues (`sli-video-points`, with their jumps, pauses, mute and rate) and the video cut (`#t=start,stop`) – for the current frame as well as for the next one
 * feat: <kbd>0</kbd>-<kbd>9</kbd> seek a video to 0 %-90 % of its duration (YouTube-style)
 * fix: clicking a video thumbnail in the grid/playlist left the browser focus stuck on that `<video>`, swallowing subsequent playback shortcuts until clicked away with the mouse

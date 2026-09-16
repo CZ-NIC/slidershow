@@ -351,6 +351,11 @@ menu {
             .aux-points-icon {
                 flex: none;
             }
+
+            .aux-point.current-point {
+                font-weight: bold;
+                opacity: 1;
+            }
         }
 
         .current-step:before {

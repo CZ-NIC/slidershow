@@ -149,7 +149,7 @@ const AUX_SLOTS = AUX_COLUMNS.flat()
  * Default pane per sector – reproduces the layout the aux window had before it became configurable:
  * an empty bottom sector leaves the one above it spanning the whole column (the merged right side).
  */
-const AUX_LAYOUT_DEFAULT = ["current", "next", "notes", "-"]
+const AUX_LAYOUT_DEFAULT = ["current", "next", "notes", "next-notes"]
 /** Human labels for the sectors, in AUX_SLOTS order. */
 const AUX_SLOT_NAMES = ["Left top", "Left bottom", "Right top", "Right bottom"]
 /**
@@ -244,7 +244,13 @@ function main() {
             menu?.playback.hud.info("Error: " + message)
         }
     }
-    window.addEventListener("error", e => announce(e.message))
+    window.addEventListener("error", e => {
+        // Benign Chrome/Safari quirk (the browser skipped a notification because the observed
+        // element resized again before it could deliver the previous one) – not an app bug.
+        if (!/ResizeObserver loop/.test(e.message)) {
+            announce(e.message)
+        }
+    })
     window.addEventListener("unhandledrejection", e => announce(String(e.reason?.message ?? e.reason)))
 }
 
