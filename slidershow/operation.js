@@ -644,6 +644,16 @@ class Operation {
                 ["Shift+r", "⤿", "Rotate left", () => rotate(-5)],
                 ["Shift+Alt+r", "⤾", "Rotate right", () => rotate(5)],
                 ["r", "⊾", "Rotate right 90°", () => rotate(90)],
+                ["Digit0", "0️⃣", "Seek to 0 %", () => seek(0), "only-video"],
+                ["Digit1", "1️⃣", "Seek to 10 %", () => seek(0.1), "only-video"],
+                ["Digit2", "2️⃣", "Seek to 20 %", () => seek(0.2), "only-video"],
+                ["Digit3", "3️⃣", "Seek to 30 %", () => seek(0.3), "only-video"],
+                ["Digit4", "4️⃣", "Seek to 40 %", () => seek(0.4), "only-video"],
+                ["Digit5", "5️⃣", "Seek to 50 %", () => seek(0.5), "only-video"],
+                ["Digit6", "6️⃣", "Seek to 60 %", () => seek(0.6), "only-video"],
+                ["Digit7", "7️⃣", "Seek to 70 %", () => seek(0.7), "only-video"],
+                ["Digit8", "8️⃣", "Seek to 80 %", () => seek(0.8), "only-video"],
+                ["Digit9", "9️⃣", "Seek to 90 %", () => seek(0.9), "only-video"],
             ]).disable()
 
         function act() {
@@ -654,6 +664,14 @@ class Operation {
             const r = act()[0].playbackRate = Math.round((act()[0].playbackRate + step) * 10) / 10
             pl.hud.playback_icon(r + " ×")
             act().trigger('actor.slidershow', { rate: r })
+        }
+
+        function seek(fraction) {
+            if (pl.tagging_mode) {
+                return // Digit0-9 are taken by tagging shortcuts while tagging mode is on
+            }
+            const video = /** @type {HTMLVideoElement} */ (act()[0])
+            video.currentTime = video.duration * fraction
         }
 
         function rotate(deg) {

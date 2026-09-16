@@ -191,15 +191,26 @@ class Hud {
                 if (e.ctrlKey || e.metaKey) {
                     this.playback.goToFrame(ref)
                     this.grid.toggleSelect(ref)
+                    blurThumbnail()
                     return
                 }
                 if (e.shiftKey) {
                     this.grid.extendTo(ref)
+                    blurThumbnail()
                     return
                 }
                 this.grid.clearSelection() // a plain click resets the selection to just this frame
             }
             this.playback.goToFrame(ref)
+            blurThumbnail()
+
+            // Clicking a <video> preview (grid/playlist thumbnail) natively focuses it, and a focused
+            // video swallows Space/arrow keydowns before WebHotkeys sees them – blur it back off.
+            function blurThumbnail() {
+                if (document.activeElement?.closest("frame-preview")) {
+                    /** @type {HTMLElement} */ (document.activeElement).blur()
+                }
+            }
         })
 
         // Touch has no Ctrl/Shift-click, so a long-press is the mobile equivalent of a modified click –
