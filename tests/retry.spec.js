@@ -12,6 +12,9 @@ test.beforeEach(async ({ page }) => {
 test("main-view retry button shows on frame.load_failed and clicking it re-arms the load", async ({ page }) => {
     const result = await page.evaluate(async () => {
         const frame = playback.frame
+        // tags.html's sli-src ("one.jpg") is a fictional path used only for tag/path tests elsewhere –
+        // retry actually re-fetches through preload(), so it needs something real to succeed against.
+        frame.$actor.attr("sli-src", "exif.jpeg")
         frame.load_failed = true
         playback.hud.loading(frame) // frame.loaded is already resolved -> .then() fires on next tick
         await new Promise(r => setTimeout(r, 20))
@@ -42,6 +45,8 @@ test("main-view retry button shows on frame.load_failed and clicking it re-arms 
 test("grid 'Retry N frames' badge tracks _grid_failed and clicking it retries each one", async ({ page }) => {
     const result = await page.evaluate(async () => {
         const frame = $(playback.$articles[0]).data("frame")
+        // see the note in the test above: retry needs a real path to actually succeed against
+        frame.$actor.attr("sli-src", "exif.jpeg")
         playback.hud._grid_failed.add(frame)
         playback.hud._updateGridRetryBadge()
 

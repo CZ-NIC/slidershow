@@ -617,6 +617,9 @@ class Frame {
                 }
             }
             if (!loaded && !stale()) {
+                if (!isImg) {
+                    el.removeAttribute("preload") // an exported video[preload=none] wants its own file – lift the block back to normal
+                }
                 el.src = src
                 loaded = await await_load()
             }
@@ -682,7 +685,7 @@ class Frame {
      * @returns {?string}
      */
     static _resolve_placeholders(template, $el) {
-        const src = $el.attr("sli-src")
+        const src = $el.attr("sli-src")?.split(/[?#]/)[0]
         if (!template || !src) {
             return null
         }
@@ -826,17 +829,16 @@ class Frame {
         // Invalidate any _load_media() still running for this element – an abort only stops our own
         // fetch, not a probe/decode already past it (see `stale()` there).
         $el.data("load-gen", Number($el.data("load-gen") || 0) + 1)
-        if ($el.attr("sli-thumb-shown") || $el.attr("sli-data-saved")) {
-            // The full-quality file never finished loading (or was deliberately skipped by the data
-            // saver); drop the thumbnail too so a future preload() starts over instead of finding a
-            // (thumbnail) `src` already present and skipping the load.
-            $el.removeAttr("src sli-thumb-shown sli-data-saved")
-        } else if (($el_original || $el).data(READ_SRC) || $el.data("src") && $el.data("src") === $el.attr("src")
-            || $el.attr("src")?.startsWith("blob:")) {
-            if (revoke) {
+        // Whenever there is a place to re-read the medium from later (sli-src, or an in-memory
+        // READ_SRC reader for drag&dropped files), `src` is just derived, cached state – drop it so
+        // it isn't held in memory (and, for a path-referenced medium, doesn't leak into the export).
+        if ($el.attr("sli-src") || ($el_original || $el).data(READ_SRC)) {
+            if (revoke && $el.attr("src")?.startsWith("blob:")) {
                 URL.revokeObjectURL($el.attr("src")) // for the case this is a blob URL (FrameFactory reader, or Frame._fetch_with_progress())
             }
-            $el.removeAttr("src")
+            // Drop the thumbnail markers too so a future preload() starts over instead of finding a
+            // (thumbnail) `src` already present and skipping the load.
+            $el.removeAttr("src sli-thumb-shown sli-data-saved")
         }
         if ($el.is("video") && $el.attr("autoplay")) {
             $el.removeAttr("autoplay").attr("sli-autoplay-prevented", 1)
@@ -856,6 +858,10 @@ class Frame {
     static async finalize_frames($contents, $articles, keep_raw = false, path = "", callback = null) {
         // batch execute operations otherwise done in methods like `unload` or `left`
         $("video[sli-autoplay-prevented]", $contents).removeAttr("sli-autoplay-prevented").attr("autoplay", "")
+        // Belt-and-braces against a large export's videos all starting to buffer at parse time (the
+        // `src` removal above is the real fix – this just costs nothing and covers the case it somehow
+        // comes back). _load_media() overrides this to "metadata" for the frame actually being shown.
+        $("video:not([autoplay])", $contents).attr("preload", "none")
         $("[sli-wzoom]", $contents).removeAttr("sli-wzoom")
         // Data-saver bookkeeping (data_saver.js) is about this session's connection, not about the
         // presentation – it must not travel into the exported file.
@@ -1567,39 +1573,48 @@ class Frame {
      */
     get_filename($actor = null) {
         $actor = $actor || this.$actor
-        return ($actor.attr("sli-src") || $actor.attr("src") || $("source", $actor).attr("src"))?.split("/").pop() || ""
+        return ($actor.attr("sli-src") || $actor.attr("src") || $("source", $actor).attr("src"))?.split(/[?#]/)[0].split("/").pop() || ""
     }
 
     /**
      * Read the `#t=START[,STOP]` media-fragment trim off a video's src.
-     * Reads the actual `src` attribute, NOT get_filename() – that prefers `sli-src` (the canonical
-     * file reference), which never carries this runtime-only playback fragment, so a frame whose
-     * video has `sli-src` set (the common case for imported media) would always read back empty.
+     * `sli-src` is the canonical, storable place for the trim (see setVideoCut()); the live `src`
+     * is read first for backward compatibility with exports/galleries out there that only ever wrote
+     * it onto `src`.
      * @param {?JQuery} $actor
      * @returns {{start: ?number, stop: ?number}}
      */
     getVideoCut($actor = null) {
         $actor = $actor || this.$actor
-        const raw = ($actor.attr("src") || "").split("#")[1]?.split("t=")[1] || ""
+        const hash = $actor.attr("src")?.split("#")[1] || $actor.attr("sli-src")?.split("#")[1] || ""
+        const raw = hash.split("t=")[1] || ""
         const [start, stop] = raw.split(",").map(v => v === "" ? undefined : Number(v))
         return { start, stop }
     }
 
     /**
-     * Write the `#t=START[,STOP]` media-fragment trim onto a video's src.
+     * Write the `#t=START[,STOP]` media-fragment trim onto a video's `sli-src` (so it survives
+     * unload/reload and export) and, when present, onto the live `src` too, so the change takes
+     * effect immediately on the currently playing element.
      * @param {JQuery} $actor
      * @param {?number} start
      * @param {?number} stop
-     * @returns {boolean} False when the src does not support this syntax (ex: a data URI).
+     * @returns {boolean} False when there is no src to trim (ex: nothing loaded).
      */
     setVideoCut($actor, start, stop) {
-        const src = $actor.attr("src")
-        if (!src) {
+        const base = ($actor.attr("sli-src") || $actor.attr("src") || "").split("#")[0]
+        if (!base) {
             return false
         }
         const val = start === undefined && stop === undefined ? ""
             : "t=" + [start ?? 0, stop].filter(v => v !== undefined).join(",")
-        $actor.attr("src", [src.split("#")[0], val].join("#"))
+        const newSrc = val ? `${base}#${val}` : base
+        if ($actor.attr("sli-src")) {
+            $actor.attr("sli-src", newSrc)
+        }
+        if ($actor.attr("src")) {
+            $actor.attr("src", newSrc)
+        }
         return true
     }
 

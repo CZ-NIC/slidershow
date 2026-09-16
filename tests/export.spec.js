@@ -42,6 +42,32 @@ test("export round-trips: the exported file boots and keeps frames + data attrib
     await expect.poll(() => page.url()).toContain("#2")
 })
 
+test("export drops src on path-referenced media – only sli-src travels, so the browser doesn't fetch every file at parse time", async ({ page }) => {
+    const NO_SRC_EXPORTED = path.resolve(__dirname, "fixtures/exported-no-src.tmp.html")
+
+    // tags.html's <img> each carry both src="exif.jpeg" (a stand-in thumbnail baked into the fixture)
+    // and sli-src="one.jpg" et al. – exactly the shape a real import produces, and the one that made
+    // Chrome fetch ~1900 files at once on a large presentation (see PLAN.md's "Aw snap" writeup).
+    await page.goto(TAGS_FIXTURE)
+    await page.locator("#start").click()
+    await expect.poll(() => page.url()).toContain("#1")
+
+    const [download] = await Promise.all([
+        page.waitForEvent("download"),
+        page.evaluate(() => {
+            menu.export.file_handler_wanted = false
+            menu.export.export()
+        }),
+    ])
+    await download.saveAs(NO_SRC_EXPORTED)
+    const html = fs.readFileSync(NO_SRC_EXPORTED, "utf8")
+    fs.rmSync(NO_SRC_EXPORTED, { force: true })
+
+    expect(html).not.toMatch(/<img[^>]* src=/)
+    expect(html).not.toMatch(/<video[^>]* src=/)
+    expect((html.match(/sli-src="(one|two|three)\.jpg"/g) || []).length).toBe(3)
+})
+
 test("single-file export inlines server-hosted media it can fetch, and reports the ones it can't", async ({ page }) => {
     const INLINED = path.resolve(__dirname, "fixtures/exported-inlined.tmp.html")
 

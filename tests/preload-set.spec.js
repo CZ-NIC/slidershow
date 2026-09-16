@@ -31,6 +31,10 @@ test("unload() removes the frame from playback.preloaded; preload() (incl. the a
     await page.evaluate(() => playback.frame.unload())
     expect(await isTracked()).toBe(false)
     expect(await page.evaluate(() => playback.frame.$frame.attr("sli-preloaded"))).toBeUndefined()
+    // The medium is path-referenced (sli-src) – src is only derived state and must not survive unload,
+    // or an import the size of a real gallery leaks it back into memory (and, later, into the export).
+    expect(await page.evaluate(() => playback.frame.$actor.attr("src"))).toBeUndefined()
+    expect(await page.evaluate(() => playback.frame.$actor.attr("sli-src"))).toBeTruthy()
 
     await page.evaluate(() => playback.frame.preload())
     expect(await isTracked()).toBe(true)

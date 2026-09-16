@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8" />
+    <script src="../../slidershow/slidershow.js"></script>
+</head>
+
+<body>
+    <!-- A path-referenced video (sli-src, no bytes) – the case the aw-snap fix targets. The path does
+         not need to resolve to a real file: these tests only check DOM state (sli-src/src attributes),
+         never actual playback. -->
+    <main>
+        <section>
+            <article>
+                <video sli-src="clip.mp4"></video>
+            </article>
+        </section>
+    </main>
+</body>
+
+</html>

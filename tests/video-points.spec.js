@@ -1,7 +1,9 @@
 const { test, expect } = require("@playwright/test")
 const path = require("path")
+const fs = require("fs")
 
 const FIXTURE = "file://" + path.resolve(__dirname, "fixtures/video-points.html")
+const VIDEO_CUT_FIXTURE = "file://" + path.resolve(__dirname, "fixtures/video-cut.html")
 
 /** Enter the presentation in editing mode, with the docs fetch stubbed out. */
 async function start(page, hash = "#1?start&editing") {
@@ -135,4 +137,42 @@ test("\"Zoom live\" hands over to the pill's live editing", async ({ page }) => 
     await expect(page.locator("#hud-properties .hud-point.active")).toHaveCount(1)
     await expect(page.locator("#hud-properties .hud-point.active")).toHaveText('[2,"goto:5"]')
     expect(await page.evaluate(() => playback.frame.$actor[0].currentTime)).toBe(2)
+})
+
+test("video cut trim lives in sli-src, survives unload/reload, and reaches the export", async ({ page }) => {
+    await page.goto(VIDEO_CUT_FIXTURE + "#1?start&editing")
+    await expect.poll(() => page.evaluate(() => typeof playback !== "undefined" && playback.frame?.index !== undefined)).toBe(true)
+
+    await page.evaluate(() => playback.frame.setVideoCut(playback.frame.$actor, 2, 8))
+    expect(await page.evaluate(() => playback.frame.$actor.attr("sli-src"))).toBe("clip.mp4#t=2,8")
+    expect(await page.evaluate(() => playback.frame.$actor.attr("src"))).toBe("clip.mp4#t=2,8")
+
+    // Simulate the frame falling far outside the preload window: unload() must drop `src` (it is only
+    // derived, re-readable state) but the trim must survive – it now lives in sli-src.
+    await page.evaluate(() => playback.frame.unload())
+    expect(await page.evaluate(() => playback.frame.$actor.attr("src"))).toBeUndefined()
+    expect(await page.evaluate(() => playback.frame.$actor.attr("sli-src"))).toBe("clip.mp4#t=2,8")
+
+    await page.evaluate(() => playback.frame.preload())
+    await expect.poll(() => page.evaluate(() => playback.frame.$actor.attr("src"))).toBeTruthy()
+    expect(await page.evaluate(() => playback.frame.getVideoCut(playback.frame.$actor))).toEqual({ start: 2, stop: 8 })
+
+    const EXPORTED = path.resolve(__dirname, "fixtures/exported-video-cut.tmp.html")
+    try {
+        const [download] = await Promise.all([
+            page.waitForEvent("download"),
+            page.evaluate(() => {
+                menu.export.file_handler_wanted = false // force the <a download> path instead of showSaveFilePicker
+                menu.export.app_code = "cdn" // this fixture is file://, so the default would be "asis" instead
+                menu.export.export()
+            }),
+        ])
+        await download.saveAs(EXPORTED)
+        const html = fs.readFileSync(EXPORTED, "utf8")
+
+        expect(html).toContain('sli-src="clip.mp4#t=2,8"')
+        expect(html).not.toMatch(/<video[^>]* src=/)
+    } finally {
+        fs.rmSync(EXPORTED, { force: true })
+    }
 })
