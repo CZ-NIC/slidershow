@@ -43,6 +43,9 @@ class Hud {
          * fetch, keyed by its <frame-preview> element (unique per attempt, so a retried fetch never
          * collides with the stale entry of the hung attempt it replaced). Read by _checkStuckGridFrames(). */
         this._grid_pending_since = new Map()
+        /** @type {?{frame: Frame, videos: HTMLVideoElement[]}} What _suspend_videos() paused when the
+         * grid covered the presentation, waiting for _resume_videos() to put it back. */
+        this._grid_suspended = null
         this._grid_stuck_check = new Interval(() => this._checkStuckGridFrames(), GRID_STUCK_MS / 4)
         this.$hud_grid_retry = $("#hud-grid-retry").on("click", () => this._retryGridFrames())
         this.$hud_selection = $("#hud-selection")
@@ -334,6 +337,7 @@ class Hud {
         // to tell whether the frame has actually been entered yet (session restore from the hash).
         const frameReady = this.playback.frame?.index !== undefined
         if (on && frameReady) {
+            this._suspend_videos()
             this.display_grid(true)
         } else {
             // even that the frame was focused, it was not yet prepared and entered
@@ -344,10 +348,40 @@ class Hud {
                 // redirect away just because normal playback would otherwise skip it.
                 this.playback.goToFrame(this.playback.frame.index, false, true, false, true)
             }
+            this._resume_videos() // after goToFrame – it decides whether we land on the suspended frame at all
             this._updateGridStatusRow() // outstanding fetches (if any) keep running, just no longer shown
         }
         this.playback.operation.grid.toggle(on)
         this.playback.session.store()
+    }
+
+    /**
+     * Opening the grid covers the presentation but does not leave the frame – Playback.goToFrame returns
+     * early while the grid is visible – so a playing video would go on playing, and sounding, behind the
+     * overlay. Pause it, remembering only what was really playing, so closing the grid resumes exactly
+     * that and nothing else. A programmatic pause is inert for the frame's own `pause.slidershow-video`
+     * listener (Frame.video_enter): that one reacts to a video that ended or reached its `#t=` endtime,
+     * never to one stopped mid-way.
+     */
+    _suspend_videos() {
+        const frame = this.playback.frame
+        const videos = /** @type {HTMLVideoElement[]} */ (frame.$frame.find("video").toArray()).filter(v => !v.paused)
+        videos.forEach(v => v.pause())
+        this._grid_suspended = videos.length ? { frame, videos } : null
+    }
+
+    /**
+     * Resume what _suspend_videos() paused – but only when the grid closed back onto the very frame it
+     * covered. Landing anywhere else means goToFrame has just left that frame (pausing its videos itself),
+     * and playing them again would sound from a frame no longer on screen.
+     */
+    _resume_videos() {
+        const suspended = this._grid_suspended
+        this._grid_suspended = null
+        if (!suspended || suspended.frame !== this.playback.frame) {
+            return
+        }
+        suspended.videos.forEach(v => v.play().catch(() => { })) // a rejected play() just means it stays paused
     }
 
     async toggle_properties() {
