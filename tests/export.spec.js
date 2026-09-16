@@ -388,3 +388,28 @@ test("\"cdn\" app-code leaves an existing jsdelivr src alone, whatever tag it pi
     const html = fs.readFileSync(await download.path(), "utf8")
     expect(html).toContain(`src="${PINNED}"`)
 })
+
+test("the export copy is built in an inert document, so the HUD's thumbnails are not re-fetched", async ({ page }) => {
+    // The copy used to be `body.outerHTML` re-parsed in this very document, which instantiates every
+    // <img>/<video> in it - including the grid thumbnails the HUD piles up - and the browser starts
+    // fetching and decoding them all, only for the #hud removal to throw them away right after. Exporting
+    // one and the same presentation then cost a second or gigabytes depending on how much of the grid had
+    // been scrolled through. A document with no browsing context loads nothing.
+    await page.goto(TAGS_FIXTURE + "#1?start&grid")
+    await expect.poll(() => page.evaluate(() => typeof playback !== "undefined" && playback.frame?.index !== undefined)).toBe(true)
+    await page.locator("#hud-grid frame-preview").first().waitFor()
+    await expect.poll(() => page.locator("#hud-grid frame-preview.loading").count()).toBe(0)
+
+    const copy = await page.evaluate(async () => {
+        const { $contents } = await menu.export._build_export_contents(false, "")
+        return {
+            inert: $contents[0].ownerDocument !== document,
+            hud: $contents.find("#hud, frame-preview").length,
+            frames: $contents.find(FRAME_SELECTOR).length,
+        }
+    })
+
+    expect(copy.inert).toBe(true)
+    expect(copy.hud).toBe(0) // the HUD never travels into the export either way
+    expect(copy.frames).toBe(3)
+})

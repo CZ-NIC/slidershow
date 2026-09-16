@@ -403,14 +403,24 @@ class Export {
      * @returns {Promise<{$contents: JQuery, $head: JQuery, inlineStats: ?InlineStats}>}
      */
     async _build_export_contents(compact_file, path) {
-        // Why to wrap the body inside a div? jQuery seems to handle such fundamental tags differently.
-        // We end up with a collection of body children, not with the body itself.
-        const $contents = $("<div>" + $("body").prop('outerHTML') + "</div>")
+        // The working copy is cloned into an *inert* document (one with no browsing context), never
+        // round-tripped through `body.outerHTML` and a re-parse the way this used to be done. Parsing
+        // that string in this very document instantiates every `<img>`/`<video>` it carries – including
+        // the hundreds of grid thumbnails the HUD has piled up (its loaded window only ever grows) –
+        // and the browser starts fetching and decoding them all at once, only to have them thrown away
+        // by the `#hud` removal two lines below. That is why exporting one and the same presentation
+        // could take a second once and eat gigabytes the next time: the difference was how much of the
+        // grid had been scrolled through meanwhile. An inert document loads nothing, and cloning skips
+        // building the (potentially huge) intermediate HTML string altogether.
+        const inert = document.implementation.createHTMLDocument("")
+        const $contents = $(inert.importNode(document.body, true))
 
         // reduce parameters
+        // The HUD & co. go first – stripping `style` off a subtree that is about to be deleted is pure
+        // work, and on a big grid that subtree dwarfs the presentation itself.
+        $contents.find("> #map, > #map-hud, > #map-wrapper, > #hud, > #preblink-prevention, > menu, > .ZebraDialog, > .ZebraDialogBackdrop").remove()
         $contents.removeAttr("style")
         $contents.find("*").removeAttr("style")
-        $contents.find("> #map, > #map-hud, > #map-wrapper, > #hud, > #preblink-prevention, > menu, > .ZebraDialog, > .ZebraDialogBackdrop").remove()
         await Frame.finalize_frames($contents, this.playback.$articles, compact_file, path, this.menu.display_progress(this.playback.$articles.length))
         let inlineStats = null
         if (compact_file) {
@@ -451,6 +461,26 @@ class Export {
     async _build_export_parts(compact_file, path) {
         const { $contents, $head, inlineStats } = await this._build_export_contents(compact_file, path)
         return { html: this._serialize_contents($contents), $head, inlineStats }
+    }
+
+    /**
+     * Wraps the serialized body in its `<html>`/`<head>` and hands it over as a `Blob` – never as one
+     * concatenated string. `html` is already the single largest object in the process (the whole
+     * presentation, media bytes and all when exporting a single file); `head + html + tail` would make
+     * a full second copy of it, and handing that to `write()` a third. A `Blob` merely references the
+     * parts, and a JS string also has a hard ceiling (~512M chars in V8) that a big single-file export
+     * can genuinely hit, throwing mid-export rather than reporting anything useful.
+     * @param {string} html
+     * @param {JQuery} $head
+     * @param {boolean} offline Mark the exported `<html sli-offline>` (app code inlined).
+     * @returns {Blob}
+     */
+    _assemble_document(html, $head, offline = false) {
+        return new Blob([
+            `<!DOCTYPE html><html${offline ? " sli-offline" : ""}><head>\n${$head[0].innerHTML}</head>\n<body>`,
+            html,
+            "\n</body>\n</html>",
+        ], { type: "text/plain" })
     }
 
     /**
@@ -682,13 +712,15 @@ class Export {
         }
 
         // Export the data blob
-        const data = `<!DOCTYPE html><html${inline_wanted ? " sli-offline" : ""}><head>\n${$head[0].innerHTML}</head>\n<body>` + html + "\n</body>\n</html>"
+        const data = this._assemble_document(html, $head, inline_wanted)
 
         if (this.file_handler_wanted && window.showSaveFilePicker) {
             const newHandle = await this.assure_handler()
             const fileStream = await newHandle.createWritable()
-            await fileStream.write(data)
-            await fileStream.close() // otherwise "Saved" shows while the file is still flushing
+            // Streamed in chunks, not written in one go: the whole file never has to sit in the renderer
+            // a second time on its way out. pipeTo closes the stream itself and only settles once it is
+            // closed – otherwise "Saved" would show while the file is still flushing.
+            await data.stream().pipeTo(fileStream)
 
             this.menu.playback.hud.info("Saved")
         } else {
@@ -860,7 +892,7 @@ class Export {
             return // the empty vendor/slidershow folders are left behind – harmless, user can delete them
         }
 
-        const data = `<!DOCTYPE html><html><head>\n${$head[0].innerHTML}</head>\n<body>` + html + "\n</body>\n</html>"
+        const data = this._assemble_document(html, $head)
         await this._write_text(targetDir, this.playback.session.export_filename, data)
         this.playback.hud.info("Offline folder written.")
         this._report_inline_stats(inlineStats)
@@ -991,7 +1023,7 @@ class Export {
             return
         }
 
-        const data = `<!DOCTYPE html><html${inline_wanted ? " sli-offline" : ""}><head>\n${$head[0].innerHTML}</head>\n<body>` + html + "\n</body>\n</html>"
+        const data = this._assemble_document(html, $head, inline_wanted)
         await this._write_text(targetDir, this.playback.session.export_filename, data)
 
         const missing = mediaFrames.length - nameByFrame.size
@@ -999,8 +1031,9 @@ class Export {
         this.playback.changes.unblock_unload()
     }
 
+    /** @param {Blob|string} data */
     download(data) {
-        this._trigger_download(new Blob([data], { type: "text/plain" }), this.playback.session.export_filename)
+        this._trigger_download(data instanceof Blob ? data : new Blob([data], { type: "text/plain" }), this.playback.session.export_filename)
     }
 
     /**
@@ -1582,11 +1615,16 @@ class Export {
     /**
      * @param {FileSystemDirectoryHandle} dirHandle
      * @param {string} name
-     * @param {string} text
+     * @param {string|Blob} text A `Blob` is streamed in chunks instead of being written in one piece –
+     *  see _assemble_document() for why the exported presentation arrives as one.
      */
     async _write_text(dirHandle, name, text) {
         const handle = await dirHandle.getFileHandle(name, { create: true })
         const writable = await handle.createWritable()
+        if (text instanceof Blob) {
+            await text.stream().pipeTo(writable)
+            return // pipeTo closes the stream itself
+        }
         await writable.write(text)
         await writable.close()
     }

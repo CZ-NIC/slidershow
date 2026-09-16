@@ -868,19 +868,22 @@ class Frame {
         // handling media
         const $originals = $articles.find("img[sli-src], video[sli-src]")
         const $media = $frames.find("img[sli-src], video[sli-src]")
-        let $frame = null
+        let frame_el = null
         for (let index = 0; index < $media.length; index++) {
             // process the media files one by one (we cannot use map since it would ignore `await reader()`)
             const $el = $($media[index])
             const $el_original = $($originals[index])
 
-            // progress bar
-            const $parent = $el.closest(FRAME_SELECTOR)
-            if ($frame !== $parent) {
-                Frame.unload_media($el, $el_original, false) // unload the frame copy – the live original keeps its blob: src
+            Frame.unload_media($el, $el_original, false) // unload the frame copy – the live original keeps its blob: src
+
+            // progress bar. Compare the frame *elements* – `closest()` hands out a fresh jQuery object every
+            // time, so the former `$frame !== $parent` was true on every single medium and the bar (sized by
+            // the frame count) ran off its scale on any presentation holding a frame with two media in it.
+            const parent_el = $el.closest(FRAME_SELECTOR)[0]
+            if (frame_el !== parent_el) {
+                frame_el = parent_el
                 callback?.()  // this is a new frame, increase
             }
-            $frame = $parent
 
             // summarize attributes
             const reader = $el_original.data(READ_SRC)
