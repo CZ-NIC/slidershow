@@ -143,18 +143,21 @@ class PropertyPanelPoints {
                 $zoomOn.prop("checked", true)
             })
 
-        const row = (/** @type {string} */ label, /** @type {JQuery[]} */ ...content) =>
-            $("<label/>").append($("<span/>", { class: "vp-label", text: label }), ...content)
+        const row = (/** @type {string|JQuery} */ label, /** @type {JQuery[]} */ ...content) =>
+            $("<label/>").append($("<span/>", { class: "vp-label" }).append(label), ...content)
+
+        const mnemonic = this._mnemonic.bind(this)
+        $take.empty().append(mnemonic("Take current view", "t", $take))
 
         const $list = $("<div/>", { class: "video-point-dialog" }).append(
             $mode ?? [],
-            row("At time", $time, $("<span/>", { text: " s" })),
+            row(mnemonic("At time", "a", $time), $time, $("<span/>", { text: " s" })),
             $("<div/>", { class: "vp-rules" }).append(
-                row("", $gotoOn, $("<span/>", { text: " jump to " }), $goto, $("<span/>", { text: " s" })),
-                row("", $rateOn, $("<span/>", { text: " playback rate " }), $rate),
-                row("", $pause, $("<span/>", { text: " pause" })),
-                row("Sound", $sound),
-                row("", $zoomOn, $("<span/>", { text: " zoom to " }), $zoom, $take),
+                row("", $gotoOn, mnemonic(" jump to ", "j", $gotoOn), $goto, $("<span/>", { text: " s" })),
+                row("", $rateOn, mnemonic(" playback rate ", "r", $rateOn), $rate),
+                row("", $pause, mnemonic(" pause", "p", $pause)),
+                row(mnemonic("Sound", "s", $sound), $sound),
+                row("", $zoomOn, mnemonic(" zoom to ", "z", $zoomOn), $zoom, $take),
             ))
 
         // In "continue" mode nothing but the time is used – it only fills in the previous point's goto.
@@ -225,6 +228,26 @@ class PropertyPanelPoints {
     }
 
     /**
+     * Underlines the first occurrence of `key` in `text` and wires `key` as the accesskey of
+     * `$target`, so Alt+<key> activates the control the underlined letter belongs to.
+     * @param {string} text
+     * @param {string} key
+     * @param {JQuery} $target
+     * @returns {JQuery}
+     */
+    _mnemonic(text, key, $target) {
+        $target.attr("accesskey", key)
+        const i = text.toLowerCase().indexOf(key.toLowerCase())
+        if (i === -1) {
+            return $("<span/>", { text })
+        }
+        return $("<span/>").append(
+            text.slice(0, i),
+            $("<u/>", { text: text.slice(i, i + 1) }),
+            text.slice(i + 1))
+    }
+
+    /**
      * "New point" / "fill in the previous point's jump target" choice – see pointDialog().
      * Defaults to continuing when the previous point carries nothing but its time; such a point
      * does nothing on its own, so it is almost certainly the start of a cut waiting to be finished.
@@ -233,20 +256,22 @@ class PropertyPanelPoints {
      */
     _modeRadios(prev, time) {
         const bare = prev.rate == null && !prev.pause && !prev.mute && !prev.unmute && !prev.position.length
+        const key = { "new": "n", "continue": "c" }
         const label = (/** @type {number} */ t) => ({
             "new": `New point at ${t} s`,
             "continue": `Cut: jump from ${prev.startTime} s here (previous point gets goto:${t})`
         })
-        const radio = (/** @type {string} */ value, /** @type {boolean} */ checked) =>
-            $("<label/>").append(
-                $("<input/>", { type: "radio", name: "vp-mode", value, checked }),
-                $("<span/>", { text: " " + label(time)[value] }))
+        const radio = (/** @type {string} */ value, /** @type {boolean} */ checked) => {
+            const $input = $("<input/>", { type: "radio", name: "vp-mode", value, checked })
+            return $("<label/>").append($input, " ", this._mnemonic(label(time)[value], key[value], $input))
+        }
         return $("<div/>", { class: "vp-mode" })
             .append(radio("new", !bare), radio("continue", bare))
             // both captions quote the time, which the "At time" field may still change
             .on("time-changed", (e, t) => {
                 $("label", $(e.currentTarget)).each((_, el) => {
-                    $("span", el).text(" " + label(t)[String($("input", el).val())])
+                    const value = String($("input", el).val())
+                    $("span", el).replaceWith(this._mnemonic(label(t)[value], key[value], $("input", el)))
                 })
             })
     }

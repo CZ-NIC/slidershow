@@ -418,12 +418,16 @@ class Export {
         // can re-enable only the ones it actually disabled.
         $body.find("input:disabled").data("blocked", true)
         refresh()
+        const op = this.playback.operation
+        op._confirmOnEnter($body, "Export")
 
         const dialog = new $.Zebra_Dialog({
             type: false, // no icon – it reserves left padding this already-busy dialog can't spare
             width: 720, // wider than the 450px default – this dialog has grown too tall to also be narrow
             source: { inline: $body },
             title: "Export",
+            auto_focus_button: 1, // focus "Export" (index 1), not "Cancel" (index 0, Zebra_Dialog's default)
+            onClose: op.suspendHotkeys(), // otherwise the Grid's own "Enter" hotkey fires instead of the dialog's
             buttons: ["Cancel", {
                 caption: "Export",
                 default_confirmation: true,

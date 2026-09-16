@@ -153,12 +153,13 @@ class Operation {
      * own Enter-confirms-default-button wiring listens for `keypress`, which browsers don't reliably fire
      * for Enter while a checkbox is focused (unlike a text input) – `keydown` always fires.
      * @param {JQuery} $container The dialog's inline content (passed as `source: {inline: ...}`).
+     * @param {string} [caption] Caption of the button to click (defaults to "Ok").
      */
-    _confirmOnEnter($container) {
+    _confirmOnEnter($container, caption = "Ok") {
         $container.on("keydown", e => {
             if (e.key === "Enter") {
                 e.preventDefault()
-                $container.closest(".ZebraDialog").find("a").filter((_, el) => $(el).text().trim() === "Ok").trigger("click")
+                $container.closest(".ZebraDialog").find("a").filter((_, el) => $(el).text().trim() === caption).trigger("click")
             }
         })
     }
@@ -167,12 +168,13 @@ class Operation {
      * Ctrl+Enter confirms the dialog (clicks its "Ok" button). Useful for multi-line text inputs
      * where Enter alone would add a newline.
      * @param {JQuery} $container The dialog's inline content (passed as `source: {inline: ...}`).
+     * @param {string} [caption] Caption of the button to click (defaults to "Ok").
      */
-    _confirmOnCtrlEnter($container) {
+    _confirmOnCtrlEnter($container, caption = "Ok") {
         $container.on("keydown", e => {
             if (e.ctrlKey && e.key === "Enter") {
                 e.preventDefault()
-                $container.closest(".ZebraDialog").find("a").filter((_, el) => $(el).text().trim() === "Ok").trigger("click")
+                $container.closest(".ZebraDialog").find("a").filter((_, el) => $(el).text().trim() === caption).trigger("click")
             }
         })
     }
