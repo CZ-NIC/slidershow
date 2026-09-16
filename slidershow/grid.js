@@ -1472,6 +1472,12 @@ class GridController {
                 .toggleClass("current-section", $currentSection.length > 0 && $currentSection.is(section))
         })
         this.hud.refresh_selection_info()
+        if (typeof embed_bridge !== "undefined" && embed_bridge) {
+            const ids = [...this.selection]
+                .map(i => $(this.pl.$articles[i]).data("embed-id"))
+                .filter(id => id !== undefined)
+            embed_bridge.notifySelection(ids)
+        }
     }
 
     /**

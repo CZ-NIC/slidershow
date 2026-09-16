@@ -118,6 +118,11 @@ var playback
 var menu
 /** @type {AuxWindow} */
 var aux_window
+/** @type {?EmbedBridge} */
+var embed_bridge
+/** Whether `?embed` is present – decided once, up front, so Hud can lay out its close icon before
+    `embed_bridge` itself exists (it is only constructed after `new Menu()` returns, see main()). */
+const IS_EMBED = new URLSearchParams(window.location.search).has("embed")
 
 /**
  * Auxiliary window panes – what a single slot may display. Keys are the hash-serialized ids
@@ -189,11 +194,16 @@ main()
 
 function main() {
     // Whether this window is the main one or an aux-window
-    const channel_id = new URLSearchParams((window.location.search)).get("controller")
+    const params = new URLSearchParams(window.location.search)
+    const channel_id = params.get("controller")
     if (channel_id) {
         aux_window = new AuxWindow().overrun(channel_id)
     } else {
         menu = new Menu()
+        if (IS_EMBED) {
+            menu.$menu.hide(0) // the splash screen is not part of the embed contract – stay blank until _open
+            embed_bridge = new EmbedBridge(menu)
+        }
     }
 
     // Loading actions

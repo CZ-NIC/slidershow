@@ -39,6 +39,7 @@ Full docs live at **[cz-nic.github.io/slidershow/docs](https://cz-nic.github.io/
 * [Organizing & tagging](https://cz-nic.github.io/slidershow/docs/organizing/) – thumbnails, grid multi-selection, tagging, tag export to albums.
 * [Structure](https://cz-nic.github.io/slidershow/docs/structure/) – the `<main>`/`<section>`/`<article>` model and how `sli-*` attributes resolve.
 * [Steps](https://cz-nic.github.io/slidershow/docs/steps/), [Images](https://cz-nic.github.io/slidershow/docs/images/), [Video](https://cz-nic.github.io/slidershow/docs/video/), [Text & maps](https://cz-nic.github.io/slidershow/docs/text-maps/) – per-content reference.
+* [Embedding](https://cz-nic.github.io/slidershow/docs/embedding/) *(experimental)* – running SlideRshow inside an `<iframe>`, driven by `postMessage`.
 
 ## License
 

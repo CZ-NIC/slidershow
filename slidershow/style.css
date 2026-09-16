@@ -476,6 +476,16 @@ frame-preview {
             cursor: pointer;
             text-shadow: 0 0 7px var(--surface-white), 0 0 10px var(--surface-white), 0 0 21px var(--surface-white), 0 0 42px var(--indicator-progress), 0 0 82px var(--indicator-progress), 0 0 92px var(--indicator-progress), 0 0 102px var(--indicator-progress), 0 0 151px var(--indicator-progress);
         }
+
+        /* Embed-only close icon (see Hud constructor) – its normal state already carries a faint red
+           glow so it reads as "leave" at a glance, not just as another neutral control icon. */
+        #hud-embed-close {
+            text-shadow: 0 0 6px #ff3b30, 0 0 14px #ff3b30;
+        }
+
+        #hud-embed-close:hover {
+            text-shadow: 0 0 8px #ff3b30, 0 0 18px #ff3b30, 0 0 32px #ff3b30, 0 0 48px #ff3b30;
+        }
     }
 
     /* Loading spinner, shown (via .active) while the current frame's full-quality media is still downloading.
@@ -693,6 +703,22 @@ frame-preview {
             padding: 0 .2em;
             opacity: .6;
             cursor: default;
+        }
+    }
+
+    /* Embed-supplied per-photo caption (EmbedBridge._load's `photo.caption`) - a public-facing title/
+       description, unlike #hud-fileinfo's EXIF-ish metadata, so it's shown bottom-center and on by
+       default (opt-out via `_open({captions: false})`, see EmbedBridge). */
+    #hud-caption {
+        left: 50%;
+        bottom: 4vh;
+        transform: translateX(-50%);
+        max-width: 80vw;
+        text-align: center;
+        text-shadow: 0 0 6px black;
+
+        &:empty {
+            display: none;
         }
     }
 

@@ -65,4 +65,5 @@ nav:
       - Video: video.md
       - Text & maps: text-maps.md
       - Styling: styling.md
+  - Embedding: embedding.md
   - Troubleshooting: troubleshooting.md

@@ -75,7 +75,7 @@ loadjQuery(() => {
         loadStyle("https://unpkg.com/leaflet@1.9.4/dist/leaflet.css")
     }
 
-    const local = ["static.js", "data_saver.js", "frame_factory.js", "frame.js", "frame_zoom.js", "place.js", "map.js", "hud.js", "grid.js", "palette.js", "export.js", "property_panel.js", "propertyPanelPoints.js", "operation.js", "section.js", "changes.js", "start.js", "playback.js", "session.js", "aux_window.js"].filter(Boolean).map(f => loadScript({ src: DIR + f }))
+    const local = ["static.js", "data_saver.js", "frame_factory.js", "frame.js", "frame_zoom.js", "place.js", "map.js", "hud.js", "grid.js", "palette.js", "export.js", "property_panel.js", "propertyPanelPoints.js", "operation.js", "section.js", "changes.js", "start.js", "playback.js", "session.js", "aux_window.js", "embed_bridge.js"].filter(Boolean).map(f => loadScript({ src: DIR + f }))
 
     /**
      When there were 60 photos and 10 videos in a 230 MB presentation file, these were started before we could
@@ -245,6 +245,7 @@ function get_menu() {
             <div id="hud-counter"></div>
             <div id="hud-tag-filter" title="Filtered by tag – click to change or clear"></div>
         </div>
+        <div id="hud-caption"></div>
         <div id="hud-properties"></div>
         <div id="hud-points" title="Points of this frame – click (or Alt+P) to edit them"></div>
         <div id="hud-data-saver" title="Data saver – click to see how much it saved"></div>

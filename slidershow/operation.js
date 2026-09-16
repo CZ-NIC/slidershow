@@ -736,8 +736,9 @@ class Operation {
         const g = () => pl.hud.grid
         return this._group("Grid", [
             ["Enter", "Enter the frame (hides the grid)", () => this.playback.hud.toggle_grid()],
-            // Escape drops the clipboard/selection first (only then, on a second press, toggles the menu)
-            ["Escape", "Clear selection / menu", () => g().hasSelection() || g().clipboard ? g().clearClipboardOrSelection() : pl.hud.toggleMenu()],
+            // Escape drops the clipboard/selection first (only then, on a second press, closes the embed
+            // or toggles the menu – see the Global group's own Escape for why)
+            ["Escape", "Clear selection / menu", () => g().hasSelection() || g().clipboard ? g().clearClipboardOrSelection() : (embed_bridge ? embed_bridge.close() : pl.hud.toggleMenu())],
 
             // Ctrl+Arrow – move the whole selection (or the cursor frame alone) as one block
             ["Ctrl+ArrowUp", "Move selection up", () => g().moveSelection("up")],
@@ -855,9 +856,14 @@ class Operation {
     globalInit() {
         const menu = this.playback.menu
         return this._group("Global", null, [
-            ["Escape", "☰", "Toggle menu", () => this.playback.hud.toggleMenu()],
+            // Embedded mode has no splash/menu screen to fall back to (see EmbedBridge) – Escape reports
+            // back to the host and hides the overlay instead of toggling a menu the embed contract hid.
+            ["Escape", "☰", "Toggle menu", () => embed_bridge ? embed_bridge.close() : this.playback.hud.toggleMenu()],
             [["/", "?"], "🎨", "Command palette", () => this.playback.hud.palette.focus()],
-            ["Alt+m", "🧰", "Show splashscreen", () => menu.stop_playback()],
+            // Same reasoning as Escape above: embedded mode has no splash/menu screen to fall back to,
+            // and its recent-presentations list / drag&drop-upload zone have no business appearing inside
+            // a foreign page's embed.
+            ["Alt+m", "🧰", "Show splashscreen", () => embed_bridge ? null : menu.stop_playback()],
             ["Alt+w", "&#127916;", "Auxiliary window", () => menu.aux_window.open()],
             // the very same dialog the aux window opens from the knob in its corner
             ["Alt+Shift+w", "&#10697;", "Auxiliary window layout…", () => this.playback.aux_window.layout_dialog()],

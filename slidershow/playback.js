@@ -893,7 +893,11 @@ class Playback {
             if (lastFrame !== this.frame) {
                 // we cannot use `same_frame` here because this.frame might have changed meanwhile
                 // (the user might have gone back meanwhile)
-                lastFrame.left()
+                // lastFrame can be undefined here for the same reason noted above `lastFrame?.leave()`
+                // (goToFrame reaching this point before any frame was ever entered) - this branch was
+                // missing that same guard, so the very first goToFrame call in a fresh presentation
+                // threw here and aborted the rest of this callback (frame.enter() below never ran).
+                lastFrame?.left()
             }
             if (promise.aborted) { // another frame was raised meanwhile
                 return

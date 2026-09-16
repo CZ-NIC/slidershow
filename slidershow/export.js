@@ -140,6 +140,30 @@ class Export {
             .removeAttr("integrity crossorigin referrerpolicy")
     }
 
+    /** @type {string} The canonical bootstrap URL "cdn" app-code points the exported file at. */
+    static DEFAULT_CDN_SRC = "https://cdn.jsdelivr.net/gh/CZ-NIC/slidershow@latest/slidershow/slidershow.js"
+
+    /**
+     * Retarget the exported bootstrap `<script src>` at the public CDN, unless it's already pointing
+     * at one. "cdn" app-code used to just leave the current `<script src>` untouched, silently
+     * assuming it was already the CDN copy – true for a normal CDN-loaded session (whatever tag it
+     * happens to pin, ex. some deployment intentionally on `@main` or a pinned version rather than
+     * `@latest` – left exactly as-is, since that pin was presumably deliberate), but not for a
+     * self-hosted embed (ex. a WordPress plugin vendoring its own copy at a relative path): exporting
+     * there left the exported file pointing at that plugin-only relative path, broken once opened
+     * anywhere else. Only a non-jsdelivr `src` (relative path, or some other host entirely) gets
+     * rewritten, and only to the `@latest` default – there is no other tag to infer for a src that
+     * was never on jsdelivr to begin with.
+     * @param {JQuery} $head
+     */
+    _point_app_code_at_cdn($head) {
+        const $script = $head.find("script[src$='slidershow.js']")
+        const current = $script.attr("src") || ""
+        if (!/^https?:\/\/cdn\.jsdelivr\.net\//i.test(current)) {
+            $script.attr("src", Export.DEFAULT_CDN_SRC).removeAttr("integrity crossorigin referrerpolicy")
+        }
+    }
+
     /**
      * Applies only to "Referenced where they are now" – picks whether an already-referenced media path is
      * rewritten before export. The other media targets copy the actual bytes instead, so this doesn't
@@ -653,6 +677,8 @@ class Export {
             }
         } else if (this.app_code === "local") {
             this._point_app_code_at_local($head)
+        } else if (this.app_code === "cdn") {
+            this._point_app_code_at_cdn($head)
         }
 
         // Export the data blob
@@ -957,6 +983,8 @@ class Export {
                 await this._copy_app_code_to_folder($head, targetDir)
             } else if (this.app_code === "local") {
                 this._point_app_code_at_local($head)
+            } else if (this.app_code === "cdn") {
+                this._point_app_code_at_cdn($head)
             }
         } catch (e) {
             this._offline_file_error(e)

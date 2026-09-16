@@ -12,6 +12,7 @@ class Hud {
      */
     constructor(playback) {
         const pl = this.playback = playback
+        this.$hud_caption = $("#hud-caption")
         this.$hud_filename = $("#hud-filename")
         this.$hud_device = $("#hud-device")
         this.$hud_datetime = $("#hud-datetime")
@@ -152,6 +153,14 @@ class Hud {
         $("<div/>", { html: "&#9638;", title: "Grid overview" })
             .appendTo(this.$control_icons)
             .on("click", () => this.toggle_grid())
+
+        // Embedded mode has no splash/menu screen to fall back to (see EmbedBridge) – a close icon takes
+        // its place right in the existing icon row instead of the host having to draw its own button.
+        if (IS_EMBED) {
+            $("<div/>", { id: "hud-embed-close", html: "&#10006;", title: "Close" })
+                .appendTo(this.$control_icons)
+                .on("click", () => embed_bridge.close())
+        }
 
         // Bottom mobile nav bar (touch devices, see the `pointer: coarse` media query).
         // Its "menu" button is wired above, together with the top ☰ icon.
@@ -519,7 +528,10 @@ class Hud {
         // mobile: the bar would sit there permanently (no keyboard shortcut applies) rather than being a
         // one-off tip, so it's just in the way.
         if (!n && !clipN) {
-            if (this.playback.isMobileMode) {
+            // Skipped on mobile (no keyboard shortcut applies there) and, by default, in embed mode
+            // (EmbedBridge.showHints, opt in via `_open({hints: true})`) – a foreign page embedding a
+            // viewer/picker has no use for a hint that teaches an editing affordance.
+            if (this.playback.isMobileMode || (embed_bridge && !embed_bridge.showHints)) {
                 this.$hud_selection.hide()
                 return
             }
@@ -983,6 +995,11 @@ class Hud {
      */
     file_info(frame) {
         const $actor = frame.$actor
+
+        // Embed-supplied caption (EmbedBridge._load's `photo.caption`), stashed on the frame's own
+        // wrapper element the same way EmbedBridge stores `embed-id` - plain outside embed mode, since
+        // nothing ever sets it there.
+        this.$hud_caption.text(frame.$frame.data("embed-caption") || "")
 
         this.$hud_filename.html(frame.get_filename($actor) || "?")
         this.$hud_device.text($actor.attr("sli-device") || "")

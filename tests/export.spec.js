@@ -4,7 +4,9 @@ const fs = require("fs")
 
 const FIXTURE = "file://" + path.resolve(__dirname, "fixtures/basic.html")
 const TAGS_FIXTURE = "file://" + path.resolve(__dirname, "fixtures/tags.html")
-// Saved next to the fixture so the exported <script src> relative path keeps working. Gitignored.
+// Gitignored. Default app-code is "cdn", so the exported file's bootstrap <script src> is rewritten
+// to the public CDN regardless of where this fixture itself loaded slidershow.js from (see
+// Export._point_app_code_at_cdn) - reopening it needs network, same as every other CDN-loaded page.
 const EXPORTED = path.resolve(__dirname, "fixtures/exported.tmp.html")
 
 test.afterAll(() => fs.rmSync(EXPORTED, { force: true }))
@@ -22,6 +24,13 @@ test("export round-trips: the exported file boots and keeps frames + data attrib
         }),
     ])
     await download.saveAs(EXPORTED)
+
+    // The fixture itself loads slidershow.js from a local relative path (see FIXTURE above) - "cdn"
+    // app-code (the default) must still rewrite the exported copy to the public CDN, not keep that
+    // dev-only relative path (which would 404 once the file is opened anywhere else).
+    expect(fs.readFileSync(EXPORTED, "utf8")).toContain(
+        '<script src="https://cdn.jsdelivr.net/gh/CZ-NIC/slidershow@latest/slidershow/slidershow.js">'
+    )
 
     await page.goto("file://" + EXPORTED)
     await expect(page.locator("#start")).toBeVisible()
@@ -353,4 +362,29 @@ test("the app code can be pointed at a copy that already exists, without copying
     expect(html).not.toContain("cdn.jsdelivr.net/gh/CZ-NIC/slidershow")
     // the CDN's integrity/crossorigin would make the browser refuse the local file
     expect(html).not.toMatch(/integrity=.*slidershow\.js/)
+})
+
+test("\"cdn\" app-code leaves an existing jsdelivr src alone, whatever tag it pins", async ({ page }) => {
+    await page.goto(FIXTURE)
+    await page.locator("#start").click()
+    await expect.poll(() => page.url()).toContain("#1")
+
+    // Simulate a deployment intentionally pinned to a non-"@latest" tag (ex. "@dev-7", as some
+    // real galleries do per the project's own CHANGELOG) - the default "cdn" export must not
+    // clobber a deliberate pin back to "@latest".
+    const PINNED = "https://cdn.jsdelivr.net/gh/CZ-NIC/slidershow@dev-7/slidershow/slidershow.js"
+    await page.evaluate(pinned => {
+        document.querySelector("script[src$='slidershow.js']").src = pinned
+    }, PINNED)
+
+    const [download] = await Promise.all([
+        page.waitForEvent("download"),
+        page.evaluate(() => {
+            menu.export.file_handler_wanted = false
+            menu.export.app_code = "cdn"
+            return menu.export.export()
+        }),
+    ])
+    const html = fs.readFileSync(await download.path(), "utf8")
+    expect(html).toContain(`src="${PINNED}"`)
 })
