@@ -332,6 +332,27 @@ menu {
             overflow: auto;
         }
 
+        /* What the frame does by itself (zoom flyover, video cues, video cut) – an aside to the
+           notes, so it is quieter than them but still readable from a distance. */
+        .aux-points {
+            list-style: none;
+            margin: .5em 0 0;
+            padding: .4em 0 0;
+            border-top: 1px dashed var(--border-default);
+            opacity: .8;
+            font-size: .9em;
+
+            li {
+                display: flex;
+                gap: .4em;
+                align-items: baseline;
+            }
+
+            .aux-points-icon {
+                flex: none;
+            }
+        }
+
         .current-step:before {
             /* highlight step position in the main frame */
             content: '';

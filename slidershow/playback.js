@@ -869,7 +869,12 @@ class Playback {
         this.process_bg_tasks([
             () => frame.preload(),
             () => following?.preload(),
-            () => this.aux_window.info(frame, following)  // send the new info to the aux-window
+            () => this.aux_window.info(frame, following),  // send the new info to the aux-window
+            // That preview is a clone of the DOM as it stands right now, and `preload()` merely starts the
+            // downloads – the `src` lands later (queued behind `original_loader`), so on a big presentation
+            // the next frame reached the aux window as a black rectangle and stayed one, nothing ever
+            // re-sent it. Not awaited: the whole bg queue must not stall on a slow file.
+            () => { [frame, following].forEach(f => f?.loaded.then(() => this.frame === frame && this.refresh_aux())) }
         ], true)
 
         // Give visible feedback while the full-quality media downloads (esp. noticeable on a slow real server).

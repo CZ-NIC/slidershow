@@ -120,8 +120,10 @@ class AuxWindow {
             action: "info",
             frame: frame.get_preview(false),
             notes: frame.get_notes(),
+            points: frame.get_points_summary(),
             next_frame: following?.get_preview(),
             next_notes: following?.get_notes(),
+            next_points: following?.get_points_summary(),
             step: frame.get_step(),
             layout: this.layout,
             sizes: this.sizes
@@ -200,8 +202,10 @@ class AuxWindow {
         const content = {
             "current": [d.frame, "Start presenting to see the current frame here."],
             "next": [started ? (d.next_frame || "END") : "", ""],
-            "notes": [d.notes, "Here you will see presenter's notes."],
-            "next-notes": [d.next_notes, "Here you will see the next frame's notes."],
+            // The points summary rides along with the notes – it is the same kind of "what is about
+            // to happen" information, and a frame may well carry points while having no notes at all.
+            "notes": [(d.notes || "") + (d.points || ""), "Here you will see presenter's notes."],
+            "next-notes": [(d.next_notes || "") + (d.next_points || ""), "Here you will see the next frame's notes."],
             "-": ["", ""]
         }
 

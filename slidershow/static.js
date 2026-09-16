@@ -323,3 +323,17 @@ function pref_set(key, value) {
         } catch (e) { /* quota / storage disabled – fall through to the next one */ }
     }
 }
+
+/**
+ * Seconds as a clock, ex: 65 → "1:05", 3605 → "1:00:05". Fractions are dropped (a tenth of
+ * a second means nothing to a presenter reading a cue list).
+ * @param {number} seconds
+ * @returns {string}
+ */
+function formatSeconds(seconds) {
+    const s = Math.max(0, Math.round(Number(seconds) || 0))
+    const parts = [Math.floor(s / 3600), Math.floor(s % 3600 / 60), s % 60]
+    return (parts[0] ? parts : parts.slice(1))
+        .map((val, i) => i ? String(val).padStart(2, "0") : String(val))
+        .join(":")
+}

@@ -1228,8 +1228,13 @@ class Frame {
         // separate standard frame jQuery elements and img[sli-step-animation] elements
         const [$tags, $animations] = [$els.not("img-temp-animation-step"), $els.filter("img-temp-animation-step")]
 
+        // Every animation step re-zooms the same image, so when several of them are processed at once
+        // (entering a frame hides/shows all the steps), the last call wins. Hiding them all should end up
+        // at the first point, hence the reversed order; showing them all ends up at the last point.
+        const $zooms = shown ? $animations : $($animations.get().reverse())
+
         // evaluate step duration, either from usual tags or from an img zoom animation step point
-        const durations = $animations.map((_, el) => $(el).data("callback")(shown))
+        const durations = $zooms.map((_, el) => $(el).data("callback")(shown))
             .add(...$tags.map((_, el) => prop("step-duration", $(el), null, "duration"))).get()
         // step-duration is either 0 (if any of the elements sets it) or the max value or the frame default
         // Why checking length? Prevent `Math.max(empty) -> -Infinity`
@@ -1425,6 +1430,28 @@ class Frame {
             $clone.find("video, img").first().removeAttr("style")
         }
 
+        // The media may not have arrived yet (`preload()` only starts the downloads), in which case the
+        // clone would carry a bare `sli-src` and paint a black rectangle in the aux window. Stand the
+        // `sli-thumb` preview in meanwhile – resolved against the original element, as a detached clone
+        // can no longer inherit the property. Done before anything is removed below, so that the two
+        // element lists still line up.
+        const $originals = this.$frame.find("img, video")
+        $clone.find("img, video").each((i, el) => {
+            const $el = $(el)
+            const is_img = el.tagName === "IMG"
+            if (!$el.attr(is_img ? "src" : "poster")) {
+                const thumb = Frame.get_thumb_src($originals.eq(i))
+                if (thumb) {
+                    $el.attr(is_img ? "src" : "poster", thumb)
+                }
+            }
+            if (!is_img) {
+                // A <video src> left to the browser's discretion may fetch nothing at all and show a
+                // black box; metadata is enough for the poster frame.
+                $el.attr("preload", "metadata")
+            }
+        })
+
         if (this.$actor.is("video")) {
             $clone.addClass("video-thumbnail")
         }
@@ -1564,6 +1591,80 @@ class Frame {
      */
     get_notes() {
         return this.playback.menu.markdown.makeHtml(this.get_notes_raw())
+    }
+
+    /**
+     * What the frame is going to do on its own, in a single glance: the image zoom flyover
+     * (`sli-step-points`), the video cues (`sli-video-points`) and the video trim (`#t=start,stop`).
+     * The presenter's aux window shows it next to the notes, so that they know a photo is about to
+     * zoom twice, or that the video pauses at 0:12, before it happens.
+     * @returns {string} HTML; empty when the frame just plainly shows its media.
+     */
+    get_points_summary() {
+        /** @type {[string, string, string][]} icon, title, description */
+        const rows = []
+
+        /**
+         * A zoom position as authored: [left, top, scale, transition, duration, rotate].
+         * @param {?Array} position
+         */
+        const position_text = position => {
+            const [left = 0, top = 0, scale = 1, , , rotate = 0] = position || []
+            const parts = []
+            if (scale !== 1 || left || top) {
+                parts.push(`${Math.round(scale * 10) / 10}×`)
+            } else {
+                parts.push("full view")
+            }
+            if (rotate) {
+                parts.push(`${rotate}°`)
+            }
+            return parts.join(" ")
+        }
+
+        // Image zoom flyover
+        const $images = this.getImagesWithStepPoints()
+        $images.each((i, el) => {
+            const points = this.prop("step-points", $(el))
+            rows.push(["📸", "sli-step-points",
+                ($images.length > 1 ? `image ${i + 1}: ` : "")
+                + "zoom: " + points.map(position_text).join(" → ")])
+        })
+
+        if (this.$actor.is("video")) {
+            // Video cues
+            const points = this.prop("video-points", this.$actor) || []
+            if (points.length) {
+                rows.push(["🎬", "sli-video-points", points.map(data => {
+                    const point = new PointStep(null, data, null)
+                    const flags = [
+                        point.goto != null ? `→ ${formatSeconds(point.goto)}` : null,
+                        point.rate != null ? `${point.rate}×` : null,
+                        point.pause ? "pause" : null,
+                        point.mute ? "mute" : null,
+                        point.unmute ? "unmute" : null,
+                        point.position?.length ? position_text(point.position) : null,
+                    ].filter(Boolean)
+                    return formatSeconds(point.startTime) + (flags.length ? ` (${flags.join(", ")})` : "")
+                }).join(" → ")])
+            }
+
+            // Video trim
+            const { start, stop } = this.getVideoCut()
+            if (start !== undefined || stop !== undefined) {
+                rows.push(["✂️", "video cut",
+                    `${formatSeconds(start || 0)} – ${stop === undefined ? "end" : formatSeconds(stop)}`])
+            }
+        }
+
+        if (!rows.length) {
+            return ""
+        }
+        return $("<ul/>", { "class": "aux-points" })
+            .append(rows.map(([icon, title, text]) => $("<li/>")
+                .append($("<span/>", { "class": "aux-points-icon", text: icon, title: title }))
+                .append($("<span/>", { text: text }))))
+            .prop("outerHTML")
     }
 
     /**
