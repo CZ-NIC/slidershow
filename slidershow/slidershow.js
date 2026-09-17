@@ -75,7 +75,7 @@ loadjQuery(() => {
         loadStyle("https://unpkg.com/leaflet@1.9.4/dist/leaflet.css")
     }
 
-    const local = ["static.js", "data_saver.js", "frame_factory.js", "frame.js", "frame_zoom.js", "place.js", "map.js", "hud.js", "grid.js", "palette.js", "export.js", "property_panel.js", "propertyPanelPoints.js", "operation.js", "section.js", "changes.js", "start.js", "playback.js", "session.js", "aux_window.js", "embed_bridge.js"].filter(Boolean).map(f => loadScript({ src: DIR + f }))
+    const local = ["static.js", "data_saver.js", "frame_factory.js", "frame.js", "frame_zoom.js", "place.js", "map.js", "hud.js", "grid.js", "palette.js", "export.js", "pdf_export.js", "property_panel.js", "propertyPanelPoints.js", "operation.js", "section.js", "changes.js", "start.js", "playback.js", "session.js", "aux_window.js", "embed_bridge.js"].filter(Boolean).map(f => loadScript({ src: DIR + f }))
 
     /**
      When there were 60 photos and 10 videos in a 230 MB presentation file, these were started before we could

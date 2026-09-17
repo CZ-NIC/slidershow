@@ -465,7 +465,7 @@ class Export {
         // reduce parameters
         // The HUD & co. go first – stripping `style` off a subtree that is about to be deleted is pure
         // work, and on a big grid that subtree dwarfs the presentation itself.
-        $contents.find("> #map, > #map-hud, > #map-wrapper, > #hud, > #preblink-prevention, > menu, > .ZebraDialog, > .ZebraDialogBackdrop").remove()
+        $contents.find("> #map, > #map-hud, > #map-wrapper, > #hud, > #preblink-prevention, > menu, > .ZebraDialog, > .ZebraDialogBackdrop, > print-root, > print-progress").remove()
         $contents.removeAttr("style")
         $contents.find("*").removeAttr("style")
         await Frame.finalize_frames($contents, this.playback.$articles, compact_file, path, this.menu.display_progress(this.playback.$articles.length))

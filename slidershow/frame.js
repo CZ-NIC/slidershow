@@ -1419,9 +1419,12 @@ class Frame {
 
     /**
      * We do not guarantee the frame is preloaded.
+     * @param {boolean} suppress_step_animation
+     * @param {boolean} keep_step_state Keep the frame's *current* step state instead of flattening it
+     *  (every step shown). Used by PdfExport, where one page is one step.
      * @returns {string} HTML
      */
-    get_preview(suppress_step_animation = true) {
+    get_preview(suppress_step_animation = true, keep_step_state = false) {
         const $clone = this.$frame.clone().removeAttr("style")
         if (this.panorama_starter) { // remove panorama styling
             $clone.find("video, img").first().removeAttr("style")
@@ -1454,9 +1457,15 @@ class Frame {
         }
         $clone.find("video").removeAttr("autoplay controls") // even if the main $actor in not video, disable all the videos
         $clone.find("[sli-templated]").remove()
-        $clone.find("[sli-step]").show() // ignore frame steps
+        if (!keep_step_state) {
+            $clone.find("[sli-step]").show() // ignore frame steps
+        }
         if (suppress_step_animation) {
-            Frame._clean_step($clone)
+            if (!keep_step_state) {
+                Frame._clean_step($clone)
+            }
+            // The step state we just kept is mid-animation in the clone; without this it would be
+            // rendered at the animation's *initial* frame (ex: opacity 0) instead of its result.
             $clone.addClass("prevent-animation-important")
         }
 

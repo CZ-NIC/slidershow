@@ -14,6 +14,7 @@ class Menu {
         const pl = playback = this.playback = new Playback(this, this.aux_window) // expose global `playback`
 
         this.export = new Export(this)
+        this.pdf = new PdfExport(this)
 
         // With a presentation loaded, Start is the primary action – keep the append panel folded.
         // With no frames, appending is the only action – unfold it.

@@ -85,6 +85,12 @@ class Session {
                         pl.hud.toggle_progress()
                     }
                     break;
+                case "print-pdf":
+                    // reveal.js parity: a URL that lays the presentation out for the browser's own
+                    // "Save as PDF". Deferred – the frames are not positioned (nor is the playback
+                    // even started) at the time the hash is parsed. `print-pdf=0` flattens the steps.
+                    setTimeout(() => pl.menu.pdf.build({ include_steps: value !== "0" }))
+                    break;
                 case "no-steps":
                     pl.step_disabled = true
                     break

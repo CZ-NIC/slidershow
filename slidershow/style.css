@@ -2213,3 +2213,146 @@ article-map {
     /* must not be seen by user. But must be on the viewport, puttin top:100% would make FF not to preload it. */
     top: 99.999%;
 }
+
+/* ---------------------------------------------------------------- Print to PDF (pdf_export.js)
+
+   One <print-page> per slide, each holding a clone of the frame at its *screen* size, uniformly scaled
+   into the paper. See the comment block atop pdf_export.js for why the live tree cannot simply be
+   restyled for print. The sheet size itself is generated at build time into #sli-print-page, since
+   `@page { size }` cannot read a custom property. */
+
+print-root {
+    display: none;
+}
+
+/* Laid out on screen first, so the presenter can review the pages before printing. */
+html[sli-print] {
+    body>*:not(print-root) {
+        display: none !important;
+    }
+
+    /* Screen only – on paper the sheet is the page and any gap around it spills onto the next one. */
+    @media screen {
+        print-root {
+            display: block;
+            background: var(--bg-menu);
+            padding: 10px 0;
+        }
+
+        body {
+            /* The presentation itself never scrolls (it is a fixed canvas), the page list has to. */
+            overflow-y: auto;
+        }
+
+        print-page {
+            margin-bottom: 10px;
+        }
+    }
+}
+
+print-page {
+    display: block;
+    position: relative;
+    overflow: hidden;
+    margin: 0 auto;
+    /* The presentation's own background (`body`), not the paper's – a photo show is authored against
+       black and prints that way, hence print-color-adjust below. */
+    background: var(--bg-dark);
+    width: var(--page-w);
+    height: var(--page-h);
+    break-after: page;
+    break-inside: avoid;
+
+    >article,
+    >article-map {
+        display: block !important;
+        position: absolute;
+        margin: 0;
+        overflow: hidden;
+        left: var(--offset-x);
+        top: var(--offset-y);
+        width: var(--slide-w);
+        height: var(--slide-h);
+        transform: scale(var(--print-scale));
+        transform-origin: 0 0;
+    }
+
+    /* The clone is a still picture – whatever was mid-flight must render at its result, not its start. */
+    * {
+        animation: none !important;
+        transition: none !important;
+    }
+
+    /* Placed by its real on-screen rectangle (PdfExport._freeze_videos), so nothing here may move it. */
+    canvas.print-frozen-video {
+        position: absolute;
+        object-fit: contain;
+    }
+
+    /* Same stand-ins the grid uses for what cannot be pictured. */
+    >article.video-thumbnail:before {
+        content: '\1f3a5';
+    }
+
+    >article-map:before {
+        content: '🗺';
+    }
+
+    >article.video-thumbnail:before,
+    >article-map:before {
+        position: absolute;
+        width: 100%;
+        margin-top: 20%;
+        font-size: 300px;
+        text-shadow: 0 0 100px var(--base);
+    }
+}
+
+print-toolbar {
+    position: fixed;
+    bottom: 10px;
+    right: 10px;
+    z-index: 10;
+    display: flex;
+    gap: .5em;
+    align-items: center;
+    padding: .5em .8em;
+    border-radius: 5px;
+    background-color: var(--bg-menu);
+}
+
+print-progress {
+    position: fixed;
+    z-index: 1000;
+    bottom: 20px;
+    left: 20px;
+    padding: .5em .8em;
+    border-radius: 5px;
+    background-color: var(--bg-menu);
+}
+
+@media print {
+    :root {
+        /* Without this the dark theme prints white on white. */
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+    }
+
+    body>*:not(print-root) {
+        display: none !important;
+    }
+
+    print-root {
+        display: block;
+        background: none;
+    }
+
+    print-toolbar {
+        display: none;
+    }
+
+    /* Otherwise the last page's break-after conjures an empty sheet behind it. */
+    print-page:last-of-type {
+        break-after: auto;
+    }
+}

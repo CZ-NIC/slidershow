@@ -916,6 +916,10 @@ class Operation {
             })],
             ['Ctrl+s', "&#128190;", "Export", () => menu.export.export_dialog()],
             ['Ctrl+Shift+s', "&#128193;", "Export tags to folders…", () => menu.export.export_tags_dialog()],
+            // Not Ctrl+p – that is the browser's own print shortcut and there is no point fighting it;
+            // it prints the laid-out pages anyway once this command has produced them. (Nor Alt+p,
+            // which is the properties panel.)
+            ['Alt+Shift+p', "&#128424;", "Export to PDF…", () => menu.pdf.dialog()],
             ['F1', "&#9432;", "Help", () => menu.help()],
         ])
     }

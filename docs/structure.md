@@ -119,6 +119,26 @@ kind of export it will be.
 The middle two have to re-read this presentation's own files, which Chrome refuses under `file://` –
 host the presentation over http(s) to use them. The last one copies nothing, so it works anywhere.
 
+### Exporting to PDF
+
+<kbd>Alt+Shift+P</kbd> ("Export to PDF…") turns the presentation into printable pages and lets the
+browser write the PDF – there is no separate PDF file to download, you print to one. Pick the page
+size (a 16:9 / 4:3 slide, A4 either way round, or whatever this window currently is) and whether
+every [step](steps.md) gets a page of its own or the frame is shown with all of its steps at once.
+
+SlideRshow then walks the whole presentation to load every photo, so a big album takes a while. The
+pages are laid out on screen when it finishes: scroll through them, then hit **Print** and choose
+"Save as PDF" in the browser's dialog, with margins set to none (the page is already exactly the
+size it should be). **Close** puts the presentation back where you left it.
+
+Each page is the frame as it really looks – same proportions, same zoom, letterboxed onto the paper
+– with text staying vector-sharp rather than a screenshot. A video prints as the frame it was
+showing; a map prints as a 🗺 placeholder. Frames hidden by a [tag filter](organizing.md#filtering-by-tag)
+are left out, so the PDF matches what the presentation currently plays.
+
+The same thing is reachable from a link: `presentation.html#1?print-pdf` lays the pages out on open
+(`print-pdf=0` flattens the steps instead of giving each one a page).
+
 ## Frame `<article>`
 
 Every frame is represented by an `<article>` tag.
