@@ -1000,7 +1000,10 @@ class Frame {
         // No HTML tag found, fit plain text to the screen size
         const fit = this.prop("fit")
         if (fit === true || fit === 1 || (fit === 'auto' && $frame.children().length === 0)) {
-            textFit($frame)
+            // Plain single-line mode wraps the content in a nowrap <span> and clips it - any text with a
+            // line break loses everything past the first line. sli-fit=auto is the default, so this hits
+            // every multi-line text frame unless multiLine is used instead.
+            textFit($frame, { multiLine: /\n/.test($frame.text()) })
         }
 
         if (!this._entered) {
@@ -1231,8 +1234,10 @@ class Frame {
         const $zooms = shown ? $animations : $($animations.get().reverse())
 
         // evaluate step duration, either from usual tags or from an img zoom animation step point
-        const durations = $zooms.map((_, el) => $(el).data("callback")(shown))
-            .add(...$tags.map((_, el) => prop("step-duration", $(el), null, "duration"))).get()
+        // Plain array concat, not jQuery's .add(...spread) - .add(selector, context) only takes 2 args, so
+        // spreading more than 2 durations into it silently dropped the rest.
+        const durations = $zooms.map((_, el) => $(el).data("callback")(shown)).get()
+            .concat($tags.map((_, el) => prop("step-duration", $(el), null, "duration")).get())
         // step-duration is either 0 (if any of the elements sets it) or the max value or the frame default
         // Why checking length? Prevent `Math.max(empty) -> -Infinity`
         this.step_duration = durations.length ? durations.includes(0) ? 0 : Math.max(...durations) : null

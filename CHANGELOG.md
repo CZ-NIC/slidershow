@@ -8,6 +8,7 @@
 * fix: stepping backward through a run of hidden frames got stuck bouncing forward instead of continuing back; a grid tile stayed dimmed/hidden after its own tag changed until the next full grid rebuild; the HUD's inner per-section counter still counted every frame in the section, hidden or not
 
 ### Export
+* feat: on `file://`, a reloaded presentation's `Ctrl+S` now saves back to its own file with no native file picker and no permission prompt beyond a single one-click re-grant – the write target is remembered per presentation (by its on-disk path) across reloads. If the file changed outside the app, or was last saved with a different export mode, a confirmation asks before overwriting; the export dialog shows the remembered filename with a "Forget" action. Never persisted on a hosted origin, where `Ctrl+S` stays a plain export
 * feat: **export to PDF** (<kbd>Alt+Shift+P</kbd>, or `print-pdf` in the URL hash) – the presentation is laid out as one printable page per frame (optionally per [step](https://cz-nic.github.io/slidershow/docs/steps/)) and the browser's own "Save as PDF" writes the file, so the text stays vector-sharp instead of being a screenshot and nothing new is downloaded. Choose the page size (16:9 / 4:3 slide, A4 either way, or this window); the pages are shown on screen for review before printing. A video prints as the frame it was showing, a map as a placeholder; frames hidden by a tag filter are left out
 
 ### Embedding

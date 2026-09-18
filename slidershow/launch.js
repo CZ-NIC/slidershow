@@ -282,6 +282,22 @@ function docname() {
 }
 
 /**
+ * The presentation's on-disk identity, shared by the Recent list and the persisted export target
+ * (see `Export._target_key()`): `location.pathname + location.search`, with `#...` (session.js state)
+ * and `?controller=...` (aux_window.js) dropped, and `decodeURI`'d so diacritics don't split one file
+ * into two keys. Callers that must only persist for on-disk documents (the export target) gate this
+ * themselves on `file:` protocol – see `Export._target_key()` – rather than this helper doing it, so
+ * tests can stub that check the same way they already stub `_is_file_protocol()`.
+ * @returns {string}
+ */
+function presentation_key() {
+    const params = new URLSearchParams(location.search)
+    params.delete("controller")
+    const search = params.toString()
+    return decodeURI(location.pathname + (search ? `?${search}` : ""))
+}
+
+/**
  * The presentation's human display name: `<main sli-title>`, else the document `<title>`. Consistent
  * with `<section sli-title>` (a section's display name) – "sli-title is the display name at any level".
  * Set via `Playback.set_presentation_name()`, which mirrors it to `document.title`.

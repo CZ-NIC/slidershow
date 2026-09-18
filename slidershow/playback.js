@@ -20,8 +20,12 @@ class Playback {
         /** @type {Interval} */
         this.moving_timeout = new Interval(() => {
             this.moving_timeout.stop()
-            const hudTimeouted = Promise.race([this.hud_map.finished, new Promise(r => setTimeout(() => r(), 5000))])
-            Promise.all([this.frame.video_finished, this.map.finished, hudTimeouted]).then(() => this.tryGoNext())
+            // MapWidget.finished (map.js) itself rejects after 5s (e.g. two consecutive frames sharing a
+            // place never fire moveend) - raced against a resolving timer here so that rejection can't
+            // reject this whole Promise.all and stall auto-forward forever (no .catch below).
+            const timeouted = p => Promise.race([p, new Promise(r => setTimeout(() => r(), 5000))])
+            Promise.all([this.frame.video_finished, timeouted(this.map.finished), timeouted(this.hud_map.finished)])
+                .then(() => this.tryGoNext())
         }).stop()
 
         const fact = id => $("<div/>", { id: id }).prependTo("body")
@@ -504,8 +508,15 @@ class Playback {
      */
     async waitAndGo(duration) {
         if (this.moving && duration) {
+            const frame = this.frame
             await this.frame.loaded
             await Promise.all(this.frame.effects)
+            if (this.frame !== frame) {
+                // Navigation moved on while we were awaiting – this call's duration is for a frame that's
+                // no longer current, so re-arming moving_timeout with it would clobber whatever timing the
+                // frame we actually landed on is expecting.
+                return
+            }
             this.hud.progress_start(duration * 1000)
             return this.moving_timeout.start(duration * 1000)
         }

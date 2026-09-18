@@ -1943,7 +1943,9 @@ article-map {
     display: none; /* initially hidden */
     position: absolute;
     width: 100vw;
-    height: 100vh;
+    height: 100vh; /* fallback for browsers without dvh support */
+    height: 100dvh; /* on mobile, 100vh includes the strip the address-bar chrome covers/uncovers, which
+        made a frame's last content unreachable by scroll - 100dvh accounts for the address bar itself */
     text-align: center;
     font-size: 10vw; /* XX use with the sli-fit only? */
     margin-bottom: 100vh;
@@ -2193,6 +2195,18 @@ article-map {
 .export-handler-row {
     margin-top: .8em;
     text-align: left;
+}
+
+/* Export dialog (export.js): which file Ctrl+S currently remembers, if any (empty until the async
+   IndexedDB lookup resolves, and empty again on a hosted origin – nothing is remembered there). */
+.export-target-row {
+    margin-top: .4em;
+    text-align: left;
+
+    .export-target-name {
+        margin-right: .6em;
+        opacity: .8;
+    }
 }
 
 .tag-summary {

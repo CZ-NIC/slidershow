@@ -278,7 +278,17 @@ class FrameZoom {
             wzoom.options.smoothTime = transition_duration
             wzoom.transform(top * ratio * scale, left * ratio * scale, scale)
             wzoom.options.smoothTime = orig
-            this.frame.add_effect(r => $el.on("transitionend", () => r()))
+            this.frame.add_effect(r => {
+                if (!transition_duration) {
+                    // No CSS transition actually runs (smoothTime 0) -> "transitionend" never fires, which
+                    // would otherwise hang this effect's promise forever (Promise.all in waitAndGo/goNext).
+                    r()
+                } else {
+                    // .one, not .on: repeated set() calls on the same $el would otherwise pile up listeners
+                    // that never get removed.
+                    $el.one("transitionend", () => r())
+                }
+            })
 
             // Register keys immediately, do not wait the transition to end so that the user does not end up on a different frame.
             this._adjustKeys(wzoom, scale)

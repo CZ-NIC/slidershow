@@ -183,7 +183,7 @@ class Menu {
         if (!frames) {
             return
         }
-        const url = location.pathname + location.search
+        const url = presentation_key()
         const range = this._photo_date_range($(FRAME_SELECTOR))
         const entry = {
             url, frames, name: presentation_name() || docname(), time: new Date().toISOString(),
@@ -204,7 +204,7 @@ class Menu {
 
     /** Render the recent-presentations list on the splash. Skips the entry for the current document. */
     refresh_recent() {
-        const here = location.pathname + location.search
+        const here = presentation_key()
         const list = this._recent_load().filter(e => e.url && e.url !== here)
         const $panel = $("#recent-panel").empty()
         // Always render the heading (with a muted placeholder when empty) so the feature is discoverable.

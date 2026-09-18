@@ -74,6 +74,30 @@ class Export {
     }
 
     /**
+     * Shows which file `Ctrl+S` currently writes to (if any), so choosing another file in the native
+     * picker is visibly a "save as" rather than a silent switch – see PLAN.md "Persisted export target"
+     * step 4. Empty on a hosted origin (`_target_key()` is null there – nothing is remembered).
+     */
+    _export_target_row() {
+        const key = this._target_key()
+        if (!key || !this.file_handler_allowed) {
+            return ""
+        }
+        const $row = $("<div/>", { class: "export-target-row" })
+        this._load_export_target().then(target => {
+            $row.empty()
+            if (!target) {
+                return
+            }
+            $("<span/>", { class: "export-target-name", text: `Saved as: ${target.name}` }).appendTo($row)
+            $("<button/>", { type: "button", text: "Forget", title: "Forget the remembered file – the next export asks again." })
+                .on("click", () => this.forget_export_target().then(() => $row.empty()))
+                .appendTo($row)
+        })
+        return $row
+    }
+
+    /**
      * Picks how the app's own code (vendor libs + local slidershow/*.js + style.css) is attached to the
      * exported file, independent of what happens to the media. Applies to every media target except
      * "Split into folders by tags". Mutually exclusive options only – "cdn", "asis", "inline", "folder",
@@ -414,6 +438,7 @@ class Export {
             this.media_target_radio(refresh),
             $("<div/>", { class: "app-code-footer" }).append(this.app_code_radio(refresh), this._file_protocol_warning()),
             $("<div/>", { class: "export-handler-row" }).append(this.file_handler_checkbox()),
+            this._export_target_row(),
         )
         // Remember which radios are unavailable for their own reasons (file://, no Chrome), so refresh()
         // can re-enable only the ones it actually disabled.
@@ -762,14 +787,15 @@ class Export {
         const data = this._assemble_document(html, $head, inline_wanted)
 
         if (this.file_handler_wanted && window.showSaveFilePicker) {
-            const newHandle = await this.assure_handler()
+            const newHandle = await this.assure_handler(compact_file)
             const fileStream = await newHandle.createWritable()
             // Streamed in chunks, not written in one go: the whole file never has to sit in the renderer
             // a second time on its way out. pipeTo closes the stream itself and only settles once it is
             // closed – otherwise "Saved" would show while the file is still flushing.
             await data.stream().pipeTo(fileStream)
+            await this._record_export_target(newHandle, compact_file)
 
-            this.menu.playback.hud.info("Saved")
+            this.menu.playback.hud.info(`Saved → ${newHandle.name}`)
         } else {
             this.download(data)
         }
@@ -778,13 +804,6 @@ class Export {
 
         // Changes saved, allow leaving
         this.playback.changes.unblock_unload()
-    }
-
-    async assure_handler() {
-        if (!this.file_handler) {
-            this.file_handler = await window.showSaveFilePicker({suggestedName: this.playback.session.export_filename}) // ask once for the path – then keep newHandle
-        }
-        return this.file_handler
     }
 
     // --- Offline export (bundle the app's own code so the export needs no network but for map tiles) ---
@@ -1747,10 +1766,199 @@ class Export {
      */
     _open_handle_db() {
         return new Promise((resolve, reject) => {
-            const req = indexedDB.open("sli:tag-export", 1)
-            req.onupgradeneeded = () => req.result.createObjectStore("handles")
+            const req = indexedDB.open("sli:tag-export", 2)
+            req.onupgradeneeded = () => {
+                const db = req.result
+                if (!db.objectStoreNames.contains("handles")) {
+                    db.createObjectStore("handles")
+                }
+                if (!db.objectStoreNames.contains("targets")) {
+                    // Key = Export._target_key() (on-disk identity, gated to file:// documents).
+                    db.createObjectStore("targets")
+                }
+            }
             req.onsuccess = () => resolve(req.result)
             req.onerror = () => reject(req.error)
+        })
+    }
+
+    // --- Persisted export target (Ctrl+S without the picker, see PLAN.md) ---
+
+    /**
+     * `presentation_key()`, gated to `file:` documents only – on a hosted origin the document is a fresh
+     * copy from the server on every load, so writing it onto a local file that has diverged would destroy
+     * exactly the local edits the server never had (there, Ctrl+S is an export, not a save). Routed
+     * through `_is_file_protocol()`, not a raw `location.protocol` check, so tests can stub it the same
+     * way they already stub the app-code/offline-export file:// checks.
+     * @returns {?string}
+     */
+    _target_key() {
+        return this._is_file_protocol() ? presentation_key() : null
+    }
+
+    /**
+     * The remembered export target for the current presentation, if any.
+     * @returns {Promise<?{handle: FileSystemFileHandle, name: string, size: number, mtime: number,
+     *  app_code: string, compact: boolean, saved_at: number}>}
+     */
+    async _load_export_target() {
+        const key = this._target_key()
+        if (!key) {
+            return null
+        }
+        try {
+            const db = await this._open_handle_db()
+            const tx = db.transaction("targets", "readonly")
+            return await new Promise(resolve => {
+                const req = tx.objectStore("targets").get(key)
+                req.onsuccess = () => resolve(req.result || null)
+                req.onerror = () => resolve(null)
+            })
+        } catch (e) {
+            return null
+        }
+    }
+
+    /**
+     * @param {{handle: FileSystemFileHandle, name: string, size: number, mtime: number, app_code: string,
+     *  compact: boolean, saved_at: number}} entry
+     */
+    async _save_export_target(entry) {
+        const key = this._target_key()
+        if (!key) {
+            return
+        }
+        const db = await this._open_handle_db()
+        const tx = db.transaction("targets", "readwrite")
+        tx.objectStore("targets").put(entry, key)
+        await new Promise(resolve => tx.oncomplete = resolve)
+        await this._trim_export_targets(db)
+    }
+
+    async forget_export_target() {
+        const key = this._target_key()
+        if (!key) {
+            return
+        }
+        const db = await this._open_handle_db()
+        const tx = db.transaction("targets", "readwrite")
+        tx.objectStore("targets").delete(key)
+        this.file_handler = null
+        return new Promise(resolve => tx.oncomplete = resolve)
+    }
+
+    /**
+     * Keeps the `targets` store from growing without bound (a presentation opened once a year should
+     * still remember its target, so this is a plain LRU cap, not time-based).
+     * @param {IDBDatabase} db
+     */
+    async _trim_export_targets(db, limit = 50) {
+        const tx = db.transaction("targets", "readwrite")
+        const store = tx.objectStore("targets")
+        const entries = await new Promise(resolve => {
+            const keys = []
+            const req = store.openCursor()
+            req.onsuccess = () => {
+                const cursor = req.result
+                if (cursor) {
+                    keys.push({ key: cursor.primaryKey, saved_at: cursor.value.saved_at || 0 })
+                    cursor.continue()
+                } else {
+                    resolve(keys)
+                }
+            }
+            req.onerror = () => resolve([])
+        })
+        entries.sort((a, b) => b.saved_at - a.saved_at)
+        entries.slice(limit).forEach(e => store.delete(e.key))
+        return new Promise(resolve => tx.oncomplete = resolve)
+    }
+
+    /**
+     * A yes/no confirmation dialog, resolving `true` only when the affirmative button is clicked.
+     * @param {string} title
+     * @param {string} message
+     * @param {string} confirmCaption
+     * @returns {Promise<boolean>}
+     */
+    _confirm(title, message, confirmCaption) {
+        return new Promise(resolve => {
+            new $.Zebra_Dialog({
+                message, title, type: "question",
+                buttons: [
+                    { caption: "Cancel", callback: () => resolve(false) },
+                    { caption: confirmCaption, default_confirmation: true, callback: () => resolve(true) },
+                ],
+            })
+        })
+    }
+
+    /**
+     * Resolves the file handle to write on Ctrl+S: reuses the persisted target for this presentation when
+     * it's still valid, otherwise falls back to `showSaveFilePicker`. Guard order:
+     *   no _target_key()            → picker (hosted origin – see _target_key())
+     *   no entry under the key      → picker
+     *   getFile() → NotFoundError   → picker (file moved/renamed/deleted)
+     *   size/mtime ≠ recorded       → confirm "changed outside the app"
+     *   app_code/compact ≠ recorded → confirm "different export mode"
+     *   otherwise                   → silent reuse
+     * @param {boolean} compact_file Same meaning as `export()`'s parameter – whether this export bundles
+     *  everything into one file ("single" media target).
+     * @returns {Promise<FileSystemFileHandle>}
+     */
+    async assure_handler(compact_file = false) {
+        if (this.file_handler) {
+            return this.file_handler
+        }
+        const target = await this._load_export_target()
+        if (target) {
+            try {
+                const granted = await target.handle.queryPermission({ mode: "readwrite" }) === "granted"
+                    || await target.handle.requestPermission({ mode: "readwrite" }) === "granted"
+                if (granted) {
+                    const file = await target.handle.getFile()
+                    const changed = file.size !== target.size || file.lastModified !== target.mtime
+                    if (changed && !await this._confirm("Save",
+                        `"${target.name}" changed outside the app since it was last saved. Overwrite it anyway?`,
+                        "Overwrite")) {
+                        return this._pick_new_handler()
+                    }
+                    const modeChanged = target.app_code !== this.app_code || target.compact !== compact_file
+                    if (modeChanged && !await this._confirm("Save",
+                        `"${target.name}" was last saved with a different export mode. Overwrite it anyway?`,
+                        "Overwrite")) {
+                        return this._pick_new_handler()
+                    }
+                    this.file_handler = target.handle
+                    return this.file_handler
+                }
+            } catch (e) {
+                // NotFoundError (moved/renamed/deleted) or a denied permission dance – fall through to the picker.
+            }
+        }
+        return this._pick_new_handler()
+    }
+
+    /** @returns {Promise<FileSystemFileHandle>} */
+    async _pick_new_handler() {
+        this.file_handler = await window.showSaveFilePicker({ suggestedName: this.playback.session.export_filename })
+        return this.file_handler
+    }
+
+    /**
+     * Called once the write to `handle` has actually flushed – records the identity the next Ctrl+S
+     * checks against. No-op on a hosted origin (`_target_key()` is null there, see its doc).
+     * @param {FileSystemFileHandle} handle
+     * @param {boolean} compact_file
+     */
+    async _record_export_target(handle, compact_file) {
+        if (!this._target_key()) {
+            return
+        }
+        const file = await handle.getFile()
+        await this._save_export_target({
+            handle, name: handle.name, size: file.size, mtime: file.lastModified,
+            app_code: this.app_code, compact: compact_file, saved_at: Date.now(),
         })
     }
 
