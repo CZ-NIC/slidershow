@@ -914,7 +914,12 @@ class Operation {
                     callback: (_, name) => this.playback.set_presentation_name(name)
                 }]
             })],
-            ['Ctrl+s', "&#128190;", "Export", () => menu.export.export_dialog()],
+            // Re-exports straight away once a save target is already known (a remembered file:// handle
+            // with permission still granted) – no point re-asking settings that haven't changed. Falls
+            // back to the dialog below otherwise (first save, Firefox, a hosted origin, …) – see
+            // Export.quick_save().
+            ['Ctrl+s', "&#128190;", "Save", () => menu.export.quick_save()],
+            ['Alt+Shift+s', "&#128228;", "Export…", () => menu.export.export_dialog()],
             ['Ctrl+Shift+s', "&#128193;", "Export tags to folders…", () => menu.export.export_tags_dialog()],
             // Not Ctrl+p – that is the browser's own print shortcut and there is no point fighting it;
             // it prints the laid-out pages anyway once this command has produced them. (Nor Alt+p,

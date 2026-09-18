@@ -27,7 +27,7 @@ Or embed it on any page with a single tag:
 
 ## Presentation names
 
-Every presentation can have a name, which you set on the splash screen (hover the "Start presenting" label to reveal the editable field), with <kbd>Alt+N</kbd> during playback, via the export dialog (<kbd>Ctrl+S</kbd>), or by clicking the "Presentation" title in the grid overview. The name is stored in the document `<title>` (browser tab) and in the `sli-title` attribute on `<main>`, travels with exported files, and – when you export – the name is slugified to become the filename (e.g. *Dovolená 2019* → `dovolena-2019.html` instead of the generic `slidershow.html`). Several differently-named presentations can coexist under the same URL without their cached tag names interfering with each other.
+Every presentation can have a name, which you set on the splash screen (hover the "Start presenting" label to reveal the editable field), with <kbd>Alt+N</kbd> during playback, via the export dialog (<kbd>Alt+Shift+S</kbd>, or <kbd>Ctrl+S</kbd> when no save target is known yet), or by clicking the "Presentation" title in the grid overview. The name is stored in the document `<title>` (browser tab) and in the `sli-title` attribute on `<main>`, travels with exported files, and – when you export – the name is slugified to become the filename (e.g. *Dovolená 2019* → `dovolena-2019.html` instead of the generic `slidershow.html`). Several differently-named presentations can coexist under the same URL without their cached tag names interfering with each other.
 
 To generate a presentation from a sheet, see [slidershow-builder](https://github.com/CZ-NIC/slidershow-builder/).
 

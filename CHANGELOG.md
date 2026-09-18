@@ -1,6 +1,6 @@
 # CHANGELOG
 
-## 1.3.0 (unreleased)
+## 1.3.0 (2026-09-18)
 
 ### Tagging
 * feat: tags (and the untagged pseudo-tag) can be marked hidden from the "Name tags…" dialog (🙈 checkbox), so they get skipped during playback without deleting or untagging anything; "Cycle hidden-tag view" (<kbd>Alt+Shift+H</kbd>) switches how the grid shows them (dimmed / dropped entirely / hiding suppressed / a hard "lock" that also blocks the grid's own navigation onto them). In the first three modes the grid overview stays a way in: its arrow-key/click navigation always reaches a hidden frame, and closing the grid shows whatever frame the cursor landed on, hidden or not. The HUD's "N / total" counter now counts only non-hidden frames, so a mostly-hidden presentation doesn't read as huge to whoever is watching it; the grid's own frame counts keep the true total but add a separate "N hidden" note
@@ -9,6 +9,7 @@
 
 ### Export
 * feat: on `file://`, a reloaded presentation's `Ctrl+S` now saves back to its own file with no native file picker and no permission prompt beyond a single one-click re-grant – the write target is remembered per presentation (by its on-disk path) across reloads. If the file changed outside the app, or was last saved with a different export mode, a confirmation asks before overwriting; the export dialog shows the remembered filename with a "Forget" action. Never persisted on a hosted origin, where `Ctrl+S` stays a plain export
+* feat: `Ctrl+S` skips the export dialog and saves immediately once a target is already known (this session's handle, or a persisted one with permission still granted) – no point re-asking settings that haven't changed. Falls back to the dialog on the first save, in Firefox, on a hosted origin, or for the two folder-based media targets, exactly as before. The dialog itself now also opens via <kbd>Alt+Shift+S</kbd> when you want it explicitly (ex. to change settings or "Save as…" a different file)
 * feat: **export to PDF** (<kbd>Alt+Shift+P</kbd>, or `print-pdf` in the URL hash) – the presentation is laid out as one printable page per frame (optionally per [step](https://cz-nic.github.io/slidershow/docs/steps/)) and the browser's own "Save as PDF" writes the file, so the text stays vector-sharp instead of being a screenshot and nothing new is downloaded. Choose the page size (16:9 / 4:3 slide, A4 either way, or this window); the pages are shown on screen for review before printing. A video prints as the frame it was showing, a map as a placeholder; frames hidden by a tag filter are left out
 
 ### Embedding

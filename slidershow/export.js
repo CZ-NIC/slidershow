@@ -1946,6 +1946,44 @@ class Export {
     }
 
     /**
+     * `Ctrl+S`: re-exports straight away with the settings already in effect when a target is already
+     * known and reachable without asking – either this session already picked a handle, or a persisted
+     * one (see "Persisted export target" above) still has readwrite permission granted, with no user
+     * gesture needed to check that. Otherwise falls back to `export_dialog()` exactly as before – first
+     * `Ctrl+S` on a presentation (no handle yet), Firefox (no `showSaveFilePicker`), a hosted origin (no
+     * persisted target – `_target_key()` is null there), or "Split into folders by tags"/"Copied into a
+     * media/ folder" (always ask via `showDirectoryPicker`, never through `file_handler`).
+     */
+    async quick_save() {
+        if (this.media_target !== "folder" && this.media_target !== "tags" && await this._can_quick_save()) {
+            this._export_selected()
+            return
+        }
+        this.export_dialog()
+    }
+
+    /** @returns {Promise<boolean>} */
+    async _can_quick_save() {
+        if (!this.file_handler_wanted || !window.showSaveFilePicker) {
+            return false
+        }
+        if (this.file_handler) {
+            return true
+        }
+        const target = await this._load_export_target()
+        if (!target) {
+            return false
+        }
+        try {
+            // queryPermission alone (never requestPermission here) – asking would need a user gesture and,
+            // more importantly, could pop the permission prompt with no dialog open to explain why.
+            return await target.handle.queryPermission({ mode: "readwrite" }) === "granted"
+        } catch (e) {
+            return false
+        }
+    }
+
+    /**
      * Called once the write to `handle` has actually flushed – records the identity the next Ctrl+S
      * checks against. No-op on a hosted origin (`_target_key()` is null there, see its doc).
      * @param {FileSystemFileHandle} handle
