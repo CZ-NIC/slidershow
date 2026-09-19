@@ -88,7 +88,7 @@ class Frame {
         /** @type {?Promise} */
         this.video_finished = null
 
-        /** @type {Array<HTMLElement|Function>} Which elements are to be showed progressivelly.
+        /** @type {Array<Array<HTMLElement>>} Which elements are to be showed progressivelly.
          * They are grouped by the same data-set: [ [sli-step=2, 2], [4], [5,5,5], [12]]
          */
         this.steps = []
@@ -169,6 +169,8 @@ class Frame {
      * @param {boolean} resetSteps Force the step to reset to the first one, regardless of lastFrame (ex: Home key)
      */
     prepare(lastFrame = null, resetSteps = false) {
+        // Read now, not in the `loaded.then` below – `enter()` may well have run by then.
+        const first_entry = !this._entered
         this.children.forEach(f => f.$frame.hide())
         if (this.parent) { // this is a child frame
             this.$frame.show(0) // it was hidden before
@@ -199,7 +201,7 @@ class Frame {
         this.loaded.then(() => {
             this.refresh_actor()
             if (!this.playback.step_disabled) {
-                this.steps_prepare(lastFrame, resetSteps)
+                this.steps_prepare(lastFrame, resetSteps, first_entry)
             }
         })
     }
@@ -243,8 +245,9 @@ class Frame {
      *
      * @param {?Frame} last_frame
      * @param {boolean} resetSteps Force the step to reset to the first one, regardless of last_frame (ex: Home key)
+     * @param {boolean} first_entry Are we arriving at the frame, as opposed to rebuilding the one we are in?
      */
-    steps_prepare(last_frame = null, resetSteps = false) {
+    steps_prepare(last_frame = null, resetSteps = false, first_entry = false) {
         // Prepare the elements eligible for being step through
         const $steppable = $("[sli-step]", this.$frame)
             // [sli-step-li] affects all <li>
@@ -256,18 +259,36 @@ class Frame {
                     // generate multiple steps (dummy <img-temp-animation-step>) for points
                     const $el = $(el)
                     const points = this.prop("step-points", $(el))
+                    /**
+                     * Zoom the image to a point.
+                     * @param {PointPosition} point
+                     * @param {boolean} immediate Entering a frame is not a step, hence we land on the point
+                     *  without animating. (Otherwise the viewer would see the unzoomed image first and only
+                     *  then a `sli-step-transition-duration` long zoom into the initial position.)
+                     * @param {boolean} initial Is this the very first point, i.e. the initial image position?
+                     *  There is nothing to transition from, so its `transition_duration` slot is free to mean
+                     *  something else: when the author fills it in, they ask for an intro zoom on frame enter.
+                     * @returns {number} After zoom step duration.
+                     */
+                    const zoom_to = (point, immediate, initial = false) => {
+                        const [left, top, scale, transition_duration, duration, rotate] = point
+                        const instant = immediate && !(initial && transition_duration != null)
+                        return this.zoom.set($el, left, top, scale, instant ? 0 : transition_duration, duration, rotate)
+                    }
                     if (points.length === 1) {
                         // There is an image with a single step.
                         // Normally, the first step is already active. However, the author defined only a single one.
                         // Let's assume they wanted just one frame state, not multiple steps.
                         // When the user proceeds to the next step, they end up in a different frame.
-                        this.zoom.set($el, ...points[0])
+                        zoom_to(points[0], true, true)
                         return []
                     } else {
                         return $.map(points.slice(1), // the init point will already be zoomed into (thanks to the data(callback)), slice it out
                             (point, index) => $("<img-temp-animation-step/>")
                                 // show the next or the previous animation step (we sliced the points due to the init point)
-                                .data("callback", shown => this.zoom.set($el, ...shown ? point : points[index]))
+                                .data("callback", (shown, immediate) => shown ?
+                                    zoom_to(point, immediate) :
+                                    zoom_to(points[index], immediate, index === 0))
                             [0])
                     }
                 }))
@@ -309,21 +330,32 @@ class Frame {
             })
 
         // Adjust initial step (either the first or the last).
+        // Why `immediate` everywhere here? Arriving at a frame is not a step. Whatever state the frame
+        // starts in – the first point, the last one, hidden step elements – has to be there already when
+        // the frame appears, not fade or zoom in front of the viewer.
         if (resetSteps) { // ex: Home key – reset to the first step, whatever the previous position was
             this.step_index = Math.min(1, this.steps.length)
             // Reset every group, not just the first – a stale (e.g. mid-way) step_index from before
             // this rebuild might have left later groups marked shown by the loop above.
-            this.step_process($(this.steps.flat()), false)
-            this.step_process($(this.steps.slice(0, 1).flat()), true)
+            this.step_process($(this.steps.flat()), false, true)
+            this.step_process($(this.steps.slice(0, 1).flat()), true, true)
         } else if (last_frame) {
             // last_frame might not be set. Eg. when no frame change happened on window resize or font size change
             if (last_frame.index < this.index) { // went forward to the frame (or direct entry)
                 this.step_index = 0
-                this.step_process($(this.steps.flat()), false)
+                this.step_process($(this.steps.flat()), false, true)
             } else { // went backwards to the frame
                 this.step_index = this.steps.length
-                this.step_process($(this.steps.flat()), true)
+                this.step_process($(this.steps.flat()), true, true)
             }
+        } else if (first_entry) {
+            // There is no last frame, yet we are arriving – this is the very first frame of the
+            // presentation (Playback sees it as `sameFrame`, having started on it). Nothing has put
+            // the frame into its initial state, so an image whose first point is zoomed in would
+            // just stay unzoomed. Re-entering a frame we are already in (window resize, font size
+            // change) goes the other way: keep whatever the viewer is looking at, even a manual zoom.
+            this.step_process($(this.steps.flat()), false, true)
+            this.step_process($(this.steps.slice(0, this.step_index).flat()), true, true)
         }
     }
 
@@ -1219,9 +1251,10 @@ class Frame {
     /**
      * Show or hide step.
      * Or adds them classes or zoom images.
-     * @param {JQuery<HTMLElement|Function>} $els The collection of elements that represents the step.
+     * @param {JQuery<HTMLElement>} $els The collection of elements that represents the step.
      * @param {boolean} shown
-     * @param {boolean} immediate Does not allow animation
+     * @param {boolean} immediate Does not allow animation – neither the CSS fade of the step elements
+     *  nor the zoom transition of the image points.
      * @returns
      */
     step_process($els, shown, immediate = false) {
@@ -1236,7 +1269,7 @@ class Frame {
         // evaluate step duration, either from usual tags or from an img zoom animation step point
         // Plain array concat, not jQuery's .add(...spread) - .add(selector, context) only takes 2 args, so
         // spreading more than 2 durations into it silently dropped the rest.
-        const durations = $zooms.map((_, el) => $(el).data("callback")(shown)).get()
+        const durations = $zooms.map((_, el) => $(el).data("callback")(shown, immediate)).get()
             .concat($tags.map((_, el) => prop("step-duration", $(el), null, "duration")).get())
         // step-duration is either 0 (if any of the elements sets it) or the max value or the frame default
         // Why checking length? Prevent `Math.max(empty) -> -Infinity`

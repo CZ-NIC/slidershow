@@ -22,6 +22,13 @@ An array of points an image should pass through. The first is the initial image 
 
 Point: `[left = 0, top = 0, scale = 1, transition_duration = sli-step-transition-duration | sli-transition-duration, duration = sli-step-duration | sli-duration, sli-rotate ]`
 
+The first point is a state, not a step – the frame simply appears in it, with no animation, even when
+it is zoomed in. (The same goes for entering a frame backwards: you land on its last point at once.)
+Want the frame to start unzoomed and only then zoom in? Prepend the neutral point `[]` and make the
+zoom a regular step – that way you also control how long the whole image is held: `[[], [100,10,2]]`.
+Alternatively, fill in `transition_duration` on the first point; there is nothing to transition from,
+so that slot means "zoom in from the neutral position when the frame opens".
+
 In this example, the image starts at `[100, 10, 2]`, then zooms out `[]` (instantly, no delay), then goes slowly (note the delay parameter) to `[150,10,3,3]`. Next, while using the default `transition_duration` (note the `null` -> becomes `1.5`), we set `duration` to 0.5 second for this step only `[200,10,4,null,.5]`.
 
 ```html
@@ -44,7 +51,7 @@ Position `0,0` is at the image centre. Its real dimension is taken into account 
 Every image in the sections slowly zooms out from the centre. (Images in header and footer are ignored.)
 
 ```html
-<section sli-step-points="[[0,0,15,5], [0,0,1,5]]">
+<section sli-step-points="[[0,0,15], [0,0,1,5]]">
     <article><img src="..."/></article>
     <article><img src="..."/></article>
     <article><img src="..."/></article>

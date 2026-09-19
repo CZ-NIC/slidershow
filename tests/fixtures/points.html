@@ -25,6 +25,16 @@
                 <img id="triple" sli-step-points="[[],[10,20,2],[-30,-10,3]]"
                     src="data:image/gif;base64,R0lGODlhAQABAIAAAP///wAAACH5BAEAAAAALAAAAAABAAEAAAICRAEAOw==" />
             </article>
+            <!-- The first point is already zoomed in – entering the frame must show it zoomed right
+                 away, not the whole image followed by a sli-step-transition-duration long zoom. -->
+            <article>
+                <img id="zoomed-start" sli-step-points="[[10,20,2],[30,40,3]]"
+                    src="data:image/gif;base64,R0lGODlhAQABAIAAAP///wAAACH5BAEAAAAALAAAAAABAAEAAAICRAEAOw==" />
+            </article>
+            <!-- a plain frame behind it, so that #zoomed-start can also be entered backwards -->
+            <article>
+                <img src="data:image/gif;base64,R0lGODlhAQABAIAAAP///wAAACH5BAEAAAAALAAAAAABAAEAAAICRAEAOw==" />
+            </article>
         </section>
     </main>
 </body>

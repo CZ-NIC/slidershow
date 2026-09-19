@@ -114,3 +114,7 @@ How many seconds a frame step will last. By default, it takes [`sli-duration`](s
 
 ## `sli-step-transition-duration`
 How many seconds it will take to change to an image zoom step. By default, it takes [`sli-transition-duration`](structure.md#sli-transition-duration).
+
+It applies to stepping *within* a frame only. Arriving at a frame is not a step, so its initial state
+– the first [`sli-step-points`](images.md#sli-step-points) point, or the last one when you come back
+from behind – is there the moment the frame appears.
