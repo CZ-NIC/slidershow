@@ -1134,6 +1134,13 @@ class Hud {
      * opens the panel, where they can actually be edited, and the trailing "+" adds a point without
      * opening anything. An image or a video always gets the badge, even with no points yet – that "+"
      * is the only hint the frame can carry them at all.
+     *
+     * The most recently added point (the last pill) also gets two inline number inputs for its
+     * transition-duration/duration (the 4th/5th `sli-step-points` params) – these have no other GUI
+     * short of the video point's blocking Zebra_Dialog (which does not even offer them), so a point
+     * added while the panel is closed would otherwise be stuck with the defaults. Requires the
+     * `PropertyPanelPoints` instance to already exist (built silently by Operation.addPoint()) – a
+     * frame's points seen for the first time (panel never touched this session) show as plain pills.
      * Editing mode only – during a plain playthrough they are noise.
      */
     refresh_points_badge() {
@@ -1156,22 +1163,77 @@ class Hud {
                 continue
             }
             any = true
-            const points = frame.prop(p, $actor)
-            $("<div/>", { "class": "points-row" })
+            /** @type {PropertyPanelPoints} */
+            const panel = this[which]
+            const points = panel ? panel.points : (frame.prop(p, $actor) ?? []).map(build)
+            const $row = $("<div/>", { "class": "points-row" })
                 .append($("<span/>", { "class": "points-icon", text: icon, title: `sli-${p}` }))
-                .append((points ?? []).map(d => $("<div/>", { "class": "hud-point" }).append($("<span/>", { text: build(d).toString() }))))
-                // Same "+" as the panel's own point-adding button, so it works even with the panel closed.
-                // stopPropagation: the badge itself opens the panel on click, which is the opposite of
-                // what this button is for.
-                .append($("<div/>", { "class": "hud-point hud-point-add", title: tag === "IMG" ? "Add step point (Alt+S)" : "Add video point (Alt+V)" })
-                    .append($("<span/>", { text: "+" }))
-                    .on("click", e => {
-                        e.stopPropagation()
-                        this.playback.operation.addPoint(which, tag === "VIDEO")
-                    }))
+            points.forEach((point, i) => {
+                const $pill = $("<div/>", { "class": "hud-point" }).append($("<span/>", { "class": "hud-point-label", text: point.toString() }))
+                if (panel && i === points.length - 1) {
+                    this._pointDurationInputs(panel, point, $pill, p)
+                }
+                $row.append($pill)
+            })
+            // Same "+" as the panel's own point-adding button, so it works even with the panel closed.
+            // stopPropagation: the badge itself opens the panel on click, which is the opposite of
+            // what this button is for.
+            $row.append($("<div/>", { "class": "hud-point hud-point-add", title: tag === "IMG" ? "Add step point (Alt+S)" : "Add video point (Alt+V)" })
+                .append($("<span/>", { text: "+" }))
+                .on("click", e => {
+                    e.stopPropagation()
+                    this.playback.operation.addPoint(which, tag === "VIDEO")
+                }))
                 .appendTo($badge)
         }
         $badge.toggle(any)
+    }
+
+    /**
+     * Two number inputs for `point`'s transition-duration/duration (`sli-step-points`' 4th/5th tuple
+     * params), appended to its `$pill`. Live-updates the pill's label while typing (mirrors how dragging
+     * a point live-updates its position, see `PropertyPanelPoints.enter()`) and only commits an undo step
+     * on `change` (blur / spinner release / Enter) – see `PropertyPanelPoints.refresh_points()`.
+     * @param {PropertyPanelPoints} panel
+     * @param {PointStep} point
+     * @param {JQuery} $pill
+     * @param {string} attr `step-points` or `video-points` – for the input titles only.
+     */
+    _pointDurationInputs(panel, point, $pill, attr) {
+        const mnemonic = panel._mnemonic.bind(panel)
+        const field = (/** @type {string} */ label, /** @type {string} */ key, /** @type {number} */ index, /** @type {string} */ title) => {
+            const value = point.position[index]
+            const $input = $("<input/>", {
+                type: "number", step: 0.1, min: 0, class: "hud-point-duration",
+                placeholder: prop(index === 3 ? "step-transition-duration" : "step-duration", this.playback.frame.$actor),
+                value: value ?? "", title
+            })
+            $input
+                .on("click", e => e.stopPropagation())
+                .on("input", () => {
+                    // A default-position point's array is empty (or shorter than 3) – holes there read as
+                    // `undefined` for now (FrameZoom.set()'s own defaults apply), but `JSON.stringify` turns
+                    // them into real `null`s once saved, which would break the reload (null fails the `??`
+                    // fallback that `undefined` passes). Fill them with the actual identity/current position
+                    // first, so the point keeps meaning "default view" after a reload too.
+                    if (point.position.length < 3) {
+                        point.position = panel.zoom.get(panel.$actor)
+                    }
+                    // Live: only reflect the value in the point's own label, same as dragging a point live-
+                    // updates its position (PropertyPanelPoints.enter()) – .hud-point-label, not the plain
+                    // <span> refresh_points() itself targets, since that would also catch the mnemonic <span>s.
+                    point.position[index] = $input.val() === "" ? undefined : Number($input.val())
+                    $pill.find(".hud-point-label").text(point.toString())
+                })
+                .on("change", () => {
+                    // Commit: persist the whole points array to the <input> and register one undo step.
+                    panel.refresh_points()
+                })
+            return $("<label/>", { class: "hud-point-duration-label", title }).append(mnemonic(label, key, $input), $input)
+        }
+        $pill.append(
+            field("Transition", "i", 3, `sli-${attr}: transition-duration of this point (s)`),
+            field("Duration", "u", 4, `sli-${attr}: duration of this point (s)`))
     }
 
     /**

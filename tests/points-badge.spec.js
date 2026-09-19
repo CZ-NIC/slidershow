@@ -78,3 +78,33 @@ test("clicking the badge opens the properties panel", async ({ page }) => {
     await page.locator("#hud-points").click()
     await expect(page.locator("#hud-properties")).toBeVisible()
 })
+
+test("the last added point gets inline transition/duration inputs, editable without the panel", async ({ page }) => {
+    await start(page, "#2?start&editing") // an image with no points yet
+    await page.keyboard.press("Alt+s")
+
+    const pill = page.locator("#hud-points " + POINT)
+    const transition = pill.locator("input.hud-point-duration").first()
+    const duration = pill.locator("input.hud-point-duration").last()
+    await expect(transition).toHaveAttribute("accesskey", "i")
+    await expect(duration).toHaveAttribute("accesskey", "u")
+
+    const points = () => page.evaluate(() => JSON.parse(playback.frame.$actor.attr("sli-step-points")))
+    // The point starts at the default view ("[]" – x/y/zoom collapse away); setting a duration must
+    // still fill them with the real identity (0,0,1), not leave holes that reload as `null` (see
+    // Hud._pointDurationInputs).
+    const [x, y, zoom] = [0, 0, 1]
+
+    await transition.fill("2.5")
+    await transition.dispatchEvent("change")
+    await duration.fill("0.3")
+    await duration.dispatchEvent("change")
+
+    await expect.poll(points).toEqual([[x, y, zoom, 2.5, 0.3]])
+    // the panel never opened – the fields must not have required it
+    await expect(page.locator("#hud-properties")).toBeHidden()
+
+    // each commit is its own undo step, like every other property edit
+    await page.evaluate(() => playback.changes.undo())
+    await expect.poll(points).toEqual([[x, y, zoom, 2.5]])
+})

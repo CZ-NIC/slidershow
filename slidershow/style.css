@@ -1677,6 +1677,19 @@ frame-preview {
             font-size: 85%;
             white-space: nowrap;
         }
+
+        /* Transition-duration / duration of the last (just added) point – see Hud._pointDurationInputs. */
+        .hud-point-duration-label {
+            display: inline-flex;
+            align-items: center;
+            gap: 2px;
+            font-size: 85%;
+            cursor: help;
+
+            input.hud-point-duration {
+                width: 3.2em;
+            }
+        }
     }
 
     /* Data-saver indicator (data_saver.js) – bottom left, out of the way of the properties panel and
