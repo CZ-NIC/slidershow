@@ -79,3 +79,18 @@ test("rotate written on <main> is visible after refresh_actor (its invalidation 
     })
     expect(r).toEqual({ before: 90, after: 180 })
 })
+
+test("an array-valued property stays an array, whatever its numbers look like", async ({ page }) => {
+    await page.goto(FIXTURE)
+    await expect(page.locator("#start")).toBeVisible()
+
+    // The scalar coercions stringify their argument, so a lone number used to come back as a number
+    // (String([[2]]) === "2") and an empty point as `true` – both then crashed anything doing .map().
+    const values = await page.evaluate(() => {
+        $("#a1").attr("sli-video-points", "[[2]]").attr("sli-step-points", "[[]]")
+        prop_invalidate()
+        return { video: prop("video-points", $("#a1")), step: prop("step-points", $("#a1")) }
+    })
+
+    expect(values).toEqual({ video: [[2]], step: [[]] })
+})

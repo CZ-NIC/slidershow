@@ -61,7 +61,7 @@ class Hud {
             }
         })
         this.$hud_properties = $("#hud-properties").hide() // by default off
-        /** Read-only mirror of the current frame's points, shown while the properties panel is closed. */
+        /** Mirror of the current frame's points, shown while the properties panel is closed. */
         this.$hud_points = $("#hud-points").hide()
             .on("click", () => this.properties_visible || this.toggle_properties())
         /** Data-saver indicator – present only while the mode is on (see data_saver.js). */
@@ -1130,8 +1130,10 @@ class Hud {
     /**
      * Points (`sli-step-points` / `sli-video-points`) used to be visible only inside the properties
      * panel, so with the panel closed nothing said a frame carried any – not even right after Alt+s
-     * added one. Mirror them as read-only pills in the corner the panel would otherwise occupy;
-     * clicking opens the panel, where they can actually be edited.
+     * added one. Mirror them as pills in the corner the panel would otherwise occupy; clicking one
+     * opens the panel, where they can actually be edited, and the trailing "+" adds a point without
+     * opening anything. An image or a video always gets the badge, even with no points yet – that "+"
+     * is the only hint the frame can carry them at all.
      * Editing mode only – during a plain playthrough they are noise.
      */
     refresh_points_badge() {
@@ -1142,20 +1144,31 @@ class Hud {
             return $badge.hide()
         }
 
+        const tagName = $actor.prop("tagName")
+        /** @type {{p: string, icon: string, build: (d: *) => PointStep, tag: string, which: "ownStepPoints"|"ownVideoPoints"}[]} */
         const kinds = [
-            { p: "step-points", icon: "📸", build: d => new PointStep(d) },
-            { p: "video-points", icon: "🎬", build: d => new PointStep(null, d, null) },
+            { p: "step-points", icon: "📸", build: d => new PointStep(d), tag: "IMG", which: "ownStepPoints" },
+            { p: "video-points", icon: "🎬", build: d => new PointStep(null, d, null), tag: "VIDEO", which: "ownVideoPoints" },
         ]
         let any = false
-        for (const { p, icon, build } of kinds) {
-            const points = frame.prop(p, $actor)
-            if (!points?.length) {
+        for (const { p, icon, build, tag, which } of kinds) {
+            if (tagName !== tag) {
                 continue
             }
             any = true
+            const points = frame.prop(p, $actor)
             $("<div/>", { "class": "points-row" })
                 .append($("<span/>", { "class": "points-icon", text: icon, title: `sli-${p}` }))
-                .append(points.map(d => $("<div/>", { "class": "hud-point" }).append($("<span/>", { text: build(d).toString() }))))
+                .append((points ?? []).map(d => $("<div/>", { "class": "hud-point" }).append($("<span/>", { text: build(d).toString() }))))
+                // Same "+" as the panel's own point-adding button, so it works even with the panel closed.
+                // stopPropagation: the badge itself opens the panel on click, which is the opposite of
+                // what this button is for.
+                .append($("<div/>", { "class": "hud-point hud-point-add", title: tag === "IMG" ? "Add step point (Alt+S)" : "Add video point (Alt+V)" })
+                    .append($("<span/>", { text: "+" }))
+                    .on("click", e => {
+                        e.stopPropagation()
+                        this.playback.operation.addPoint(which, tag === "VIDEO")
+                    }))
                 .appendTo($badge)
         }
         $badge.toggle(any)

@@ -412,8 +412,10 @@ function _prop_resolve(property, $el, def, defProperty) {
     const $found = $el.closest(`[sli-${property}]`)
     let v = $found.length ? $found.attr(`sli-${property}`) : undefined
     if (v !== undefined && PROP_NONSCALAR[property]) {
-        // ex: step-points, video-points - array-valued attributes, stored as JSON in the DOM
-        v = JSON.parse(v)
+        // ex: step-points, video-points - array-valued attributes, stored as JSON in the DOM.
+        // Returned right away – the scalar coercions below stringify their argument, so a
+        // single-number point list would come back as a number ([[2]] -> "2" -> 2) and [[]] as true.
+        return JSON.parse(v)
     }
     switch (v) {
         case "false": // <main sli-start='false'> -> false

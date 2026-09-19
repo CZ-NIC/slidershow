@@ -1641,7 +1641,9 @@ frame-preview {
        closed (Hud.refresh_points_badge) – it sits in the corner the panel would occupy, so the two
        are never up at the same time. */
     #hud-points {
-        top: 0;
+        /* A bit below the top edge, so it does not sit flush under the hover menu (#hud-menu, in
+           #hud-righttop-wrapper) when both are visible at once. */
+        top: 6vh;
         right: 0;
         max-width: var(--prop-panel-width);
         padding: 4px 6px;
@@ -1693,8 +1695,10 @@ frame-preview {
     #hud-properties {
         /* display: flex; */
         max-width: var(--prop-panel-width);
-        max-height: 70vh;
-        top: 0;
+        max-height: 64vh;
+        /* A bit below the top edge, so it does not sit flush under the hover menu (#hud-menu, in
+           #hud-righttop-wrapper) when both are visible at once. */
+        top: 6vh;
         right: 0;
         background-color: var(--bg-neutral);
 

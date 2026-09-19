@@ -692,6 +692,31 @@ class Operation {
         }
     }
 
+    /**
+     * Adds a point without requiring the properties panel to be open. The point editor lives in
+     * the panel's rows, so with the panel never opened (or opened for a different frame) there is
+     * none yet – build the rows silently; they stay hidden, only the corner badge shows the result.
+     * Shared by the Alt+s / Alt+v shortcuts and the "+" button in the #hud-points corner badge.
+     * @param {"ownStepPoints"|"ownVideoPoints"} which
+     * @param {boolean} dialog
+     */
+    async addPoint(which, dialog = false) {
+        const pl = this.playback
+        if (!pl.hud[which]) {
+            await pl.hud.properties()
+        }
+        if (!pl.hud[which]) {
+            return pl.hud.info(which === "ownStepPoints"
+                ? "Step points can only be added to an image"
+                : "Video points can only be added to a video")
+        }
+        if (dialog) { // the dialog persists (and refreshes the badge) itself, once confirmed
+            return pl.hud[which].pointDialog()
+        }
+        pl.hud[which].addPoint()
+        pl.hud.refresh_points_badge()
+    }
+
     propertiesInit() {
         const pl = this.playback
         // Unlike the other groups below, this one is NOT gated to "panel open" (or any other mode) –
@@ -699,31 +724,12 @@ class Operation {
         // however that panel currently sits.
         return this._group("Properties", null,
             [
-                ["Alt+s", "📸", "Add step point", () => addPoint("ownStepPoints")],
-                ["Alt+v", "🎬", "Add video point…", () => addPoint("ownVideoPoints", true)],
-                ["Shift+Alt+v", "🎬", "Add video point (no dialog)", () => addPoint("ownVideoPoints")],
+                ["Alt+s", "📸", "Add step point", () => this.addPoint("ownStepPoints")],
+                ["Alt+v", "🎬", "Add video point…", () => this.addPoint("ownVideoPoints", true)],
+                ["Shift+Alt+v", "🎬", "Add video point (no dialog)", () => this.addPoint("ownVideoPoints")],
                 ["Alt+,", "⏱", "Mark video trim start", () => setTrim("start")],
                 ["Alt+.", "⏱", "Mark video trim end", () => setTrim("stop")],
             ])
-
-        // Adds a point without automatically opening the properties panel. The point editor lives in
-        // the panel's rows, so with the panel never opened (or opened for a different frame) there is
-        // none yet – build the rows silently; they stay hidden, only the corner badge shows the result.
-        async function addPoint(which, dialog = false) {
-            if (!pl.hud[which]) {
-                await pl.hud.properties()
-            }
-            if (!pl.hud[which]) {
-                return pl.hud.info(which === "ownStepPoints"
-                    ? "Step points can only be added to an image"
-                    : "Video points can only be added to a video")
-            }
-            if (dialog) { // the dialog persists (and refreshes the badge) itself, once confirmed
-                return pl.hud[which].pointDialog()
-            }
-            pl.hud[which].addPoint()
-            pl.hud.refresh_points_badge()
-        }
 
         function setTrim(which) {
             const frame = pl.frame
