@@ -98,14 +98,24 @@ does not interrupt the watching.
     Mark the end of a boring part, then the start of the next interesting one, and the pair becomes
     `[5, "goto:41"]`.
 
+The dialog also offers **Zoom live**, which hands the new point straight over to the editing below.
+
 <kbd>Shift+Alt+V</kbd> skips the dialog and marks a bare point, snapshotting whatever the video is
 doing at that moment (the pre-1.3.0 behaviour of <kbd>Alt+V</kbd>).
 
-Clicking a point in the property panel (<kbd>Alt+P</kbd>) reopens the same dialog for it, with a
-**Remove** button and a **Zoom live** one – the latter hands over to the live editing, where the video
-follows the point and every zoom/rotate is written into it until you click the point again.
-Drag a point onto another one to reorder them.
+### Editing a point afterwards
 
-In [editing mode](playback.md) (<kbd>Alt+E</kbd>) with the panel closed, the points of the current
-frame are mirrored as read-only 🎬 pills in the top-right corner, so you can see them piling up
-while marking them – see [Seeing the points without the panel](images.md#sli-step-points).
+Clicking an existing point – in the property panel (<kbd>Alt+P</kbd>) or on its 🎬 pill in the
+top-right corner (see [Seeing the points without the panel](images.md#sli-step-points)) – does not
+open any dialog: the video pauses at that very moment and the point's rules appear right below its
+pill, so you tune them with the moment they describe still on screen. The row holds the time,
+**jump to**, **rate**, **pause**, the sound and the transition-duration of the zoom, plus a remove
+button; double-clicking the pill removes the point outright. Every change is undoable
+(<kbd>Ctrl+Alt+Z</kbd>) on its own.
+
+While a point is being edited this way, the video follows it: zoom/pan/rotate the video and the view
+is written into the point's `point:` rule. Click the pill again (or anywhere outside) to finish – the
+playback resumes where it was interrupted. Drag a point onto another one to reorder them.
+
+The point has no `duration`, unlike an [`sli-step-points`](images.md#sli-step-points) one: a video
+point does not end, the video itself decides when the next point comes.

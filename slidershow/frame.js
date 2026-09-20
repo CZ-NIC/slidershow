@@ -94,6 +94,9 @@ class Frame {
         this.steps = []
         /** Element in this.steps that is going to be shown in the next step. Elements with lower index are already shown. */
         this.step_index = 0
+        /** Index into this actor's step-/video-points currently in effect, or -1 if none – drives
+         * the "current" (state 1) highlight in Hud.refresh_points_badge(). */
+        this.currentPointIndex = -1
         /** @type {number|null} How long the last active step should last. */
         this.step_duration = null
         /** Check the lifecycle. The .enter passed but not yet .leave.
@@ -281,14 +284,20 @@ class Frame {
                         // Let's assume they wanted just one frame state, not multiple steps.
                         // When the user proceeds to the next step, they end up in a different frame.
                         zoom_to(points[0], true, true)
+                        this.currentPointIndex = points.length ? 0 : -1
                         return []
                     } else {
+                        this.currentPointIndex = 0
                         return $.map(points.slice(1), // the init point will already be zoomed into (thanks to the data(callback)), slice it out
-                            (point, index) => $("<img-temp-animation-step/>")
+                            (point, /** @type {number} */ index) => $("<img-temp-animation-step/>")
                                 // show the next or the previous animation step (we sliced the points due to the init point)
-                                .data("callback", (shown, immediate) => shown ?
-                                    zoom_to(point, immediate) :
-                                    zoom_to(points[index], immediate, index === 0))
+                                .data("callback", (shown, immediate) => {
+                                    this.currentPointIndex = shown ? index + 1 : index
+                                    this.playback.hud.refresh_points_badge()
+                                    return shown ?
+                                        zoom_to(point, immediate) :
+                                        zoom_to(points[index], immediate, index === 0)
+                                })
                             [0])
                     }
                 }))
@@ -1182,6 +1191,8 @@ class Frame {
                 }
                 if (changed) {
                     this.playback.aux_window.update_video_point(index)
+                    this.currentPointIndex = index
+                    this.playback.hud.refresh_points_badge()
                 }
             })
         }

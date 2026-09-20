@@ -18,6 +18,12 @@ class PropertyPanelPoints {
         this.zoom = pl.frame.zoom
         this.$input = $(input)
         this.videoStep = videoStep
+        /** @type {?PointStep} The point currently in live-drag "state 2", if any. */
+        this.activePoint = null
+        /** @type {?PointStep} A point added this session, not yet touched – its detail row stays open once. */
+        this.justAddedPoint = null
+        /** @type {boolean} A video paused just for the editing of a point is resumed on blur(). */
+        this.resumeAfterEdit = false
 
         const $wrap = this.$wrap = $("<div />", { "class": "point-wrapper" }).hide().insertAfter(this.$input)
         this.points = PointStep.load(this.$input, videoStep) // load set of points from the given <input>
@@ -31,6 +37,19 @@ class PropertyPanelPoints {
                 $button.remove()
                 $actor.off(".slidershow")
                 const replacement = new PropertyPanelPoints(pl, this.$input, videoStep)
+                // Every commit to this <input> (even one this very instance made, ex: a duration
+                // field's own "change") re-triggers this rebuild synchronously – PropertyPanel._field()
+                // immediately self-invokes its undo callback to register the undo step, which re-syncs
+                // via `undo-performed`. Carry the state-2/just-added tracking over by index (the old
+                // PointStep objects are gone, replaced by a fresh parse), or a rebuild mid-edit would
+                // silently drop the badge's active pill / details row.
+                if (this.activePoint) {
+                    replacement.activePoint = replacement.points[this.points.indexOf(this.activePoint)] ?? null
+                }
+                if (this.justAddedPoint) {
+                    replacement.justAddedPoint = replacement.points[this.points.indexOf(this.justAddedPoint)] ?? null
+                }
+                replacement.resumeAfterEdit = this.resumeAfterEdit
                 // Keep the Alt+s / Alt+v shortcuts pointed at a live instance – this one is being torn down.
                 if (pl.hud.ownStepPoints === this) {
                     pl.hud.ownStepPoints = replacement
@@ -52,8 +71,13 @@ class PropertyPanelPoints {
      * Shared by the "+" button and the Alt+s / Alt+v keyboard shortcuts (operation.js).
      */
     addPoint() {
-        this.new_point(PointStep.fromActor(this, this.$actor, this.videoStep), true)
+        const point = PointStep.fromActor(this, this.$actor, this.videoStep)
+        const index = this._insertIndex()
+        this.new_point(point, true) // commits – may synchronously replace `this`, see the constructor
         this.$wrap.show()
+        // Read back from whichever instance is live now (see the constructor's rebuild comment).
+        const live = (this.videoStep ? this.pl.hud.ownVideoPoints : this.pl.hud.ownStepPoints) ?? this
+        live.justAddedPoint = live.points[index] ?? null
     }
 
     /**
@@ -88,51 +112,52 @@ class PropertyPanelPoints {
     }
 
     /**
-     * A video point is a whole rule set (`[startTime, "goto:…", "rate:…", …]`), which a plain
+     * A *new* video point is a whole rule set (`[startTime, "goto:…", "rate:…", …]`), which a plain
      * snapshot of what the video happens to be doing cannot express. Pause the video and ask,
      * so the point can be given its rules right where it is marked; resume afterwards so that
      * marking points does not interrupt the watching.
-     * @param {?PointStep} point Point to edit. Null creates a new one at the current playback time.
-     * @param {?HTMLElement} pt Its pill element, when editing.
+     *
+     * Only new points: an existing one is edited in place, in the point list / corner badge (see
+     * `Hud._pointDetails()`), which keeps the video itself visible while its rules are tuned. The
+     * one question this dialog asks that an existing point cannot be asked – whether the marked
+     * time is a point of its own or the missing half of the cut before it – exists at creation only.
      */
-    pointDialog(point = null, pt = null) {
+    pointDialog() {
         const pl = this.pl
         const video = /** @type {HTMLVideoElement} */ (this.$actor[0])
         let wasPlaying = !video.paused
         video.pause()
 
         const round = (/** @type {number} */ v) => Math.round(v * 10) / 10
-        const index = point ? this.points.indexOf(point) : this._insertIndex()
+        const index = this._insertIndex()
         const before = this._stateBefore(index)
-        const time = round(point ? Number(point.startTime) : video.currentTime)
+        const time = round(video.currentTime)
 
         // Cutting a video into excerpts takes pairs of times: the earlier point says when to jump
         // away, this one says where to. So a freshly marked time is often not a point of its own but
         // the missing half of the one before – offer that whenever the previous one still lacks a target.
-        const prev = point ? null : this.points[index - 1]
+        const prev = this.points[index - 1]
         const canContinue = prev?.videoStep && prev.goto == null && Number(prev.startTime) < time
         const $mode = canContinue ? this._modeRadios(prev, time) : null
 
         const $time = $("<input/>", { type: "number", step: 0.1, value: time })
-        const $gotoOn = $("<input/>", { type: "checkbox", checked: point?.goto != null })
-        const $goto = $("<input/>", { type: "number", step: 0.1, value: point?.goto ?? "", placeholder: "s" })
-        const rate = point ? point.rate : (video.playbackRate !== before.rate ? round(video.playbackRate) : null)
+        const $gotoOn = $("<input/>", { type: "checkbox" })
+        const $goto = $("<input/>", { type: "number", step: 0.1, value: "", placeholder: "s" })
+        const rate = video.playbackRate !== before.rate ? round(video.playbackRate) : null
         const $rateOn = $("<input/>", { type: "checkbox", checked: rate != null })
         const $rate = $("<input/>", { type: "number", step: 0.1, value: rate ?? video.playbackRate })
-        const sound = point
-            ? (point.mute ? "mute" : point.unmute ? "unmute" : "")
-            : (video.muted === before.muted ? "" : video.muted ? "mute" : "unmute")
+        const sound = video.muted === before.muted ? "" : video.muted ? "mute" : "unmute"
         const $sound = $("<select/>").append(
             $("<option/>", { value: "", text: "keep as is" }),
             $("<option/>", { value: "mute", text: "mute" }),
             $("<option/>", { value: "unmute", text: "unmute" }))
             .val(sound)
-        const $pause = $("<input/>", { type: "checkbox", checked: !!point?.pause })
+        const $pause = $("<input/>", { type: "checkbox" })
 
-        // Zoom: the view the point should move to. A new point starts with the current one (when the
-        // user has zoomed in before marking); an existing point keeps its own until re-taken.
+        // Zoom: the view the point should move to – the current one, when the user has zoomed in
+        // before marking the point.
         /** @type {PointPosition} */
-        let position = point ? [...point.position] : PointStep.fromActor(this, this.$actor, false).position
+        let position = PointStep.fromActor(this, this.$actor, false).position
         const zoomable = !PointStep.prototype._isDefault(position) && position.length
         const $zoomOn = $("<input/>", { type: "checkbox", checked: !!zoomable })
         const $zoom = $("<code/>", { text: zoomable ? JSON.stringify(position) : "none" })
@@ -172,10 +197,11 @@ class PropertyPanelPoints {
 
         const apply = () => {
             const t = Number($time.val())
-            if (continued()) {
+            const cut = continued()
+            if (cut) {
                 prev.goto = t
             } else {
-                const p = point ?? new PointStep(null, [t], null)
+                const p = new PointStep(null, [t], null)
                 p.startTime = t
                 p.goto = $gotoOn.prop("checked") && $goto.val() !== "" ? Number($goto.val()) : undefined
                 p.rate = $rateOn.prop("checked") && $rate.val() !== "" ? Number($rate.val()) : undefined
@@ -183,12 +209,14 @@ class PropertyPanelPoints {
                 p.mute = $sound.val() === "mute"
                 p.unmute = $sound.val() === "unmute"
                 p.position = $zoomOn.prop("checked") ? position : []
-                if (!point) {
-                    this.points.splice(index, 0, p)
-                }
+                this.points.splice(index, 0, p)
             }
             this.$wrap.show()
-            this.refresh_points() // rewrites the <input> (undoable) and rebuilds the whole pill list
+            this.refresh_points() // commits – may synchronously replace `this`, see the constructor
+            // Read back from whichever instance is live now (see the constructor's rebuild comment);
+            // the point the user just shaped keeps its detail row open (the cut filled in the previous one).
+            const live = pl.hud.ownVideoPoints ?? this
+            live.justAddedPoint = live.points[cut ? index - 1 : index] ?? null
             pl.hud.refresh_points_badge()
         }
 
@@ -199,7 +227,10 @@ class PropertyPanelPoints {
             apply()
             const panel = pl.hud.ownVideoPoints
             const i = continued() ? index - 1 : index
-            const el = $(".hud-point", panel?.$wrap).get(i)
+            // Whichever list the user is actually looking at – the corner badge, or the panel's own
+            // one while the panel is open (the two are never up at the same time).
+            const $list = pl.hud.$hud_points.is(":visible") ? pl.hud.$hud_points : panel?.$wrap
+            const el = $(".hud-point:not(.hud-point-add)", $list).get(i)
             if (el) {
                 panel._activate(panel.points[i], el)
             }
@@ -210,7 +241,7 @@ class PropertyPanelPoints {
         new $.Zebra_Dialog({
             source: { inline: $list },
             type: "question",
-            title: point ? "Edit video point" : "Video point",
+            title: "Video point",
             onClose: () => {
                 resume()
                 if (wasPlaying) {
@@ -218,7 +249,6 @@ class PropertyPanelPoints {
                 }
             },
             buttons: [
-                ...(point ? [{ caption: "Remove", callback: () => { point.remove(this); pl.hud.refresh_points_badge() } }] : []),
                 "Cancel",
                 { caption: "Zoom live", callback: zoomLive },
                 { caption: "Ok", default_confirmation: true, callback: apply },
@@ -303,38 +333,91 @@ class PropertyPanelPoints {
             })
             .on("click", e => {
                 const pt = e.currentTarget
-                if (this.videoStep) {
-                    // A video point is a rule set, not just a position – the live editing below cannot
-                    // express goto/pause/rate, so go through the dialog (which can still hand over to it).
-                    // Seek there first so the dialog opens over the moment it talks about.
-                    point.affect(this.$actor, this.zoom, true)
-                    return this.pointDialog(point, pt)
-                }
                 if ($(pt).hasClass("active")) {
                     this.refresh_points() // save
                     return this.blur()
                 }
+                this.justAddedPoint = null
                 this._activate(point, pt)
             })
             .on("dblclick", () => {
-                if (!this.videoStep) { // video points are removed from their dialog instead
-                    point.remove(this)
+                if (this.activePoint === point) {
+                    this.activePoint = null
                 }
+                if (this.justAddedPoint === point) {
+                    this.justAddedPoint = null
+                }
+                point.remove(this)
+                this.pl.hud.refresh_points_badge()
             })
     }
 
     /**
+     * Both containers a `.hud-point` pill can live in – the panel's own list (only relevant while
+     * the panel is manually opened) and the HUD corner badge mirror (the normal, panel-closed path).
+     */
+    get $hudAll() {
+        return this.$hud.add(this.pl.hud.$hud_points)
+    }
+
+    /**
      * Start the live editing of a point: the actor jumps there and follows every zoom/rotate
-     * (and, for a video, every rate/mute change) until the pill is clicked again.
+     * (and, for a video, every rate/mute change) until the pill is clicked again or the user
+     * clicks anywhere outside a pill and outside the actor being edited.
+     *
+     * Also makes this point "current" (state 1) right away – the actor is now sitting at it, and
+     * this is what a `blur()` (leaving state 2) is expected to settle back into. This also demotes
+     * whichever other pill used to be "current" back to a plain one, immediately (not just on the
+     * next unrelated `refresh_points_badge()` rebuild).
      * @param {PointStep} point
      * @param {HTMLElement} pt Its pill element.
      */
     _activate(point, pt) {
-        $(".hud-point", this.$hud).removeClass("active")
-        $(pt).addClass("active")
-        $(window).on("resize.wzoom-properties", this.blur)
+        if (this.videoStep) {
+            const video = /** @type {HTMLVideoElement} */ (this.$actor[0])
+            // Editing a video point means typing into fields that describe one exact moment – a
+            // running playback would carry that moment away (and the live sync `enter()` installs
+            // keeps the point at the playhead, so it would overwrite the very time being edited).
+            this.resumeAfterEdit = !video.paused
+            video.pause()
+        }
+        $(".hud-point", this.$hudAll).removeClass("active current")
+        $(".hud-point-details", this.$hudAll).remove()
+        $(pt).addClass("active current")
+        this.activePoint = point
+        this.justAddedPoint = null
+        this.pl.frame.currentPointIndex = this.points.indexOf(point)
+        $(window).on("resize.wzoom-properties", () => this.blur())
+        // Deferred: activation can be triggered by a click that isn't itself on a pill (ex: the
+        // video dialog's "Zoom live" button) – binding synchronously would catch that same click
+        // as it keeps bubbling to `document` and immediately undo the activation.
+        setTimeout(() => {
+            $(document).on("click.point-blur", e => {
+                // Panning/zooming the actor to live-edit the point ends in a native "click" too (the
+                // WZoom library cannot stop its propagation, see frame_zoom.js's onDrop comment) –
+                // that must not itself end state 2, only a click genuinely elsewhere should.
+                if ($(e.target).closest(".hud-point").length || $(e.target).closest(this.$actor).length) {
+                    return
+                }
+                this.refresh_points() // save whatever dragging changed before leaving state 2
+                this.blur()
+            })
+        }, 0)
+        this._showDetails(point, pt)
 
         point.enter(this, pt)
+    }
+
+    /**
+     * Insert the transition/duration/remove details row right after `pt`, in place, without a full
+     * `refresh_points_badge()` rebuild – that would replace `pt` mid live-drag (breaking the label
+     * updates `PointStep.enter()` writes into it) and could race an in-progress double-click.
+     * @param {PointStep} point
+     * @param {HTMLElement} pt
+     */
+    _showDetails(point, pt) {
+        const $pt = $(pt)
+        this.pl.hud._pointDetails(this, point, $pt, this.videoStep ? "video-points" : "step-points").insertAfter($pt)
     }
 
     /**
@@ -384,8 +467,19 @@ class PropertyPanelPoints {
     }
 
     blur() {
-        $(".hud-point", this.$hud).removeClass("active")
+        // Just the active state, not a full refresh_points_badge() rebuild – that would replace the
+        // very pill a double-click's second "click" (which lands here, see new_point()) is about to
+        // fire "dblclick" on, silently swallowing the removal.
+        $(".hud-point", this.$hudAll).removeClass("active")
+        $(".hud-point-details", this.$hudAll).remove()
+        if (this.resumeAfterEdit) { // the video was playing when the editing started, see _activate()
+            this.resumeAfterEdit = false
+            const video = /** @type {HTMLVideoElement} */ (this.$actor[0])
+            video.play()
+        }
+        this.activePoint = null
         $(window).off("resize.wzoom-properties")
+        $(document).off("click.point-blur")
         this.$actor.off("zoom.slidershow").off("actor.slidershow")
     }
 
@@ -395,7 +489,7 @@ class PropertyPanelPoints {
      */
     new_tag(htmlOrPoint) {
         return $("<div />", {
-            "html": "<span>" + (htmlOrPoint instanceof PointStep ? htmlOrPoint.toString() : htmlOrPoint) + "</span>",
+            "html": "<span class=\"hud-point-label\">" + (htmlOrPoint instanceof PointStep ? htmlOrPoint.toString() : htmlOrPoint) + "</span>",
             "class": "hud-point"
         })
     }
@@ -568,7 +662,9 @@ class PointStep {
                     this.rate = data.rate
                 }
                 if (data.currentTime) {
-                    this.startTime = data.currentTime
+                    // Rounded: a seek reports a slightly-off time (3 → 3.0000001), which would make
+                    // both the pill label and the stored point unreadable.
+                    this.startTime = Math.round(data.currentTime * 10) / 10
                 }
                 panel.refresh_points(pt, this)
             })

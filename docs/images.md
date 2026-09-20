@@ -43,10 +43,12 @@ Position `0,0` is at the image centre. Its real dimension is taken into account 
     In [editing mode](playback.md) (<kbd>Alt+E</kbd>), a frame that carries points shows them as
     pills in the top-right corner whenever the property panel is closed – 📸 for `sli-step-points`,
     🎬 for [`sli-video-points`](video.md#sli-video-points). So it is visible at a glance that a
-    frame has points at all, and that <kbd>Alt+S</kbd> / <kbd>Alt+V</kbd> just added one. Click a
-    pill to open the panel and edit it further; the last pill also carries two number inputs
-    (<kbd>Alt+I</kbd> / <kbd>Alt+U</kbd>) to set that point's own `transition_duration`/`duration`
-    right there, without opening the panel at all.
+    frame has points at all, and that <kbd>Alt+S</kbd> / <kbd>Alt+V</kbd> just added one. The pills
+    are fully interactive without the panel: click one to edit that point (a step-point follows
+    whatever you zoom/pan to, a video point shows [its rules](video.md#editing-a-point-afterwards)),
+    double-click to remove it, and use the trailing **+** to add one. The point being edited, or one
+    just added, gets a row of its own fields below it – for a step-point the two number inputs
+    (<kbd>Alt+I</kbd> / <kbd>Alt+U</kbd>) setting its `transition_duration`/`duration`.
 
 <video autoplay controls muted loop playsinline width="640" src="https://cdn.jsdelivr.net/gh/CZ-NIC/slidershow-assets@main/step-points.webm" title="Composing sli-step-points in the property panel and stepping through them"></video>
 

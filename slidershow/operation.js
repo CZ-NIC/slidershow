@@ -695,25 +695,24 @@ class Operation {
     /**
      * Adds a point without requiring the properties panel to be open. The point editor lives in
      * the panel's rows, so with the panel never opened (or opened for a different frame) there is
-     * none yet – build the rows silently; they stay hidden, only the corner badge shows the result.
-     * Shared by the Alt+s / Alt+v shortcuts and the "+" button in the #hud-points corner badge.
+     * none yet – `Hud.ensureOwnPoints()` builds just that one row, silently; only the corner badge
+     * shows the result. Shared by the Alt+s / Alt+v shortcuts and the "+" button in the #hud-points
+     * corner badge.
      * @param {"ownStepPoints"|"ownVideoPoints"} which
      * @param {boolean} dialog
      */
-    async addPoint(which, dialog = false) {
+    addPoint(which, dialog = false) {
         const pl = this.playback
-        if (!pl.hud[which]) {
-            await pl.hud.properties()
-        }
-        if (!pl.hud[which]) {
+        const panel = pl.hud.ensureOwnPoints(which)
+        if (!panel) {
             return pl.hud.info(which === "ownStepPoints"
                 ? "Step points can only be added to an image"
                 : "Video points can only be added to a video")
         }
         if (dialog) { // the dialog persists (and refreshes the badge) itself, once confirmed
-            return pl.hud[which].pointDialog()
+            return panel.pointDialog()
         }
-        pl.hud[which].addPoint()
+        panel.addPoint()
         pl.hud.refresh_points_badge()
     }
 

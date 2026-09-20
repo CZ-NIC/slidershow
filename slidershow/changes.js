@@ -100,6 +100,10 @@ class Changes {
       this.hud.info((redo ? "Redo" : "Undo") + ": " + title)
     }
     this.performing = false
+    // A point add/edit/remove undoes via the generic property-field mechanism (no dedicated
+    // point-remove undo entry), which never touches the badge – refresh it so an undone/redone
+    // point count or position is reflected, not just the underlying sli-*-points attribute.
+    this.hud.refresh_points_badge()
 
     this.$buttonUndo.prop("disabled", !this.changes.length)
     if (!this.changes.length) {

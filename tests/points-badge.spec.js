@@ -44,7 +44,6 @@ test("the badge's + adds a point without opening the panel", async ({ page }) =>
 
     await expect(page.locator("#hud-points " + POINT)).toHaveCount(1)
     expect(await page.evaluate(() => playback.frame.$actor.attr("sli-step-points"))).toBeTruthy()
-    // the badge as a whole opens the panel on click; its own button must not
     await expect(page.locator("#hud-properties")).toBeHidden()
 })
 
@@ -73,26 +72,78 @@ test("Alt+s adds a step point with the panel never opened, and the badge shows i
     expect(errors).toEqual([])
 })
 
-test("clicking the badge opens the properties panel", async ({ page }) => {
+test("clicking a pill activates it (state 2) without opening the properties panel", async ({ page }) => {
     await start(page)
-    await page.locator("#hud-points").click()
-    await expect(page.locator("#hud-properties")).toBeVisible()
+
+    const pill = page.locator("#hud-points " + POINT).first()
+    await pill.click()
+    await expect(pill).toHaveClass(/active/)
+    await expect(page.locator("#hud-properties")).toBeHidden()
+
+    // clicking outside any pill drops it back out of state 2
+    await page.locator("#hud-points .points-icon").click()
+    await expect(page.locator("#hud-points " + POINT + ".active")).toHaveCount(0)
 })
 
-test("the last added point gets inline transition/duration inputs, editable without the panel", async ({ page }) => {
+test("clicking/dragging the actor being live-edited does not end state 2", async ({ page }) => {
+    await start(page)
+
+    const pill = page.locator("#hud-points " + POINT).first()
+    await pill.click()
+    await expect(pill).toHaveClass(/active/)
+    // let the (deferred) click-away listener actually bind before we probe it
+    await page.waitForTimeout(50)
+
+    // WZoom (frame_zoom.js) cannot stop its own drag-end click from bubbling to `document` – that
+    // click must not itself be read as "clicked elsewhere" and end state 2 (see frame_zoom.js's
+    // onDrop comment). Simulated here instead of a real mouse drag, since points.html's fixture
+    // images sit far outside the viewport once zoomed/panned to a point.
+    await page.evaluate(() => playback.frame.$actor[0].dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true })))
+    await expect(pill).toHaveClass(/active/)
+})
+
+test("activating a pill makes it current (state 1) too, demoting whichever pill was current before", async ({ page }) => {
+    await start(page)
+
+    const [first, second] = [page.locator("#hud-points " + POINT).nth(0), page.locator("#hud-points " + POINT).nth(1)]
+    await expect(first).toHaveClass(/current/) // the frame opened on its first point
+
+    await second.click()
+    await expect(second).toHaveClass(/active/)
+    await expect(second).toHaveClass(/current/)
+    await expect(first).not.toHaveClass(/current/)
+
+    // leaving state 2 keeps it current – the actor really is sitting at that point now
+    await page.locator("#hud-points .points-icon").click()
+    await expect(second).not.toHaveClass(/active/)
+    await expect(second).toHaveClass(/current/)
+})
+
+test("double-clicking a pill removes the point, undoably", async ({ page }) => {
+    await start(page)
+    await expect(page.locator("#hud-points " + POINT)).toHaveCount(2)
+
+    await page.locator("#hud-points " + POINT).first().dblclick()
+    await expect(page.locator("#hud-points " + POINT)).toHaveCount(1)
+
+    await page.evaluate(() => playback.changes.undo())
+    await expect(page.locator("#hud-points " + POINT)).toHaveCount(2)
+})
+
+test("a just-added point gets a details row with transition/duration inputs and a remove button, editable without the panel", async ({ page }) => {
     await start(page, "#2?start&editing") // an image with no points yet
     await page.keyboard.press("Alt+s")
 
-    const pill = page.locator("#hud-points " + POINT)
-    const transition = pill.locator("input.hud-point-duration").first()
-    const duration = pill.locator("input.hud-point-duration").last()
+    const details = page.locator("#hud-points .hud-point-details")
+    const transition = details.locator("input.hud-point-duration").first()
+    const duration = details.locator("input.hud-point-duration").last()
     await expect(transition).toHaveAttribute("accesskey", "i")
     await expect(duration).toHaveAttribute("accesskey", "u")
 
     const points = () => page.evaluate(() => JSON.parse(playback.frame.$actor.attr("sli-step-points")))
     // The point starts at the default view ("[]" – x/y/zoom collapse away); setting a duration must
     // still fill them with the real identity (0,0,1), not leave holes that reload as `null` (see
-    // Hud._pointDurationInputs).
+    // Hud._pointDetails).
     const [x, y, zoom] = [0, 0, 1]
 
     await transition.fill("2.5")
@@ -105,6 +156,12 @@ test("the last added point gets inline transition/duration inputs, editable with
     await expect(page.locator("#hud-properties")).toBeHidden()
 
     // each commit is its own undo step, like every other property edit
+    await page.evaluate(() => playback.changes.undo())
+    await expect.poll(points).toEqual([[x, y, zoom, 2.5]])
+
+    // the remove button deletes the point outright, undoably too
+    await details.locator(".hud-point-remove").click()
+    await expect.poll(() => page.evaluate(() => playback.frame.$actor.attr("sli-step-points"))).toBeFalsy()
     await page.evaluate(() => playback.changes.undo())
     await expect.poll(points).toEqual([[x, y, zoom, 2.5]])
 })

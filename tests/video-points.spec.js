@@ -105,38 +105,73 @@ test("Shift+Alt+v keeps the old no-dialog snapshot", async ({ page }) => {
     expect(JSON.parse(await points(page))).toEqual([[5]])
 })
 
-test("clicking a video pill in the panel edits it through the same dialog", async ({ page }) => {
-    await start(page, "#1?start&editing&properties")
-    await page.locator("#hud-properties .point-wrapper .hud-point").first().click()
+test("clicking a video pill edits its rules in place, with the video paused at that very moment", async ({ page }) => {
+    await start(page)
+    await seek(page, 12, true)
 
-    const dialog = page.locator(".video-point-dialog")
-    await expect(dialog).toBeVisible()
-    await expect(dialog.locator("input[type=number]").first()).toHaveValue("2")
+    const pill = page.locator("#hud-points .hud-point").first()
+    await pill.click()
 
-    await dialog.locator(".vp-rules label").nth(2).locator("input[type=checkbox]").check() // pause
-    await confirm(page)
+    // no dialog over the video – the moment the point talks about stays visible while it is tuned
+    await expect(page.locator(".video-point-dialog")).toHaveCount(0)
+    await expect(pill).toHaveClass(/active/)
+    const details = page.locator("#hud-points .hud-point-details")
+    await expect(details).toBeVisible()
+    await expect(details.locator("input[type=number]").first()).toHaveValue("2")
+    expect(await page.evaluate(() => playback.frame.$actor[0].paused)).toBe(true)
+    expect(await page.evaluate(() => playback.frame.$actor[0].currentTime)).toBe(2)
 
-    expect(JSON.parse(await points(page))[0]).toEqual([2, "goto:5", "pause"])
+    // the jump target (the point's second number) is editable right there
+    const goto = details.locator("input[type=number]").nth(1)
+    await goto.fill("9")
+    await goto.dispatchEvent("change")
+    expect(JSON.parse(await points(page))).toEqual([[2, "goto:9"], [8]])
+
+    // …as is pausing / muting, which no position could express
+    await details.locator("input[type=checkbox]").last().check() // pause
+    await details.locator("select").selectOption("mute")
+    expect(JSON.parse(await points(page))).toEqual([[2, "goto:9", "pause", "mute"], [8]])
+
+    // each commit is its own undo step, like every other property edit
+    await page.evaluate(() => playback.changes.undo())
+    expect(JSON.parse(await points(page))).toEqual([[2, "goto:9", "pause"], [8]])
+
+    // leaving the editing resumes the playback it interrupted
+    await page.locator("#hud-points .points-icon").click()
+    await expect.poll(() => page.evaluate(() => playback.frame.$actor[0].paused)).toBe(false)
 })
 
-test("a video point is removed from its dialog", async ({ page }) => {
-    await start(page, "#1?start&editing&properties")
-    await page.locator("#hud-properties .point-wrapper .hud-point").first().click()
-    await confirm(page, "Remove")
+test("a video point is removed from its detail row", async ({ page }) => {
+    await start(page)
+    await page.locator("#hud-points .hud-point").first().click()
+    await page.locator("#hud-points .hud-point-remove").click()
 
     expect(JSON.parse(await points(page))).toEqual([[8]])
+    await page.evaluate(() => playback.changes.undo())
+    expect(JSON.parse(await points(page))[0]).toEqual([2, "goto:5"])
+})
+
+test("a video point has a transition, but no duration – the video decides when the next one comes", async ({ page }) => {
+    await start(page)
+    await page.locator("#hud-points .hud-point").first().click()
+
+    const details = page.locator("#hud-points .hud-point-details")
+    await expect(details.locator("input[type=number][accesskey=i]")).toHaveCount(1) // "Transition"
+    // "Duration" is a step-point-only field (Alt+u here belongs to the "pause" checkbox instead)
+    await expect(details.locator("input[type=number][accesskey=u]")).toHaveCount(0)
 })
 
 test("\"Zoom live\" hands over to the pill's live editing", async ({ page }) => {
-    await start(page, "#1?start&editing&properties")
-    await page.locator("#hud-properties .point-wrapper .hud-point").first().click()
+    await start(page, "#2?start&editing")
+    await seek(page, 3)
+
+    await page.keyboard.press("Alt+v")
     await confirm(page, "Zoom live")
 
-    // the point stays selected, so every zoom/rotate of the video now writes into it –
-    // and the video sits at the point itself, not at its goto target
-    await expect(page.locator("#hud-properties .hud-point.active")).toHaveCount(1)
-    await expect(page.locator("#hud-properties .hud-point.active")).toHaveText('[2,"goto:5"]')
-    expect(await page.evaluate(() => playback.frame.$actor[0].currentTime)).toBe(2)
+    // the point stays selected, so every zoom/rotate of the video now writes into it
+    await expect(page.locator("#hud-points .hud-point.active")).toHaveCount(1)
+    await expect(page.locator("#hud-points .hud-point.active")).toHaveText("[3]")
+    expect(await page.evaluate(() => playback.frame.$actor[0].currentTime)).toBe(3)
 })
 
 test("video cut trim lives in sli-src, survives unload/reload, and reaches the export", async ({ page }) => {

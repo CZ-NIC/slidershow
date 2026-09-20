@@ -1645,7 +1645,11 @@ frame-preview {
            #hud-righttop-wrapper) when both are visible at once. */
         top: 6vh;
         right: 0;
-        max-width: var(--prop-panel-width);
+        /* A fixed width (not max-width/shrink-to-fit) – right:0 means a content-driven resize (ex:
+           a pill's details row appearing) would otherwise shift every pill's on-screen X position,
+           which both looks jumpy and can turn a double-click into two clicks on different elements
+           (the second one lands where the first pill used to be). */
+        width: var(--prop-panel-width);
         padding: 4px 6px;
         background-color: var(--bg-neutral);
         color: var(--bg-dark);
@@ -1678,18 +1682,69 @@ frame-preview {
             white-space: nowrap;
         }
 
-        /* Transition-duration / duration of the last (just added) point – see Hud._pointDurationInputs. */
-        .hud-point-duration-label {
-            display: inline-flex;
-            align-items: center;
-            gap: 2px;
-            font-size: 85%;
-            cursor: help;
-
-            input.hud-point-duration {
-                width: 3.2em;
-            }
+        .hud-point.active>span {
+            background-color: var(--highlight);
         }
+
+        .hud-point[draggable]>span {
+            cursor: grab;
+        }
+
+        /* State 1 – the point matching wherever the presentation currently stands, see
+           Frame.currentPointIndex. Distinct from .active (state 2, being edited). */
+        .hud-point.current>span {
+            outline: 2px solid var(--highlight);
+            outline-offset: -1px;
+        }
+
+        .hud-point.dragging {
+            opacity: 0.4;
+        }
+
+    }
+
+    /* Fields of the active or just-added point, on their own line below its pill – see
+       Hud._pointDetails(). Lives in both the corner badge and the properties panel's own point list.
+       flex-basis: 100% forces the .points-row wrap. */
+    .hud-point-details {
+        display: flex;
+        flex-basis: 100%;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 6px;
+        margin: 2px 0 4px;
+        cursor: default;
+    }
+
+    /* A video point carries a whole rule set, so its row is denser than a step-point's two fields. */
+    .hud-point-details.hud-video-point {
+        gap: 2px 5px;
+
+        .hud-point-sound {
+            font-size: 85%;
+        }
+    }
+
+    .hud-point-duration-label {
+        display: inline-flex;
+        align-items: center;
+        gap: 2px;
+        font-size: 85%;
+        cursor: help;
+
+        input.hud-point-duration {
+            width: 3.2em;
+        }
+    }
+
+    .hud-point-remove {
+        cursor: pointer;
+        border: 1px solid var(--border-muted);
+        border-radius: 5px;
+        background: none;
+        font-size: 85%;
+        line-height: 1;
+        padding: 2px 5px;
     }
 
     /* Data-saver indicator (data_saver.js) – bottom left, out of the way of the properties panel and

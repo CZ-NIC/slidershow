@@ -61,9 +61,9 @@ class Hud {
             }
         })
         this.$hud_properties = $("#hud-properties").hide() // by default off
-        /** Mirror of the current frame's points, shown while the properties panel is closed. */
+        /** Interactive pills for the current frame's points, shown while the properties panel is
+         * closed – see refresh_points_badge(). Clicking a pill activates it directly (no panel). */
         this.$hud_points = $("#hud-points").hide()
-            .on("click", () => this.properties_visible || this.toggle_properties())
         /** Data-saver indicator – present only while the mode is on (see data_saver.js). */
         this.$hud_data_saver = $("#hud-data-saver").hide()
             .on("click", () => this.playback.dataSaver.report())
@@ -1130,17 +1130,18 @@ class Hud {
     /**
      * Points (`sli-step-points` / `sli-video-points`) used to be visible only inside the properties
      * panel, so with the panel closed nothing said a frame carried any – not even right after Alt+s
-     * added one. Mirror them as pills in the corner the panel would otherwise occupy; clicking one
-     * opens the panel, where they can actually be edited, and the trailing "+" adds a point without
-     * opening anything. An image or a video always gets the badge, even with no points yet – that "+"
-     * is the only hint the frame can carry them at all.
+     * added one. Mirror them as pills in the corner the panel would otherwise occupy, so they can be
+     * edited right there – no need to open the panel at all. An image or a video always gets the
+     * badge, even with no points yet – the trailing "+" is the only hint the frame can carry them.
      *
-     * The most recently added point (the last pill) also gets two inline number inputs for its
-     * transition-duration/duration (the 4th/5th `sli-step-points` params) – these have no other GUI
-     * short of the video point's blocking Zebra_Dialog (which does not even offer them), so a point
-     * added while the panel is closed would otherwise be stuck with the defaults. Requires the
-     * `PropertyPanelPoints` instance to already exist (built silently by Operation.addPoint()) – a
-     * frame's points seen for the first time (panel never touched this session) show as plain pills.
+     * Pills are fully interactive, the same as the properties panel's own point list (built via
+     * `panel.new_point()`, reused as-is): clicking one activates it directly (state 2 – live
+     * drag-editing for a step-point, the rule dialog for a video-point) without opening the
+     * properties panel; the currently active pill, or the one matching wherever the presentation
+     * currently stands (state 1, see `Frame.currentPointIndex`), gets a details row with its
+     * transition/duration inputs and a remove button (see `_pointDetails()`). Requires the
+     * `PropertyPanelPoints` instance – `ensureOwnPoints()` builds it (cheaply, without opening or
+     * rebuilding the whole panel) on first need.
      * Editing mode only – during a plain playthrough they are noise.
      */
     refresh_points_badge() {
@@ -1152,32 +1153,34 @@ class Hud {
         }
 
         const tagName = $actor.prop("tagName")
-        /** @type {{p: string, icon: string, build: (d: *) => PointStep, tag: string, which: "ownStepPoints"|"ownVideoPoints"}[]} */
-        const kinds = [
-            { p: "step-points", icon: "📸", build: d => new PointStep(d), tag: "IMG", which: "ownStepPoints" },
-            { p: "video-points", icon: "🎬", build: d => new PointStep(null, d, null), tag: "VIDEO", which: "ownVideoPoints" },
-        ]
         let any = false
-        for (const { p, icon, build, tag, which } of kinds) {
+        for (const kind of Hud.POINT_KINDS) {
+            const { p, icon, tag, which } = kind
             if (tagName !== tag) {
                 continue
             }
             any = true
-            /** @type {PropertyPanelPoints} */
-            const panel = this[which]
-            const points = panel ? panel.points : (frame.prop(p, $actor) ?? []).map(build)
+            const panel = this.ensureOwnPoints(which)
             const $row = $("<div/>", { "class": "points-row" })
                 .append($("<span/>", { "class": "points-icon", text: icon, title: `sli-${p}` }))
-            points.forEach((point, i) => {
-                const $pill = $("<div/>", { "class": "hud-point" }).append($("<span/>", { "class": "hud-point-label", text: point.toString() }))
-                if (panel && i === points.length - 1) {
-                    this._pointDurationInputs(panel, point, $pill, p)
+            panel?.points.forEach((point, i) => {
+                // Drag-reordering is a panel-only affordance – in this small a pill, a real user's
+                // (and Playwright's) double-click-to-remove is prone to reading as a drag start once
+                // draggable="true" is in play, so the badge turns it off.
+                const $pill = panel.new_point(point).removeAttr("draggable").off("dragstart dragend dragover drop")
+                if (i === frame.currentPointIndex) {
+                    $pill.addClass("current")
+                }
+                if (panel.activePoint === point) {
+                    $pill.addClass("active")
                 }
                 $row.append($pill)
+                if (panel.activePoint === point || panel.justAddedPoint === point) {
+                    $row.append(this._pointDetails(panel, point, $pill, p))
+                }
             })
             // Same "+" as the panel's own point-adding button, so it works even with the panel closed.
-            // stopPropagation: the badge itself opens the panel on click, which is the opposite of
-            // what this button is for.
+            // stopPropagation: a click anywhere on a pill activates it – this button is not a pill.
             $row.append($("<div/>", { "class": "hud-point hud-point-add", title: tag === "IMG" ? "Add step point (Alt+S)" : "Add video point (Alt+V)" })
                 .append($("<span/>", { text: "+" }))
                 .on("click", e => {
@@ -1189,27 +1192,77 @@ class Hud {
         $badge.toggle(any)
     }
 
+    /** Property name / icon / tag / `Hud` field for each kind of point badge – shared by
+     * `refresh_points_badge()` and `ensureOwnPoints()`.
+     * @type {{p: string, tag: string, which: "ownStepPoints"|"ownVideoPoints", videoStep: boolean, icon: string}[]} */
+    static POINT_KINDS = [
+        { p: "step-points", tag: "IMG", which: "ownStepPoints", videoStep: false, icon: "📸" },
+        { p: "video-points", tag: "VIDEO", which: "ownVideoPoints", videoStep: true, icon: "🎬" },
+    ]
+
     /**
-     * Two number inputs for `point`'s transition-duration/duration (`sli-step-points`' 4th/5th tuple
-     * params), appended to its `$pill`. Live-updates the pill's label while typing (mirrors how dragging
-     * a point live-updates its position, see `PropertyPanelPoints.enter()`) and only commits an undo step
-     * on `change` (blur / spinner release / Enter) – see `PropertyPanelPoints.refresh_points()`.
+     * Build (once) the `PropertyPanelPoints` instance for `which` ("ownStepPoints"/"ownVideoPoints"),
+     * without opening or rebuilding the whole properties panel – just the one input row it needs, the
+     * same way `properties()` resolves it (see `_ownedInput()`). Shared by the corner badge (so its
+     * pills are always interactive) and `Operation.addPoint()`'s Alt+s / Alt+v shortcuts.
+     * @param {"ownStepPoints"|"ownVideoPoints"} which
+     * @returns {?PropertyPanelPoints}
+     */
+    ensureOwnPoints(which) {
+        if (this[which]) {
+            return this[which]
+        }
+        const $actor = this.playback.frame?.$actor
+        const kind = Hud.POINT_KINDS.find(k => k.which === which)
+        if (!$actor?.length || $actor.prop("tagName") !== kind.tag) {
+            return null
+        }
+        const $rows = this.propertyPanel.input_ancestored(kind.p, $actor)
+        // Attach the rows into the (hidden) panel DOM, even though the rest of the panel is never
+        // built: a property's undo callback re-locates its <input> with a document-wide `[name=…]`
+        // selector (PropertyPanel._field()), which only finds elements actually in the document –
+        // a detached <input> would silently desync from `pl.changes.undo()`.
+        $rows.appendTo(this.$hud_properties)
+        const $input = this._ownedInput($rows, kind.p)
+        this[which] = $input ? new this.propertyPanel.points(this.playback, $input, kind.videoStep) : null
+        return this[which]
+    }
+
+    /**
+     * Detail row for a state-2 (active) or just-added point: its own fields, on their own line
+     * rather than squeezed into the pill, plus a remove button – shown only for that one point (see
+     * `refresh_points_badge()`), so a plain pill stays uncluttered. A step-point carries just the
+     * transition/duration of its zoom; a video point carries its whole rule set (see
+     * `_videoPointFields()`). Live-updates the pill's label while typing (mirrors how dragging a
+     * point live-updates its position, see `PropertyPanelPoints.enter()`) and only commits an undo
+     * step on `change` (blur / spinner release / Enter) – see `PropertyPanelPoints.refresh_points()`.
      * @param {PropertyPanelPoints} panel
      * @param {PointStep} point
      * @param {JQuery} $pill
      * @param {string} attr `step-points` or `video-points` – for the input titles only.
+     * @returns {JQuery}
      */
-    _pointDurationInputs(panel, point, $pill, attr) {
+    _pointDetails(panel, point, $pill, attr) {
         const mnemonic = panel._mnemonic.bind(panel)
-        const field = (/** @type {string} */ label, /** @type {string} */ key, /** @type {number} */ index, /** @type {string} */ title) => {
-            const value = point.position[index]
-            const $input = $("<input/>", {
-                type: "number", step: 0.1, min: 0, class: "hud-point-duration",
+        // Live: only reflect the value in the point's own label, same as dragging a point live-
+        // updates its position (PropertyPanelPoints.enter()) – .hud-point-label, not the plain
+        // <span> refresh_points() itself targets, since that would also catch the mnemonic <span>s.
+        const relabel = () => $pill.find(".hud-point-label").text(point.toString())
+        // Commit: persist the whole points array to the <input> and register one undo step.
+        const commit = () => panel.refresh_points()
+        // A click anywhere on a pill activates it – these controls are not the pill.
+        const stop = (/** @type {JQuery.Event} */ e) => e.stopPropagation()
+        const number = (/** @type {*} */ value, /** @type {Object} */ attrs) => $("<input/>",
+            Object.assign({ type: "number", step: 0.1, class: "hud-point-duration", value: value ?? "" }, attrs))
+            .on("click", stop)
+
+        /** transition-duration / duration of the point's zoom, ie. `position[index]` */
+        const zoomField = (/** @type {string} */ label, /** @type {string} */ key, /** @type {number} */ index, /** @type {string} */ title) => {
+            const $input = number(point.position[index], {
+                min: 0, title,
                 placeholder: prop(index === 3 ? "step-transition-duration" : "step-duration", this.playback.frame.$actor),
-                value: value ?? "", title
             })
             $input
-                .on("click", e => e.stopPropagation())
                 .on("input", () => {
                     // A default-position point's array is empty (or shorter than 3) – holes there read as
                     // `undefined` for now (FrameZoom.set()'s own defaults apply), but `JSON.stringify` turns
@@ -1219,21 +1272,114 @@ class Hud {
                     if (point.position.length < 3) {
                         point.position = panel.zoom.get(panel.$actor)
                     }
-                    // Live: only reflect the value in the point's own label, same as dragging a point live-
-                    // updates its position (PropertyPanelPoints.enter()) – .hud-point-label, not the plain
-                    // <span> refresh_points() itself targets, since that would also catch the mnemonic <span>s.
                     point.position[index] = $input.val() === "" ? undefined : Number($input.val())
-                    $pill.find(".hud-point-label").text(point.toString())
+                    relabel()
                 })
-                .on("change", () => {
-                    // Commit: persist the whole points array to the <input> and register one undo step.
-                    panel.refresh_points()
-                })
+                .on("change", commit)
             return $("<label/>", { class: "hud-point-duration-label", title }).append(mnemonic(label, key, $input), $input)
         }
-        $pill.append(
-            field("Transition", "i", 3, `sli-${attr}: transition-duration of this point (s)`),
-            field("Duration", "u", 4, `sli-${attr}: duration of this point (s)`))
+        const $remove = $("<button/>", { type: "button", "class": "hud-point-remove", text: "✕", title: "Remove this point" })
+            .on("click", e => {
+                e.stopPropagation()
+                if (panel.activePoint === point) {
+                    panel.activePoint = null
+                }
+                if (panel.justAddedPoint === point) {
+                    panel.justAddedPoint = null
+                }
+                point.remove(panel)
+                this.refresh_points_badge()
+            })
+        if (point.videoStep) {
+            return $("<div/>", { "class": "hud-point-details hud-video-point" }).append(
+                ...this._videoPointFields(panel, point, { number, mnemonic, relabel, commit, stop }),
+                // A video point's `duration` would mean nothing – it is not a step that ends, the video
+                // itself decides when the next point comes. Only the zoom's transition applies.
+                zoomField("Transition", "i", 3, `sli-${attr}: how long the zoom to this point takes (s)`),
+                $remove)
+        }
+        return $("<div/>", { "class": "hud-point-details" }).append(
+            zoomField("Transition", "i", 3, `sli-${attr}: transition-duration of this point (s)`),
+            zoomField("Duration", "u", 4, `sli-${attr}: duration of this point (s)`),
+            $remove)
+    }
+
+    /**
+     * The video-point half of `_pointDetails()`: the rule set (`[startTime, "goto:…", "rate:…",
+     * "pause", "mute"]`) that a plain position cannot express. Edited here, in place, rather than in
+     * a dialog over the video – the point describes one exact moment, so the moment has to stay
+     * visible while its rules are tuned (`PropertyPanelPoints._activate()` pauses the video and parks
+     * it there; the zoom is taken live from whatever the user pans/zooms the video to meanwhile).
+     * The Alt+v dialog is left with the one question that only a *new* point can be asked – whether
+     * the marked time starts a point or finishes the cut before it.
+     *
+     * Only the fields whose word holds a still-unused letter get a mnemonic – most of the alphabet is
+     * taken by the global Alt hotkeys (see operation.js), and a duplicate accesskey silently wins over one.
+     * @param {PropertyPanelPoints} panel
+     * @param {PointStep} point
+     * @param {{number: function(*, Object=): JQuery, mnemonic: function(string, string, JQuery): JQuery,
+     *   relabel: function(): void, commit: function(): void, stop: function(JQuery.Event): void}} tools
+     * @returns {JQuery[]}
+     */
+    _videoPointFields(panel, point, { number, mnemonic, relabel, commit, stop }) {
+        const video = /** @type {HTMLVideoElement} */ (panel.$actor[0])
+        const label = (/** @type {string} */ title, /** @type {JQuery[]} */ ...content) =>
+            $("<label/>", { class: "hud-point-duration-label", title }).append(...content)
+
+        const $time = number(point.startTime, { min: 0, title: "sli-video-points: the moment this point takes effect (s)" })
+            .on("input", () => {
+                point.startTime = $time.val() === "" ? 0 : Number($time.val())
+                relabel()
+            })
+            // Seek there too, so the video shows the moment the number talks about. (The seek's own
+            // `timeupdate` writes the very same time back through the live sync, see PointStep.enter().)
+            .on("change", () => {
+                video.currentTime = Number($time.val())
+                commit()
+            })
+
+        /** Checkbox + number pair for an optional numeric rule (`goto`, `rate`). */
+        const rule = (/** @type {string} */ text, /** @type {?string} */ key, /** @type {string} */ name,
+            /** @type {number} */ fallback, /** @type {string} */ title) => {
+            const $on = $("<input/>", { type: "checkbox", checked: point[name] != null }).on("click", stop)
+            const $value = number(point[name] ?? fallback, { title })
+            const sync = () => {
+                point[name] = $on.prop("checked") && $value.val() !== "" ? Number($value.val()) : undefined
+                relabel()
+            }
+            $value.on("input", sync).on("change", () => { sync(); commit() })
+            $on.on("change", () => { sync(); commit() })
+            return label(title, $on, key ? mnemonic(text, key, $on) : $("<span/>", { text }), $value)
+        }
+
+        const $pause = $("<input/>", { type: "checkbox", checked: !!point.pause })
+            .on("click", stop)
+            .on("change", () => {
+                point.pause = $pause.prop("checked") || undefined
+                relabel()
+                commit()
+            })
+        const $sound = $("<select/>", { class: "hud-point-sound", title: "sli-video-points: mute/unmute the video from here on" })
+            .append(
+                $("<option/>", { value: "", text: "🔊 keep" }),
+                $("<option/>", { value: "mute", text: "🔇 mute" }),
+                $("<option/>", { value: "unmute", text: "🔊 unmute" }))
+            .val(point.mute ? "mute" : point.unmute ? "unmute" : "")
+            .on("click", stop)
+            .on("change", () => {
+                point.mute = $sound.val() === "mute"
+                point.unmute = $sound.val() === "unmute"
+                relabel()
+                commit()
+            })
+
+        return [
+            label("sli-video-points: the moment this point takes effect (s)", $("<span/>", { text: "⏱" }), $time),
+            rule(" jump to ", "j", "goto", null, "sli-video-points: jump to this time when the point is reached (s)"),
+            rule(" rate ×", null, "rate", video.playbackRate, "sli-video-points: playback rate from here on"),
+            label("sli-video-points: pause the video here", $pause, mnemonic(" pause", "u", $pause)),
+            $sound,
+        ]
     }
 
     /**
@@ -1404,6 +1550,22 @@ class Hud {
     }
 
     /**
+     * `input_ancestored()` returns one <input> row per ancestor level (actor first, then its
+     * parents) for a property that can be set at any of them (ex: `sli-step-points` set on the
+     * <article> instead of the <img> itself, see docs/images.md). Pick the row whose own element
+     * actually carries the attribute – not just the actor's (often empty) row – so
+     * `ownStepPoints`/`ownVideoPoints` end up pointed at the points that are really in effect.
+     * Falls back to the actor's own row when nothing carries the attribute yet (ex: no points added).
+     * @param {JQuery} $rows Rows as returned by `pp.input_ancestored()`
+     * @param {string} p Property name (ex: 'step-points')
+     * @returns {?HTMLElement}
+     */
+    _ownedInput($rows, p) {
+        const $inputs = $rows.find("input")
+        return $inputs.filter((_, el) => $(el).data("target")?.hasAttribute(`sli-${p}`)).get(0) ?? $inputs.get(0) ?? null
+    }
+
+    /**
      * Properties pane. Builds the raw rows (unchanged generation logic – input_ancestored/input/
      * textarea, undo wiring and all) bucketed by theme, then hands them to _renderPropertyPanel()
      * which lays them out as level tabs (Frame/Section/Main) with collapsible groups + a filter box.
@@ -1459,7 +1621,8 @@ class Hud {
             if ($actor.prop("tagName") === "IMG") {
                 // step-points property
                 const $rows = pp.input_ancestored("step-points", $actor)
-                this.ownStepPoints = $rows.find("input").map((_, el) => new pp.points(this.playback, el, false)).get()[0] ?? null
+                const $stepInput = this._ownedInput($rows, "step-points")
+                this.ownStepPoints = $stepInput ? new pp.points(this.playback, $stepInput, false) : null
                 const stepPointRows = $rows.get()
                 markFrameRowHideable(stepPointRows, "step-points")
                 groups.Transform.push(...stepPointRows)
@@ -1481,7 +1644,8 @@ class Hud {
 
                 // video-points property
                 const $vrows = pp.input_ancestored("video-points", $actor)
-                this.ownVideoPoints = $vrows.find("input").map((_, el) => new pp.points(this.playback, el, true)).get()[0] ?? null
+                const $videoInput = this._ownedInput($vrows, "video-points")
+                this.ownVideoPoints = $videoInput ? new pp.points(this.playback, $videoInput, true) : null
                 const videoPointRows = $vrows.get()
                 markFrameRowHideable(videoPointRows, "video-points")
                 groups.Transform.push(...videoPointRows)
