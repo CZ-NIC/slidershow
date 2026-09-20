@@ -130,6 +130,24 @@ test("double-clicking a pill removes the point, undoably", async ({ page }) => {
     await expect(page.locator("#hud-points " + POINT)).toHaveCount(2)
 })
 
+test("undoing by keyboard while a point is being edited really undoes it", async ({ page }) => {
+    await start(page)
+    const points = () => page.evaluate(() => playback.frame.$actor.attr("sli-step-points"))
+
+    await page.locator("#hud-points " + POINT).first().click() // state 2 – the click-away listener is armed
+    const transition = page.locator("#hud-points .hud-point-details input.hud-point-duration").first()
+    await transition.fill("2.5")
+    await transition.dispatchEvent("change")
+    expect(JSON.parse(await points())[0]).toEqual([10, 20, 2, 2.5])
+
+    // WebHotkeys runs a shortcut by clicking its HUD button, so Ctrl+Alt+Z's own click reaches the
+    // click-away listener right after the undo – which used to save the pre-undo points straight
+    // back over it, leaving the pills and the attribute disagreeing.
+    await page.keyboard.press("Control+Alt+z")
+    await expect.poll(async () => JSON.parse(await points())[0]).toEqual([10, 20, 2])
+    await expect(page.locator("#hud-points " + POINT).first()).toHaveText("[10,20,2]")
+})
+
 test("a just-added point gets a details row with transition/duration inputs and a remove button, editable without the panel", async ({ page }) => {
     await start(page, "#2?start&editing") // an image with no points yet
     await page.keyboard.press("Alt+s")

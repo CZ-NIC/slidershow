@@ -110,7 +110,8 @@ top-right corner (see [Seeing the points without the panel](images.md#sli-step-p
 open any dialog: the video pauses at that very moment and the point's rules appear right below its
 pill, so you tune them with the moment they describe still on screen. The row holds the time,
 **jump to**, **rate**, **pause**, the sound and the transition-duration of the zoom, plus a remove
-button; double-clicking the pill removes the point outright. Every change is undoable
+button; double-clicking the pill removes the point outright. Times go to the hundredth of a second,
+so a cut lands on the frame you mean. Every change is undoable
 (<kbd>Ctrl+Alt+Z</kbd>) on its own.
 
 While a point is being edited this way, the video follows it: zoom/pan/rotate the video and the view

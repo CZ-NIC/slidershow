@@ -75,9 +75,18 @@ class PropertyPanelPoints {
         const index = this._insertIndex()
         this.new_point(point, true) // commits – may synchronously replace `this`, see the constructor
         this.$wrap.show()
-        // Read back from whichever instance is live now (see the constructor's rebuild comment).
-        const live = (this.videoStep ? this.pl.hud.ownVideoPoints : this.pl.hud.ownStepPoints) ?? this
+        const live = this.live // reading back from a possibly rebuilt instance
         live.justAddedPoint = live.points[index] ?? null
+    }
+
+    /**
+     * Whichever instance is the live one now – `this`, unless a commit (or an undo) has meanwhile
+     * rebuilt it, see the constructor. Anything that outlives a single call (a deferred callback, a
+     * document-wide listener) has to go through this, or it would act on a dead instance's points.
+     * @returns {PropertyPanelPoints}
+     */
+    get live() {
+        return (this.videoStep ? this.pl.hud.ownVideoPoints : this.pl.hud.ownStepPoints) ?? this
     }
 
     /**
@@ -128,7 +137,7 @@ class PropertyPanelPoints {
         let wasPlaying = !video.paused
         video.pause()
 
-        const round = (/** @type {number} */ v) => Math.round(v * 10) / 10
+        const round = PointStep.roundTime
         const index = this._insertIndex()
         const before = this._stateBefore(index)
         const time = round(video.currentTime)
@@ -140,9 +149,9 @@ class PropertyPanelPoints {
         const canContinue = prev?.videoStep && prev.goto == null && Number(prev.startTime) < time
         const $mode = canContinue ? this._modeRadios(prev, time) : null
 
-        const $time = $("<input/>", { type: "number", step: 0.1, value: time })
+        const $time = $("<input/>", { type: "number", step: 0.01, value: time })
         const $gotoOn = $("<input/>", { type: "checkbox" })
-        const $goto = $("<input/>", { type: "number", step: 0.1, value: "", placeholder: "s" })
+        const $goto = $("<input/>", { type: "number", step: 0.01, value: "", placeholder: "s" })
         const rate = video.playbackRate !== before.rate ? round(video.playbackRate) : null
         const $rateOn = $("<input/>", { type: "checkbox", checked: rate != null })
         const $rate = $("<input/>", { type: "number", step: 0.1, value: rate ?? video.playbackRate })
@@ -213,9 +222,8 @@ class PropertyPanelPoints {
             }
             this.$wrap.show()
             this.refresh_points() // commits – may synchronously replace `this`, see the constructor
-            // Read back from whichever instance is live now (see the constructor's rebuild comment);
-            // the point the user just shaped keeps its detail row open (the cut filled in the previous one).
-            const live = pl.hud.ownVideoPoints ?? this
+            // The point the user just shaped keeps its detail row open (a cut filled in the previous one).
+            const live = this.live
             live.justAddedPoint = live.points[cut ? index - 1 : index] ?? null
             pl.hud.refresh_points_badge()
         }
@@ -387,7 +395,7 @@ class PropertyPanelPoints {
         this.activePoint = point
         this.justAddedPoint = null
         this.pl.frame.currentPointIndex = this.points.indexOf(point)
-        $(window).on("resize.wzoom-properties", () => this.blur())
+        $(window).on("resize.wzoom-properties", () => this.live.blur())
         // Deferred: activation can be triggered by a click that isn't itself on a pill (ex: the
         // video dialog's "Zoom live" button) – binding synchronously would catch that same click
         // as it keeps bubbling to `document` and immediately undo the activation.
@@ -399,8 +407,12 @@ class PropertyPanelPoints {
                 if ($(e.target).closest(".hud-point").length || $(e.target).closest(this.$actor).length) {
                     return
                 }
-                this.refresh_points() // save whatever dragging changed before leaving state 2
-                this.blur()
+                // Through `live`: a click may have changed the points before reaching us – WebHotkeys
+                // runs a shortcut by clicking its HUD button, so Ctrl+Alt+Z's own click lands here
+                // right after the undo, and a dead instance would write its pre-undo points back.
+                const live = this.live
+                live.refresh_points() // save whatever dragging changed before leaving state 2
+                live.blur()
             })
         }, 0)
         this._showDetails(point, pt)
@@ -510,6 +522,17 @@ class PropertyPanelPoints {
 }
 
 class PointStep {
+    /**
+     * Round a video time the way a point stores it: to hundredths. Fine enough to place a cut
+     * within a frame or two, coarse enough that a typed `3` stays `3` – seeking there reports back
+     * a slightly-off time (3.0000001) that would otherwise be written into the point.
+     * @param {number} v
+     * @returns {number}
+     */
+    static roundTime(v) {
+        return Math.round(v * 100) / 100
+    }
+
     /**
      * Deserialize the set of points from the given <input>
      * @param {JQuery} $input
@@ -662,9 +685,7 @@ class PointStep {
                     this.rate = data.rate
                 }
                 if (data.currentTime) {
-                    // Rounded: a seek reports a slightly-off time (3 → 3.0000001), which would make
-                    // both the pill label and the stored point unreadable.
-                    this.startTime = Math.round(data.currentTime * 10) / 10
+                    this.startTime = PointStep.roundTime(data.currentTime)
                 }
                 panel.refresh_points(pt, this)
             })

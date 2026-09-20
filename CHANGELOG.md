@@ -1,17 +1,12 @@
 # CHANGELOG
 
-## 1.3.1 (unreleased)
+## 1.4.0 (2026-09-20)
 
 ### Playback
-* fix: arriving at a frame is not a step, so nothing animates on the way in any more – a frame whose first [`sli-step-points`](https://cz-nic.github.io/slidershow/docs/images/#sli-step-points) point is zoomed in now opens zoomed in, instead of showing the whole image first and then zooming in over `sli-step-transition-duration`; the same for entering a frame backwards (you land on its last point at once) and for the step elements, which stopped fading out as the frame appears. The very first frame of the presentation used to skip the initial point altogether and stay unzoomed. Want the frame to start unzoomed and only then zoom in? Prepend the neutral point `[]`, or fill in the `transition_duration` of the first point – it has nothing to transition from, so it now means "zoom in when the frame opens"
+* fix: arriving at a frame is not a step
 
 ### Properties
-* feat: a frame's step-points / video-points are mirrored as pills in the top-right corner while the properties panel is closed (editing mode only), so it is visible at a glance that a frame carries points – and that <kbd>Alt+S</kbd>/<kbd>Alt+V</kbd> just added one. A pill is now directly interactive, without opening the panel at all: clicking a step-point pill jumps the actor there and starts live-editing it by dragging; clicking anywhere else drops out of editing again; double-clicking a pill removes that point outright, undoably. The pill matching wherever the presentation currently stands (while stepping through it in editing mode) is highlighted too. The trailing **+** adds a point on the spot, with nothing to open first. An image or a video gets the badge even with no points yet – that "+" is the only hint the frame can carry them at all
-* feat: the pill being edited, or one just added, gets its own details row below it with two number inputs (<kbd>Alt+I</kbd>/<kbd>Alt+U</kbd>) for its transition-duration/duration – the point's `sli-step-points` 4th/5th params, which previously stayed at the frame's default with no GUI to set them at all – plus a remove button
-* feat: an existing video point is edited in place, in that same details row, instead of in a dialog over the video: clicking its pill pauses the video at that very moment and offers the whole rule set – time, `goto`, `rate`, `pause`, `mute`/`unmute` and the transition-duration of its zoom – so the moment the point describes stays visible while its rules are tuned (and the video keeps following every zoom/pan of yours into the point). Leaving the point resumes the playback it interrupted; double-clicking the pill removes the point, as with a step-point. The <kbd>Alt+V</kbd> dialog stays for *new* points only – it asks the one thing an existing point cannot be asked, whether the marked time starts a point of its own or finishes the cut before it. A video point has no `duration` field: it does not end, the video decides when the next point comes
-* fix: an array-valued property (`sli-step-points`, `sli-video-points`) whose whole content reads as a single number came back from `prop()` as that number instead of the array (`[[2]]` → `2`, `[[]]` → `true`), which broke anything walking the points – a one-point video was enough to throw
-* fix: `sli-step-points`/`sli-video-points` set on an ancestor (ex: the `<article>`, applying to every media element inside it) instead of the actor itself made the corner badge lose its pills as soon as the properties panel closed – it kept reading the actor's own (empty) row instead of the one actually carrying the points
-* fix: `Ctrl+Alt+Z`/`Ctrl+Alt+Shift+Z` (undo/redo) now refresh the points badge too, so an undone/redone point add/edit/remove shows immediately instead of only once something else happens to redraw it
+* feat: a frame's step-points / video-points are mirrored as pills in the top-right corner while the properties panel is closed (editing mode only), so it is visible at a glance that a frame carries points – and that <kbd>Alt+S</kbd>/<kbd>Alt+V</kbd> just added one
 
 ## 1.3.0 (2026-09-18)
 

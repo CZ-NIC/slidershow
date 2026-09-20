@@ -1326,7 +1326,7 @@ class Hud {
         const label = (/** @type {string} */ title, /** @type {JQuery[]} */ ...content) =>
             $("<label/>", { class: "hud-point-duration-label", title }).append(...content)
 
-        const $time = number(point.startTime, { min: 0, title: "sli-video-points: the moment this point takes effect (s)" })
+        const $time = number(point.startTime, { min: 0, step: 0.01, title: "sli-video-points: the moment this point takes effect (s)" })
             .on("input", () => {
                 point.startTime = $time.val() === "" ? 0 : Number($time.val())
                 relabel()
@@ -1340,9 +1340,9 @@ class Hud {
 
         /** Checkbox + number pair for an optional numeric rule (`goto`, `rate`). */
         const rule = (/** @type {string} */ text, /** @type {?string} */ key, /** @type {string} */ name,
-            /** @type {number} */ fallback, /** @type {string} */ title) => {
+            /** @type {number} */ fallback, /** @type {string} */ title, /** @type {number} */ step = 0.1) => {
             const $on = $("<input/>", { type: "checkbox", checked: point[name] != null }).on("click", stop)
-            const $value = number(point[name] ?? fallback, { title })
+            const $value = number(point[name] ?? fallback, { title, step })
             const sync = () => {
                 point[name] = $on.prop("checked") && $value.val() !== "" ? Number($value.val()) : undefined
                 relabel()
@@ -1375,7 +1375,7 @@ class Hud {
 
         return [
             label("sli-video-points: the moment this point takes effect (s)", $("<span/>", { text: "⏱" }), $time),
-            rule(" jump to ", "j", "goto", null, "sli-video-points: jump to this time when the point is reached (s)"),
+            rule(" jump to ", "j", "goto", null, "sli-video-points: jump to this time when the point is reached (s)", 0.01),
             rule(" rate ×", null, "rate", video.playbackRate, "sli-video-points: playback rate from here on"),
             label("sli-video-points: pause the video here", $pause, mnemonic(" pause", "u", $pause)),
             $sound,

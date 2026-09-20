@@ -59,7 +59,10 @@ test("Alt+v asks what the point should do, pauses meanwhile and resumes after", 
     await dialog.locator(".vp-rules label").first().locator("input[type=number]").fill("12")
     await confirm(page)
 
-    expect(JSON.parse(await points(page))).toEqual([[3, "goto:12"]])
+    // the time comes from the playhead, which kept running until the dialog paused it
+    const [[time, ...rules]] = JSON.parse(await points(page))
+    expect(rules).toEqual(["goto:12"])
+    expect(time).toBeCloseTo(3, 1)
     await expect.poll(() => page.evaluate(() => playback.frame.$actor[0].paused)).toBe(false)
 
     // still undoable, panel or no panel
@@ -127,14 +130,20 @@ test("clicking a video pill edits its rules in place, with the video paused at t
     await goto.dispatchEvent("change")
     expect(JSON.parse(await points(page))).toEqual([[2, "goto:9"], [8]])
 
+    // a hundredth of a second is settable – a cut has to land on the right frame
+    const time = details.locator("input[type=number]").first()
+    await time.fill("3.25")
+    await time.dispatchEvent("change")
+    expect(JSON.parse(await points(page))).toEqual([[3.25, "goto:9"], [8]])
+
     // …as is pausing / muting, which no position could express
     await details.locator("input[type=checkbox]").last().check() // pause
     await details.locator("select").selectOption("mute")
-    expect(JSON.parse(await points(page))).toEqual([[2, "goto:9", "pause", "mute"], [8]])
+    expect(JSON.parse(await points(page))).toEqual([[3.25, "goto:9", "pause", "mute"], [8]])
 
     // each commit is its own undo step, like every other property edit
     await page.evaluate(() => playback.changes.undo())
-    expect(JSON.parse(await points(page))).toEqual([[2, "goto:9", "pause"], [8]])
+    expect(JSON.parse(await points(page))).toEqual([[3.25, "goto:9", "pause"], [8]])
 
     // leaving the editing resumes the playback it interrupted
     await page.locator("#hud-points .points-icon").click()
