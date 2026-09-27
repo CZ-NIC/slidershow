@@ -75,7 +75,7 @@ class Export {
 
     /**
      * Shows which file `Ctrl+S` currently writes to (if any), so choosing another file in the native
-     * picker is visibly a "save as" rather than a silent switch – see PLAN.md "Persisted export target"
+     * picker is visibly a "save as" rather than a silent switch – see BACKLOG.md "Persisted export target"
      * step 4. Empty on a hosted origin (`_target_key()` is null there – nothing is remembered).
      */
     _export_target_row() {
@@ -1782,7 +1782,7 @@ class Export {
         })
     }
 
-    // --- Persisted export target (Ctrl+S without the picker, see PLAN.md) ---
+    // --- Persisted export target (Ctrl+S without the picker, see BACKLOG.md) ---
 
     /**
      * `presentation_key()`, gated to `file:` documents only – on a hosted origin the document is a fresh

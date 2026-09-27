@@ -296,6 +296,16 @@ class GridController {
         return false
     }
 
+    /** Whether `el` is off-screen for navigation purposes – either collapsed (see `_isHidden`) or, in
+     * tag_hidden_mode "hide", a tag-hidden frame (removed from the grid the same way, see .grid-tag-hidden
+     * in style.css). Used by arrow-key navigation so it never lands on a frame the grid doesn't show.
+     * @param {HTMLElement} el
+     * @returns {boolean}
+     */
+    _isNavHidden(el) {
+        return this._isHidden(el) || (this.pl.tag_hidden_mode === "hide" && this._isTagHidden(el))
+    }
+
     /** Sync every currently-rendered ribbon's data-expanded to match this.collapsedSections. */
     _refreshRibbonExpandedAttrs() {
         this.$container.children("section-controller").each((_, el) => {
@@ -780,9 +790,9 @@ class GridController {
         let col = 0
         let row = -1
         this.$framesSections.each((i, el) => {
-            if (this._isHidden(el)) {
-                // Hidden by a collapsed ancestor – not on screen at all, so it gets no row/col of its own
-                // (see getFrameIndexInNextRow, which navigates purely on this map).
+            if (this._isNavHidden(el)) {
+                // Hidden by a collapsed ancestor or a hidden tag – not on screen at all, so it gets no
+                // row/col of its own (see getFrameIndexInNextRow, which navigates purely on this map).
                 colMap[i] = null
                 rowOf[i] = row
                 return
@@ -1343,7 +1353,7 @@ class GridController {
 
         for (let i = pos + direction; i >= 0 && i < this.$framesSections.length; i += direction) {
             const el = this.$framesSections[i]
-            if (this._isHidden(el)) continue
+            if (this._isNavHidden(el)) continue
             if (["SECTION", "MAIN"].includes(el.tagName)) {
                 if (this._isRowIsolatedSection(el)) return el
                 continue

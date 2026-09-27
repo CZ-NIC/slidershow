@@ -224,6 +224,23 @@ test("The grid's own cursor/click navigation always reaches a hidden frame (dim/
     expect(await page.evaluate(() => playback.index)).not.toBe(1)
 })
 
+test("grid arrow-key navigation (ArrowLeft/ArrowRight) skips a frame hidden by mode 'hide', unlike a plain click via goToFrame", async ({ page }) => {
+    await page.evaluate(() => {
+        playback.$articles.eq(1).data("frame").set_tag(1) // two.jpg (index 1) carries the hidden tag
+        $main.attr("sli-tag-hidden", "1")
+        playback.operation._cycleTagHiddenMode() // dim -> hide, which removes the tile from the grid entirely
+        playback.hud.toggle_grid()
+        playback.goToFrame(0) // cursor starts on one.jpg
+    })
+    expect(await page.evaluate(() => playback.tag_hidden_mode)).toBe("hide")
+
+    await page.keyboard.press("ArrowRight")
+    expect(await page.evaluate(() => playback.index)).toBe(2) // three.jpg – index 1 is off-screen, skipped
+
+    await page.keyboard.press("ArrowLeft")
+    expect(await page.evaluate(() => playback.index)).toBe(0) // back to one.jpg, index 1 skipped again
+})
+
 test("HUD counter and Playback.visible_slide_count/visible_slide_index exclude hidden frames from the total and position, except in 'show'", async ({ page }) => {
     await page.evaluate(() => {
         playback.$articles.eq(1).data("frame").set_tag(1) // two.jpg (index 1) carries the hidden tag
