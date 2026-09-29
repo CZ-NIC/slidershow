@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## Unreleased
+
+* enh: regrouping, sorting sections (and their undo) and flattening subsections is much faster on thousands of frames
+
 ## 1.4.0 (2026-09-20)
 
 ### Playback

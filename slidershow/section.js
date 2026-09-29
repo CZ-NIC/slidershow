@@ -323,18 +323,18 @@ class SectionController {
         }).get()
 
         pl.changes.undoable("Flatten subsections " + pl.section_controller.getSubsectionCount($main),
-            () => {
+            () => withDetached($main[0], () => {
                 snapshots.forEach(({ $section, $children }) => {
                     $section.before($children)  // move contents before the section
                     $section.detach()           // remove empty section
                 })
-            },
-            () => {
+            }),
+            () => withDetached($main[0], () => {
                 snapshots.forEach(({ reinsert, $section, $children }) => {
                     reinsert()                    // restore section
                     $section.append($children)    // restore its contents
                 })
-            },
+            }),
             () => pl.reset()
         )
     }
@@ -346,15 +346,11 @@ class SectionController {
     */
     group(criterion = "tags", $frames = null) {
         const pl = this.playback
-        /** @type {function[]} */
-        const redos = []
-        /** @type {JQuery[]} */
-        const added = []
         /** @type {string[]} */
         const multiTagged = []
-        /** @type {{el: HTMLElement, prev: ?Element}[]} Every section that existed before this regroup, with
-         * its original preceding sibling – lets undo reattach the ones we emptied and revert the numeric sort. */
-        let sectionsBefore = []
+        /** @type {Map<Node, Node[]>} One snapshot of the child lists of everything a regroup can touch
+         * (<main>, every frame's ancestors) – the whole undo, instead of one closure per frame. */
+        let before = new Map()
 
         if (!$frames) {
             $frames = pl.$articles
@@ -362,11 +358,8 @@ class SectionController {
 
         pl.changes.undoable(`Group ${$frames.length} frames by ${criterion}`,
             () => {
-                redos.length = 0
-                added.length = 0
                 multiTagged.length = 0
-                sectionsBefore = this.getDirectSections($main).toArray()
-                    .map(el => ({ el, prev: el.previousElementSibling }))
+                before = snapshotChildren($frames.toArray(), $main[0])
                 /** @type {JQuery} Catch-all for frames without a group key; reused across regroups so it never duplicates. */
                 let $looseSection = this.getDirectSections($main).filter("[sli-untagged]").first()
                 /** @type {Map<string, HTMLElement>} Sections at this level by their sli-name, kept up to
@@ -378,10 +371,18 @@ class SectionController {
                         .filter(el => el.hasAttribute("sli-name"))
                         .map(el => [el.getAttribute("sli-name"), el])
                 )
+                /** @typedef {{section: HTMLElement, frames: HTMLElement[], title: ?string}} Bucket */
+                /** @type {Map<string, Bucket>} Frames to put into each section, in their final order. */
+                const buckets = new Map()
+                /** @type {HTMLElement[]} Sections created by this regroup, in creation order. */
+                const created = []
+                /** @type {?HTMLElement} */
+                let looseCreated = null
+                /** @type {?Bucket} */
+                let looseBucket = null
                 $frames.each((_, el) => {
-                    const $frame = $(el)
                     /** @type {Frame} */
-                    const frame = $frame.data("frame")
+                    const frame = $(el).data("frame")
 
                     const { name, title, tags } = this.groupKey(criterion, frame)
                     if (tags.length > 1) {
@@ -392,62 +393,91 @@ class SectionController {
                         // frame into a single catch-all section. Previously only frames sitting loose directly
                         // under <main> were gathered, so photos untagged inside an existing section stayed
                         // scattered there after a regroup; now they all land in one place.
-                        redos.push(this.redoForMoving($frame))
-                        if (!$looseSection.length) {
-                            $looseSection = $("<section/>", { "sli-untagged": "", "sli-title": "untagged" }).appendTo($main)
-                            added.push($looseSection)
+                        if (!looseBucket) {
+                            if (!$looseSection.length) {
+                                looseCreated = $("<section/>", { "sli-untagged": "", "sli-title": "untagged" })[0]
+                                $looseSection = $(looseCreated)
+                            }
+                            looseBucket = { section: $looseSection[0], frames: [], title: null }
                         }
-                        $frame.appendTo($looseSection)
+                        looseBucket.frames.push(el)
                         return
                     }
-                    redos.push(this.redoForMoving($frame))
 
                     // find or create section to put the frame to (to its end)
                     const key = String(name)
-                    let $section
-                    const existing = sectionsByName.get(key)
-                    if (existing) {
-                        $section = $(existing)
-                    } else {
-                        $section = $("<section/>", { "sli-name": name }).prependTo($main)
-                        sectionsByName.set(key, $section[0])
-                        added.push($section)
+                    let section = sectionsByName.get(key)
+                    if (!section) {
+                        section = $("<section/>", { "sli-name": name })[0]
+                        sectionsByName.set(key, section)
+                        created.push(section)
                     }
+                    let bucket = buckets.get(key)
+                    if (!bucket) {
+                        buckets.set(key, bucket = { section, frames: [], title: null })
+                    }
+                    bucket.frames.push(el)
+                    bucket.title = title
+                })
+                // Fill every target section while it is detached from the document: moving a frame into a
+                // section that is part of the laid-out presentation costs ~0.3 ms each (seconds for
+                // thousands of frames), into a detached one next to nothing. Existing sections keep their
+                // identity and place (a placeholder marks it) and go back in with one insertion each.
+                /**
+                 * @param {Bucket} bucket
+                 * @param {boolean} refreshTitle
+                 */
+                const fill = ({ section, frames, title }, refreshTitle) => {
+                    const placeholder = document.createComment("")
+                    const attached = Boolean(section.parentNode)
+                    if (attached) {
+                        section.replaceWith(placeholder)
+                    }
+                    const fragment = document.createDocumentFragment()
+                    frames.forEach(el => fragment.appendChild(el))
+                    section.appendChild(fragment)
                     // sli-title is the resolved display label (ex. a tag's name) at grouping time, kept
                     // separate from sli-name (the stable key sections are matched/reused by) – renaming
                     // a tag later only refreshes sli-title on the next regroup, sli-name never changes.
-                    if (title) {
-                        $section.attr("sli-title", title)
-                    } else {
-                        $section.removeAttr("sli-title")
+                    if (refreshTitle) {
+                        title ? section.setAttribute("sli-title", title) : section.removeAttribute("sli-title")
                     }
-                    $frame.appendTo($section)
+                    if (attached) {
+                        placeholder.replaceWith(section)
+                    }
+                }
+                // <main> itself is taken out of the document for the duration too: frames leaving a laid-out
+                // container are as costly as frames entering one.
+                withDetached($main[0], () => {
+                    buckets.forEach(bucket => fill(bucket, true))
+                    if (looseBucket) {
+                        fill(looseBucket, false)
+                    }
+                    // New sections go to the front of <main> (the latest created first), the catch-all to its end.
+                    if (created.length) {
+                        $main[0].prepend(...created.reverse())
+                    }
+                    if (looseCreated) {
+                        $main[0].append(looseCreated)
+                    }
                 })
                 // Drop sections this regroup emptied out (frames all moved elsewhere), so no ghost zero-frame
-                // sections linger. Kept in `sectionsBefore`, so undo reattaches them.
+                // sections linger. Undo restores them from `before`.
                 this.getDirectSections($main).filter((_, sec) => !$(sec).find(FRAME_TAGS).length).detach()
                 if (criterion == "tags") {
                     // Order the resulting sections by tag number (1, 2, 3…) instead of by the order frames
                     // happened to appear; the untagged catch-all (no numeric name) sinks to the end.
-                    appendGroupedByParent(
-                        this.getDirectSections($main).toArray()
-                            .sort((a, b) => this._tagSortKey(a) - this._tagSortKey(b))
-                    )
+                    const sorted = this.getDirectSections($main).toArray()
+                        .sort((a, b) => this._tagSortKey(a) - this._tagSortKey(b))
+                    withDetached($main[0], () => appendGroupedByParent(sorted))
                 }
-                pl.positionFrames()
-                pl.goToFrame(pl.$current.data("frame").index - 1) // keeps you on the same frame (works badly)
+                // positionFrames() + goToFrame() come from resetAndGo() below – running them here as well
+                // paid a second restyle of the whole presentation.
                 if (multiTagged.length) {
                     pl.hud.ok("Group by tags", `${multiTagged.length} frames have more than one tag — grouped by the first one only:<br>${multiTagged.slice(0, 5).join("<br>")}`)
                 }
             },
-            () => {
-                // Restore each pre-existing section to its original position first (reattaches the ones we
-                // emptied, reverts the numeric sort), so frames can then move back into containers that exist.
-                sectionsBefore.forEach(({ el, prev }) =>
-                    prev && prev.parentNode ? prev.after(el) : $main[0].prepend(el))
-                redos.reverse().map(f => f())
-                added.map(el => $(el).remove())
-            },
+            () => restoreChildren(before, $main[0]),
             () => pl.resetAndGo()
         )
     }
@@ -526,17 +556,11 @@ class SectionController {
                 // current parent – not unconditionally $main, since a section may sit inside a wrapper
                 // div (ex. a layout wrapper) rather than directly under $section – and appended once per
                 // parent rather than one DOM move per section, so a big sort does not reflow n times.
-                appendGroupedByParent(sorted)
+                // And with <main> out of the document, see withDetached().
+                withDetached($main[0], () => appendGroupedByParent(sorted))
             },
-            () => {
-                // Undo: restore original order
-                appendGroupedByParent(originalOrder)
-            },
-            () => {
-                pl.positionFrames()
-                pl.goToFrame(pl.$current.data("frame").index - 1)
-                pl.resetAndGo()
-            }
+            () => withDetached($main[0], () => appendGroupedByParent(originalOrder)),
+            () => pl.resetAndGo()
         )
     }
 
@@ -596,5 +620,61 @@ function appendGroupedByParent(elements) {
     }
     for (const [parent, group] of byParent) {
         $(parent).append(group)
+    }
+}
+/**
+ * One-shot snapshot for undoing a bulk move: the child list of <root> and of every ancestor of the given
+ * frames (up to <root>), i.e. every container whose content a regroup may change. Replaces a per-frame
+ * "put me back after my previous sibling" closure – 30 000 closures + jQuery wrappers for a big regroup.
+ * @param {Element[]} frames
+ * @param {Element} root
+ * @returns {Map<Node, Node[]>}
+ */
+function snapshotChildren(frames, root) {
+    /** @type {Map<Node, Node[]>} */
+    const snapshot = new Map()
+    const remember = node => snapshot.set(node, Array.from(node.childNodes))
+    remember(root)
+    for (const frame of frames) {
+        for (let node = frame.parentNode; node && node !== root && !snapshot.has(node); node = node.parentNode) {
+            remember(node)
+        }
+    }
+    return snapshot
+}
+
+/**
+ * Put every container of a `snapshotChildren()` snapshot back to its remembered children. Done while
+ * <root> is out of the document, see `withDetached()`. Nodes that are not in the snapshot (ex. sections
+ * a regroup created) drop out.
+ * @param {Map<Node, Node[]>} snapshot
+ * @param {Element} root The container the snapshot was taken from.
+ */
+function restoreChildren(snapshot, root) {
+    withDetached(root, () => {
+        for (const [node, children] of snapshot) {
+            /** @type {Element} */ (node).replaceChildren(...children)
+        }
+    })
+}
+
+/**
+ * Run `fn` with `element` taken out of the document (a comment marks its place), then put it back.
+ * Moving thousands of nodes inside the live, laid-out presentation costs ~0.3 ms per node (each move
+ * tears down and rebuilds the node's layout/style state); the same moves in a detached subtree are
+ * almost free, so a bulk edit pays for one re-layout instead of one per node.
+ * @param {Element} element
+ * @param {function} fn
+ */
+function withDetached(element, fn) {
+    if (!element.parentNode) {
+        return fn()
+    }
+    const placeholder = document.createComment("")
+    element.replaceWith(placeholder)
+    try {
+        return fn()
+    } finally {
+        placeholder.replaceWith(element)
     }
 }
