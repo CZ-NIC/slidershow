@@ -8,4 +8,4 @@ Another issue arises from the patent mess surrounding x265: [HEIF](https://caniu
 
 If you encounter difficulties with MOV, specifying [the right codec](https://stackoverflow.com/questions/31380695/how-to-open-mov-format-video-in-html-video-tag) might help.
 
-See also [`sli-fallback`](images.md#fallback-source-sli-fallback) to auto-load a pre-converted alternative when a format fails to decode.
+See also [`sli-fallback`](images.md#fallback-source-sli-fallback) to auto-load a pre-converted alternative when a format fails to decode; [slidershow-builder](https://github.com/CZ-NIC/slidershow-builder/) can produce those conversions for a whole media tree.

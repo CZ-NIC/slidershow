@@ -101,7 +101,9 @@ only *paths*, never the media:
 Two things are worth doing at that scale:
 
 * prepare [thumbnails](images.md#thumbnail-preview-sli-thumb) (`sli-thumb`). Without them, the
-  grid has to decode full-size originals to draw a tile;
+  grid has to decode full-size originals to draw a tile. The partner tool
+  [slidershow-builder](https://github.com/CZ-NIC/slidershow-builder/) generates them for a whole
+  album in one command;
 * keep the presentation file next to the media and use relative paths, so the whole tree can be
   moved or copied without breaking a single link.
 

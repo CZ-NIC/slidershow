@@ -42,7 +42,7 @@ Should a more detailed presentation be needed, just export the presentation HTML
 
 What can you achieve? See a variety of features in the [tutorial](https://cz-nic.github.io/slidershow/extra/tutorial.html).
 
-Generate a presentation from a sheet with [slidershow-builder](https://github.com/CZ-NIC/slidershow-builder/).
+Generate a presentation without the browser with the partner command-line tool [slidershow-builder](https://github.com/CZ-NIC/slidershow-builder/): just list file names in a sheet and it finds the files on disk and generates the HTML. It also prepares [thumbnails](images.md#thumbnail-preview-sli-thumb) and [browser-compatible conversions](images.md#fallback-source-sli-fallback) of HEIC and HEVC files.
 
 ## Where to go next
 

@@ -99,7 +99,18 @@ If your originals are large (multi-MB photos over a slow connection), let SlideR
 <main sli-thumb="thumbs/{name}.webp"> <!-- same folder tree, different name/extension -->
 ```
 
-You prepare the thumbnails yourself (e.g. with `ffmpeg`/`imagemagick`) – SlideRshow never generates them. If a thumbnail is missing or fails to load for a particular file, that file is silently loaded the usual way, no error is shown. A `sli-thumb` without any `{}` placeholder is used verbatim, so you may also override it on a single element for an irregular file:
+SlideRshow itself never generates the thumbnails. The partner tool [slidershow-builder](https://github.com/CZ-NIC/slidershow-builder/) does: its `previews` subcommand writes a 320 px WebP for every photo and video frame (re-running it only touches what changed and prunes thumbnails of deleted files):
+
+```bash
+pip install slidershow-builder
+slidershow-builder previews photos --preview-dir thumbs
+```
+
+```html
+<main sli-thumb="thumbs/{file}.webp"> <!-- photos/flower.jpg → thumbs/flower.jpg.webp -->
+```
+
+Subfolders are mirrored (`photos/2024/a.jpg` → `thumbs/2024/a.jpg.webp`), so for a nested tree set the template per `<section>` (`sli-thumb="thumbs/2024/{file}.webp"`). You may of course prepare the thumbnails any other way (`ffmpeg`, `imagemagick`) and point the template at them. If a thumbnail is missing or fails to load for a particular file, that file is silently loaded the usual way, no error is shown. A `sli-thumb` without any `{}` placeholder is used verbatim, so you may also override it on a single element for an irregular file:
 
 ```html
 <img sli-src="photos/oddball.jpg" sli-thumb="thumbs/oddball-special.jpg" />
@@ -136,4 +147,14 @@ Several space-separated templates may be given – useful when a single `sli-fal
 <main sli-fallback="converted/{name}.jpg converted/{name}.mp4">
 ```
 
-You prepare the alternative file(s) yourself; SlideRshow never converts them. If none of the candidates loads (or `sli-fallback` is empty/missing), a toast warns about the unsupported file for the frame currently being viewed (a visible thumbnail, if any, stays on screen).
+SlideRshow never converts the files itself. [slidershow-builder](https://github.com/CZ-NIC/slidershow-builder/) does – HEIC/HEIF → JPEG and videos in codecs browsers do not play (e.g. HEVC) → H.264 MP4, in the same pass that creates the thumbnails:
+
+```bash
+slidershow-builder previews photos --preview-dir thumbs --fallback-dir fb
+```
+
+```html
+<main sli-thumb="thumbs/{file}.webp" sli-fallback="fb/{file}.jpg fb/{file}.mp4">
+```
+
+If none of the candidates loads (or `sli-fallback` is empty/missing), a toast warns about the unsupported file for the frame currently being viewed (a visible thumbnail, if any, stays on screen).
