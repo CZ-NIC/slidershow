@@ -263,7 +263,7 @@ class GridController {
      * and every subsection nested under it, recursively – hides all their frames in the grid at once.
      * @param {JQuery} $section */
     collapseAllUnder($section) {
-        $section.find("section").addBack("section").each((_, el) => this.collapsedSections.add(el))
+        $section.find("section").addBack("section").each((_, el) => { this.collapsedSections.add(el) })
         this._refreshRibbonExpandedAttrs()
         this._refreshCollapsedVisibility()
     }
@@ -275,7 +275,7 @@ class GridController {
      * ITS children back open left it still collapsed, still hiding its own frames.
      * @param {JQuery} $section */
     expandAllUnder($section) {
-        $section.find("section").addBack("section").each((_, el) => this.collapsedSections.delete(el))
+        $section.find("section").addBack("section").each((_, el) => { this.collapsedSections.delete(el) })
         this._refreshRibbonExpandedAttrs()
         this._refreshCollapsedVisibility()
         if ($section[0]?.tagName === "SECTION") {
@@ -489,8 +489,8 @@ class GridController {
                 pl.section_controller.insertNewFrame(rightPlace())
                 break
             case "regroup": {
-                const [criterion, order] = param.split(":")
-                pl.section_controller.group(criterion, $frames, order)
+                const [criterion] = param.split(":")
+                pl.section_controller.group(criterion, $frames)
                 break
             }
             case "delete":
@@ -519,13 +519,14 @@ class GridController {
                 break
             case "import":
                 $("<input/>", { type: "file" }).change(async function () {
-                    const frames = await pl.menu.loadFiles([...this.files])
+                    const files = /** @type {HTMLInputElement} */ (this).files
+                    const frames = await pl.menu.loadFiles([...files])
                     pl.section_controller.importFrames(frames, rightPlace(), false)
-                    pl.hud.info(`${this.files.length} media imported`)
+                    pl.hud.info(`${files.length} media imported`)
                 }).trigger("click")
                 break
             default:
-                this.info("Unknown action")
+                this.hud.info("Unknown action")
                 break
         }
 
@@ -564,12 +565,15 @@ class GridController {
      * Parse menu templates that are appended to <section-controller> tags.
      * And make commands from them.
      *
-     * @returns {[hint: string, callback: Function, group_name: string][]}
+     * @returns {MenuCommand[]}
      */
     getHotkeys() {
+        /** @type {MenuCommand[]} */
         const commands = []
 
-        for (const [template, register, navtext] of [
+        /** @type {[string, (button: HTMLElement) => () => void, string][]} */
+        const menus = [
+
             [
                 this._sectionMenuTemplate,
                 /**
@@ -592,7 +596,9 @@ class GridController {
                 (button) => () => this.sectionMenuAction($main, button.dataset.role, button.dataset.param),
                 "presentation"
             ]
-        ]) {
+        ]
+
+        for (const [template, register, navtext] of menus) {
 
             const $sc = $(template)
 
@@ -605,15 +611,12 @@ class GridController {
 
             $sc.find(".section-menu").each((_, menu) => {
                 const group = $(menu).find("span").first().text().replace(" ▾", "").trim()
-                $(menu).find("button").each((_, btn) => addCmd(`${group} ${$(btn).text()}`, btn))
+                $(menu).find("button").each((_, btn) => { addCmd(`${group} ${$(btn).text()}`, btn) })
             })
 
             $sc.find(".section-menu-row > button").each((_, btn) => {
-
-                return addCmd($(btn).text(), btn)
-            }
-
-            )
+                addCmd($(btn).text(), btn)
+            })
         }
         return commands
     }

@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+* fix: an unknown action of a grid section menu threw instead of showing a notice; dragging a thumbnail onto itself in the grid is a no-op again instead of a pointless undo step
 * enh: regrouping, sorting sections (and their undo) and flattening subsections is much faster on thousands of frames
 
 ## 1.4.0 (2026-09-20)
