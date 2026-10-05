@@ -16,6 +16,4 @@ jobs:
       - run: npm ci
       - run: npx playwright install chromium --with-deps
       - run: npm test
-      # Known baseline of pre-existing errors – informative until cleaned up (see PLAN.md)
       - run: npm run typecheck
-        continue-on-error: true

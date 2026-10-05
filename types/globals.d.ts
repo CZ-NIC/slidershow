@@ -36,6 +36,12 @@ declare global {
         [key: string]: any
     }
 
+    /** What `webHotkeys.group()` returns: an array of the grabbed shortcuts that can be switched off at once. */
+    interface HotkeyGroup extends Array<any> {
+        enable(): void
+        disable(): void
+    }
+
     const EXIF: {
         getData(el: any, callback: () => void): void
         getTag(el: any, tag: string): any

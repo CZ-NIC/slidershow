@@ -87,7 +87,7 @@ class MapWidget {
         this.last_places = []
 
 
-        /** @type {Function[]} @see this.display_graphics_stack */
+        /** @type {Function[]} See display_graphics_stack. */
         this._graphics_stack = []
         this._hold_graphics = false
 
@@ -195,7 +195,7 @@ class MapWidget {
      * @param {*} geometry_clear
      * @param {*} markers_clear
      * @param {number | null} zoom
-     * @param {never[]} last_places
+     * @param {Place[]} last_places
      */
     async engage(places, animate, geometry_show, geometry_criterion, markers_show, geometry_clear, markers_clear, zoom, last_places) {
         if (!MAP_ENABLE) {
@@ -219,7 +219,7 @@ class MapWidget {
      * @param {*} geometry_clear
      * @param {*} markers_clear
      * @param {number | null} zoom
-     * @param {never[]} last_places
+     * @param {Place[]} last_places
      */
     async _engage(places, animate, geometry_show, geometry_criterion, markers_show, geometry_clear, markers_clear, zoom, last_places) {
         this.postponed = null

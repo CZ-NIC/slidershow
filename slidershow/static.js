@@ -9,7 +9,7 @@ class Interval {
      *
      * @param {?function} fn If callback is set, the interval directly starts.
      * @param {number} delay
-     * @param {boolean} blocking If true, the fn is an AJAX call. The fn will not be called again unless it calls `this.blocking = false` when AJAX is finished.
+     * @param {?boolean} ajax_wait If true, the fn is an AJAX call. The fn will not be called again unless it calls `this.blocking = false` when AJAX is finished.
      *      You may want to include `.always(() => {this.blocking = false;})` after the AJAX call. (In 'this' should be instance of the Interval object.)
      *
      *      (Note that we preferred that.blocking setter over method unblock() because interval function

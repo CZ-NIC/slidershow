@@ -10,9 +10,9 @@ class FrameZoom {
         this.playback = frame.playback
         /** @type {?HotkeyGroup} */
         this.keys = null
-        /** @type {?function} */
+        /** @type {?(e: KeyboardEvent) => void} */
         this._keydown = null
-        /** @type {?function} */
+        /** @type {?(e: KeyboardEvent) => void} */
         this._keyup = null
         this._allowKeys = false
     }
@@ -27,7 +27,7 @@ class FrameZoom {
     }
 
     /**
-     * @param {JQuery<HTMLImageElement|HTMLMediaElement>} $el
+     * @param {JQuery} $el
      * @param {boolean} makeEnabled Zoom may be used before frame enter (ex: step-points). But keys must be active only after frame enter.
      * */
     init($el, makeEnabled = false) {
@@ -43,7 +43,7 @@ class FrameZoom {
         return wzoom || this._init($el) // do not re-initialize
     }
 
-    /** @param {JQuery<HTMLImageElement|HTMLMediaElement>} $el */
+    /** @param {JQuery} $el */
     _init($el) {
         const WHEEL_SPEED = 1.5
         const TOUCHPAD_SPEED = 1.05
@@ -129,12 +129,12 @@ class FrameZoom {
             .off("wheel").on("wheel", event => {
                 // Touchpad is faster than mouse wheel.
                 // Let mouse wheel zoom with smaller granularity.
-                const isTouchpad = event.originalEvent.deltaMode === 0 && !Number.isInteger(event.originalEvent.deltaY)
+                const isTouchpad = /** @type {WheelEvent} */ (event.originalEvent).deltaMode === 0 && !Number.isInteger(/** @type {WheelEvent} */ (event.originalEvent).deltaY)
                 wzoom.options.speed = isTouchpad ? TOUCHPAD_SPEED : WHEEL_SPEED
             })
             .data("wzoom_resize_off", () => $(window).off("resize.wzoom", refresh_viewport))
             // zooming modifiable from the outside
-            .attr("sli-wzoom", true)
+            .attr("sli-wzoom", "true")
             .data("wzoom", wzoom)
 
         if (image) {// we have zoomed in, do not playback further
@@ -255,7 +255,7 @@ class FrameZoom {
     get($el) {
         const { currentLeft, currentTop, currentScale } = this.init($el).content
         const ratio = $el.data("wzoom_get_ratio")()
-        return [currentLeft / ratio / currentScale, currentTop / ratio / currentScale, currentScale].map(n => Math.round(n * 10) / 10)
+        return /** @type {[number, number, number]} */ ([currentLeft / ratio / currentScale, currentTop / ratio / currentScale, currentScale].map(n => Math.round(n * 10) / 10))
     }
 
     /**

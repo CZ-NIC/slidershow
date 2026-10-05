@@ -179,7 +179,7 @@ class Session {
         }
         if (this.playback.tag_filter.length) {
             this.playback.tag_filter.forEach(tagId => {
-                params.append("tag-filter", tagId)
+                params.append("tag-filter", String(tagId))
             })
         }
         if (this.playback.tag_hidden_mode !== "dim") {

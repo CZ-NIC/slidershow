@@ -98,7 +98,8 @@ class PropertyPanel {
             $label.on("click", () => this.hud.toggle_property_help(p, $label.parent()[0]))
         }
 
-        return $.merge(
+        // $.merge() fills and returns its first argument, so this is the $label jQuery object (typed as a plain array)
+        return /** @type {JQuery} */ (/** @type {unknown} */ ($.merge(
             $label,
             $field
                 .attr("placeholder", placeholder)
@@ -151,7 +152,7 @@ class PropertyPanel {
                             pl.frame.refresh_actor(p)
                         }, value, previous)
                 })
-        ).wrapAll($("<div/>")).parent()
+        ))).wrapAll($("<div/>")).parent()
             .attr("data-property", p)
             .attr("data-el-tag", $el.prop("tagName"))
     }

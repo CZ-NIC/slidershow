@@ -157,7 +157,7 @@ class SectionController {
      */
     insertNewSection($supersection, prepend = false) {
         const pl = this.playback
-        const formData = new FormData($("#defaults")[0])
+        const formData = new FormData(/** @type {HTMLFormElement} */ ($("#defaults")[0]))
         formData.delete('path') // path does not belong to <section>
         // The import "Group by" select shares the #defaults form for layout only – it is a personal
         // preference of this browser (see Menu.GROUP_BY_KEY), not a property of the new section.
@@ -571,7 +571,7 @@ class SectionController {
         const tmp = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
         tmp.setUTCDate(tmp.getUTCDate() + 4 - (tmp.getUTCDay() || 7));
         const yearStart = new Date(Date.UTC(tmp.getUTCFullYear(), 0, 1));
-        const week = Math.ceil((((tmp - yearStart) / 86400000) + 1) / 7);
+        const week = Math.ceil((((tmp.getTime() - yearStart.getTime()) / 86400000) + 1) / 7);
 
         return `${tmp.getUTCFullYear()}-week${String(week).padStart(2, '0')}`;
     }
@@ -588,7 +588,7 @@ class SectionController {
         const date = new Date(typeof dateStr === "string"
             ? dateStr.replace(/T(\d{2})-(\d{2})-(\d{2})/, "T$1:$2:$3")
             : dateStr)
-        if (isNaN(date)) return `unknown-${granularity}`
+        if (isNaN(date.getTime())) return `unknown-${granularity}`
 
         switch (granularity) {
             case "hours": return date.toISOString().slice(0, 13)          // "2024-03-15T14"

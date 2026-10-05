@@ -540,7 +540,7 @@ class PointStep {
      * @returns {PointStep[]}
      */
     static load($input, videoStep) {
-        return JSON.parse($input.val() || '[]').map(p => new PointStep(!videoStep && p, videoStep && p))
+        return JSON.parse(String($input.val() || '[]')).map(p => new PointStep(!videoStep && p, videoStep && p))
     }
 
     /**
@@ -623,7 +623,7 @@ class PointStep {
      * @param {boolean} videoStep Either consider it as a video-step or a step-point.
      */
     static fromActor(panel, $actor, videoStep) {
-        const p = new PointStep(panel.zoom.get($actor), null, videoStep ? $actor[0] : null)
+        const p = new PointStep(panel.zoom.get($actor), null, videoStep ? /** @type {HTMLVideoElement} */ ($actor[0]) : null)
         const rotate = prop("rotate", $actor, null, null, true)
         if (rotate) {
             p.position[5] = rotate
@@ -701,8 +701,7 @@ class PointStep {
      */
     affect($actor, zoom, full = false) {
         if (this.videoStep) {
-            /** @type {HTMLVideoElement} */
-            const video = $actor[0]
+            const video = /** @type {HTMLVideoElement} */ ($actor[0])
             if (full) {
                 // While managing the point, stay at it. Following its own goto would jump the video
                 // away – and the live editing, which keeps the point at the playhead, would then

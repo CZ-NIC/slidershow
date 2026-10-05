@@ -20,7 +20,7 @@ class Operation {
 
     /**
      * @param {string} group_name
-     * @returns {function} Will create a button or label and return values suitable for a Hotkey (or null for labels)
+     * @returns {(item: Button) => ?[string|string[], string, HTMLElement]} Will create a button or label and return values suitable for a Hotkey (or null for labels)
      */
     _button(group_name) {
         const $group = $("<div/>", { "data-hotkey-group": group_name }).appendTo(this.playback.hud.$hud_menu)
@@ -41,16 +41,16 @@ class Operation {
 
     /**
      *
-     * @typedef {[hotkey: string|string[], symbol: string, hint: string, fn: Function, role?: string|null]} Button
+     * @typedef {[hotkey: string|string[], symbol: string, hint: string, fn: (...args: any[]) => any, role?: string|null]} Button
      * @typedef {[hotkey: string|string[], hint: string, fn: Function]} Shortcut
-     * @typedef {[hint: string, fn: Function, isEnabled: Function, group_name: string]} Command
+     * @typedef {[hint: string, fn: Function, isEnabled: Function, group_name: string]} MenuCommand
      *
      * Register a shortcut in the command palette, as hotkeys, and possibly as a GUI button
      *
      * @param {string} group_name
      * @param {?Shortcut[]} shortcuts Shortcuts without a GUI button
      * @param {Button[]} buttons Shortcuts with a GUI button.
-     * @param {?Command[]} commands Commands without shortcuts.
+     * @param {?MenuCommand[]} commands Commands without shortcuts.
      * @returns
      */
     _group(group_name, shortcuts, buttons, commands = null) {
@@ -61,7 +61,7 @@ class Operation {
             shortcuts = shortcuts.flatMap(shortcut => {
                 const [hotkey, hint, fn] = shortcut
                 if (Array.isArray(hotkey)) {
-                    return hotkey.map(hk => [hk, hint, fn])
+                    return hotkey.map(hk => /** @type {Shortcut} */ ([hk, hint, fn]))
                 }
                 return [shortcut]
             })
@@ -78,7 +78,7 @@ class Operation {
             if (Array.isArray(hotkey)) {
                 const [primaryHotkey, ...otherHotkeys] = hotkey
                 otherHotkeys.forEach(hk => shortcuts.push([hk, hint, fn]))
-                return [primaryHotkey, symbol, hint, fn, role]
+                return /** @type {Button} */ ([primaryHotkey, symbol, hint, fn, role])
             }
             return button
         })
@@ -439,7 +439,7 @@ class Operation {
                     if (!$el.attr("contenteditable")) {
                         return false
                     }
-                    const $new = $("<li/>").attr("contenteditable", true)
+                    const $new = $("<li/>").attr("contenteditable", "true")
                     cc.undoable("Inserted new &lt;li&gt;",
                         () => $new.insertAfter($el).focus(),
                         () => $new.detach() && $el.focus()
@@ -652,7 +652,7 @@ class Operation {
                 ["NumpadAdd", "🐰", "Faster video", () => playback_change(0.1), "only-video"],
                 ["NumpadSubtract", "🐢", "Slower video", () => playback_change(-0.1), "only-video"],
                 ["Alt+m", "🔇", "Toggle muted", () => {
-                    act().trigger('actor.slidershow', { muted: act()[0].muted = !act()[0].muted })
+                    act().trigger('actor.slidershow', { muted: media().muted = !media().muted })
                 }, "only-video"],
                 ["Shift+r", "⤿", "Rotate left", () => rotate(-5)],
                 ["Shift+Alt+r", "⤾", "Rotate right", () => rotate(5)],
@@ -673,8 +673,13 @@ class Operation {
             return pl.frame.$actor
         }
 
+        /** @returns {HTMLMediaElement} */
+        function media() {
+            return /** @type {HTMLMediaElement} */ (act()[0])
+        }
+
         function playback_change(step) {
-            const r = act()[0].playbackRate = Math.round((act()[0].playbackRate + step) * 10) / 10
+            const r = media().playbackRate = Math.round((media().playbackRate + step) * 10) / 10
             pl.hud.playback_icon(r + " ×")
             act().trigger('actor.slidershow', { rate: r })
         }

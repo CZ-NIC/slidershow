@@ -778,7 +778,7 @@ class Playback {
 
     /**
      * Frame has an absolute index. If they are nested and become subframes, the still have the same slide_index.
-     * @param {Number|String} slide_index
+     * @param {Number|String} slide_number 1-based
      */
     goToSlide(slide_number) {
         const slide_index = Number(slide_number) - 1

@@ -38,7 +38,7 @@ class CommandPalette {
      * @param {string} description
      * @param {Function} callback
      * @param {Function|Boolean} isEnabled Optional function that returns whether the command is currently enabled
-     * @param {?string|?function} hotkey Its combination, or a getter of it.
+     * @param {?string|(() => ?string)} hotkey Its combination, or a getter of it.
      * @param {?string} group
      */
     register(description, callback, isEnabled = true, hotkey = null, group = null) {

@@ -261,7 +261,7 @@ class AuxWindow {
         $current.find("[sli-step]")
             .removeClass("current-step step-hidden step-not-yet-visible")
             .filter((_, el) => Number($(el).attr("sli-step")) > this.data.step).addClass("step-not-yet-visible")
-        $current.find(`[sli-step=${Number(this.data.step)}]`).addClass("current-step", true)
+        $current.find(`[sli-step=${Number(this.data.step)}]`).addClass("current-step")
         this.apply_video_point()
     }
 

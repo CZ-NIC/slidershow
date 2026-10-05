@@ -197,7 +197,7 @@ class Frame {
 
         // Insert templated header and footer
         // If such template exists, insert it to the current frame if needed (it does not yet contain it)
-        const check = (tag, method) => $($("template")[0]?.content).find(tag).clone().attr("sli-templated", 1)[method](this.$frame.not(`:has(${tag})`))
+        const check = (tag, method) => $(/** @type {HTMLTemplateElement|undefined} */ ($("template")[0])?.content).find(tag).clone().attr("sli-templated", 1)[method](this.$frame.not(`:has(${tag})`))
         check("header", "prependTo")
         check("footer", "appendTo")
 
@@ -307,7 +307,7 @@ class Frame {
         let [last_step, pointer] = [null, null]
         this.steps = []
         $steppable
-            .attr("sli-step", function (_, step) {
+            .attr("sli-step", function (_, /** @type {string|number} */ step) {
                 // Conserve the original.
                 // Why null? This helps to restore the value through .attr later, having .attr(..., undefined) would be same as reading.
                 $(this).data("step-original", step === undefined ? null : step)
@@ -483,7 +483,7 @@ class Frame {
             if ($el.attr("src") && !$el.attr("sli-thumb-shown") && !$el.attr("sli-data-saved")) { // src already fully set, nothing to do
                 return null
             }
-            return Frame._load_media($el, el, this)
+            return Frame._load_media($el, /** @type {HTMLImageElement|HTMLVideoElement} */ (el), this)
         }).get().filter(Boolean)
 
         // Process markdown
@@ -995,7 +995,7 @@ class Frame {
             // the attribute would have no effect.
             $el.attr(attributes.reduce((k, v) => ({ ...k, [v]: true }), {})) // ex: <video muted=true>
 
-            if ($el[0].hasAttribute("autoplay")) {
+            if ($el.is("[autoplay]")) {
                 // While doing an export and preloading frame, it might start playing
                 // or sometimes a video in a presentation starts playing after load. Prevent this.
                 $el.removeAttr("autoplay").attr("sli-autoplay-prevented", 1)
@@ -1050,7 +1050,7 @@ class Frame {
         if (!this._entered) {
             // Video frame
             if ($actor.prop("tagName") === "VIDEO") {
-                this.video_finished = new Promise(r => this.video_enter(r, $actor))
+                this.video_finished = new Promise(r => this.video_enter(r, /** @type {JQuery<HTMLVideoElement>} */ ($actor)))
             }
 
             // Editing
@@ -1072,7 +1072,7 @@ class Frame {
 
     make_editable() {
         $(EDITABLE_ELEMENTS, this.$frame)
-            .attr("contenteditable", true)
+            .attr("contenteditable", "true")
         this.$frame
             .on("focus", EDITABLE_ELEMENTS, () => {
                 this.playback.hud.$stopEditing.prop("disabled", false)
@@ -1256,7 +1256,7 @@ class Frame {
         this.steps = []
         // These images might have been zoomed by a step.
         // Either when we suddenly jumped to another frame (without completing steps one by one) or when there is an image with a single step.
-        this.getImagesWithStepPoints().each((_, el) => this.zoom.set($(el), ...FrameZoom.DEFAULT_ZOOM))
+        this.getImagesWithStepPoints().each((_, el) => { this.zoom.set($(el), ...FrameZoom.DEFAULT_ZOOM) })
     }
 
     /**
@@ -1337,7 +1337,7 @@ class Frame {
         this.shortcuts.length = 0
 
         if (document.activeElement?.closest(FRAME_SELECTOR) === this.$frame[0]) {
-            document.activeElement.blur() // do not stay stuck on the video gauge (which prevents shortcuts)
+            /** @type {HTMLElement} */ (document.activeElement).blur() // do not stay stuck on the video gauge (which prevents shortcuts)
         }
 
         if (this.$video_pause_listener?.off(".slidershow-video")) {
@@ -1389,6 +1389,7 @@ class Frame {
     delete() {
         const pl = this.playback
         const $frame = this.$frame
+        /** @type {[JQuery, "after"|"prepend"]} */
         const reinsert = $frame.prev().length ? [$frame.prev(), "after"] : [$frame.parent(), "prepend"]
 
         pl.changes.undoable("Delete frame",
@@ -1460,7 +1461,7 @@ class Frame {
 
     /**
      *
-     * @param {Function} promise
+     * @param {(resolve: (value?: any) => void, reject: (reason?: any) => void) => void} promise
      */
     add_effect(promise) {
         this.effects.push(new Promise(promise))
@@ -1611,7 +1612,7 @@ class Frame {
         return find_comment(frame_dom.previousSibling, "previousSibling") || find_comment(frame_dom.firstChild, "nextSibling")
 
         /**
-         * @param {HTMLElement|Comment|Text} node First node to search.
+         * @param {?ChildNode} node First node to search.
          * @param {string} crossing Method
          * @returns {?Comment}
          */
@@ -1825,7 +1826,7 @@ class Frame {
 
     get_position() {
         if (this.playback.debug) {
-            const zoom = $main.css("zoom")
+            const zoom = Number($main.css("zoom"))
             return {
                 top: `-${this.$frame.position().top - 300 / zoom}px`,
                 left: `-${this.$frame.position().left - 300 / zoom}px`,

@@ -58,7 +58,7 @@ class Menu {
 
         // Input files
         const $file = $("#file").change(() => {
-            this.appendFiles([...$file[0].files])
+            this.appendFiles([.../** @type {HTMLInputElement} */ ($file[0]).files])
         })
 
         // Quick play-mode buttons – launch straight into auto-forward (or kiosk = auto + loop) without
@@ -173,7 +173,7 @@ class Menu {
             list.push(...session.map(e => ({ ...e, storage: "session" })))
         } catch (e) { /* ignore */ }
 
-        return list.sort((a, b) => new Date(b.time) - new Date(a.time))
+        return list.sort((a, b) => new Date(b.time).getTime() - new Date(a.time).getTime())
     }
 
     /** Remember the currently loaded presentation so it can be reopened from the splash next time.
@@ -579,13 +579,14 @@ class Menu {
      * @returns
      */
     make_header_offline() {
-        return $("script", "head").map((_, el) =>
-            $.ajax({
-                url: el.src,
+        return $("script", "head").map((_, el) => {
+            const src = /** @type {HTMLScriptElement} */ (el).src
+            return $.ajax({
+                url: src,
                 dataType: "text",
-            }).then(text => `<script data-url="${el.src}">${text}</script>`
-            ).catch(error => console.warn(el.src, error))
-        ).get()
+            }).then(text => `<script data-url="${src}">${text}</script>`
+            ).catch(error => console.warn(src, error))
+        }).get()
         // await Promise.all(head).then(contents => contents.join("\n\n"))
     }
 

@@ -85,7 +85,7 @@ loadjQuery(() => {
     */
     const stop_videos = () => {
         console.log("Stopping videos", $("video[autoplay]").length)
-        $("video[autoplay]").removeAttr("autoplay").attr("sli-autoplay-prevented", 1).each(function () { this.pause() })
+        $("video[autoplay]").removeAttr("autoplay").attr("sli-autoplay-prevented", 1).each(function () { /** @type {HTMLVideoElement} */ (this).pause() })
     }
 
     const load_launch = () => {
