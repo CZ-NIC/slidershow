@@ -50,6 +50,8 @@ Position `0,0` is at the image centre. Its real dimension is taken into account 
     just added, gets a row of its own fields below it – for a step-point the two number inputs
     (<kbd>Alt+I</kbd> / <kbd>Alt+U</kbd>) setting its `transition_duration`/`duration`.
 
+<video autoplay controls muted loop playsinline width="640" src="https://cdn.jsdelivr.net/gh/CZ-NIC/slidershow-assets@main/points-badge.webm" title="Adding step-points from the corner badge in editing mode"></video>
+
 <video autoplay controls muted loop playsinline width="640" src="https://cdn.jsdelivr.net/gh/CZ-NIC/slidershow-assets@main/step-points.webm" title="Composing sli-step-points in the property panel and stepping through them"></video>
 
 Every image in the sections slowly zooms out from the centre. (Images in header and footer are ignored.)

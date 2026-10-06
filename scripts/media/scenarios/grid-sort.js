@@ -17,11 +17,21 @@ module.exports = () => withPage("grid-sort", { record: true }, async page => {
     // children, of which there are none here). Must target the section's own ribbon instead – it has no
     // data-role attribute (only main's does), so pick the non-main one.
     const orderMenu = page.locator('section-controller:not([data-role="main"]) .section-menu:has(span:text("order ▾"))')
-    const orderSpan = orderMenu.locator("span")
+    const orderSpan = orderMenu.locator("span").first()
+    // The ribbon's menus are display:none until the section header is hovered, so hover it first.
+    const sectionTitle = page.locator('section-controller:not([data-role="main"]) .section-title').first()
 
     await narrate(page, [
         {
-            caption: "The grid ribbon can sort a whole section …", after: 700,
+            caption: "Hover a section header in the grid and its ribbon appears …", after: 700,
+            action: async p => {
+                const title = await sectionTitle.boundingBox()
+                await moveMouse(p, title.x + 60, title.y + title.height / 2)
+                await p.waitForTimeout(400)
+            },
+        },
+        {
+            caption: "… it can sort the whole section …", after: 700,
             action: async p => {
                 const box = await orderSpan.boundingBox()
                 await moveMouse(p, box.x + box.width / 2, box.y + box.height / 2)
