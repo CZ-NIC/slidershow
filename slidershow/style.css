@@ -732,22 +732,6 @@ frame-preview {
         }
     }
 
-    /* Embed-supplied per-photo caption (EmbedBridge._load's `photo.caption`) - a public-facing title/
-       description, unlike #hud-fileinfo's EXIF-ish metadata, so it's shown bottom-center and on by
-       default (opt-out via `_open({captions: false})`, see EmbedBridge). */
-    #hud-caption {
-        left: 50%;
-        bottom: 4vh;
-        transform: translateX(-50%);
-        max-width: 80vw;
-        text-align: center;
-        text-shadow: 0 0 6px black;
-
-        &:empty {
-            display: none;
-        }
-    }
-
     #hud-fileinfo {
         right: 3vw;
         bottom: 10vw;
@@ -2074,7 +2058,7 @@ article {
     }
 
     /* Caption – white text on a dark fade at the bottom edge. It lives inside the frame, so it arrives
-       and leaves together with it (unlike #hud-caption, which only swaps its text). */
+       and leaves together with it (not a HUD overlay that only swaps its text). */
     >figcaption {
         position: absolute;
         left: 0;
@@ -2111,6 +2095,10 @@ article {
     }
 }
 
+/* Captions given by an embedding page (EmbedBridge._load) are switched off by `_open({captions: false})`. */
+main[sli-captions="off"]>article>figcaption.embed-caption {
+    display: none;
+}
 
 article-map {
     /* as the map widget is hard to be moved in the DOM and yet we need to interact it */

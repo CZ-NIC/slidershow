@@ -42,7 +42,7 @@ The top-right icon row (prev/next/grid) grows its own ✕ close icon while embed
 
 | Command  | Args                                                          | Effect |
 |----------|----------------------------------------------------------------|--------|
-| `_load`  | `{photos: [{id, src, thumb?, type?, caption?}]}`                 | Replaces the whole presentation. `type` is `"image"` or `"video"`, guessed from the extension when omitted. `caption`, if given, shows as a bottom-center overlay while that photo is on screen (see [Captions](#captions)). |
+| `_load`  | `{photos: [{id, src, thumb?, type?, caption?}]}`                 | Replaces the whole presentation. `type` is `"image"` or `"video"`, guessed from the extension when omitted. `caption`, if given, shows as a caption over the bottom of that photo's frame (see [Captions](#captions)). |
 | `_open`  | `{mode?: "view"\|"picker", startIndex?: number, grid?: boolean, hints?: boolean, fileInfo?: boolean, historyEntry?: boolean, captions?: boolean}` | Shows the overlay and starts playback (skipping the splash screen). `grid: true` opens straight into the grid overview instead of the single-frame view. `hints: true` re-enables the grid's empty-selection hint bar (off by default in embeds, see below). `fileInfo: true` re-enables the filename/GPS/device/datetime/tag overlay (also off by default; still toggleable by hand with the "i" hotkey once open). `historyEntry: false` opts out of the [Back button](#back-button) history entry (on by default). `captions: false` opts out of showing `photo.caption` (on by default, see [Captions](#captions)). |
 | `close`  | –                                                                | Hides the overlay. In picker mode, reports back the selection (see below). |
 | `destroy`| –                                                                | Detaches the bridge's `message` listener. |
@@ -59,7 +59,7 @@ The top-right icon row (prev/next/grid) grows its own ✕ close icon while embed
 
 ## Captions
 
-Pass `caption` alongside `id`/`src` in `_load`'s `photos` to show a bottom-center overlay (`#hud-caption`) while that photo is on screen - meant for a title/description the host page already has (ex. a WordPress attachment's caption field), unlike `fileInfo`'s EXIF-ish metadata. On by default (opt-out via `_open({captions: false})`), since unlike `fileInfo` it's public-facing content the host presumably wants seen, not debug-ish metadata. A photo with no `caption` simply shows nothing (`#hud-caption` collapses to zero height when empty).
+Pass `caption` alongside `id`/`src` in `_load`'s `photos` to show a caption: it becomes a `<figcaption>` inside the photo's frame (white text on a dark fade over the bottom edge), so it moves and fades together with the frame instead of being swapped on a HUD overlay. The text is inserted as plain text, never HTML - meant for a title/description the host page already has (ex. a WordPress attachment's caption field), unlike `fileInfo`'s EXIF-ish metadata. On by default (opt-out via `_open({captions: false})`), since unlike `fileInfo` it's public-facing content the host presumably wants seen, not debug-ish metadata. A photo with no `caption` simply shows nothing (no `<figcaption>` is created).
 
 ## Grid hint bar
 
