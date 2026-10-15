@@ -64,6 +64,18 @@ Every image in the sections slowly zooms out from the centre. (Images in header 
 </section>
 ```
 
+## Caption
+
+Put a `<figcaption>` next to the image (or video) to show a caption over the bottom of the frame – white text on a dark fade. It does not take part in the frame's layout: the photo still fills the whole frame exactly as if it were alone, the caption is not zoomed with it, and it arrives and leaves together with its frame. Any HTML goes inside; restyle it with `article > figcaption` in your own CSS.
+
+```html
+<article sli-src="flower.jpg">
+    <figcaption><i>Greetings from the garden!</i><br><b>— Jane</b></figcaption>
+</article>
+```
+
+In the grid overview, a photo's tile does not show its caption (it would bury the tile); a frame with further content is previewed as a whole, caption included.
+
 ## Panoramic images
 
 When an image is much longer than the screen, we show it slowly first before resizing it to fit the screen. This delays the `<article>`'s [`sli-duration`](structure.md#sli-duration). It starts when the image proportion width / height > `sli-panorama-threshold=2`.

@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+* feat: a `<figcaption>` next to a frame's photo/video is shown as a caption over the bottom of the frame (white text on a dark fade); the media keeps filling the whole frame, the caption is not zoomed with it and moves together with its frame
 * fix: an unknown action of a grid section menu threw instead of showing a notice; dragging a thumbnail onto itself in the grid is a no-op again instead of a pointless undo step
 * enh: regrouping, sorting sections (and their undo) and flattening subsections is much faster on thousands of frames
 

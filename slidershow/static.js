@@ -279,14 +279,14 @@ function getEndTimeFromURL(url) {
 }
 
 /**
- * Whether a frame (or a frame preview's clone of one) holds nothing but its photo/video – no caption, no
- * layout of its own. Such a frame is a photo, anything else is an authored slide; the grid uses the
+ * Whether a frame (or a frame preview's clone of one) holds nothing but its photo/video – no text, no
+ * layout of its own. A `<figcaption>` does not count, it overlays the media (see style.css). Such a frame is a photo, anything else is an authored slide; the grid uses the
  * distinction both to let the media own its whole tile and to guess the tile shape.
  * @param {JQuery} $article
  * @returns {boolean}
  */
 function is_media_only($article) {
-    const $children = $article.children()
+    const $children = $article.children().not("figcaption")
     return $children.length === 1 && $children.is("img, video")
 }
 

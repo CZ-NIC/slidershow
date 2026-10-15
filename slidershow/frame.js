@@ -50,7 +50,7 @@ class Frame {
         this.playback = playback
         this.$video_pause_listener = null
         /**  @type {JQuery} Main media element of the frame. Might be empty if there is none, just text. */
-        this.$actor = this.$frame.find("video, img").first()
+        this.$actor = this.$frame.find("video, img").not("figcaption *").first() // an icon in the caption is not the medium
         this.panorama_starter = null
         this.loop_interval = new Interval()
         this.zoom = new FrameZoom(this)
