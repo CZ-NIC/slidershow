@@ -76,6 +76,24 @@ Put a `<figcaption>` next to the image (or video) to show a caption over the bot
 
 In the grid overview, a photo's tile does not show its caption (it would bury the tile); a frame with further content is previewed as a whole, caption included.
 
+## Blurred backdrop (`sli-backdrop`)
+
+A photo whose shape differs from the screen's – typically a portrait photo on a landscape projector – does not sit between black bars: the empty space is filled with a blurred, darkened copy of the photo. It belongs to the frame, so it moves and fades together with it.
+
+* `auto` (default) – behind every photo frame (a frame holding just its photo, a [caption](#caption) aside), not behind a slide of your own layout, a video or a map
+* `blur` – behind any frame with an image, slides of your own layout too
+* `none` – plain black
+
+Set it on `<main>` for the whole presentation or on a single `<article>`/`<section>`; cycle it live with <kbd>Shift+B</kbd>, or preset it with `backdrop=none` in the [URL hash](playback.md#url-hash-presets).
+
+It costs next to nothing: the photo (its [thumbnail](#thumbnail-preview-sli-thumb), if there is one) is drawn once into a 64px picture which the browser merely stretches – nothing more is downloaded, and no blur is computed while the frames move. Only a photo from another domain cannot be read like that (the browser forbids it); then CSS blurs the photo itself, which looks the same but costs more on a slow machine.
+
+```html
+<main sli-backdrop="none"> <!-- the whole presentation in plain black … -->
+    <article sli-src="portrait.jpg" sli-backdrop="auto"></article> <!-- … but this frame -->
+</main>
+```
+
 ## Panoramic images
 
 When an image is much longer than the screen, we show it slowly first before resizing it to fit the screen. This delays the `<article>`'s [`sli-duration`](structure.md#sli-duration). It starts when the image proportion width / height > `sli-panorama-threshold=2`.

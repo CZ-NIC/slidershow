@@ -2089,6 +2089,26 @@ article {
         text-shadow: 0 1px 4px var(--bg-dark);
         background: linear-gradient(transparent, color-mix(in srgb, var(--bg-dark) 75%, transparent) 35%);
     }
+
+    /* Blurred copy of the photo filling the letterbox (sli-backdrop, see Frame.backdrop_paint). Part of the
+       frame, so it moves and fades together with it. */
+    &[sli-backdrop-shown] {
+        isolation: isolate; /* keeps the z-index below inside the frame, under the actor */
+
+        &::before {
+            content: "";
+            position: absolute;
+            inset: 0;
+            z-index: -1;
+            background: var(--sli-backdrop) center / cover no-repeat;
+        }
+    }
+
+    /* The canvas could not be read (cross-origin photo) – blur the photo itself, the costly way. */
+    &[sli-backdrop-shown="live"]::before {
+        filter: blur(4vmin) brightness(.45);
+        clip-path: inset(0); /* the blur would bleed into the neighbouring frames */
+    }
 }
 
 

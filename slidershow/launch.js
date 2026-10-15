@@ -59,6 +59,7 @@ Private attributes that are not documented in the README because the user should
 * [sli-preloaded] The frame has already been preloaded.
 * img[sli-thumb-shown] The full-quality src is still loading in the background; src currently holds the sli-thumb preview.
 * [sli-data-saved] Data saver (data_saver.js) held the full-quality file back: "thumb" = the sli-thumb preview stands in for good, "none" = nothing was loaded at all.
+* [sli-backdrop-shown] The frame's blurred backdrop (Frame.backdrop_paint) is in its `style` as `--sli-backdrop`: "painted" = a tiny pre-blurred picture, "live" = the photo itself blurred by CSS (cross-origin, the canvas could not be read).
 * [sli-load-full] One-shot marker asking Frame._load_media to ignore the data saver for this element (Alt+L).
 * data("step-original") Temporarily change [sli-step] value.
 * .step-shown Frame step index has greater value so we see this element.
@@ -172,6 +173,7 @@ const PROP_DEFAULT = {
     "panorama-threshold": 2,
     "start": false,
     "loop-presentation": false,
+    "backdrop": "auto",
     "spread-frames": "spiral",
     "step-shown": false,
     "rotate": 0,

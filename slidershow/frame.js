@@ -476,6 +476,7 @@ class Frame {
         }
         $frame.attr("sli-preloaded", 1) // prevent another preload
         this.playback.preloaded.add(this)
+        this.backdrop_prepare()
 
         // Process media
         const loaded = $frame.find("img[sli-src], video[sli-src]").map((_, el) => {
@@ -506,6 +507,83 @@ class Frame {
         const current_loaded = this._loaded // Why storing it outside? Might be unloaded before finish.
         Promise.all(loaded).then(() => current_loaded())
         return loaded
+    }
+
+    /**
+     * Paint a blurred, darkened copy of the photo behind it, so that the letterbox of a photo whose shape
+     * differs from the screen's is not plain black (`sli-backdrop`). Waits for the photo's first `src`
+     * (the thumbnail, if any – it is just as good for a blur) and never downloads anything of its own.
+     * A frame whose photo fills the screen gets one too; it is cheap and simply stays hidden behind it.
+     */
+    backdrop_prepare() {
+        const mode = this.prop("backdrop")
+        const $actor = this.$actor
+        const wanted = $actor.is("img") && (mode === "blur" || (mode === "auto" && is_media_only(this.$frame)))
+        if (!wanted) {
+            Frame.backdrop_clear(this.$frame)
+            return
+        }
+        if (this.$frame[0].style.getPropertyValue("--sli-backdrop")) {
+            return // already painted (it outlives unload(), being a few hundred bytes)
+        }
+        const el = /** @type {HTMLImageElement} */ ($actor[0])
+        const paint = () => { el.naturalWidth && Frame.backdrop_paint(this.$frame, el) }
+        if (el.complete && el.naturalWidth) {
+            paint()
+        } else {
+            $actor.off("load.slidershow-backdrop").one("load.slidershow-backdrop", paint)
+        }
+    }
+
+    /**
+     * Render the backdrop once into a tiny canvas and hand it to CSS as a data URL (`article::before`).
+     * A live `filter: blur()` over the whole screen would be recomputed on every repaint – during every
+     * frame-to-frame move – which a weak projector laptop or a phone cannot keep up with; a 64px picture
+     * stretched by the browser costs nothing and the stretching itself does most of the blurring.
+     * @param {JQuery} $frame
+     * @param {HTMLImageElement} img
+     */
+    static backdrop_paint($frame, img) {
+        const SIZE = 64
+        const ratio = img.naturalWidth / img.naturalHeight
+        const w = ratio >= 1 ? SIZE : Math.max(1, Math.round(SIZE * ratio))
+        const h = ratio >= 1 ? Math.max(1, Math.round(SIZE / ratio)) : SIZE
+        const canvas = document.createElement("canvas")
+        canvas.width = w
+        canvas.height = h
+        const ctx = /** @type {CanvasRenderingContext2D} */ (canvas.getContext("2d"))
+        if ("filter" in /** @type {object} */ (ctx)) { // the type stubs claim every browser has it
+            // Overdraw the edges, so that the blur does not fade them into the transparent surroundings.
+            const m = 4
+            ctx.filter = "blur(3px)"
+            ctx.drawImage(img, -m, -m, w + 2 * m, h + 2 * m)
+            ctx.filter = "none"
+        } else { // Safari: no canvas filter – shrinking to a few pixels and stretching back blurs as well
+            const tiny = document.createElement("canvas")
+            tiny.width = Math.max(1, Math.round(w / 6))
+            tiny.height = Math.max(1, Math.round(h / 6))
+            const tctx = /** @type {CanvasRenderingContext2D} */ (tiny.getContext("2d"))
+            tctx.drawImage(img, 0, 0, tiny.width, tiny.height)
+            ctx.drawImage(tiny, 0, 0, w, h)
+        }
+        ctx.fillStyle = "rgba(0, 0, 0, .55)" // darken, so that the backdrop does not compete with the photo
+        ctx.fillRect(0, 0, w, h)
+
+        let url = null
+        try {
+            url = canvas.toDataURL("image/jpeg", .8)
+        } catch (e) {
+            // SecurityError: a photo from another origin (or file:// in Chrome) taints the canvas. Let CSS
+            // blur the photo itself instead – the costly way, but the picture looks the same.
+        }
+        $frame[0].style.setProperty("--sli-backdrop", `url("${(url || img.currentSrc || img.src).replaceAll('"', "%22")}")`)
+        $frame.attr("sli-backdrop-shown", url ? "painted" : "live")
+    }
+
+    /** @param {JQuery} $frame */
+    static backdrop_clear($frame) {
+        $frame.each((_, el) => { el.style.removeProperty("--sli-backdrop") }).removeAttr("sli-backdrop-shown")
+        $frame.find("img").off("load.slidershow-backdrop")
     }
 
     /**
@@ -911,6 +989,7 @@ class Frame {
         // Data-saver bookkeeping (data_saver.js) is about this session's connection, not about the
         // presentation – it must not travel into the exported file.
         $("[sli-data-saved], [sli-load-full]", $contents).removeAttr("sli-data-saved sli-load-full")
+        $("[sli-backdrop-shown]", $contents).removeAttr("sli-backdrop-shown") // its picture lives in `style`, stripped too
         const $frames = $contents.find(FRAME_SELECTOR).removeAttr("sli-preloaded")
         $frames.find("[sli-templated]").remove()
         Frame.unmake_editable($frames)

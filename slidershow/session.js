@@ -73,6 +73,11 @@ class Session {
                     $main.attr("sli-loop-presentation", "true")
                     prop_invalidate()
                     break;
+                case "backdrop":
+                    // Blurred backdrop behind photos: auto/blur/none, the same <main sli-backdrop> Shift+B cycles.
+                    $main.attr("sli-backdrop", value)
+                    prop_invalidate()
+                    break;
                 case "tag-hidden-mode":
                     // Presenter's live override of how hidden-tag frames are treated (Operation._cycleTagHiddenMode).
                     // Sets the same <main sli-tag-hidden-mode> the cycle command writes.
@@ -167,6 +172,10 @@ class Session {
         }
         if (prop("loop-presentation", $main)) {
             params.set("loop-presentation", "")
+        }
+        const backdrop = $main.attr("sli-backdrop")
+        if (backdrop !== undefined) {
+            params.set("backdrop", backdrop)
         }
         if (this.playback.hud.progress_visible) {
             params.set("progress", "")

@@ -978,6 +978,17 @@ class Playback {
         Promise.resolve(this.frame?.preload()).then(() => this.hud.refresh_data_saver())
     }
 
+    /** Cycle `<main sli-backdrop>` auto → none → blur and repaint the frames around the cursor. */
+    cycle_backdrop() {
+        const next = { auto: "none", none: "blur", blur: "auto" }[String(prop("backdrop", $main))] ?? "auto"
+        $main.attr("sli-backdrop", next)
+        prop_invalidate()
+        Frame.backdrop_clear(this.$articles) // a frame further away gets (or loses) its own when it is preloaded
+        this.preloaded.forEach(f => f.backdrop_prepare())
+        this.hud.info({ auto: "Blurred backdrop behind photos", none: "No backdrop", blur: "Blurred backdrop behind every picture, slides too" }[next])
+        this.session.store()
+    }
+
     toggle_steps() {
         // XX Zoom out from a stepped picture when steps disabled.
         this.step_disabled = !this.step_disabled

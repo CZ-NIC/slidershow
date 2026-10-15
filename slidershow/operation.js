@@ -866,6 +866,7 @@ class Operation {
                     pl.hud.info(`Loop presentation ${on ? "enabled" : "disabled."}`)
                     pl.session.store()
                 }],
+                ["Shift+b", "🌫️", "Blurred backdrop (auto / always / off)", () => pl.cycle_backdrop()],
                 ["Shift+c", "&#9203;", "Countdown bar", () => pl.hud.toggle_progress()],
                 ["Alt+b", "🐢", "Data saver", () => pl.dataSaver.toggle()],
                 ["Alt+l", "⤓", "Load this frame fully", () => pl.dataSaver.load_current_frame(), "saver-only"],
