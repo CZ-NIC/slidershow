@@ -171,8 +171,12 @@ Auto-forward can also be set live with <kbd>Shift+Alt+f</kbd>, and a thin **coun
 ### `sli-spread-frames`
 (default `spiral`) A viewport stands for a chessboard field. This is how the frames are positioned on the chessboard.
 
-* `true=spiral`
-* `diagonal`
+* `spiral` (`true`)
+* `diagonal` – every frame sits where [`sli-x`, `sli-y`](#sli-x-sli-y) say
+* `row` – one horizontal strip, frame after frame to the right
+* `column` – one vertical strip, frame after frame downwards; on touch devices a swipe up goes to the next frame
+
+On touch devices the frames are always a plain strip: `column` stays `column`, any other value becomes `row`.
 
 ### `sli-x`, `sli-y`
 Valid only for `sli-spread-frames=diagonal`. Overrides the default position. Attention: do not let frames share the same position.

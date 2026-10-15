@@ -121,7 +121,7 @@ class Playback {
         const SNAP_DURATION = 150
         /** @type {Object|null} Live-drag state while dragMode === "live", else null */
         let drag = null
-        let touchstartX = 0, touchendX = 0, dragMode = "threshold"
+        let touchstartX = 0, touchendX = 0, touchstartY = 0, touchendY = 0, dragMode = "threshold"
 
         document.addEventListener('touchstart', event => {
             // Ignore gestures starting over the HUD (menu, panels, grid, palette, ...)
@@ -131,11 +131,12 @@ class Playback {
             }
             $main.stop()
             touchstartX = event.touches[0].clientX
+            touchstartY = event.touches[0].clientY
             // Live-drag (the frame following the finger) turned out flaky on mobile – neighbours could end
             // up desynced/overlapping mid-gesture. On mobile a swipe now always just acts like tapping the
             // prev/next button once past SWIPE_THRESHOLD (see handleGesture) – only the desktop-authored
-            // diagonal layout still gets the finger-following drag.
-            const livedrag = !this.isMobileMode && prop("spread-frames", $main) === "diagonal" && this.frame.prop("transition") !== "fade"
+            // diagonal, row and column layouts still get the finger-following drag.
+            const livedrag = !this.isMobileMode && ["diagonal", "row", "column"].includes(String(this.spreadLayout)) && this.frame.prop("transition") !== "fade"
             if (!livedrag) {
                 dragMode = "threshold"
                 return
@@ -158,6 +159,7 @@ class Playback {
                 nextPosition: nextFrame?.get_position(),
                 prevPosition: prevFrame?.get_position(),
                 horizontal: false,
+                vertical: this.spreadLayout === "column", // swipe axis: the strip's own axis for column, else horizontal
                 progress: 0,
                 direction: 0,
             }
@@ -166,8 +168,8 @@ class Playback {
         document.addEventListener('touchmove', event => {
             if (dragMode === "threshold") {
                 // No finger-following drag here – just a visual hint of which way a release would go.
-                const deltaX = event.touches[0].clientX - touchstartX
-                this.hud.swipeHint(Math.abs(deltaX) > 20 ? (deltaX < 0 ? "next" : "prev") : null)
+                const delta = this.spreadLayout === "column" ? event.touches[0].clientY - touchstartY : event.touches[0].clientX - touchstartX
+                this.hud.swipeHint(Math.abs(delta) > 20 ? (delta < 0 ? "next" : "prev") : null)
                 // Whether the photo itself pans while not zoomed in is handled in frame_zoom.js's `onMove`
                 // (stopping WZoom's own drag-scroll here via the event turned out unreliable).
                 return
@@ -184,22 +186,25 @@ class Playback {
             }
             const deltaX = event.touches[0].clientX - drag.startX
             const deltaY = event.touches[0].clientY - drag.startY
-            if (!drag.horizontal) {
-                if (Math.abs(deltaX) < 10 || Math.abs(deltaX) < Math.abs(deltaY)) {
+            // Along the swipe axis (Y for the column layout, X otherwise) vs. the cross axis.
+            const along = drag.vertical ? deltaY : deltaX
+            const across = drag.vertical ? deltaX : deltaY
+            if (!drag.horizontal) { // "horizontal" = the gesture has locked onto the swipe axis
+                if (Math.abs(along) < 10 || Math.abs(along) < Math.abs(across)) {
                     return
                 }
                 drag.horizontal = true
             }
             event.preventDefault()
 
-            drag.direction = deltaX < 0 ? 1 : -1
+            drag.direction = along < 0 ? 1 : -1
             const target = drag.direction === 1 ? drag.nextPosition : drag.prevPosition
             if (!target) {
                 // no frame in that direction, resist further dragging
                 drag.progress = 0
                 return
             }
-            drag.progress = Math.min(Math.abs(deltaX) / window.innerWidth, 1)
+            drag.progress = Math.min(Math.abs(along) / (drag.vertical ? window.innerHeight : window.innerWidth), 1)
             $main.css({
                 top: `${drag.originalTop + (parseFloat(target.top) - drag.originalTop) * drag.progress}px`,
                 left: `${drag.originalLeft + (parseFloat(target.left) - drag.originalLeft) * drag.progress}px`,
@@ -210,6 +215,7 @@ class Playback {
             if (dragMode === "threshold") {
                 this.hud.swipeHint(null)
                 touchendX = event.changedTouches[0].clientX
+                touchendY = event.changedTouches[0].clientY
                 handleGesture()
                 return
             }
@@ -242,8 +248,10 @@ class Playback {
         }, false)
 
         const handleGesture = () => {
-            if (Math.abs(touchendX - touchstartX) > SWIPE_THRESHOLD) {
-                if (touchendX < touchstartX) {
+            const vertical = this.spreadLayout === "column"
+            const [start, end] = vertical ? [touchstartY, touchendY] : [touchstartX, touchendX]
+            if (Math.abs(end - start) > SWIPE_THRESHOLD) {
+                if (end < start) {
                     this.goNext()
                 } else {
                     this.goPrev()
@@ -251,6 +259,16 @@ class Playback {
             }
             touchstartX = 0
         }
+    }
+
+    /**
+     * The effective frame layout (`sli-spread-frames`). On touch devices everything is a plain strip:
+     * `column` if the presentation asks for it, otherwise `row`.
+     * @returns {string|boolean} "spiral" (or true), "diagonal", "row" or "column"
+     */
+    get spreadLayout() {
+        const layout = prop("spread-frames", $main)
+        return this.isMobileMode ? (layout === "column" ? "column" : "row") : layout
     }
 
     /** On a coarse-pointer (touch) device we drop the spiral fly-through for a simple photo-strip feel. */
@@ -429,7 +447,7 @@ class Playback {
             // We do not set the index directly because the values interefere.
             $preview.data("ref-temp", frame.index)
 
-            const positioning = this.isMobileMode ? "ribbon" : prop("spread-frames", $main)
+            const positioning = this.spreadLayout
             switch (positioning) {
                 case "spiral":
                 case true:
@@ -469,10 +487,15 @@ class Playback {
                     el.style.top = frame.prop("y", null, slide_index) * 100 + "vh"
                     el.style.left = frame.prop("x", null, slide_index) * 100 + "vw"
                     break;
-                case "ribbon":
-                    // Mobile: a plain horizontal photo-strip, one frame after another – no diagonal offset.
+                case "row":
+                    // A plain horizontal photo-strip, one frame after another – no diagonal offset (always so on mobile).
                     el.style.top = "0vh"
                     el.style.left = slide_index * 100 + "vw"
+                    break;
+                case "column":
+                    // The same strip, vertical.
+                    el.style.top = slide_index * 100 + "vh"
+                    el.style.left = "0vw"
                     break;
                 default:
                     this.hud.info(`Unknown spread-frames: ${positioning}`)
