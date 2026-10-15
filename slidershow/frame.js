@@ -523,6 +523,52 @@ class Frame {
      * @param {HTMLImageElement} img
      */
     static backdrop_paint($frame, img) {
+        const url = Frame.backdrop_data_url(img)
+        const shown = (url || img.currentSrc || img.src).replaceAll('"', "%22")
+        $frame[0].style.setProperty("--sli-backdrop", `url("${shown}")`)
+        $frame.attr("sli-backdrop-shown", url ? "painted" : "live")
+        if (!url) {
+            Frame.backdrop_paint_cors($frame, img.currentSrc || img.src)
+        }
+    }
+
+    /**
+     * A photo from another origin taints the canvas – unless the server allows CORS. Fetch it once more
+     * as a CORS request (a separate `Image`; the shown <img> never gets `crossorigin`, which would break
+     * photos of servers without CORS) and repaint the backdrop cheaply from it. Until then, and if the
+     * server does not allow it, the backdrop stays "live". Not done in the data saver mode (an extra
+     * download), nor for `data:`/`blob:` (no use) and `file:` (Chrome taints it, CORS cannot help).
+     * @param {JQuery} $frame
+     * @param {string} src The URL that has just been drawn.
+     */
+    static backdrop_paint_cors($frame, src) {
+        if (!src || /^(data|blob|file):/i.test(src) || playback?.dataSaver?.active) {
+            return
+        }
+        const cors = new Image()
+        $frame.data("sli-backdrop-cors", cors) // identifies this request; backdrop_clear() forgets it
+        cors.onload = () => {
+            if ($frame.data("sli-backdrop-cors") !== cors || $frame.attr("sli-backdrop-shown") !== "live") {
+                return // cleared or switched off meanwhile
+            }
+            const url = cors.naturalWidth ? Frame.backdrop_data_url(cors) : null
+            if (url) {
+                $frame[0].style.setProperty("--sli-backdrop", `url("${url}")`)
+                $frame.attr("sli-backdrop-shown", "painted")
+            }
+        }
+        cors.crossOrigin = "anonymous"
+        cors.src = src
+    }
+
+    /**
+     * Draw the photo blurred and darkened into a tiny canvas.
+     * @param {HTMLImageElement} img
+     * @returns {string | null} A JPEG data URL, `null` if the canvas is tainted (SecurityError: a photo
+     *  from another origin without CORS, or file:// in Chrome) – let CSS blur the photo itself then,
+     *  the costly way, but the picture looks the same.
+     */
+    static backdrop_data_url(img) {
         const SIZE = 64
         const ratio = img.naturalWidth / img.naturalHeight
         const w = ratio >= 1 ? SIZE : Math.max(1, Math.round(SIZE * ratio))
@@ -548,20 +594,17 @@ class Frame {
         ctx.fillStyle = "rgba(0, 0, 0, .55)" // darken, so that the backdrop does not compete with the photo
         ctx.fillRect(0, 0, w, h)
 
-        let url = null
         try {
-            url = canvas.toDataURL("image/jpeg", .8)
+            return canvas.toDataURL("image/jpeg", .8)
         } catch (e) {
-            // SecurityError: a photo from another origin (or file:// in Chrome) taints the canvas. Let CSS
-            // blur the photo itself instead – the costly way, but the picture looks the same.
+            return null
         }
-        $frame[0].style.setProperty("--sli-backdrop", `url("${(url || img.currentSrc || img.src).replaceAll('"', "%22")}")`)
-        $frame.attr("sli-backdrop-shown", url ? "painted" : "live")
     }
 
     /** @param {JQuery} $frame */
     static backdrop_clear($frame) {
         $frame.each((_, el) => { el.style.removeProperty("--sli-backdrop") }).removeAttr("sli-backdrop-shown")
+        $frame.removeData("sli-backdrop-cors")
         $frame.find("img").off("load.slidershow-backdrop")
     }
 
