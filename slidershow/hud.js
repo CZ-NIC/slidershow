@@ -12,7 +12,6 @@ class Hud {
      */
     constructor(playback) {
         const pl = this.playback = playback
-        this.$hud_caption = $("#hud-caption")
         this.$hud_filename = $("#hud-filename")
         this.$hud_device = $("#hud-device")
         this.$hud_datetime = $("#hud-datetime")
@@ -1041,11 +1040,6 @@ class Hud {
      */
     file_info(frame) {
         const $actor = frame.$actor
-
-        // Embed-supplied caption (EmbedBridge._load's `photo.caption`), stashed on the frame's own
-        // wrapper element the same way EmbedBridge stores `embed-id` - plain outside embed mode, since
-        // nothing ever sets it there.
-        this.$hud_caption.text(frame.$frame.data("embed-caption") || "")
 
         this.$hud_filename.html(frame.get_filename($actor) || "?")
         this.$hud_device.text($actor.attr("sli-device") || "")

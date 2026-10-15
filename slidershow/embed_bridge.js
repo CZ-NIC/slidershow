@@ -77,10 +77,10 @@ class EmbedBridge {
                 $frame.find("img,video").attr("sli-thumb", photo.thumb)
             }
             if (photo.caption) {
-                // Read back by Hud.file_info() via frame.$frame.data("embed-caption") - stashed the same
-                // way as embed-id above, there being no generic per-frame metadata store outside jQuery's
-                // own data bag on the frame's wrapper element.
-                $frame.data("embed-caption", photo.caption)
+                // An in-frame <figcaption> (see style.css), so it moves and fades with its frame. Plain text
+                // (textContent): the caption comes from a foreign host page. The class lets `_open({captions:
+                // false})` hide just these, see below.
+                $frame.append($("<figcaption/>", { class: "embed-caption" }).text(photo.caption))
             }
         }
         this.playback.reset()
@@ -109,10 +109,10 @@ class EmbedBridge {
         // viewer/picker rarely wants EXIF-ish metadata surfaced over the photo. Still toggleable by hand
         // via the "i" hotkey once open, same as outside embed mode.
         $("#hud-fileinfo").toggle(options.fileInfo === true)
-        // #hud-caption (photo.caption passed to _load, see Hud.file_info) is the opposite: it's a
-        // public-facing title/description meant to be seen, not EXIF-ish metadata, so it's opt-out
-        // rather than opt-in - pass `_open({captions: false})` to suppress it.
-        $("#hud-caption").toggle(options.captions !== false)
+        // photo.caption (passed to _load, an in-frame <figcaption>) is the opposite: it's a public-facing
+        // title/description meant to be seen, not EXIF-ish metadata, so it's opt-out rather than opt-in -
+        // pass `_open({captions: false})` to suppress it (style.css hides `.embed-caption` under this attribute).
+        $("main").attr("sli-captions", options.captions === false ? "off" : null)
         this.menu.start_playback()
         if (Number.isInteger(options.startIndex)) {
             this.playback.goToFrame(options.startIndex)

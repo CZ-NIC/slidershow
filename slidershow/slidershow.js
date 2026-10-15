@@ -252,7 +252,6 @@ function get_menu() {
             <div id="hud-counter"></div>
             <div id="hud-tag-filter" title="Filtered by tag – click to change or clear"></div>
         </div>
-        <div id="hud-caption"></div>
         <div id="hud-properties"></div>
         <div id="hud-points" title="Points of this frame – click (or Alt+P) to edit them"></div>
         <div id="hud-data-saver" title="Data saver – click to see how much it saved"></div>

@@ -227,8 +227,9 @@ test("embed: photo caption shows by default, hidden with captions:false", async 
     await post(page, "_load", { photos: [{ id: "a", src: PIXEL, caption: "Hello caption" }] })
     await post(page, "_open", {})
     await waitForEvent(page, "opened")
-    await expect(frame.locator("#hud-caption")).toBeVisible()
-    await expect(frame.locator("#hud-caption")).toHaveText("Hello caption")
+    const caption = frame.locator("article:visible > figcaption")
+    await expect(caption).toBeVisible()
+    await expect(caption).toHaveText("Hello caption")
 
     await post(page, "close")
     await waitForEvent(page, "closed")
@@ -236,7 +237,19 @@ test("embed: photo caption shows by default, hidden with captions:false", async 
     await post(page, "_load", { photos: [{ id: "a", src: PIXEL, caption: "Hello caption" }] })
     await post(page, "_open", { captions: false })
     await waitForEvent(page, "opened")
-    await expect(frame.locator("#hud-caption")).toBeHidden()
+    await expect(frame.locator("article > figcaption")).toBeHidden()
+})
+
+test("embed: caption is inserted as text, not HTML", async ({ page }) => {
+    await gotoHost(page)
+    const frame = page.frame({ url: IFRAME })
+    await waitForEvent(page, "ready")
+
+    await post(page, "_load", { photos: [{ id: "a", src: PIXEL, caption: "<b>bold</b>" }] })
+    await post(page, "_open", {})
+    await waitForEvent(page, "opened")
+    await expect(frame.locator("article > figcaption")).toHaveText("<b>bold</b>")
+    await expect(frame.locator("article > figcaption b")).toHaveCount(0)
 })
 
 test("embed: photo with no caption shows nothing", async ({ page }) => {
@@ -247,7 +260,7 @@ test("embed: photo with no caption shows nothing", async ({ page }) => {
     await post(page, "_load", { photos: [{ id: "a", src: PIXEL }] })
     await post(page, "_open", {})
     await waitForEvent(page, "opened")
-    await expect(frame.locator("#hud-caption")).toBeEmpty()
+    await expect(frame.locator("article > figcaption")).toHaveCount(0)
 })
 
 test("embed: Alt+m (show splashscreen) is a no-op", async ({ page }) => {
