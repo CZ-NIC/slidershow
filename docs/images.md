@@ -86,7 +86,7 @@ A photo whose shape differs from the screen's – typically a portrait photo on 
 
 Set it on `<main>` for the whole presentation or on a single `<article>`/`<section>`; cycle it live with <kbd>Shift+B</kbd>, or preset it with `backdrop=none` in the [URL hash](playback.md#url-hash-presets).
 
-It costs next to nothing: the photo (its [thumbnail](#thumbnail-preview-sli-thumb), if there is one) is drawn once into a 64px picture which the browser merely stretches – nothing more is downloaded, and no blur is computed while the frames move. Only a photo from another domain cannot be read like that (the browser forbids it); then CSS blurs the photo itself, which looks the same but costs more on a slow machine.
+It costs next to nothing: the photo (its [thumbnail](#thumbnail-preview-sli-thumb), if there is one) is drawn once into a 64px picture which the browser merely stretches – nothing more is downloaded (see below for the exception), and no blur is computed while the frames move. A photo from another domain cannot be read like that unless its server allows it (`Access-Control-Allow-Origin`): then the photo is fetched once more as a CORS request and painted cheaply too. Otherwise CSS blurs the photo itself, which looks the same but costs more on a slow machine. The [data saver](playback.md#data-saver) skips that extra download.
 
 ```html
 <main sli-backdrop="none"> <!-- the whole presentation in plain black … -->

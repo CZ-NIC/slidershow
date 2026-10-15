@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+* enh: the blurred backdrop of a photo from another origin is painted cheaply too when its server allows CORS (fetched once more, skipped in the data saver); otherwise it stays a live CSS blur
 * feat: blurred backdrop – the letterbox around a photo of a different shape than the screen (a portrait photo on a projector) is filled with a blurred, darkened copy of it instead of black; on by default for photo frames, `sli-backdrop="auto|blur|none"`, <kbd>Shift+B</kbd>, `backdrop=` in the URL hash; drawn once into a tiny picture, so it costs nothing while frames move
 * feat: a `<figcaption>` next to a frame's photo/video is shown as a caption over the bottom of the frame (white text on a dark fade); the media keeps filling the whole frame, the caption is not zoomed with it and moves together with its frame
 * fix: an unknown action of a grid section menu threw instead of showing a notice; dragging a thumbnail onto itself in the grid is a no-op again instead of a pointless undo step
