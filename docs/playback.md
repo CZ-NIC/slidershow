@@ -47,7 +47,7 @@ The `<menu>` is displayed before the presentation starts, unless the `<main>` ha
 When a presentation is loaded, the splash shows a short summary of what is loaded (frames / videos / sections) and, next to the big ▶ Start button, quick play-mode buttons:
 
 * **⏱ 5 s** / **⏱ 10 s** – start straight into auto-forward with that per-frame duration.
-* **🔁 Kiosk** – auto-forward **and** loop the whole presentation (back to the first frame at the end) – exhibition / kiosk mode.
+* **🔁 Kiosk** – auto-forward **and** loop the whole presentation (back to the first frame at the end) – exhibition / kiosk mode. Frames crossfade (`sli-transition=fade`, 1.2 s) unless the presentation sets its own [`sli-transition`](structure.md#sli-transition) or `sli-transition-duration` on `<main>`.
 
 The last few presentations you opened are listed under "Recent" so you can jump back to them.
 
@@ -57,4 +57,4 @@ The last few presentations you opened are listed under "Recent" so you can jump 
 
 Most viewing options can also be preset from the URL hash so you can hand out a ready-to-run link, e.g. `presentation.html#1?duration=5&loop-presentation&progress&start` starts at frame 1, auto-forwards every 5 s, loops at the end, shows the countdown bar, and skips the splash menu.
 
-Available parameters include `duration=<seconds>` (numeric), `loop-presentation`, `progress`, `thumbnails`, `grid`, `properties`, `no-steps`, `save-data`, `editing`, `tagging`, `tag-filter=<id>` (may repeat), `tag-names=<pipe-separated>`, `aux=<pane,pane,pane,pane>` and `aux-size=<n,n,n>` (see [auxiliary window](organizing.md#choosing-what-it-shows-where)), `backdrop=auto|blur|none` (see [blurred backdrop](images.md#blurred-backdrop-sli-backdrop)), `print-pdf` (see [exporting to PDF](structure.md#exporting-to-pdf)), `start`. Boolean flags like `loop-presentation` may omit a value; `tag-filter` and other boolean flags can appear multiple times (for `tag-filter`). `start` skips the splash menu and begins playback immediately.
+Available parameters include `duration=<seconds>` (numeric), `loop-presentation`, `progress`, `thumbnails`, `grid`, `properties`, `no-steps`, `save-data`, `editing`, `tagging`, `tag-filter=<id>` (may repeat), `tag-names=<pipe-separated>`, `aux=<pane,pane,pane,pane>` and `aux-size=<n,n,n>` (see [auxiliary window](organizing.md#choosing-what-it-shows-where)), `backdrop=auto|blur|none` (see [blurred backdrop](images.md#blurred-backdrop-sli-backdrop)), `transition=move|fade|none` and `transition-duration=<seconds>` (see [`sli-transition`](structure.md#sli-transition)), `print-pdf` (see [exporting to PDF](structure.md#exporting-to-pdf)), `start`. Boolean flags like `loop-presentation` may omit a value; `tag-filter` and other boolean flags can appear multiple times (for `tag-filter`). `start` skips the splash menu and begins playback immediately.

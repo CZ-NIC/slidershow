@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8" />
+    <script src="../../slidershow/slidershow.js"></script>
+</head>
+
+<body>
+    <!-- sli-transition (Playback.transition): the default move, explicit none, the deprecated scroll-down,
+         a section-inherited fade and a frame overriding it – the target frame's value decides. -->
+    <main sli-transition-duration="0.4">
+        <section>
+            <article><h1>1 move</h1></article>
+            <article sli-transition="none"><h1>2 none</h1></article>
+            <article sli-transition="scroll-down"><h1>3 scroll-down</h1></article>
+        </section>
+        <section sli-transition="fade">
+            <article><h1>4 fade (section)</h1></article>
+            <article sli-transition="move"><h1>5 move (frame)</h1></article>
+            <article><h1>6 fade (section)</h1></article>
+        </section>
+    </main>
+</body>
+
+</html>

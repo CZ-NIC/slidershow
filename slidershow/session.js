@@ -78,6 +78,17 @@ class Session {
                     $main.attr("sli-backdrop", value)
                     prop_invalidate()
                     break;
+                case "transition":
+                    // Frame transition move/fade/none – the same <main sli-transition> the authored default sits on.
+                    $main.attr("sli-transition", value)
+                    prop_invalidate()
+                    break;
+                case "transition-duration":
+                    if (!isNaN(parseFloat(value))) {
+                        $main.attr("sli-transition-duration", parseFloat(value))
+                        prop_invalidate()
+                    }
+                    break;
                 case "tag-hidden-mode":
                     // Presenter's live override of how hidden-tag frames are treated (Operation._cycleTagHiddenMode).
                     // Sets the same <main sli-tag-hidden-mode> the cycle command writes.
@@ -176,6 +187,12 @@ class Session {
         const backdrop = $main.attr("sli-backdrop")
         if (backdrop !== undefined) {
             params.set("backdrop", backdrop)
+        }
+        for (const key of ["transition", "transition-duration"]) {
+            const value = $main.attr("sli-" + key)
+            if (value !== undefined) {
+                params.set(key, value)
+            }
         }
         if (this.playback.hud.progress_visible) {
             params.set("progress", "")

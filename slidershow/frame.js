@@ -128,31 +128,6 @@ class Frame {
     }
 
     /**
-     *  XX not used in the moment
-     */
-    effect(effect) {
-        return
-        // const TRANS_DURATION = this.prop("transition-duration") * 1000
-        // const $el = this.$frame
-        // const winHeight = $(window).height() + "px"
-        // switch (effect) {
-        //     case "go-up":
-        //         return $el.animate({ top: `-${$el.height()}px` }, TRANS_DURATION,
-        //             () => $el.hide(0).css("top", "0px"))
-        //     case "go-down":
-        //         return $el.animate({ top: winHeight }, TRANS_DURATION,
-        //             () => $el.hide(0).css("top", "0px"))
-        //     case "arrive-from-bottom":
-        //         return $el.css("top", winHeight).show(0).animate({ top: "0px" }, TRANS_DURATION)
-        //     case "arrive-from-top":
-        //         return $el.css("top", `-${$el.height()}px`).show(0).animate({ top: "0px" }, TRANS_DURATION)
-        //     default:
-        //         console.error("Unknown effect: " + effect)
-        // }
-    }
-
-
-    /**
      * Return closest prop, defined in the DOM.
      * (Zero aware, you can safely set `sli-prop=0`.)
      * @param {string} property
@@ -509,6 +484,12 @@ class Frame {
         return loaded
     }
 
+    /** @type {boolean} Whether this frame gets a blurred backdrop at all (`sli-backdrop`, see backdrop_prepare()). */
+    get backdrop_wanted() {
+        const mode = this.prop("backdrop")
+        return this.$actor.is("img") && (mode === "blur" || (mode === "auto" && is_media_only(this.$frame)))
+    }
+
     /**
      * Paint a blurred, darkened copy of the photo behind it, so that the letterbox of a photo whose shape
      * differs from the screen's is not plain black (`sli-backdrop`). Waits for the photo's first `src`
@@ -516,10 +497,8 @@ class Frame {
      * A frame whose photo fills the screen gets one too; it is cheap and simply stays hidden behind it.
      */
     backdrop_prepare() {
-        const mode = this.prop("backdrop")
         const $actor = this.$actor
-        const wanted = $actor.is("img") && (mode === "blur" || (mode === "auto" && is_media_only(this.$frame)))
-        if (!wanted) {
+        if (!this.backdrop_wanted) {
             Frame.backdrop_clear(this.$frame)
             return
         }

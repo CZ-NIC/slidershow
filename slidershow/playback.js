@@ -2,6 +2,8 @@
  * Frame playback controller.
  */
 class Playback {
+    /** How long a fade waits for its target frame's media and backdrop before it starts anyway, ms. */
+    static FADE_READY_WAIT = 300
 
     /**
      * @param {Menu} menu
@@ -135,7 +137,7 @@ class Playback {
             // up desynced/overlapping mid-gesture. On mobile a swipe now always just acts like tapping the
             // prev/next button once past SWIPE_THRESHOLD (see handleGesture) – only the desktop-authored
             // diagonal layout still gets the finger-following drag.
-            const livedrag = !this.isMobileMode && prop("spread-frames", $main) === "diagonal" && this.frame.prop("transition") !== "fade"
+            const livedrag = !this.isMobileMode && prop("spread-frames", $main) === "diagonal" && this.transition_type(this.frame) !== "fade"
             if (!livedrag) {
                 dragMode = "threshold"
                 return
@@ -903,7 +905,16 @@ class Playback {
             $last.removeClass("debugged")
         }
 
-        const trans = sameFrame || supress_transition || this.isMobileMode ? $main.css(frame.get_position()) : this.transition($last, $current)
+        /** @type {{promise: () => any}} */
+        let trans
+        if (sameFrame || supress_transition) {
+            if (!sameFrame) { // (a running transition to this very frame may go on, ex. a resize repositioning it)
+                this.cancel_transition()
+            }
+            trans = $main.css(frame.get_position())
+        } else {
+            trans = this.transition($last, $current)
+        }
         const promise = this.promise = trans.promise()
         promise.then(() => {  // frame is at the viewport now
             if (lastFrame !== this.frame) {
@@ -1011,41 +1022,156 @@ class Playback {
 
 
     /**
-     * @returns {Object} that we can call promise() to
+     * Which transition brings `frame` in: its `sli-transition` (inherited, the *target* frame decides in
+     * both directions). Only the first token counts – the value is kept open for a future space-separated
+     * list. `scroll-down` (a never finished effect) is `none`, anything unknown is `move`.
+     * With `prefers-reduced-motion`, `move` becomes `fade`.
+     * @param {Frame} frame
+     * @returns {"move"|"fade"|"none"}
+     */
+    transition_type(frame) {
+        const token = String(frame.prop("transition") ?? "").trim().split(/\s+/)[0].toLowerCase()
+        const type = token === "fade" || token === "none" ? token : token === "scroll-down" ? "none" : "move"
+        return type === "move" && matchMedia("(prefers-reduced-motion: reduce)").matches ? "fade" : type
+    }
+
+    /** Incremented by every navigation; a pending fade that sees another value was superseded. */
+    #transition_token = 0
+    /** `performance.now()` until which a transition counts as still running (a step arriving earlier is instant). */
+    #transition_busy_until = 0
+    /** @type {?ViewTransition} The crossfade running right now. */
+    #view_transition = null
+
+    /** Any running/pending transition is dropped: a new navigation positions the camera itself. */
+    cancel_transition() {
+        this.#transition_token++
+        this.#transition_busy_until = 0
+        this.#view_transition?.skipTransition()
+        this.#view_transition = null
+    }
+
+    /**
+     * Bring the camera to `$current` the way its `sli-transition` says (see transition_type()).
+     * `sli-transition-duration` 0, a step arriving before the previous transition finished (holding an arrow),
+     * a `move` on a mobile device and a `fade` in a browser without View Transitions are all instant.
+     * @param {JQuery} $last
+     * @param {JQuery} $current
+     * @returns {{promise: () => Promise<any>}}
      */
     transition($last, $current) {
         /** @type {Frame} */
-        const last = $last.data("frame")
-        /** @type {Frame} */
         const current = $current.data("frame")
-        const TRANS_DURATION = current.prop("transition-duration") * 1000
+        const duration = current.prop("transition-duration") * 1000
+        const busy = performance.now() < this.#transition_busy_until
+        this.cancel_transition()
+        const token = this.#transition_token
 
-        switch (current.prop("transition")) {
-            // XX document * `data-transition`: `fade` (default), `scroll-down`
-            case "scroll-down": // XX deprec?
-                if (this.$articles.index($last) < this.$articles.index($current)) {
-                    last.effect("go-up")
-                    return current.effect("arrive-from-bottom")
-                } else {
-                    last.effect("go-down")
-                    return current.effect("arrive-from-top")
+        let type = this.transition_type(current)
+        if (!(duration > 0) || busy
+            || (type === "move" && this.isMobileMode) // positioning is intentionally instant on mobile
+            || (type === "fade" && !document.startViewTransition)) {
+            type = "none"
+        }
+
+        /** @type {Promise<any>} */
+        let promise
+        switch (type) {
+            case "none":
+                Playback.resetWindow()
+                $main.css(current.get_position())
+                if (busy) { // keep counting the burst as busy so that a held arrow key stays instant
+                    this.#transition_busy_until = performance.now() + duration
                 }
-            case "fade": // XX incompatible with body manipulation
-
-                $last.fadeOut(TRANS_DURATION)
-                return $current.fadeIn(TRANS_DURATION)
+                return { promise: () => Promise.resolve() }
+            case "fade":
+                promise = this.#fade(current, duration, token)
+                break
             default:
                 if (
                     $main.position().top === -$current.position().top &&
                     $main.position().left === -$current.position().left
                 ) {
                     // skip the animation as the frame is already at position
-                    return { promise: () => Promise.resolve() } // this is just a dummy object
-                } else {
-                    Playback.resetWindow()
-                    return $main.animate(current.get_position(), TRANS_DURATION)
+                    return { promise: () => Promise.resolve() }
                 }
+                Playback.resetWindow()
+                promise = Promise.resolve($main.animate(current.get_position(), duration).promise())
         }
+        this.#transition_busy_until = Infinity
+        promise.then(() => {
+            if (token === this.#transition_token) {
+                this.#transition_busy_until = 0
+            }
+        })
+        return { promise: () => promise }
+    }
+
+    /**
+     * Crossfade to `frame` through the View Transitions API: the browser snapshots the page, the camera jumps
+     * to the target inside the update callback and the old snapshot fades into the live new state
+     * (the HUD has its own `view-transition-name` and does not fade, see style.css).
+     * Starts once the target's media and blurred backdrop are there – at most FADE_READY_WAIT ms.
+     * @param {Frame} frame
+     * @param {number} duration ms
+     * @param {number} token
+     * @returns {Promise<void>}
+     */
+    async #fade(frame, duration, token) {
+        await this.#frame_ready(frame, Playback.FADE_READY_WAIT)
+        if (token !== this.#transition_token) {
+            return // superseded meanwhile, the newer navigation has positioned the camera
+        }
+        Playback.resetWindow()
+        const root = document.documentElement
+        root.style.setProperty("--sli-transition-duration", duration + "ms")
+        const vt = this.#view_transition = document.startViewTransition(() => {
+            if (token === this.#transition_token) { // a skipped transition still runs its callback, maybe late
+                $main.css(frame.get_position())
+            }
+        })
+        vt.ready.catch(() => null) // rejects when skipped
+        try {
+            await vt.finished
+        } catch (e) {
+            // the update callback failed – nothing to recover, the camera is set again below
+        } finally {
+            if (this.#view_transition === vt || !this.#view_transition) { // (not when a newer one already runs)
+                this.#view_transition = null
+                root.style.removeProperty("--sli-transition-duration")
+            }
+            if (token === this.#transition_token) {
+                $main.css(frame.get_position())
+            }
+        }
+    }
+
+    /**
+     * Resolves when `frame` is ready to be shown: its media loaded, its blurred backdrop (if it gets one)
+     * painted, plus one animation frame – or after `max` ms, whatever comes first.
+     * @param {Frame} frame
+     * @param {number} max ms
+     * @returns {Promise<void>}
+     */
+    #frame_ready(frame, max) {
+        return new Promise(resolve => {
+            /** @type {?MutationObserver} */
+            let observer = null
+            const done = () => {
+                observer?.disconnect()
+                clearTimeout(timer)
+                resolve()
+            }
+            const timer = setTimeout(done, max)
+            const painted = () => !frame.backdrop_wanted || frame.$frame.attr("sli-backdrop-shown")
+            frame.preload() // idempotent; normally already started from goToFrame's background tasks
+            frame.loaded.then(() => new Promise(r => {
+                if (painted()) {
+                    return r()
+                }
+                observer = new MutationObserver(() => painted() && r())
+                observer.observe(frame.$frame[0], { attributes: true, attributeFilter: ["sli-backdrop-shown"] })
+            })).then(() => requestAnimationFrame(() => done()))
+        })
     }
 
     /**

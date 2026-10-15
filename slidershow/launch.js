@@ -165,6 +165,7 @@ const AUX_SIZE_MAX = 90
 const PROP_DEFAULT = {
     "duration": 0,
     "step-duration": 0,
+    "transition": "move",
     "transition-duration": 0,
     "step-transition-duration": 1,
     "playback-rate": 1,

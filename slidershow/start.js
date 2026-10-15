@@ -64,11 +64,18 @@ class Menu {
         // Quick play-mode buttons – launch straight into auto-forward (or kiosk = auto + loop) without
         // opening the properties panel. They set sli-duration / sli-loop-presentation on <main> (where prop() ends its
         // walk, same as the in-show "Set auto-forward" command and the `duration`/`loop` hash keys), then start.
+        // Kiosk crossfades too (sli-transition=fade, 1.2 s) – unless the presentation sets either itself on <main>.
         $(".play-mode", this.$menu).on("click", e => {
             const $b = $(e.currentTarget)
             $main.attr("sli-duration", Number($b.attr("sli-duration")) || 5)
             if ($b.is("[data-kiosk]")) {
                 $main.attr("sli-loop-presentation", "true")
+                if ($main.attr("sli-transition") === undefined) {
+                    $main.attr("sli-transition", "fade")
+                }
+                if ($main.attr("sli-transition-duration") === undefined) {
+                    $main.attr("sli-transition-duration", 1.2)
+                }
             }
             prop_invalidate()
             this.start_playback()

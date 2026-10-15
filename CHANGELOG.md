@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+* feat: `sli-transition="move|fade|none"` – how the next frame comes in: the camera flight (default), a crossfade (View Transitions, independent of the layout; the HUD does not fade, the new photo and its backdrop are awaited first) or an instant jump; inherited, the target frame decides; `prefers-reduced-motion` turns `move` into `fade`; the 🔁 Kiosk button crossfades for 1.2 s by default; `transition=` and `transition-duration=` in the URL hash. The broken old `fade` and the dead `scroll-down` (now `none`) are gone; a step arriving while a transition still runs (a held arrow key) is instant
 * feat: blurred backdrop – the letterbox around a photo of a different shape than the screen (a portrait photo on a projector) is filled with a blurred, darkened copy of it instead of black; on by default for photo frames, `sli-backdrop="auto|blur|none"`, <kbd>Shift+B</kbd>, `backdrop=` in the URL hash; drawn once into a tiny picture, so it costs nothing while frames move
 * feat: a `<figcaption>` next to a frame's photo/video is shown as a caption over the bottom of the frame (white text on a dark fade); the media keeps filling the whole frame, the caption is not zoomed with it and moves together with its frame
 * fix: an unknown action of a grid section menu threw instead of showing a notice; dragging a thumbnail onto itself in the grid is a no-op again instead of a pointless undo step

@@ -165,8 +165,34 @@ Auto-forward can also be set live with <kbd>Shift+Alt+f</kbd>, and a thin **coun
 ### `sli-loop-presentation`
 (default off, set on `<main>`) When the presentation reaches its last frame, loop back to the first one instead of stopping – for kiosk / exhibition playback (pair it with `sli-duration` for a hands-free loop). Toggle live with <kbd>Shift+L</kbd>, or use the **🔁 Kiosk** splash button. The narrower-scoped [`sli-loop`](#sli-loop) is a different feature – it loops several images *within* one frame.
 
+### `sli-transition`
+(default `move`) How the next frame comes in.
+
+* `move` – the camera flies over the canvas to the frame (the whole way, even on a long jump from the grid or <kbd>Home</kbd>/<kbd>End</kbd>).
+* `fade` – a crossfade: the old frame fades into the new one, regardless of where the frames lie on the canvas ([`sli-spread-frames`](#sli-spread-frames) is a separate thing – the layout). The HUD does not fade. The crossfade waits for the new frame's photo (and its [blurred backdrop](images.md#blurred-backdrop-sli-backdrop)) to be loaded, at most 0.3 s.
+* `none` – an instant jump.
+
+Like any property it is inherited `<main>` → `<section>` → `<article>`, and it is the **target** frame's value that counts – going back as well as forward. An unknown value means `move`; the deprecated `scroll-down` means `none`.
+
+```html
+<main sli-transition-duration="0.8">
+    <section sli-transition="fade">
+        <article>Fades in</article>
+        <article sli-transition="move">Flies in</article>
+    </section>
+</main>
+```
+
+* The duration is [`sli-transition-duration`](#sli-transition-duration); while it is `0` (the default), every transition is instant.
+* A step arriving before the previous transition finished (ex. holding an arrow key) is instant.
+* With the system setting *reduce motion* (`prefers-reduced-motion`), `move` becomes `fade`.
+* `fade` needs the browser's [View Transitions](https://developer.mozilla.org/docs/Web/API/View_Transition_API); without them it is instant.
+* On a phone (touch device), `move` is instant – frames are laid as a photo strip there; `fade` crossfades after a swipe.
+* The **🔁 Kiosk** splash button uses `fade` for 1.2 s, unless `<main>` sets `sli-transition` / `sli-transition-duration` itself.
+* Preset from the URL hash: `#1?transition=fade&transition-duration=1`.
+
 ### `sli-transition-duration`
-(default `0`) How many seconds it will take to change a frame.
+(default `0`) How many seconds it will take to change a frame – applies to every [`sli-transition`](#sli-transition) type.
 
 ### `sli-spread-frames`
 (default `spiral`) A viewport stands for a chessboard field. This is how the frames are positioned on the chessboard.

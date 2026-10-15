@@ -476,9 +476,28 @@ frame-preview {
     pointer-events: none;
 }
 
+/* `sli-transition=fade` (Playback.#fade): the whole page crossfades (the root snapshot – <main> deliberately
+   gets no name of its own, the canvas is huge); the HUD is switched over at once instead. The duration comes
+   from `sli-transition-duration`, set on <html> by the playback just for the transition. */
+::view-transition-old(root),
+::view-transition-new(root) {
+    animation-duration: var(--sli-transition-duration, .25s);
+}
+
+::view-transition-group(hud),
+::view-transition-new(hud) {
+    animation: none;
+}
+
+::view-transition-old(hud) {
+    display: none;
+}
+
 #hud {
     position: fixed; /* note that when position:fixed does not work when moving body */
     z-index: 10;
+    /* Its own snapshot in a `sli-transition=fade` crossfade, so that the HUD does not fade with the frames. */
+    view-transition-name: hud;
 
     >* {
         position: fixed;
